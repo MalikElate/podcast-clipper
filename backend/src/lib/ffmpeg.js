@@ -1,21 +1,9 @@
-import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
+import { ProcessRunner } from "../bridge/core/ProcessRunner.js";
 
-function run(cmd, args) {
-  return new Promise((resolve, reject) => {
-    const proc = spawn(cmd, args);
-    let stderr = "";
-    proc.stderr.on("data", (d) => (stderr += d.toString()));
-    proc.on("error", (err) =>
-      reject(new Error(`Failed to start ${cmd}. Is it installed? (${err.message})`))
-    );
-    proc.on("close", (code) => {
-      if (code !== 0) reject(new Error(`${cmd} exited with ${code}: ${stderr.slice(-2000)}`));
-      else resolve();
-    });
-  });
-}
+const runner = new ProcessRunner();
+const run = (cmd, args) => runner.run(cmd, args, { timeoutMs: Number(process.env.FFMPEG_TIMEOUT_MS) || 30 * 60000 });
 
 /** Extracts a mono 16kHz mp3 track for transcription. */
 export async function extractAudio(videoPath, outAudioPath) {

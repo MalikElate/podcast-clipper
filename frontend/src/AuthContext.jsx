@@ -15,12 +15,14 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (!auth) { setUser(null); return; }
     return onAuthStateChanged(auth, (u) => setUser(u));
   }, []);
 
   async function signInWithGoogle() {
     setError(null);
     try {
+      if (!auth) throw new Error("Sign-in is not configured on this server yet.");
       await signInWithPopup(auth, googleProvider);
     } catch (e) {
       setError(friendlyAuthError(e));
@@ -31,6 +33,7 @@ export function AuthProvider({ children }) {
   async function signInWithEmail(email, password) {
     setError(null);
     try {
+      if (!auth) throw new Error("Sign-in is not configured on this server yet.");
       await signInWithEmailAndPassword(auth, email, password);
     } catch (e) {
       setError(friendlyAuthError(e));
@@ -41,6 +44,7 @@ export function AuthProvider({ children }) {
   async function signUpWithEmail(email, password) {
     setError(null);
     try {
+      if (!auth) throw new Error("Sign-in is not configured on this server yet.");
       await createUserWithEmailAndPassword(auth, email, password);
     } catch (e) {
       setError(friendlyAuthError(e));
@@ -49,12 +53,12 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
-    await firebaseSignOut(auth);
+    if (auth) await firebaseSignOut(auth);
   }
 
   /** ID token to attach to backend API requests (Authorization: Bearer <token>). */
   async function getIdToken() {
-    if (!auth.currentUser) return null;
+    if (!auth?.currentUser) return null;
     return auth.currentUser.getIdToken();
   }
 

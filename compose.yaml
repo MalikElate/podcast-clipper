@@ -1,0 +1,33 @@
+services:
+  bridge:
+    build:
+      context: .
+      args:
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY:?Set frontend Firebase configuration}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN:?Set frontend Firebase configuration}
+        VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID:?Set frontend Firebase configuration}
+        VITE_FIREBASE_STORAGE_BUCKET: ${VITE_FIREBASE_STORAGE_BUCKET:-}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID:-}
+        VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID:?Set frontend Firebase configuration}
+    env_file:
+      - backend/.env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 8787
+      BRIDGE_LOCAL_PREVIEW: "0"
+      BRIDGE_SERVE_FRONTEND: "true"
+      BRIDGE_DATA_DIR: /data
+      PYTHON_BIN: /opt/bridge-python/bin/python
+      HF_HOME: /data/model-cache
+    volumes:
+      - bridge-data:/data
+    ports:
+      - "127.0.0.1:8787:8787"
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 40s
+    security_opt:
+      - no-new-privileges:true
+volumes:
+  bridge-data:
