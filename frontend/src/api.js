@@ -1,7 +1,7 @@
-import { auth } from "./firebase.js";
+import { getAuthToken } from "./AuthContext.jsx";
 
 async function authHeaders() {
-  const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+  const token = await getAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 

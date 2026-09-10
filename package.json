@@ -1,0 +1,16 @@
+{
+  "name": "podcast-clipper-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npm ci --prefix frontend && npm run build --prefix frontend",
+    "deploy": "wrangler deploy",
+    "check": "npm test --prefix frontend && npm test --prefix backend && npm run build"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.3.7"
+  },
+  "devDependencies": {
+    "wrangler": "^4.131.0"
+  }
+}

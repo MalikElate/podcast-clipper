@@ -1,0 +1,44 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "podcast-clipper",
+  "main": "cloudflare/worker.js",
+  "compatibility_date": "2026-09-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./frontend/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/files/*"]
+  },
+  "containers": [
+    {
+      "class_name": "PodcastClipperBackend",
+      "image": "./backend/Dockerfile",
+      "max_instances": 1,
+      "instance_type": "standard-2"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "BACKEND",
+        "class_name": "PodcastClipperBackend"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["PodcastClipperBackend"]
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "PORT": "8787",
+    "PYTHON_BIN": "python3",
+    "WHISPER_MODEL": "base",
+    "GEMINI_MODEL": "gemini-3.6-flash"
+  }
+}

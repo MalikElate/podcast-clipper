@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { clerkMiddleware } from "@clerk/express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { randomUUID } from "crypto";
@@ -10,7 +11,7 @@ import { extractAudio, createClip, ensureDir } from "./lib/ffmpeg.js";
 import { transcribeAudio } from "./lib/whisper.js";
 import { pickClips } from "./lib/gemini.js";
 import { groupWordsIntoPhrases, phrasesToPromptText } from "./lib/transcript.js";
-import { requireAuth } from "./lib/firebaseAdmin.js";
+import { requireAuth } from "./lib/clerkAuth.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const JOBS_DIR = path.join(__dirname, "..", "jobs");
@@ -19,6 +20,8 @@ ensureDir(JOBS_DIR);
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.get("/api/health", (req, res) => res.json({ ok: true }));
+app.use(clerkMiddleware());
 
 // Only rendered clips are shareable by URL. Never expose source videos,
 // extracted audio, partial downloads, or other per-job working files.
