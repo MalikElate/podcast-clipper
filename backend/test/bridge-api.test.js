@@ -8,11 +8,12 @@ import { BridgeApplication } from "../src/bridge/BridgeApplication.js";
 import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 
 async function setup(t, { localPreview = false, auth = true, pipeline } = {}) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bridge-api-test-"));
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bridge-api-test-"));
+  const dir = path.join(temporaryRoot, ".bridge");
   const application = new BridgeApplication({ store: new SqliteStore(), pipeline, env: { NODE_ENV: localPreview ? "development" : "test", BRIDGE_LOCAL_PREVIEW: localPreview ? "1" : "0", BRIDGE_DATA_DIR: dir, BRIDGE_APP_URL: "http://localhost:5173", BRIDGE_MEDIA_SIGNING_KEY: "test-signing-key", BRIDGE_CLIPPING_ENABLED: "false", BRIDGE_PUBLISHING_ENABLED: "false" }, ...(auth ? { authMiddleware: (req, res, next) => { if (!/^Bearer (alice|bob)$/.test(req.headers.authorization || "")) return res.status(401).json({ error: "Sign in required" }); req.uid = req.headers.authorization.split(" ")[1]; next(); } } : {}) });
   const server = await new Promise((resolve, reject) => { const server = application.app.listen(0, "127.0.0.1", () => resolve(server)); server.on("error", reject); });
   const base = `http://127.0.0.1:${server.address().port}`;
-  t.after(async () => { await new Promise(resolve => server.close(resolve)); application.close(); fs.rmSync(dir, { recursive: true, force: true }); });
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); application.close(); fs.rmSync(temporaryRoot, { recursive: true, force: true }); });
   async function request(url, { method = "GET", body, user = "alice", headers = {} } = {}) {
     return fetch(base + url, { method, headers: { ...(user ? { Authorization: `Bearer ${user}` } : {}), ...(body && !(body instanceof FormData) ? { "Content-Type": "application/json" } : {}), ...headers }, ...(body ? { body: body instanceof FormData ? body : JSON.stringify(body) } : {}) });
   }
@@ -29,6 +30,23 @@ test("all project routes require authentication and reject another owner's proje
   for (const endpoint of ["/media", "/accounts", "/posts", "/analytics", "/clips"]) assert.equal((await h.request(h.root + endpoint, { user: "bob" })).status, 404);
   const projects = await (await h.request("/api/bridge/projects", { user: "bob" })).json(); assert.deepEqual(projects.projects, []);
   const config = await (await h.request("/api/bridge/config")).json(); assert.equal(config.platforms.length, 10); assert.equal(config.connectionsReady, false);
+});
+
+test("API keys are shown once, authenticate requests, and can be revoked", async t => {
+  const h = await setup(t);
+  const created = await h.request("/api/bridge/api-keys", { method: "POST", body: { name: "Automation" } });
+  assert.equal(created.status, 201);
+  const { apiKey, key } = await created.json();
+  assert.match(key, /^br_live_[a-f0-9]{16}_[A-Za-z0-9_-]{43}$/);
+  assert.equal(apiKey.name, "Automation");
+  assert.ok(!("digest" in apiKey));
+  const listed = await (await h.request("/api/bridge/api-keys")).json();
+  assert.deepEqual(listed.apiKeys.map(item => item.name), ["Automation"]);
+  const authorized = await h.request("/api/bridge/projects", { user: null, headers: { Authorization: `Bearer ${key}` } });
+  assert.equal(authorized.status, 200);
+  assert.equal((await authorized.json()).projects.length, 1);
+  assert.equal((await h.request(`/api/bridge/api-keys/${apiKey.id}`, { method: "DELETE" })).status, 200);
+  assert.equal((await h.request("/api/bridge/projects", { user: null, headers: { Authorization: `Bearer ${key}` } })).status, 401);
 });
 
 test("media upload validates bytes, creates signed downloads, and streams an authenticated ZIP", async t => {

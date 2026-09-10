@@ -19,6 +19,7 @@ import { RateLimitService } from "./services/RateLimitService.js";
 import { AnalyticsService } from "./services/AnalyticsService.js";
 import { ClippingService } from "./services/ClippingService.js";
 import { DownloadService } from "./services/DownloadService.js";
+import { ApiKeyService } from "./services/ApiKeyService.js";
 import { PublishingWorker } from "./services/PublishingWorker.js";
 import { SecretVault } from "./core/SecretVault.js";
 import { LockService } from "./core/LockService.js";
@@ -46,6 +47,7 @@ export class BridgeApplication {
     this.appUrl = (env.BRIDGE_APP_URL || "http://localhost:5173").replace(/\/$/, "");
     fs.mkdirSync(this.dataDir, { recursive: true, mode: 0o700 });
     this.store = store || new SqliteStore(path.join(this.dataDir, "bridge.sqlite"));
+    this.apiKeys = new ApiKeyService(this.store, { clock });
     this.vault = new SecretVault(env.BRIDGE_ENCRYPTION_KEY);
     this.projects = new ProjectService(this.store);
     this.schedules = new ScheduleService({ clock });
@@ -78,14 +80,19 @@ export class BridgeApplication {
     this.app.use(express.json({ limit: "2mb" }));
     this.app.get("/health", (req, res) => res.json({ status: "ok", app: "Bridge" }));
     this.registerPublicRoutes();
-    this.app.use("/api/bridge", authMiddleware || ((req, res, next) => {
+    const userAuth = authMiddleware || ((req, res, next) => {
       const loopback = ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress);
       if (this.localPreview && loopback && req.headers["x-bridge-preview"] === "1") {
         if (req.headers.origin && !origins.has(req.headers.origin)) return res.status(403).json({ error: "Unrecognized preview origin." });
         req.uid = "bridge-local-preview"; return next();
       }
       return requireAuth(req, res, next);
-    }));
+    });
+    this.app.use("/api/bridge", (req, res, next) => {
+      const key = this.apiKeys.token(req.headers.authorization);
+      if (!key) return userAuth(req, res, next);
+      try { req.uid = this.apiKeys.authenticate(key); return next(); } catch (error) { return next(error); }
+    });
     this.app.use("/api/bridge", rateLimit({ windowMs: 60000, limit: 180, standardHeaders: "draft-7", legacyHeaders: false, keyGenerator: req => req.uid || "anonymous", message: { error: "Too many requests. Please wait a moment." } }));
     this.registerRoutes();
     this.app.use("/api", (req, res) => res.status(404).json({ error: "Endpoint not found." }));
@@ -126,13 +133,16 @@ export class BridgeApplication {
       res.setHeader("Cache-Control", "private, max-age=300");
       res.type(result.mime);
       if (req.query.download === "1" || result.record.kind === "document") res.attachment(result.record.filename);
-      res.sendFile(this.storage.path(result.key), { dotfiles: "deny" });
+      res.sendFile(result.key, { root: this.storage.root, dotfiles: "deny" });
     }));
   }
 
   registerRoutes() {
     const app = this.app, root = "/api/bridge/projects/:projectId";
     app.get("/api/bridge/config", route((req, res) => res.json({ name: "Bridge", localPreview: this.localPreview, platforms: this.registry.catalog(), maxBatchSize: 100, maxUploadBytes: this.media.maxBytes, features: { clipping: this.env.BRIDGE_CLIPPING_ENABLED !== "false", analytics: true, publishing: this.worker.enabled }, connectionsReady: this.vault.configured, mediaReady: Boolean(this.media.signingKey) })));
+    app.get("/api/bridge/api-keys", route((req, res) => res.json({ apiKeys: this.apiKeys.list(req.uid) })));
+    app.post("/api/bridge/api-keys", route((req, res) => res.status(201).json(this.apiKeys.create(req.uid, req.body))));
+    app.delete("/api/bridge/api-keys/:id", route((req, res) => res.json(this.apiKeys.remove(req.uid, req.params.id))));
     app.get("/api/bridge/projects", route((req, res) => res.json({ projects: this.projects.list(req.uid) })));
     app.post("/api/bridge/projects", route((req, res) => res.status(201).json({ project: this.projects.create(req.uid, req.body) })));
     app.patch(root, route((req, res) => res.json({ project: this.projects.update(req.uid, req.params.projectId, req.body) })));

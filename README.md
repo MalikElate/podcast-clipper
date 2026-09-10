@@ -12,8 +12,9 @@ Bridge is a publishing workspace with a standalone podcast clipping studio. Proj
 - Separate durable deliveries for every account, automatic quota overflow queues, subsequent submissions joining the existing queue, queue editing/deletion/reordering, and independent retries.
 - Per-post and per-account analytics, the same post across accounts, combined post totals, comparison of selected posts, and an account's best-performing posts. Missing metrics remain unavailable instead of becoming zero.
 - YouTube source clipping with local Whisper timestamps, Gemini moment selection, vertical FFmpeg rendering, subtitles, clip ranking, and individual or bulk ZIP downloads. Clips can be downloaded without connecting social accounts or publishing anything.
+- Configuration screens for workspace/project settings, service readiness, API-key management, and plan comparison. API keys are stored as hashes, shown only once, and can authenticate REST and CLI requests until revoked.
 
-Collaborators and pricing/billing are intentionally deferred. Provider restrictions mean the publishing API supports a subset of each platform's native app features; see [platform setup and formats](docs/platforms.md).
+Collaborators and payment-provider checkout are intentionally deferred. The Billing screen presents the planned tiers but cannot change a subscription yet. Provider restrictions mean the publishing API supports a subset of each platform's native app features; see [platform setup and formats](docs/platforms.md).
 
 ## Current readiness
 

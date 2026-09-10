@@ -20,6 +20,8 @@ The Docker/Compose files are provided for this topology. They were not built in 
 
 Never copy runtime secrets into `VITE_*` variables. Firebase Web configuration is public and is intentionally a frontend build input. Do not change the encryption key without migrating/re-encrypting stored credentials; doing so makes existing connections unreadable. Keep backups of the keys separately from data backups.
 
+Workspace API keys are created from Configuration → API Keys. The full key is displayed only once; store it in the client's secret manager and send it as `Authorization: Bearer br_live_…`. Revoking the key immediately stops new authenticated requests. Treat it with the same care as a Firebase session because it has the creating user's workspace access.
+
 ## Build and run
 
 From the repository root on a Docker host:

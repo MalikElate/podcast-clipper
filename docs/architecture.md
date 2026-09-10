@@ -4,7 +4,7 @@ Bridge separates domain behavior, provider integrations, storage, transport, wor
 
 ## Composition and boundaries
 
-`BridgeApplication` creates the repository, media storage, credential vault, locks, providers, and domain services. Its routes authenticate the Firebase user, parse requests, call the relevant service, and serialize results. Worker startup is separate from HTTP composition, so tests can exercise routes without publishing anything.
+`BridgeApplication` creates the repository, media storage, credential vault, locks, providers, and domain services. Its routes authenticate a Firebase user or a `br_live_` API key, parse requests, call the relevant service, and serialize results. API keys retain the creating user's workspace permissions, are returned in full only once, and are persisted as SHA-256 digests. Worker startup is separate from HTTP composition, so tests can exercise routes without publishing anything.
 
 | Component | Responsibility |
 | --- | --- |
@@ -18,6 +18,7 @@ Bridge separates domain behavior, provider integrations, storage, transport, wor
 | `AnalyticsService` | Provider metric synchronization, null handling, aggregation and coverage |
 | `ClippingService` | Durable source-to-clips jobs; delegates each pipeline stage |
 | `DownloadService` | Short-lived, single-use ZIP download tickets |
+| `ApiKeyService` | Hashed personal API-key creation, authentication, usage timestamps and revocation |
 | `SqliteStore` | Durable entities, indexes, revisions, transactions, OAuth state and worker leases |
 
 There is one logical post and one delivery per selected account. A post is the unit used for cross-account comparison. A delivery stores its own destination, requested time, effective queue time, progress, result, retry count, metrics, and immutable content snapshot once processing starts.
@@ -78,7 +79,7 @@ The shell mounts `Composer`, `PostsQueue`, `Accounts`, `MediaLibrary`, `Analytic
 
 Clipping stages are injected into `ClippingService`: metadata, download, audio extraction, transcription, moment selection and rendering. Replacing the AI selector or source downloader does not change posts, accounts, analytics or the publishing adapters. Completed clips enter the same media library as direct uploads.
 
-Pricing and collaborators can be introduced through entitlement and project-access services later. They are not embedded in provider code or the media pipeline. No collaborator routes or billing behavior are included now.
+The interface includes plan comparison while payment-provider checkout and entitlement enforcement remain separate future services. Collaborators can be introduced through a project-access service later. Neither concern is embedded in provider code or the media pipeline.
 
 ## Storage and operations
 
