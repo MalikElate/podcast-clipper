@@ -13,12 +13,14 @@ import {
 import { SiBluesky } from "react-icons/si";
 import { api } from "./BridgeApi.js";
 import { Icon } from "./Icons.jsx";
+import { PLATFORM_COLORS } from "./platforms.js";
 
 export const number = value => Number.isFinite(value) ? new Intl.NumberFormat(undefined, { notation: value >= 100000 ? "compact" : "standard", maximumFractionDigits: 1 }).format(value) : "—";
 export const dateTime = (value, timeZone) => value ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short", timeZone }).format(new Date(value)) : "—";
 export const statusLabel = value => (value || "unknown").replaceAll("_", " ");
 export function Badge({ status, children }) { return <span className={`bridge-badge ${status || ""}`}>{children || statusLabel(status)}</span>; }
 export function PlatformIcon({ platform, size = 22 }) {
+  const gradientId = useId();
   const icons = {
     bluesky: SiBluesky,
     facebook: FaFacebook,
@@ -33,10 +35,29 @@ export function PlatformIcon({ platform, size = 22 }) {
   };
   const PlatformLogo = icons[platform];
   if (!PlatformLogo) return <span className="bridge-platform-icon bridge-platform-icon-fallback" style={{ width: size, height: size }} aria-hidden="true" />;
+  let logo;
   if (platform === "instagram") {
-    return <span className="bridge-platform-icon bridge-platform-icon-instagram" style={{ width: size, height: size }} aria-hidden="true"><PlatformLogo /></span>;
+    logo = <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <defs><linearGradient id={gradientId} x1="0" y1="1" x2="1" y2="0"><stop stopColor="#ffcf58"/><stop offset=".35" stopColor="#f77737"/><stop offset=".65" stopColor="#e1306c"/><stop offset="1" stopColor="#833ab4"/></linearGradient></defs>
+      <rect width="24" height="24" rx="6" fill={`url(#${gradientId})`}/>
+      <rect x="4.5" y="4.5" width="15" height="15" rx="4.5" fill="none" stroke="white" strokeWidth="1.8"/>
+      <circle cx="12" cy="12" r="3.6" fill="none" stroke="white" strokeWidth="1.8"/><circle cx="17" cy="7" r="1.1" fill="white"/>
+    </svg>;
+  } else if (platform === "tiktok") {
+    logo = <span className="social-tiktok-layers">
+      <FaTiktok style={{ color: "#25f4ee", transform: "translate(-1px, -1px)" }}/><FaTiktok style={{ color: "#fe2c55", transform: "translate(1px, 1px)" }}/><FaTiktok style={{ color: "#111111" }}/>
+    </span>;
+  } else if (platform === "google_business") {
+    logo = <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+      <path fill="#4285f4" d="M43.61 24.46c0-1.36-.12-2.66-.35-3.92H24v7.42h11a9.4 9.4 0 0 1-4.08 6.17v5h6.61c3.87-3.56 6.08-8.8 6.08-14.67Z"/>
+      <path fill="#34a853" d="M24 44c5.51 0 10.13-1.83 13.51-4.96l-6.61-5c-1.84 1.23-4.19 1.98-6.9 1.98-5.32 0-9.83-3.59-11.45-8.42H5.72v5.16A20 20 0 0 0 24 44Z"/>
+      <path fill="#fbbc05" d="M12.55 27.6A12 12 0 0 1 12 24c0-1.25.2-2.46.55-3.6v-5.16H5.72A20 20 0 0 0 4 24c0 3.22.78 6.28 1.72 8.76Z"/>
+      <path fill="#ea4335" d="M24 11.98c3 0 5.68 1.03 7.8 3.04l5.85-5.85C34.12 5.88 29.51 4 24 4A20 20 0 0 0 5.72 15.24l6.83 5.16C14.17 15.57 18.68 11.98 24 11.98Z"/>
+    </svg>;
+  } else {
+    logo = <PlatformLogo aria-hidden="true" focusable="false"/>;
   }
-  return <PlatformLogo className={`bridge-platform-icon bridge-platform-icon-${platform}`} size={size} aria-hidden="true" focusable="false" />;
+  return <span className="social-brand-icon" data-platform={platform} style={{ width: size, height: size, color: PLATFORM_COLORS[platform] }} aria-hidden="true">{logo}</span>;
 }
 export function PlatformBadge({ platform, catalog = [], size = "" }) { const info = catalog.find(item => item.id === platform); return <span className={`bridge-platform-badge ${size}`} style={{ "--platform-color": info?.color || "#8eabef" }} title={info?.name || platform}><PlatformIcon platform={platform} size={size === "large" ? 25 : 20}/></span>; }
 export function Empty({ icon = "media", title, children, action }) { return <div className="bridge-empty"><div className="bridge-empty-icon"><Icon name={icon} size={29}/></div><h2>{title}</h2><p>{children}</p>{action}</div>; }

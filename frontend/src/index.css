@@ -1399,9 +1399,10 @@ input[type="range"]::-moz-range-thumb {
 .hero-copy { position: relative; z-index: 1; display: flex; width: 100%; max-width: 960px; flex-direction: column; align-items: center; }
 .hero-platforms { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 11px; margin-bottom: 24px; }
 .landing-platform-mark { display: grid; place-items: center; width: 30px; height: 30px; flex: 0 0 auto; color: var(--platform-color); }
-.landing-platform-mark svg { display: block; }
-.bridge-platform-icon-instagram { display: grid; place-items: center; border-radius: 28%; padding: 12%; color: #fff; background: linear-gradient(145deg,#8d57d8 5%,#db5b9c 45%,#ef8f6c 78%,#f5bd68); }
-.landing-platform-mark .bridge-platform-icon-instagram svg { width: 100%; height: 100%; }
+.social-brand-icon { display: inline-grid; place-items: center; flex: 0 0 auto; line-height: 0; }
+.social-brand-icon > svg { display: block; width: 100%; height: 100%; }
+.social-tiktok-layers { position: relative; display: block; width: 100%; height: 100%; }
+.social-tiktok-layers > svg { position: absolute; inset: 6%; width: 88%; height: 88%; }
 .bridge-platform-icon-fallback { display: inline-block; border: 2px solid currentColor; border-radius: 50%; }
 .hero-kicker, .section-eyebrow, .preview-kicker, .feature-row-eyebrow { color: var(--accent-hover); font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
 .hero-kicker { display: inline-flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid rgba(92,125,255,.25); border-radius: 999px; background: rgba(69,105,245,.08); }
@@ -1422,8 +1423,7 @@ input[type="range"]::-moz-range-thumb {
 .platform-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 28px 34px; margin-top: 48px; }
 .platform-card { display: flex; align-items: center; gap: 13px; min-width: 0; }
 .platform-card .landing-platform-mark { width: 36px; height: 36px; }
-.platform-card .landing-platform-mark svg { width: 29px; height: 29px; }
-.platform-card .landing-platform-mark .bridge-platform-icon-instagram { width: 29px !important; height: 29px !important; }
+.platform-card .landing-platform-mark > .social-brand-icon { width: 28px !important; height: 28px !important; }
 .platform-card > div { min-width: 0; }
 .platform-card h3 { overflow: hidden; margin: 0; color: var(--text); font-size: 13px; letter-spacing: -.025em; text-overflow: ellipsis; white-space: nowrap; }
 .platform-card p { display: -webkit-box; overflow: hidden; margin: 4px 0 0; color: var(--text-faint); font-size: 9px; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
@@ -1479,8 +1479,7 @@ input[type="range"]::-moz-range-thumb {
   .landing .landing-title { font-size: clamp(38px,10.75vw,48px); }
   .hero-platforms { flex-wrap: nowrap; gap: 10px; margin-bottom: 22px; }
   .hero-platforms .landing-platform-mark { width: 23px; height: 23px; }
-  .hero-platforms .landing-platform-mark svg { width: 20px; height: 20px; }
-  .hero-platforms .landing-platform-mark .bridge-platform-icon-instagram { width: 20px !important; height: 20px !important; }
+  .hero-platforms .landing-platform-mark > .social-brand-icon { width: 20px !important; height: 20px !important; }
   .landing-hero { min-height: 0; padding: 54px 0 68px; }
   .landing-section { padding: 76px 0; }
   .platform-section { padding-bottom: 72px; }

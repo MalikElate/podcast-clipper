@@ -3,7 +3,7 @@ import { api } from "./BridgeApi.js";
 import { Icon } from "./Icons.jsx";
 import { Alert, Badge, Check, dateTime, Field, Modal, PlatformIcon } from "./ui.jsx";
 
-const platformOrder = ["bluesky", "facebook", "instagram", "linkedin", "pinterest", "threads", "tiktok", "x", "youtube", "google_business"];
+import { sortPlatforms } from "./platforms.js";
 
 export default function Accounts({ project, accounts, catalog, config, onChanged, connectionId, clearConnection }) {
   const [error, setError] = useState(""), [busy, setBusy] = useState(""), [bluesky, setBluesky] = useState(false), [handle, setHandle] = useState(""), [pending, setPending] = useState(null), [selected, setSelected] = useState([]), [disconnect, setDisconnect] = useState(null), [details, setDetails] = useState(null);
@@ -34,7 +34,7 @@ export default function Accounts({ project, accounts, catalog, config, onChanged
     catch (error) { setError(error.message); } finally { setBusy(""); }
   }
   const connected = accounts.filter(account => account.status !== "disconnected");
-  const platforms = [...catalog].sort((a, b) => platformOrder.indexOf(a.id) - platformOrder.indexOf(b.id));
+  const platforms = sortPlatforms(catalog);
   return <><div className="bridge-intro-row"><p>Connect the profiles, pages, and channels for <strong>{project.name}</strong>. Each account publishes independently.</p><Badge status="connected">{connected.length} connected</Badge></div><Alert message={error}/>
     <div className="bridge-connections-board" aria-label="Social connection board">{platforms.map(platform => {
       const platformAccounts = connected.filter(account => account.platform === platform.id);

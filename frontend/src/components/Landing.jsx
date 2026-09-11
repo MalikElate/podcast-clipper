@@ -1,8 +1,9 @@
 import { PlatformIcon } from "../bridge/ui.jsx";
 import BrandLogo from "./BrandLogo.jsx";
 import Waveform from "./Waveform.jsx";
+import { sortPlatforms } from "../bridge/platforms.js";
 
-const PLATFORMS = [
+const PLATFORMS = sortPlatforms([
   { id: "x", name: "X", color: "#171717", formats: "Text, images, video" },
   { id: "instagram", name: "Instagram", color: "#d94686", formats: "Images, video, carousels, stories" },
   { id: "linkedin", name: "LinkedIn", color: "#0a66c2", formats: "Text, images, video, documents" },
@@ -13,7 +14,7 @@ const PLATFORMS = [
   { id: "threads", name: "Threads", color: "#111111", formats: "Text, images, video, carousels" },
   { id: "pinterest", name: "Pinterest", color: "#e60023", formats: "Images, video, carousels" },
   { id: "google_business", name: "Google Business", color: "#4285f4", formats: "Updates, images, carousels" },
-];
+]);
 
 const STEPS = [
   {

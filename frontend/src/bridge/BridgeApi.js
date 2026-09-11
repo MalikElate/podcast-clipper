@@ -1,4 +1,5 @@
 import { getAuthToken } from "../AuthContext.jsx";
+import { normalizePlatformCollections } from "./platforms.js";
 export const localPreview = import.meta.env.DEV && import.meta.env.VITE_BRIDGE_LOCAL_PREVIEW === "true";
 export class BridgeApi {
   async headers(json = true) {
@@ -14,7 +15,7 @@ export class BridgeApi {
       Object.assign(error, { code: data.code, details: data.details, status: res.status });
       throw error;
     }
-    return data;
+    return normalizePlatformCollections(data);
   }
   projectPath(projectId, path = "") { return `/projects/${encodeURIComponent(projectId)}${path}`; }
   getProjects(signal) { return this.request("/projects", { signal }); }
