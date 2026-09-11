@@ -111,7 +111,6 @@ export default function Landing({ onGetStarted }) {
             </p>
             <div className="hero-actions">
               <button className="btn-primary landing-cta" onClick={onGetStarted}>Create your first post <ArrowIcon /></button>
-              <a className="text-link" href="#platforms">See supported platforms <ArrowIcon /></a>
             </div>
           </div>
         </section>
