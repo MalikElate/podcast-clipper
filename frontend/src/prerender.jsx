@@ -3,9 +3,10 @@ import { renderToString } from "react-dom/server";
 import Landing from "./components/Landing.jsx";
 import LegalPage from "./components/LegalPage.jsx";
 import Pricing from "./components/Pricing.jsx";
+import NotFound from "./components/NotFound.jsx";
 
 export function render(kind) {
   return renderToString(kind
-    ? kind === "pricing" ? <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><Pricing /></div></div> : <LegalPage kind={kind} />
+    ? kind === "pricing" ? <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><Pricing /></div></div> : kind === "not-found" ? <NotFound /> : <LegalPage kind={kind} />
     : <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><Landing /></div></div>);
 }

@@ -4,6 +4,7 @@ import Auth from "./components/Auth.jsx";
 import Landing from "./components/Landing.jsx";
 import LegalPage from "./components/LegalPage.jsx";
 import Pricing from "./components/Pricing.jsx";
+import NotFound from "./components/NotFound.jsx";
 import { PLANS } from "./pricing.js";
 import { api, localPreview } from "./bridge/BridgeApi.js";
 const BridgeApp = lazy(() => import("./bridge/BridgeApp.jsx"));
@@ -16,6 +17,7 @@ export default function App() {
     return <LegalPage kind={isPrivacyPage ? "privacy" : "terms"} />;
   }
   if (pathname === "/pricing") return <PricingSurface />;
+  if (pathname !== "/") return <NotFound />;
 
   return <AppSurface />;
 }
