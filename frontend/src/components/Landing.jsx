@@ -243,6 +243,7 @@ export default function Landing({ onGetStarted }) {
           <div className="footer-links">
             <div><span>Explore</span><a href="#how-it-works">How it works</a><a href="#why-bridge">Why Bridge</a><a href="#faq">FAQ</a></div>
             <div><span>Get started</span><button onClick={onGetStarted}>Create your first post</button><a href="mailto:hello@findmeadow.com">Contact us</a></div>
+            <div><span>Legal</span><a href="/terms">Terms of service</a><a href="/privacy">Privacy policy</a></div>
           </div>
         </div>
         <div className="footer-bottom">
