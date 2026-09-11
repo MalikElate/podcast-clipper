@@ -1,5 +1,5 @@
 :root {
-  --bg: #edf2e4;
+  --bg: #f4f7ee;
   --surface: #fcfdf8;
   --surface-2: #e4ebd9;
   --surface-3: #d7e3ca;
@@ -65,8 +65,8 @@ h1, h2, h3 {
   z-index: 0;
   pointer-events: none;
   background:
-    linear-gradient(rgba(252, 251, 246, 0.28), rgba(249, 249, 241, 0.38)),
-    url("/meadow-background-v2.webp") center / cover no-repeat;
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 252, 0.94) 0 22%, rgba(244, 247, 238, 0.28) 58%),
+    url("/meadow-botanicals.svg") center / cover no-repeat;
   content: "";
 }
 
@@ -108,7 +108,9 @@ h1, h2, h3 {
 
 @media (max-width: 720px) {
   .app::before {
-    background-position: 58% center;
+    background-position: center, center top;
+    background-repeat: no-repeat, repeat-y;
+    background-size: auto, auto 720px;
   }
 }
 

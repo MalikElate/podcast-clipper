@@ -8,12 +8,12 @@
 .preview-thumb .waveform-bar { background: #9ac6a3; }
 .landing-header, .legal-header, .legal-footer { border-color: var(--border); }
 .bridge.bridge[data-theme=light] {
-  --b-bg: #edf2e4; --b-panel: #fcfdf8; --b-raised: #e4ebd9;
+  --b-bg: #f4f7ee; --b-panel: #fcfdf8; --b-raised: #e4ebd9;
   --b-line: #cbd8bd; --b-text: #233247; --b-muted: #536256;
   --b-blue: #b85820; --b-blue-dark: #994719;
   background:
-    linear-gradient(rgba(252, 251, 246, 0.38), rgba(249, 249, 241, 0.5)),
-    url("/meadow-background-v2.webp") center / cover fixed no-repeat;
+    linear-gradient(rgba(250, 252, 246, 0.62), rgba(247, 250, 242, 0.72)),
+    url("/meadow-botanicals.svg") center / cover fixed no-repeat;
 }
 .bridge.bridge[data-theme=light] .bridge-sidebar { background: #e4ebd9; }
 .bridge.bridge[data-theme=light] .bridge-nav-item.active { background: #d7e3ca; color: #233247; border-color: #a5b697; }
@@ -25,5 +25,9 @@
 .bridge.bridge[data-theme=light] .bridge-modal { background: #fcfdf8; border-color: #cbd8bd; }
 
 @media (max-width: 720px) {
-  .bridge.bridge[data-theme=light] { background-position: center, 58% center; }
+  .bridge.bridge[data-theme=light] {
+    background-position: center, center top;
+    background-repeat: no-repeat, repeat-y;
+    background-size: auto, auto 720px;
+  }
 }
