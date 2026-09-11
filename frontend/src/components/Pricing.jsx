@@ -27,7 +27,6 @@ export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error =
 
       <main className="pricing-main">
         <section className="pricing-intro">
-          <span className="pricing-kicker">Simple plans, no posting limits</span>
           <h1>Choose the space your publishing needs.</h1>
           <p>Every plan includes unlimited posts and scheduling. Pick the number of connected accounts and level of support that fit your workflow.</p>
           <div className="pricing-cycle" role="group" aria-label="Billing frequency">
