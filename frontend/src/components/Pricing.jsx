@@ -20,7 +20,7 @@ export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error =
       <header className="landing-header">
         <a className="landing-logo-link" href="/" aria-label="Meadow home"><BrandLogo /></a>
         <nav className="landing-nav" aria-label="Main navigation">
-          <a href="/#platforms">Platforms</a><a href="/pricing" aria-current="page">Pricing</a><a href="/#faq">FAQ</a>
+          <a href="/pricing" aria-current="page">Pricing</a><a href="/#faq">FAQ</a>
         </nav>
         <div className="landing-actions"><button className="btn-ghost" onClick={onSignIn}>Sign in</button><button className="btn-small-primary" onClick={onSignIn}>Start posting <ArrowIcon /></button></div>
       </header>

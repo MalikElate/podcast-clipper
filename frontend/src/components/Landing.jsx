@@ -71,7 +71,6 @@ export default function Landing({ onGetStarted }) {
           <BrandLogo />
         </a>
         <nav className="landing-nav" aria-label="Main navigation">
-          <a href="#platforms">Platforms</a>
           <a href="#features">Features</a>
           <a href="/pricing">Pricing</a>
           <a href="#faq">FAQ</a>
