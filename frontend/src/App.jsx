@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useAuth } from "./AuthContext.jsx";
 import Auth from "./components/Auth.jsx";
 import Landing from "./components/Landing.jsx";
 import LegalPage from "./components/LegalPage.jsx";
-import BridgeApp from "./bridge/BridgeApp.jsx";
+const BridgeApp = lazy(() => import("./bridge/BridgeApp.jsx"));
 import { localPreview } from "./bridge/BridgeApi.js";
 
 export default function App() {
@@ -21,11 +21,7 @@ function AppSurface() {
   const { user } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
 
-  if (user === undefined && !localPreview) {
-    return <div className="bridge bridge-loading" data-theme="light">Loading Meadow…</div>;
-  }
-
-  if (user || localPreview) return <BridgeApp />;
+  if (user || localPreview) return <Suspense fallback={<PublicLanding onGetStarted={() => setShowAuth(true)} />}><BridgeApp /></Suspense>;
 
   if (showAuth) {
     return (
@@ -39,12 +35,16 @@ function AppSurface() {
     );
   }
 
+  return <PublicLanding onGetStarted={() => setShowAuth(true)} />;
+}
+
+export function PublicLanding({ onGetStarted }) {
   return (
     <div className="app">
       <div className="app-glow app-glow-a" />
       <div className="app-glow app-glow-b" />
       <div className="centered-shell landing-shell">
-        <Landing onGetStarted={() => setShowAuth(true)} />
+        <Landing onGetStarted={onGetStarted} />
       </div>
     </div>
   );
