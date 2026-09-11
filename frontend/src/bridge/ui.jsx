@@ -4,6 +4,7 @@ import {
   FaGoogle,
   FaInstagram,
   FaLinkedin,
+  FaPinterest,
   FaPinterestP,
   FaThreads,
   FaTiktok,
@@ -22,15 +23,17 @@ export const number = value => Number.isFinite(value) ? new Intl.NumberFormat(un
 export const dateTime = (value, timeZone) => value ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short", timeZone }).format(new Date(value)) : "—";
 export const statusLabel = value => (value || "unknown").replaceAll("_", " ");
 export function Badge({ status, children }) { return <span className={`bridge-badge ${status || ""}`}>{children || statusLabel(status)}</span>; }
-export function PlatformIcon({ platform, size = 22 }) {
+export function PlatformIcon({ platform, size = 22, variant = "default" }) {
   const gradientId = useId();
+  const isHero = variant === "hero";
+  const heroColors = { x: "#666666", linkedin: "#60a8ce", facebook: "#6bb0fa", tiktok: "#595959", youtube: "#ff6164", bluesky: "#68a9ff", threads: "#595959", pinterest: "#d7606b" };
   const icons = {
     bluesky: SiBluesky,
     facebook: FaFacebook,
     google_business: FaGoogle,
     instagram: FaInstagram,
     linkedin: FaLinkedin,
-    pinterest: FaPinterestP,
+    pinterest: isHero ? FaPinterest : FaPinterestP,
     threads: FaThreads,
     tiktok: FaTiktok,
     x: FaXTwitter,
@@ -39,7 +42,24 @@ export function PlatformIcon({ platform, size = 22 }) {
   const PlatformLogo = icons[platform];
   if (!PlatformLogo) return <span className="bridge-platform-icon bridge-platform-icon-fallback" style={{ width: size, height: size }} aria-hidden="true" />;
   let logo;
-  if (platform === "instagram") {
+  if (isHero && platform === "x") {
+    logo = <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <rect width="32" height="32" rx="5" fill="currentColor"/>
+      <FaXTwitter x="5" y="5" size={22} fill="white"/>
+    </svg>;
+  } else if (isHero && platform === "tiktok") {
+    logo = <FaTiktok aria-hidden="true" focusable="false"/>;
+  } else if (isHero && platform === "google_business") {
+    logo = <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <path d="M2 12h28v18H2z" fill="#8bb2ff"/>
+      <path d="M16 12h14v18H16z" fill="#80a5f2"/>
+      <path d="M3 2h7L8 14a4 4 0 0 1-8-1Z" fill="#7996d9"/>
+      <path d="M10 2h6v11a4 4 0 0 1-8 1Z" fill="#a2b9f5"/>
+      <path d="M16 2h6l2 12a4 4 0 0 1-8-1Z" fill="#7996d9"/>
+      <path d="M22 2h7l3 11a4 4 0 0 1-8 1Z" fill="#929ddd"/>
+      <FaGoogle x="18" y="20" size={9} fill="white"/>
+    </svg>;
+  } else if (platform === "instagram") {
     logo = <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <defs><linearGradient id={gradientId} x1="0" y1="1" x2="1" y2="0"><stop stopColor="#ffcf58"/><stop offset=".35" stopColor="#f77737"/><stop offset=".65" stopColor="#e1306c"/><stop offset="1" stopColor="#833ab4"/></linearGradient></defs>
       <rect width="24" height="24" rx="6" fill={`url(#${gradientId})`}/>
@@ -62,8 +82,8 @@ export function PlatformIcon({ platform, size = 22 }) {
   } else {
     logo = <PlatformLogo aria-hidden="true" focusable="false"/>;
   }
-  const pixelSize = Math.round(size * 1.04);
-  return <span className="social-brand-icon" data-platform={platform} style={{ width: pixelSize, height: pixelSize, color: PLATFORM_COLORS[platform] }} aria-hidden="true">{logo}</span>;
+  const pixelSize = isHero ? size : Math.round(size * 1.04);
+  return <span className="social-brand-icon" data-platform={platform} style={{ width: pixelSize, height: pixelSize, color: (isHero && heroColors[platform]) || PLATFORM_COLORS[platform], opacity: isHero && platform === "instagram" ? .72 : undefined }} aria-hidden="true">{logo}</span>;
 }
 export function PlatformBadge({ platform, catalog = [], size = "" }) { const info = catalog.find(item => item.id === platform); return <span className={`bridge-platform-badge ${size}`} style={{ "--platform-color": info?.color || "#8eabef" }} title={info?.name || platform}><PlatformIcon platform={platform} size={size === "large" ? 25 : 20}/></span>; }
 export function Empty({ icon = "media", title, children, action }) { return <div className="bridge-empty"><div className="bridge-empty-icon"><Icon name={icon} size={29}/></div><h2>{title}</h2><p>{children}</p>{action}</div>; }

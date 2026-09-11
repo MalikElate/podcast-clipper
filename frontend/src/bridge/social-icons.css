@@ -6,9 +6,3 @@
   width: 29px !important;
   height: 29px !important;
 }
-@media (max-width: 720px) {
-  .hero-platforms .landing-platform-mark > .social-brand-icon[data-platform] {
-    width: 21px !important;
-    height: 21px !important;
-  }
-}

@@ -53,7 +53,7 @@ function FaqIcon() {
   );
 }
 
-function PlatformMark({ platform, className = "" }) {
+function PlatformMark({ platform, className = "", variant = "default" }) {
   return (
     <span
       className={`landing-platform-mark ${className}`}
@@ -62,7 +62,7 @@ function PlatformMark({ platform, className = "" }) {
       aria-label={platform.name}
       title={platform.name}
     >
-      <PlatformIcon platform={platform.id} size={24} />
+      <PlatformIcon platform={platform.id} size={variant === "hero" ? 32 : 24} variant={variant} />
     </span>
   );
 }
@@ -70,7 +70,7 @@ function PlatformMark({ platform, className = "" }) {
 function PlatformStrip() {
   return (
     <div className="hero-platforms" aria-label="Supported social platforms">
-      {PLATFORMS.map((platform) => <PlatformMark platform={platform} key={platform.id} />)}
+      {PLATFORMS.map((platform) => <PlatformMark platform={platform} variant="hero" key={platform.id} />)}
     </div>
   );
 }
@@ -232,8 +232,6 @@ export default function Landing({ onGetStarted }) {
         </div>
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} Meadow</span>
-          <span>Publish across your social media from one place.</span>
-          <span>Only publish media you have permission to use.</span>
         </div>
       </footer>
     </div>
