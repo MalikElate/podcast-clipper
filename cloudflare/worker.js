@@ -4,6 +4,7 @@ import { env } from "cloudflare:workers";
 export class PodcastClipperBackend extends Container {
   defaultPort = 8787;
   sleepAfter = "2h";
+  entrypoint = ["/usr/local/bin/node", "/app/src/server.js"];
   envVars = {
     HOST: "0.0.0.0",
     PORT: "8787",
@@ -36,6 +37,18 @@ export class PodcastClipperBackend extends Container {
     GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET,
     BLUESKY_PRIVATE_KEY: env.BLUESKY_PRIVATE_KEY,
   };
+
+  onStart() {
+    console.log("Meadow backend container started.");
+  }
+
+  onStop() {
+    console.log("Meadow backend container stopped.");
+  }
+
+  onError(error) {
+    console.error("Meadow backend container error:", error);
+  }
 }
 
 export default {
