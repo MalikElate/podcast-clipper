@@ -81,72 +81,6 @@ function PlatformStrip() {
   );
 }
 
-function PreviewPlatforms({ ids }) {
-  return (
-    <div className="preview-platform-pair" aria-hidden="true">
-      {ids.map((id) => {
-        const platform = PLATFORMS.find((item) => item.id === id);
-        return <PlatformMark className="preview-platform-mark" platform={platform} key={id} />;
-      })}
-    </div>
-  );
-}
-
-function WorkspacePreview() {
-  return (
-    <div className="preview-wrap" aria-label="Preview of the Meadow publishing queue">
-      <div className="preview-orbit preview-orbit-a" />
-      <div className="preview-orbit preview-orbit-b" />
-      <div className="preview-window">
-        <div className="preview-window-bar">
-          <span className="preview-dots"><i /><i /><i /></span>
-          <span className="preview-window-title">meadow / publishing queue</span>
-          <span className="preview-live"><span /> connected</span>
-        </div>
-        <div className="preview-window-body">
-          <div className="preview-sidebar">
-            <div className="preview-side-brand"><Waveform bars={4} /></div>
-            <div className="preview-side-line active" />
-            <div className="preview-side-line" />
-            <div className="preview-side-line short" />
-            <div className="preview-side-spacer" />
-            <div className="preview-side-avatar" />
-          </div>
-          <div className="preview-content">
-            <div className="preview-content-heading">
-              <div>
-                <span className="preview-kicker">this week · 8 posts</span>
-                <strong>Every post in one calendar</strong>
-              </div>
-              <span className="preview-chip">queue healthy</span>
-            </div>
-            <div className="preview-clip-list">
-              <div className="preview-clip selected">
-                <PreviewPlatforms ids={["instagram", "facebook"]} />
-                <div className="preview-clip-copy"><strong>Launch day carousel</strong><span>Instagram + Facebook · today 10:00</span></div>
-                <span className="preview-score">scheduled</span>
-              </div>
-              <div className="preview-clip">
-                <PreviewPlatforms ids={["tiktok", "youtube"]} />
-                <div className="preview-clip-copy"><strong>Product demo</strong><span>TikTok + YouTube · published</span></div>
-                <span className="preview-score">live</span>
-              </div>
-              <div className="preview-clip">
-                <PreviewPlatforms ids={["linkedin", "x"]} />
-                <div className="preview-clip-copy"><strong>Founder update</strong><span>LinkedIn + X · tomorrow 09:00</span></div>
-                <span className="preview-score">draft</span>
-              </div>
-            </div>
-            <div className="preview-timeline"><span /><span /><span /><span /><span /><span /><span /><span /><span /></div>
-          </div>
-        </div>
-      </div>
-      <div className="preview-note preview-note-top"><span className="preview-note-dot" /> ten platforms</div>
-      <div className="preview-note preview-note-bottom"><span className="preview-note-icon"><ArrowIcon /></span> one publishing queue</div>
-    </div>
-  );
-}
-
 export default function Landing({ onGetStarted }) {
   return (
     <div className="landing">
@@ -185,7 +119,6 @@ export default function Landing({ onGetStarted }) {
               <span><i /> analytics in one place</span>
             </div>
           </div>
-          <WorkspacePreview />
         </section>
 
         <section className="signal-strip" aria-label="Meadow benefits">
