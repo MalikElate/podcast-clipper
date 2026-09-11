@@ -1436,10 +1436,6 @@ input[type="range"]::-moz-range-thumb {
 .feature-row > svg { margin-top: 2px; color: var(--accent-hover); }
 .feature-row h3 { max-width: 400px; margin: 10px 0 8px; color: var(--text); font-size: 21px; line-height: 1.2; letter-spacing: -.04em; }
 .feature-row p { max-width: 430px; margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.65; }
-.quote-panel { display: flex; flex-direction: column; align-items: center; padding: 72px 28px; border: 1px solid rgba(92,125,255,.29); border-radius: var(--radius-lg); background: radial-gradient(circle at 50% 0%,rgba(69,105,245,.16),transparent 64%),var(--surface); text-align: center; }
-.quote-waveform { height: 28px; margin-bottom: 26px; justify-content: center; opacity: .75; }
-.quote-panel p { max-width: 690px; margin: 0; color: var(--text); font-family: var(--font-display); font-size: clamp(24px,3vw,38px); line-height: 1.15; letter-spacing: -.045em; }
-.quote-panel > span { margin-top: 18px; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
 .faq-section { display: grid; grid-template-columns: minmax(250px,.85fr) minmax(0,1.15fr); gap: clamp(45px,10vw,145px); }
 .compact-heading h2 { font-size: clamp(30px,3.5vw,45px); }
 .faq-list { border-top: 1px solid var(--border); }
@@ -1477,7 +1473,6 @@ input[type="range"]::-moz-range-thumb {
   .platform-section { padding-bottom: 72px; }
   .platform-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 22px 18px; margin-top: 34px; }
   .feature-section, .faq-section { grid-template-columns: 1fr; gap: 42px; padding-top: 0; }
-  .quote-panel { padding: 52px 22px; }
   .footer-main { flex-direction: column; gap: 42px; }
   .footer-links { gap: 44px; }
   .footer-bottom { align-items: flex-start; flex-direction: column; gap: 9px; margin-top: 45px; }

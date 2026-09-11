@@ -1,6 +1,5 @@
 import { PlatformIcon } from "../bridge/ui.jsx";
 import BrandLogo from "./BrandLogo.jsx";
-import Waveform from "./Waveform.jsx";
 import { sortPlatforms } from "../bridge/platforms.js";
 
 const PLATFORMS = sortPlatforms([
@@ -132,12 +131,6 @@ export default function Landing({ onGetStarted }) {
               </article>
             ))}
           </div>
-        </section>
-
-        <section className="quote-panel">
-          <Waveform className="quote-waveform" bars={22} />
-          <p>From draft to scheduled to published, every post stays in view.</p>
-          <span>One composer · one calendar · every connected account</span>
         </section>
 
         <section className="landing-section faq-section" id="faq">
