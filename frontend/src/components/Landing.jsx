@@ -34,6 +34,7 @@ const FEATURES = [
 ];
 
 const CROSSPOST_PLATFORMS = PLATFORMS.filter((platform) => ["facebook", "instagram", "x", "linkedin", "tiktok"].includes(platform.id));
+const CROSSPOST_ANGLES = [-90, -18, 54, 126, 198];
 
 function ArrowIcon() {
   return (
@@ -79,9 +80,10 @@ function CrosspostVisual() {
   return (
     <div className="crosspost-visual" role="img" aria-label="A Meadow post connected to Facebook, Instagram, X, LinkedIn, and TikTok">
       <div className="crosspost-lines" aria-hidden="true">
-        {CROSSPOST_PLATFORMS.map((platform, index) => <span className={`crosspost-line crosspost-line-${index + 1}`} key={platform.id} />)}
+        {CROSSPOST_PLATFORMS.map((platform, index) => (
+          <span className="crosspost-line" key={platform.id} style={{ "--platform-angle": `${CROSSPOST_ANGLES[index]}deg` }} />
+        ))}
       </div>
-      <span className="crosspost-source-node" aria-hidden="true">Post</span>
       <span className="crosspost-flower-node" aria-hidden="true">
         <svg className="crosspost-line-mark" viewBox="0 0 92 92" fill="none">
           <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
@@ -93,7 +95,7 @@ function CrosspostVisual() {
       </span>
       <div className="crosspost-platform-nodes" aria-hidden="true">
         {CROSSPOST_PLATFORMS.map((platform, index) => (
-          <span className="crosspost-platform-node" key={platform.id} style={{ "--platform-top": `${18 + index * 16}%`, "--platform-color": platform.color }}>
+          <span className="crosspost-platform-node" key={platform.id} style={{ "--platform-angle": `${CROSSPOST_ANGLES[index]}deg`, "--platform-color": platform.color }}>
             <PlatformIcon platform={platform.id} size={25} />
           </span>
         ))}
@@ -137,7 +139,6 @@ export default function Landing({ onGetStarted }) {
 
         <section className="landing-section crosspost-section" aria-labelledby="crosspost-title">
           <div className="crosspost-copy">
-            <span className="section-eyebrow">Cross-posting</span>
             <h2 id="crosspost-title">One post, every platform <span>in sync.</span></h2>
             <p>Create once, then send the right version to every connected account from one calm workspace. Meadow keeps the post and its destinations together.</p>
             <div className="crosspost-actions">
