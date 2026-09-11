@@ -1,11 +1,15 @@
 import { Container } from "@cloudflare/containers";
 import { env } from "cloudflare:workers";
 
+const definedEnv = values => Object.fromEntries(
+  Object.entries(values).filter(([, value]) => typeof value === "string" && value.length > 0),
+);
+
 export class PodcastClipperBackend extends Container {
   defaultPort = 8787;
   sleepAfter = "2h";
   entrypoint = ["/usr/local/bin/node", "/app/src/bootstrap.js"];
-  envVars = {
+  envVars = definedEnv({
     HOST: "0.0.0.0",
     PORT: "8787",
     CLERK_SECRET_KEY: env.CLERK_SECRET_KEY,
@@ -36,7 +40,7 @@ export class PodcastClipperBackend extends Container {
     GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET,
     BLUESKY_PRIVATE_KEY: env.BLUESKY_PRIVATE_KEY,
-  };
+  });
 
   onStart() {
     console.log("Meadow backend container started.");
