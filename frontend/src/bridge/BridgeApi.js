@@ -2,7 +2,7 @@ import { getAuthToken } from "../AuthContext.jsx";
 export const localPreview = import.meta.env.DEV && import.meta.env.VITE_BRIDGE_LOCAL_PREVIEW === "true";
 export class BridgeApi {
   async headers(json = true) {
-    const token = await getAuthToken();
+    const token = localPreview ? null : await getAuthToken();
     return { ...(json ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(localPreview ? { "X-Bridge-Preview": "1" } : {}) };
   }
   async request(path, { method = "GET", body, signal } = {}) {

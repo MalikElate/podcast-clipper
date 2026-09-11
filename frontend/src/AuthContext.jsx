@@ -2,10 +2,17 @@ import { createContext, useContext, useEffect, useMemo } from "react";
 import { useAuth as useClerkAuth, useClerk, useUser } from "@clerk/react";
 
 const AuthContext = createContext(null);
-let tokenProvider = async () => null;
+let tokenProvider = null;
+let resolveTokenProviderReady;
+let tokenProviderReady = new Promise(resolve => { resolveTokenProviderReady = resolve; });
+
+function resetTokenProvider() {
+  tokenProviderReady = new Promise(resolve => { resolveTokenProviderReady = resolve; });
+}
 
 export async function getAuthToken() {
-  return tokenProvider();
+  if (!tokenProvider) await tokenProviderReady;
+  return tokenProvider ? tokenProvider() : null;
 }
 
 export function AuthProvider({ children }) {
@@ -33,9 +40,14 @@ function ClerkAuthProvider({ children }) {
   const clerk = useClerk();
 
   useEffect(() => {
-    tokenProvider = () => getToken();
+    const provider = () => getToken();
+    tokenProvider = provider;
+    resolveTokenProviderReady();
     return () => {
-      tokenProvider = async () => null;
+      if (tokenProvider === provider) {
+        tokenProvider = null;
+        resetTokenProvider();
+      }
     };
   }, [getToken]);
 
