@@ -10,7 +10,7 @@
 .bridge.bridge[data-theme=light] {
   --b-bg: #f4f7ee; --b-panel: #fcfdf8; --b-raised: #e4ebd9;
   --b-line: #cbd8bd; --b-text: #233247; --b-muted: #536256;
-  --b-blue: #b85820; --b-blue-dark: #994719;
+  --b-blue: #547af1; --b-blue-dark: #4169e1;
   background:
     linear-gradient(rgba(250, 252, 246, 0.74), rgba(247, 250, 242, 0.82)),
     url("/meadow-botanicals.svg") center / cover fixed no-repeat;
@@ -18,8 +18,8 @@
 .bridge.bridge[data-theme=light] .bridge-sidebar { background: #e4ebd9; }
 .bridge.bridge[data-theme=light] .bridge-nav-item.active { background: #d7e3ca; color: #233247; border-color: #a5b697; }
 .bridge.bridge[data-theme=light] .bridge-nav-item:hover { background: #dce6d0; }
-.bridge.bridge[data-theme=light] .bridge-button:not(.secondary):not(.danger) { background: #df914e; border-color: #ca7c3d; color: #233247; }
-.bridge.bridge[data-theme=light] .bridge-button:not(.secondary):not(.danger):hover { background: #d18443; }
+.bridge.bridge[data-theme=light] .bridge-button:not(.secondary):not(.danger) { background: #547af1; border-color: #4169e1; color: #fff; }
+.bridge.bridge[data-theme=light] .bridge-button:not(.secondary):not(.danger):hover { background: #4169e1; }
 .bridge.bridge[data-theme=light] .bridge-logo, .bridge.bridge[data-theme=light] a { color: #995023; }
 .bridge.bridge[data-theme=light] .bridge-upload-zone { background: #f3f6ec; border-color: #a5b697; }
 .bridge.bridge[data-theme=light] .bridge-modal { background: #fcfdf8; border-color: #cbd8bd; }
