@@ -3,13 +3,13 @@ import { useEffect } from "react";
 const PAGE_COPY = {
   terms: {
     label: "Terms of service",
-    title: "A clear agreement for using Bridge.",
-    intro: "These terms explain the basic rules for using Bridge to create, schedule, and understand social content.",
+    title: "Terms of Service",
+    intro: "These terms explain the basic rules for using Meadow to create, schedule, and understand social content.",
     sections: [
       {
-        heading: "1. Using Bridge",
+        heading: "1. Using Meadow",
         paragraphs: [
-          "Bridge provides tools for organizing media, creating posts, connecting supported accounts, scheduling content, and reviewing delivery and performance information. You may use Bridge only if you can enter into a binding agreement and only in accordance with these terms.",
+          "Meadow provides tools for organizing media, creating posts, connecting supported accounts, scheduling content, and reviewing delivery and performance information. You may use Meadow only if you can enter into a binding agreement and only in accordance with these terms.",
         ],
       },
       {
@@ -21,26 +21,26 @@ const PAGE_COPY = {
       {
         heading: "3. Your content and connected accounts",
         paragraphs: [
-          "You keep ownership of the media, text, and other material you provide to Bridge. You give Bridge permission to process that material only as needed to provide the features you request. You must have the rights and permissions needed to upload, transform, schedule, and publish your content.",
-          "When you connect a third-party account, you authorize Bridge to use the permissions you grant through that platform. You are responsible for following the platform’s rules, including its privacy, music, copyright, and publishing requirements.",
+          "You keep ownership of the media, text, and other material you provide to Meadow. You give Meadow permission to process that material only as needed to provide the features you request. You must have the rights and permissions needed to upload, transform, schedule, and publish your content.",
+          "When you connect a third-party account, you authorize Meadow to use the permissions you grant through that platform. You are responsible for following the platform’s rules, including its privacy, music, copyright, and publishing requirements.",
         ],
       },
       {
         heading: "4. Acceptable use",
         paragraphs: [
-          "Do not use Bridge to break the law, infringe another person’s rights, distribute harmful or malicious material, bypass platform safeguards, or interfere with the service. We may suspend access when necessary to protect the service, users, or connected platforms.",
+          "Do not use Meadow to break the law, infringe another person’s rights, distribute harmful or malicious material, bypass platform safeguards, or interfere with the service. We may suspend access when necessary to protect the service, users, or connected platforms.",
         ],
       },
       {
         heading: "5. Service changes and availability",
         paragraphs: [
-          "Bridge is evolving, so features may change, be limited, or be discontinued. We work to keep the service available, but we do not promise that it will be uninterrupted or error-free.",
+          "Meadow is evolving, so features may change, be limited, or be discontinued. We work to keep the service available, but we do not promise that it will be uninterrupted or error-free.",
         ],
       },
       {
         heading: "6. Disclaimers",
         paragraphs: [
-          "Bridge is provided as available. To the extent allowed by law, Bridge is not responsible for losses caused by content you publish, actions taken by connected platforms, or interruptions outside our reasonable control.",
+          "Meadow is provided as available. To the extent allowed by law, Meadow is not responsible for losses caused by content you publish, actions taken by connected platforms, or interruptions outside our reasonable control.",
         ],
       },
       {
@@ -53,8 +53,8 @@ const PAGE_COPY = {
   },
   privacy: {
     label: "Privacy policy",
-    title: "How Bridge handles your information.",
-    intro: "This policy describes the information Bridge receives, why we use it, and the choices available to you.",
+    title: "Privacy Policy",
+    intro: "This policy describes the information Meadow receives, why we use it, and the choices available to you.",
     sections: [
       {
         heading: "1. Information we receive",
@@ -66,13 +66,13 @@ const PAGE_COPY = {
       {
         heading: "2. How we use information",
         paragraphs: [
-          "We use information to authenticate you, operate your workspace, process and deliver content, maintain security, troubleshoot failures, improve Bridge, and respond to support requests. We use connected-account credentials only to provide the actions you authorize.",
+          "We use information to authenticate you, operate your workspace, process and deliver content, maintain security, troubleshoot failures, improve Meadow, and respond to support requests. We use connected-account credentials only to provide the actions you authorize.",
         ],
       },
       {
         heading: "3. When information is shared",
         paragraphs: [
-          "We share information with service providers that help operate Bridge, such as authentication, hosting, analytics, media-processing, and infrastructure providers. We send content to a connected platform only when you request an action that requires it. We may also disclose information when required by law or when needed to protect the service and its users.",
+          "We share information with service providers that help operate Meadow, such as authentication, hosting, analytics, media-processing, and infrastructure providers. We send content to a connected platform only when you request an action that requires it. We may also disclose information when required by law or when needed to protect the service and its users.",
         ],
       },
       {
@@ -90,7 +90,7 @@ const PAGE_COPY = {
       {
         heading: "6. Updates",
         paragraphs: [
-          "We may update this policy as Bridge changes. The effective date at the top of this page shows when the current version was published.",
+          "We may update this policy as Meadow changes. The effective date at the top of this page shows when the current version was published.",
         ],
       },
       {
@@ -107,25 +107,24 @@ export default function LegalPage({ kind }) {
   const copy = PAGE_COPY[kind] || PAGE_COPY.terms;
 
   useEffect(() => {
-    document.title = `${copy.label} · Bridge`;
+    document.title = `${copy.label} · Meadow`;
   }, [copy.label]);
 
   return (
     <div className="legal-shell">
       <header className="legal-header">
-        <a className="legal-brand" href="/" aria-label="Bridge home">
-          <span className="legal-brand-mark">bridge<span>.</span></span>
+        <a className="legal-brand" href="/" aria-label="Meadow home">
+          <span className="legal-brand-mark">meadow<span>.</span></span>
         </a>
         <nav className="legal-nav" aria-label="Legal navigation">
           <a className={kind === "terms" ? "active" : ""} href="/terms">Terms</a>
           <a className={kind === "privacy" ? "active" : ""} href="/privacy">Privacy</a>
-          <a href="/">Back to Bridge</a>
+          <a href="/">Back to Meadow</a>
         </nav>
       </header>
 
       <main className="legal-page">
         <div className="legal-intro">
-          <span className="section-eyebrow">{copy.label}</span>
           <h1>{copy.title}</h1>
           <p>{copy.intro}</p>
           <span className="legal-effective">Effective September 11, 2026</span>
@@ -143,7 +142,7 @@ export default function LegalPage({ kind }) {
       </main>
 
       <footer className="legal-footer">
-        <span>© {new Date().getFullYear()} Bridge</span>
+        <span>© {new Date().getFullYear()} Meadow</span>
         <span>Questions? <a href="mailto:hello@findmeadow.com">hello@findmeadow.com</a></span>
       </footer>
     </div>

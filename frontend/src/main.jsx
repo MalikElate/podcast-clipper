@@ -5,6 +5,7 @@ import { PostHogProvider, usePostHog } from "posthog-js/react";
 import App from "./App.jsx";
 import { AuthProvider } from "./AuthContext.jsx";
 import "./index.css";
+import "./meadow.css";
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const posthogKey = import.meta.env.VITE_POSTHOG_KEY;

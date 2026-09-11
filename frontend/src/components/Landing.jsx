@@ -51,14 +51,14 @@ function Logo() {
   return (
     <div className="brand">
       <Waveform className="brand-mark" bars={5} />
-      <span className="brand-name">bridge<span className="brand-accent">.</span></span>
+      <span className="brand-name">meadow<span className="brand-accent">.</span></span>
     </div>
   );
 }
 
 function WorkspacePreview() {
   return (
-    <div className="preview-wrap" aria-label="Preview of the Bridge publishing workspace">
+    <div className="preview-wrap" aria-label="Preview of the Meadow publishing workspace">
       <div className="preview-orbit preview-orbit-a" />
       <div className="preview-orbit preview-orbit-b" />
       <div className="preview-window">
@@ -115,12 +115,12 @@ export default function Landing({ onGetStarted }) {
   return (
     <div className="landing">
       <header className="landing-header">
-        <a className="landing-logo-link" href="#top" aria-label="Bridge home">
+        <a className="landing-logo-link" href="#top" aria-label="Meadow home">
           <Logo />
         </a>
         <nav className="landing-nav" aria-label="Main navigation">
           <a href="#how-it-works">How it works</a>
-          <a href="#why-bridge">Why Bridge</a>
+          <a href="#why-bridge">Why Meadow</a>
           <a href="#faq">FAQ</a>
         </nav>
         <div className="landing-actions">
@@ -135,7 +135,7 @@ export default function Landing({ onGetStarted }) {
             <div className="hero-kicker"><span className="hero-kicker-pulse" /> Your content, connected</div>
             <h1 className="landing-title">Move from idea to published without losing the thread.</h1>
             <p className="landing-subtitle">
-              Bridge gives your team one place to turn raw media into platform-ready posts, schedule what’s next, and learn what lands.
+              Meadow gives your team one place to turn raw media into platform-ready posts, schedule what’s next, and learn what lands.
             </p>
             <div className="hero-actions">
               <button className="btn-primary landing-cta" onClick={onGetStarted}>Build your first post <ArrowIcon /></button>
@@ -150,7 +150,7 @@ export default function Landing({ onGetStarted }) {
           <WorkspacePreview />
         </section>
 
-        <section className="signal-strip" aria-label="Bridge benefits">
+        <section className="signal-strip" aria-label="Meadow benefits">
           <span className="signal-label">Everything your content needs to move</span>
           <div className="signal-items">
             <span><strong>01</strong> Create across channels</span>
@@ -181,7 +181,7 @@ export default function Landing({ onGetStarted }) {
           <div className="feature-intro">
             <span className="section-eyebrow">Made for the messy middle</span>
             <h2>The part after making something should not scatter across six tools.</h2>
-            <p>Bridge keeps the plan, the post, and the result in the same conversation.</p>
+            <p>Meadow keeps the plan, the post, and the result in the same conversation.</p>
           </div>
           <div className="feature-list">
             {FEATURES.map((feature, index) => (
@@ -200,8 +200,8 @@ export default function Landing({ onGetStarted }) {
 
         <section className="quote-panel">
           <Waveform className="quote-waveform" bars={22} />
-          <p>“The next post is already in the work. Bridge helps it travel.”</p>
-          <span>Bridge, for the work between the idea and the publish button</span>
+          <p>“The next post is already in the work. Meadow helps it travel.”</p>
+          <span>Meadow, for the work between the idea and the publish button</span>
         </section>
 
         <section className="landing-section faq-section" id="faq">
@@ -211,7 +211,7 @@ export default function Landing({ onGetStarted }) {
           </div>
           <div className="faq-list">
             <details>
-              <summary>What can I manage in Bridge?</summary>
+              <summary>What can I manage in Meadow?</summary>
               <p>Bring in media, write posts, connect accounts, schedule content, and monitor results across the channels where your audience already is.</p>
             </details>
             <details>
@@ -219,7 +219,7 @@ export default function Landing({ onGetStarted }) {
               <p>No. Build a post once, adapt it for each destination, and keep the schedule and delivery state visible from one place.</p>
             </details>
             <details>
-              <summary>Can Bridge help with clips?</summary>
+              <summary>Can Meadow help with clips?</summary>
               <p>Yes. The clipping studio can turn permitted source media into vertical, captioned clips that are ready to add to your publishing queue.</p>
             </details>
           </div>
@@ -230,7 +230,7 @@ export default function Landing({ onGetStarted }) {
             <span className="section-eyebrow">Your next post is already in the work</span>
             <h2>Make it easier to ship the good stuff.</h2>
           </div>
-          <button className="btn-primary landing-cta" onClick={onGetStarted}>Get started with Bridge <ArrowIcon /></button>
+          <button className="btn-primary landing-cta" onClick={onGetStarted}>Get started with Meadow <ArrowIcon /></button>
         </section>
       </main>
 
@@ -241,13 +241,13 @@ export default function Landing({ onGetStarted }) {
             <p>Plan, publish, and learn from the same workspace.</p>
           </div>
           <div className="footer-links">
-            <div><span>Explore</span><a href="#how-it-works">How it works</a><a href="#why-bridge">Why Bridge</a><a href="#faq">FAQ</a></div>
+            <div><span>Explore</span><a href="#how-it-works">How it works</a><a href="#why-bridge">Why Meadow</a><a href="#faq">FAQ</a></div>
             <div><span>Get started</span><button onClick={onGetStarted}>Create your first post</button><a href="mailto:hello@findmeadow.com">Contact us</a></div>
             <div><span>Legal</span><a href="/terms">Terms of service</a><a href="/privacy">Privacy policy</a></div>
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© {new Date().getFullYear()} Bridge</span>
+          <span>© {new Date().getFullYear()} Meadow</span>
           <span>Made for the work that moves people.</span>
           <span>Only process media you have permission to use.</span>
         </div>
