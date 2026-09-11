@@ -92,7 +92,7 @@ export default function Landing({ onGetStarted }) {
               Create text, image, video, and carousel posts. Publish now or schedule them across your connected accounts, then track every delivery in Meadow.
             </p>
             <div className="hero-actions">
-              <button className="btn-primary landing-cta" onClick={onGetStarted}>Create your first post <ArrowIcon /></button>
+              <button className="btn-primary landing-cta" onClick={onGetStarted}>Post for free <ArrowIcon /></button>
             </div>
           </div>
         </section>
