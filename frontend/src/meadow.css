@@ -12,7 +12,7 @@
   --b-line: #cbd8bd; --b-text: #233247; --b-muted: #536256;
   --b-blue: #b85820; --b-blue-dark: #994719;
   background:
-    linear-gradient(rgba(250, 252, 246, 0.62), rgba(247, 250, 242, 0.72)),
+    linear-gradient(rgba(250, 252, 246, 0.74), rgba(247, 250, 242, 0.82)),
     url("/meadow-botanicals.svg") center / cover fixed no-repeat;
 }
 .bridge.bridge[data-theme=light] .bridge-sidebar { background: #e4ebd9; }

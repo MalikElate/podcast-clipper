@@ -1,84 +1,87 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" fill="none">
   <defs>
-    <style>
-      .stem { stroke: #78906f; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-      .vein { stroke: #8fa486; stroke-width: 1.15; stroke-linecap: round; }
-      .petal { fill: #fffdf4; stroke: #b7c5ad; stroke-width: 1.2; }
-      .petal-warm { fill: #e9a66d; stroke: #c77b45; stroke-width: 1.1; }
-      .leaf { fill: #b8c9ad; stroke: #78906f; stroke-width: 1.1; }
-      .leaf-light { fill: #d4dfca; stroke: #92a58a; stroke-width: 1; }
-    </style>
-    <g id="flower">
-      <ellipse class="petal" cx="0" cy="-9" rx="5" ry="9"/>
-      <ellipse class="petal" cx="8.55" cy="-2.8" rx="5" ry="9" transform="rotate(72 8.55 -2.8)"/>
-      <ellipse class="petal" cx="5.3" cy="7.3" rx="5" ry="9" transform="rotate(144 5.3 7.3)"/>
-      <ellipse class="petal" cx="-5.3" cy="7.3" rx="5" ry="9" transform="rotate(216 -5.3 7.3)"/>
-      <ellipse class="petal" cx="-8.55" cy="-2.8" rx="5" ry="9" transform="rotate(288 -8.55 -2.8)"/>
-      <circle cx="0" cy="0" r="3.8" fill="#c56d35"/>
+    <linearGradient id="blade" x1="0" y1="1" x2="1" y2="0">
+      <stop stop-color="#738d62"/>
+      <stop offset="1" stop-color="#b8cba3"/>
+    </linearGradient>
+    <linearGradient id="blade-light" x1="0" y1="1" x2="1" y2="0">
+      <stop stop-color="#9bb28b"/>
+      <stop offset="1" stop-color="#d5e0c8"/>
+    </linearGradient>
+    <radialGradient id="cream-petal">
+      <stop stop-color="#fffdf0"/>
+      <stop offset="1" stop-color="#e8e7cf"/>
+    </radialGradient>
+    <filter id="ground-shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+    <g id="cream-flower">
+      <ellipse cx="0" cy="-6" rx="3.8" ry="6" fill="url(#cream-petal)"/>
+      <ellipse cx="5.7" cy="-1.9" rx="3.8" ry="6" transform="rotate(72 5.7 -1.9)" fill="url(#cream-petal)"/>
+      <ellipse cx="3.5" cy="4.8" rx="3.8" ry="6" transform="rotate(144 3.5 4.8)" fill="url(#cream-petal)"/>
+      <ellipse cx="-3.5" cy="4.8" rx="3.8" ry="6" transform="rotate(216 -3.5 4.8)" fill="url(#cream-petal)"/>
+      <ellipse cx="-5.7" cy="-1.9" rx="3.8" ry="6" transform="rotate(288 -5.7 -1.9)" fill="url(#cream-petal)"/>
+      <circle r="2.7" fill="#cf8148"/>
     </g>
-    <g id="warm-flower">
-      <ellipse class="petal-warm" cx="0" cy="-8" rx="4.6" ry="8"/>
-      <ellipse class="petal-warm" cx="7.6" cy="-2.5" rx="4.6" ry="8" transform="rotate(72 7.6 -2.5)"/>
-      <ellipse class="petal-warm" cx="4.7" cy="6.5" rx="4.6" ry="8" transform="rotate(144 4.7 6.5)"/>
-      <ellipse class="petal-warm" cx="-4.7" cy="6.5" rx="4.6" ry="8" transform="rotate(216 -4.7 6.5)"/>
-      <ellipse class="petal-warm" cx="-7.6" cy="-2.5" rx="4.6" ry="8" transform="rotate(288 -7.6 -2.5)"/>
-      <circle cx="0" cy="0" r="3.5" fill="#fff4c7"/>
+    <g id="orange-flower">
+      <ellipse cx="0" cy="-6" rx="3.6" ry="6" fill="#e59a61"/>
+      <ellipse cx="5.7" cy="-1.9" rx="3.6" ry="6" transform="rotate(72 5.7 -1.9)" fill="#e59a61"/>
+      <ellipse cx="3.5" cy="4.8" rx="3.6" ry="6" transform="rotate(144 3.5 4.8)" fill="#e59a61"/>
+      <ellipse cx="-3.5" cy="4.8" rx="3.6" ry="6" transform="rotate(216 -3.5 4.8)" fill="#e59a61"/>
+      <ellipse cx="-5.7" cy="-1.9" rx="3.6" ry="6" transform="rotate(288 -5.7 -1.9)" fill="#e59a61"/>
+      <circle r="2.5" fill="#fff2c4"/>
     </g>
-    <g id="leaf-pair">
-      <path class="stem" d="M0 18C2 7 2-5 0-19"/>
-      <path class="leaf" d="M1 5C9-7 19-8 23-7C20 2 12 8 1 9Z"/>
-      <path class="vein" d="M3 7C10 3 15-1 20-5"/>
-      <path class="leaf-light" d="M0-5C-7-16-17-17-21-15C-17-7-10-2 0-1Z"/>
-      <path class="vein" d="M-2-3C-8-7-13-10-18-13"/>
+    <g id="soft-tuft">
+      <ellipse cx="0" cy="2" rx="33" ry="8" fill="#617a53" opacity=".15" filter="url(#ground-shadow)"/>
+      <path d="M-4 3C-24-23-24-47-18-70C-3-49 2-25-4 3Z" fill="url(#blade-light)"/>
+      <path d="M-1 4C-10-34-2-67 13-91C18-55 12-22-1 4Z" fill="url(#blade)"/>
+      <path d="M2 4C12-26 29-48 48-60C43-33 27-9 2 4Z" fill="url(#blade-light)"/>
+      <path d="M-5 4C-28-13-45-34-50-53C-27-43-10-23-5 4Z" fill="url(#blade)"/>
+      <path d="M1 5C19-11 38-20 56-20C43-2 24 7 1 5Z" fill="url(#blade)" opacity=".78"/>
     </g>
-    <g id="sprig">
-      <path class="stem" d="M0 31C0 13 3-3 12-25"/>
-      <path class="leaf" d="M5 13C17 3 26 5 29 7C24 15 16 18 6 17Z"/>
-      <path class="leaf-light" d="M4 4C-8-2-15 1-18 4C-12 10-5 11 3 9Z"/>
-      <path class="leaf" d="M8-9C17-15 24-12 26-10C21-4 15-2 8-4Z"/>
-      <circle cx="12" cy="-25" r="3.5" fill="#c56d35"/>
+    <g id="flower-tuft">
+      <use href="#soft-tuft"/>
+      <g stroke="#718863" stroke-width="1.7" stroke-linecap="round">
+        <path d="M4 0C5-24 3-46-4-68"/>
+        <path d="M9 1C17-20 25-38 37-52"/>
+      </g>
+      <g transform="translate(-5 -70)"><use href="#cream-flower"/></g>
+      <g transform="translate(38 -54) scale(.9)"><use href="#orange-flower"/></g>
+    </g>
+    <g id="sprout">
+      <path d="M0 8C1-10 1-22-2-36" stroke="#78906a" stroke-width="1.7" stroke-linecap="round"/>
+      <path d="M0-7C10-20 22-20 29-17C24-6 14-2 0-3Z" fill="url(#blade-light)"/>
+      <path d="M-1-17C-9-29-21-31-27-27C-21-17-12-12-1-13Z" fill="url(#blade)"/>
     </g>
   </defs>
-
-  <g opacity=".28" stroke="#94a98b" stroke-width="1.4" stroke-linecap="round">
-    <path d="M-40 185C170 86 315 92 470 179S781 300 963 199" stroke-dasharray="1 13"/>
-    <path d="M1041 99C1213 15 1440 39 1651 168" stroke-dasharray="1 14"/>
-    <path d="M-62 734C160 614 345 642 502 739S832 872 1020 753" stroke-dasharray="1 13"/>
-    <path d="M1140 684C1299 586 1465 602 1644 730" stroke-dasharray="1 14"/>
+  <g opacity=".68">
+    <g transform="translate(88 154) rotate(-11) scale(.92)"><use href="#flower-tuft"/></g>
+    <g transform="translate(310 80) rotate(14) scale(.55)"><use href="#soft-tuft"/></g>
+    <g transform="translate(538 132) rotate(-8) scale(.52)"><use href="#sprout"/></g>
+    <g transform="translate(1112 88) rotate(11) scale(.58)"><use href="#flower-tuft"/></g>
+    <g transform="translate(1370 168) rotate(-14) scale(.78)"><use href="#soft-tuft"/></g>
+    <g transform="translate(1538 94) rotate(7) scale(.48)"><use href="#sprout"/></g>
+    <g transform="translate(35 408) rotate(10) scale(.57)"><use href="#soft-tuft"/></g>
+    <g transform="translate(188 548) rotate(-13) scale(.48)"><use href="#sprout"/></g>
+    <g transform="translate(376 442) rotate(9) scale(.42)"><use href="#flower-tuft"/></g>
+    <g transform="translate(1245 435) rotate(-9) scale(.44)"><use href="#sprout"/></g>
+    <g transform="translate(1450 555) rotate(15) scale(.62)"><use href="#flower-tuft"/></g>
+    <g transform="translate(1570 385) rotate(-9) scale(.5)"><use href="#soft-tuft"/></g>
+    <g transform="translate(84 842) rotate(-7) scale(.78)"><use href="#soft-tuft"/></g>
+    <g transform="translate(278 760) rotate(13) scale(.43)"><use href="#flower-tuft"/></g>
+    <g transform="translate(500 872) rotate(-12) scale(.58)"><use href="#sprout"/></g>
+    <g transform="translate(1038 808) rotate(10) scale(.55)"><use href="#flower-tuft"/></g>
+    <g transform="translate(1278 874) rotate(-13) scale(.54)"><use href="#sprout"/></g>
+    <g transform="translate(1515 820) rotate(9) scale(.92)"><use href="#flower-tuft"/></g>
   </g>
-
-  <g opacity=".88">
-    <g transform="translate(72 112) rotate(-14) scale(1.25)"><use href="#sprig"/></g>
-    <g transform="translate(152 58) rotate(12)"><use href="#flower"/></g>
-    <g transform="translate(264 148) rotate(20) scale(.9)"><use href="#leaf-pair"/></g>
-    <g transform="translate(405 72) rotate(-18) scale(.72)"><use href="#warm-flower"/></g>
-    <g transform="translate(565 124) rotate(10) scale(.74)"><use href="#sprig"/></g>
-
-    <g transform="translate(1112 88) rotate(17) scale(.8)"><use href="#leaf-pair"/></g>
-    <g transform="translate(1282 145) rotate(-14)"><use href="#warm-flower"/></g>
-    <g transform="translate(1430 72) rotate(22) scale(1.15)"><use href="#sprig"/></g>
-    <g transform="translate(1536 198) rotate(-22) scale(.8)"><use href="#flower"/></g>
-
-    <g transform="translate(55 382) rotate(16) scale(.85)"><use href="#flower"/></g>
-    <g transform="translate(168 504) rotate(-18) scale(1.05)"><use href="#leaf-pair"/></g>
-    <g transform="translate(306 425) rotate(13) scale(.7)"><use href="#sprig"/></g>
-    <g transform="translate(1325 414) rotate(-8) scale(.78)"><use href="#leaf-pair"/></g>
-    <g transform="translate(1464 520) rotate(18) scale(1.08)"><use href="#flower"/></g>
-    <g transform="translate(1560 370) rotate(-12) scale(.72)"><use href="#sprig"/></g>
-
-    <g transform="translate(92 790) rotate(-12) scale(1.08)"><use href="#warm-flower"/></g>
-    <g transform="translate(230 842) rotate(15) scale(.85)"><use href="#sprig"/></g>
-    <g transform="translate(390 748) rotate(-17) scale(.68)"><use href="#leaf-pair"/></g>
-    <g transform="translate(603 820) rotate(11) scale(.82)"><use href="#flower"/></g>
-    <g transform="translate(965 772) rotate(-11) scale(.7)"><use href="#sprig"/></g>
-    <g transform="translate(1178 844) rotate(17) scale(.82)"><use href="#leaf-pair"/></g>
-    <g transform="translate(1375 756) rotate(-18)"><use href="#warm-flower"/></g>
-    <g transform="translate(1530 830) rotate(12) scale(1.08)"><use href="#sprig"/></g>
-  </g>
-
-  <g fill="#c56d35" opacity=".72">
-    <circle cx="222" cy="225" r="2.5"/><circle cx="342" cy="109" r="2"/><circle cx="484" cy="198" r="2.5"/>
-    <circle cx="1190" cy="214" r="2"/><circle cx="1388" cy="252" r="2.5"/><circle cx="1505" cy="308" r="2"/>
-    <circle cx="102" cy="650" r="2"/><circle cx="315" cy="684" r="2.5"/><circle cx="1260" cy="650" r="2.5"/><circle cx="1490" cy="682" r="2"/>
+  <g fill="#8ca17d" opacity=".32">
+    <ellipse cx="230" cy="252" rx="4" ry="7" transform="rotate(-40 230 252)"/>
+    <ellipse cx="655" cy="92" rx="3.5" ry="6" transform="rotate(32 655 92)"/>
+    <ellipse cx="943" cy="132" rx="4" ry="7" transform="rotate(-31 943 132)"/>
+    <ellipse cx="1328" cy="302" rx="3.5" ry="6" transform="rotate(40 1328 302)"/>
+    <ellipse cx="107" cy="665" rx="4" ry="7" transform="rotate(-36 107 665)"/>
+    <ellipse cx="688" cy="790" rx="3.5" ry="6" transform="rotate(34 688 790)"/>
+    <ellipse cx="1175" cy="674" rx="4" ry="7" transform="rotate(-38 1175 674)"/>
+    <ellipse cx="1392" cy="714" rx="3.5" ry="6" transform="rotate(29 1392 714)"/>
   </g>
 </svg>
