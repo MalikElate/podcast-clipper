@@ -5,12 +5,6 @@ const definedEnv = values => Object.fromEntries(
   Object.entries(values).filter(([, value]) => typeof value === "string" && value.length > 0),
 );
 
-const publicPages = new Set(["/", "/pricing", "/terms", "/terms-of-service", "/privacy", "/privacy-policy"]);
-
-function normalizedPath(pathname) {
-  return pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
-}
-
 export class PodcastClipperBackend extends Container {
   defaultPort = 8787;
   sleepAfter = "2h";
@@ -80,11 +74,6 @@ export default {
       return backend.fetch(request);
     }
 
-    const pathname = normalizedPath(url.pathname);
-    if (publicPages.has(pathname) || pathname.startsWith("/assets/")) return workerEnv.ASSETS.fetch(request);
-
-    const fallbackUrl = new URL("/404/index.html", url);
-    const fallback = await workerEnv.ASSETS.fetch(new Request(fallbackUrl, request));
-    return new Response(request.method === "HEAD" ? null : fallback.body, { status: 404, headers: fallback.headers });
+    return workerEnv.ASSETS.fetch(request);
   },
 };
