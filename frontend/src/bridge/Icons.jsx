@@ -1,3 +1,5 @@
+import { MEADOW_LOGO_URL } from "../components/BrandLogo.jsx";
+
 export function Icon({ name, size = 20, ...props }) {
   const paths = {
     compose: <><path d="M12 20H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><path d="m16 3 5 5-9 9-5 1 1-5Z"/></>,
@@ -34,4 +36,4 @@ export function Icon({ name, size = 20, ...props }) {
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>{paths[name] || paths.compose}</svg>;
 }
-export function BridgeMark() { return <svg width="31" height="31" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect width="32" height="32" rx="9" fill="currentColor"/><path d="M8 23V15a8 8 0 0 1 16 0v8M8 17h16M13 17v6m6-6v6" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/></svg>; }
+export function BridgeMark() { return <img src={MEADOW_LOGO_URL} width="31" height="31" alt="" aria-hidden="true" />; }

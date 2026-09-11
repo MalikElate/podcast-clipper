@@ -1,4 +1,4 @@
-export const MEADOW_LOGO_URL = "/meadow-logo.svg";
+export const MEADOW_LOGO_URL = "/meadow-flower-logo.png";
 
 export default function BrandLogo({ className = "" }) {
   return (
