@@ -23,7 +23,7 @@ class FakeProvider extends PlatformProvider {
 function setup(t) {
   let now = Date.parse("2026-09-09T12:00:00Z");
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bridge-test-")), provider = new FakeProvider();
-  const app = new BridgeApplication({ store: new SqliteStore(), registry: new ProviderRegistry([provider]), clock: () => now, env: { BRIDGE_DATA_DIR: dir, BRIDGE_ENCRYPTION_KEY: randomBytes(32).toString("base64"), BRIDGE_MEDIA_SIGNING_KEY: "test-signing-key", BRIDGE_PUBLIC_URL: "https://bridge.example", BRIDGE_APP_URL: "https://bridge.example", BRIDGE_CLIPPING_ENABLED: "false" } });
+  const app = new BridgeApplication({ store: new SqliteStore(), registry: new ProviderRegistry([provider]), clock: () => now, env: { BRIDGE_DATA_DIR: dir, BRIDGE_ENCRYPTION_KEY: randomBytes(32).toString("base64"), BRIDGE_MEDIA_SIGNING_KEY: "test-signing-key", BRIDGE_PUBLIC_URL: "https://bridge.example", BRIDGE_APP_URL: "https://bridge.example" } });
   const project = app.projects.create("alice", { name: "Podcast", timeZone: "Africa/Douala" });
   function account(id, { projectId = project.id, ownerUid = "alice", remoteId = id } = {}) { return app.store.put("account", { id, ownerUid, projectId, platform: "x", remoteId, label: id, rateKey: `x:${remoteId}`, status: "connected", encryptedCredentials: app.vault.encrypt({ accessToken: "test-token" }, `account:${id}`) }); }
   account("one");

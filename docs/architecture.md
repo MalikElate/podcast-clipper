@@ -16,8 +16,6 @@ Meadow separates domain behavior, provider integrations, storage, transport, wor
 | `RateLimitService` | Account-wide reservations, known rolling windows, provider blocks and replanning |
 | `PublishingWorker` | Durable destination claims, uploads, polling, safe retries and interrupted-delivery recovery |
 | `AnalyticsService` | Provider metric synchronization, null handling, aggregation and coverage |
-| `ClippingService` | Durable source-to-clips jobs; delegates each pipeline stage |
-| `DownloadService` | Short-lived, single-use ZIP download tickets |
 | `ApiKeyService` | Hashed personal API-key creation, authentication, usage timestamps and revocation |
 | `SqliteStore` | Durable entities, indexes, revisions, transactions, OAuth state and worker leases |
 
@@ -75,9 +73,7 @@ To add a platform, implement this contract, add a catalog entry, register the pr
 
 ## Feature independence
 
-The shell mounts `Composer`, `PostsQueue`, `Accounts`, `MediaLibrary`, `Analytics`, and `ClippingStudio` by project. Switching users or projects remounts the private workspace and aborts stale reads. The API client obtains a fresh Firebase ID token for authenticated requests.
-
-Clipping stages are injected into `ClippingService`: metadata, download, audio extraction, transcription, moment selection and rendering. Replacing the AI selector or source downloader does not change posts, accounts, analytics or the publishing adapters. Completed clips enter the same media library as direct uploads.
+The shell mounts `Composer`, `PostsQueue`, `Accounts`, and `Analytics` for the user's default project. The API client obtains a fresh Firebase ID token for authenticated requests.
 
 The interface includes plan comparison while payment-provider checkout and entitlement enforcement remain separate future services. Collaborators can be introduced through a project-access service later. Neither concern is embedded in provider code or the media pipeline.
 
@@ -85,7 +81,7 @@ The interface includes plan comparison while payment-provider checkout and entit
 
 SQLite uses WAL mode, immediate write transactions, optimistic revisions, account/time indexes, one-time state, and heartbeating leases. Media files live in private persistent storage, outside the frontend and static routes. AES-256-GCM credentials are bound to their account context. The encryption key is deployment configuration and is never stored with the database.
 
-Shutdown stops new work and waits briefly for active workers. If a provider has not answered before the process exits, saved progress and claims remain for recovery. Interrupted unconfirmed publication pauses for review. Interrupted clipping jobs retain any clips already ingested, report an error after their lease expires, and can be started again.
+Shutdown stops new work and waits briefly for active workers. If a provider has not answered before the process exits, saved progress and claims remain for recovery. Interrupted unconfirmed publication pauses for review.
 
 The supplied deployment targets one persistent server. UI history reads currently return at most 10,000 records per collection/project; paging and archival are the next storage extension for larger installations. The publishing worker filters due active deliveries in SQL, so completed history does not starve older queued work. Quota planning includes all pending deliveries for the relevant remote account. Move repository and media implementations to a shared database/object store before scaling across independent machines; never put this SQLite volume on a network filesystem.
 

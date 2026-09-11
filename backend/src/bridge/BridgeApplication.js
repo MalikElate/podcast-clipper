@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import multer from "multer";
-import { ZipArchive } from "archiver";
 import fs from "node:fs";
 import { randomBytes } from "node:crypto";
 import { rateLimit } from "express-rate-limit";
@@ -17,10 +16,7 @@ import { AccountService } from "./services/AccountService.js";
 import { PostService } from "./services/PostService.js";
 import { RateLimitService } from "./services/RateLimitService.js";
 import { AnalyticsService } from "./services/AnalyticsService.js";
-import { ClippingService } from "./services/ClippingService.js";
-import { DownloadService } from "./services/DownloadService.js";
 import { ApiKeyService } from "./services/ApiKeyService.js";
-import { AffiliateService } from "./services/AffiliateService.js";
 import { PublishingWorker } from "./services/PublishingWorker.js";
 import { SecretVault } from "./core/SecretVault.js";
 import { LockService } from "./core/LockService.js";
@@ -40,7 +36,7 @@ export const route = fn => (req, res, next) => Promise.resolve().then(() => fn(r
 
 /** Composition root. Services, repository, adapters and authentication are replaceable. */
 export class BridgeApplication {
-  constructor({ env = process.env, store, registry, storage, authMiddleware, clock = () => Date.now(), pipeline } = {}) {
+  constructor({ env = process.env, store, registry, storage, authMiddleware, clock = () => Date.now() } = {}) {
     this.env = env; this.clock = clock;
     this.localPreview = env.BRIDGE_LOCAL_PREVIEW === "1" && env.NODE_ENV !== "production";
     this.dataDir = path.resolve(env.BRIDGE_DATA_DIR || path.join(backendDir, ".bridge"));
@@ -49,14 +45,6 @@ export class BridgeApplication {
     fs.mkdirSync(this.dataDir, { recursive: true, mode: 0o700 });
     this.store = store || new SqliteStore(path.join(this.dataDir, "bridge.sqlite"));
     this.apiKeys = new ApiKeyService(this.store, { clock });
-    this.affiliates = new AffiliateService({
-      store: this.store,
-      appUrl: this.appUrl,
-      internalSecret: env.BRIDGE_AFFILIATE_SECRET,
-      commissionRateBps: Number(env.BRIDGE_AFFILIATE_COMMISSION_BPS || 2000),
-      attributionDays: Number(env.BRIDGE_AFFILIATE_ATTRIBUTION_DAYS || 30),
-      clock,
-    });
     this.vault = new SecretVault(env.BRIDGE_ENCRYPTION_KEY);
     this.projects = new ProjectService(this.store);
     this.schedules = new ScheduleService({ clock });
@@ -72,11 +60,9 @@ export class BridgeApplication {
     this.registry = registry || new ProviderRegistry([InstagramProvider, TikTokProvider, YouTubeProvider, FacebookProvider, XProvider, LinkedInProvider, PinterestProvider, ThreadsProvider, BlueskyProvider, GoogleBusinessProvider].map(Provider => new Provider(deps)), { disabled: (env.BRIDGE_DISABLED_PLATFORMS || "").split(",").filter(Boolean) });
     this.media = new MediaService({ store: this.store, projects: this.projects, storage: this.storage, publicUrl: this.publicUrl, signingKey, clock, maxBytes: Number(env.BRIDGE_MAX_UPLOAD_MB || 1024) * 1024 ** 2 });
     this.rates = new RateLimitService({ store: this.store, clock });
-    this.downloads = new DownloadService({ store: this.store, media: this.media, clock });
     this.accounts = new AccountService({ ...deps, registry: this.registry, projects: this.projects, clock, localPreview: this.localPreview });
     this.posts = new PostService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, media: this.media, schedules: this.schedules, rates: this.rates, clock, localPreview: this.localPreview });
     this.analytics = new AnalyticsService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, posts: this.posts, clock });
-    this.clipping = new ClippingService({ store: this.store, projects: this.projects, media: this.media, locks: this.locks, dataDir: this.dataDir, clock, pipeline });
     this.worker = new PublishingWorker({ store: this.store, accounts: this.accounts, registry: this.registry, posts: this.posts, rates: this.rates, media: this.media, locks: this.locks, analytics: this.analytics, clock, enabled: !this.localPreview && env.BRIDGE_PUBLISHING_ENABLED !== "false" });
     const incoming = path.join(this.dataDir, "incoming"); fs.mkdirSync(incoming, { recursive: true, mode: 0o700 });
     this.upload = multer({ dest: incoming, limits: { fileSize: this.media.maxBytes, files: 1, fields: 0 } });
@@ -121,24 +107,6 @@ export class BridgeApplication {
 
   registerPublicRoutes() {
     const app = this.app;
-    app.post("/api/bridge/affiliate/track", rateLimit({ windowMs: 60000, limit: 30, standardHeaders: "draft-7", legacyHeaders: false }), route((req, res) => {
-      res.setHeader("Cache-Control", "no-store");
-      res.status(201).json(this.affiliates.track(req.body.code));
-    }));
-    app.post("/api/bridge/internal/affiliate/conversions", route((req, res) => {
-      res.setHeader("Cache-Control", "no-store");
-      res.status(201).json(this.affiliates.recordConversion(req.headers["x-bridge-affiliate-secret"], req.body));
-    }));
-    app.patch("/api/bridge/internal/affiliate/conversions/:id", route((req, res) => {
-      res.setHeader("Cache-Control", "no-store");
-      res.json(this.affiliates.updateConversionStatus(req.headers["x-bridge-affiliate-secret"], req.params.id, req.body.status));
-    }));
-    app.get("/downloads/:ticket", route((req, res) => {
-      const download = this.downloads.consume(req.params.ticket);
-      req.uid = download.uid; req.params.projectId = download.projectId;
-      res.setHeader("Cache-Control", "no-store");
-      return this.sendArchive(req, res, download.ids);
-    }));
     app.get("/oauth/bluesky/client-metadata.json", route(async (req, res) => res.json((await this.registry.get("bluesky").client()).clientMetadata)));
     app.get("/oauth/bluesky/jwks.json", route(async (req, res) => res.json((await this.registry.get("bluesky").client()).jwks)));
     app.get("/oauth/:platform/callback", route(async (req, res) => {
@@ -160,16 +128,12 @@ export class BridgeApplication {
 
   registerRoutes() {
     const app = this.app, root = "/api/bridge/projects/:projectId";
-    app.get("/api/bridge/config", route((req, res) => res.json({ name: "Meadow", localPreview: this.localPreview, platforms: this.registry.catalog(), maxBatchSize: 100, maxUploadBytes: this.media.maxBytes, features: { clipping: this.env.BRIDGE_CLIPPING_ENABLED !== "false", analytics: true, publishing: this.worker.enabled }, connectionsReady: this.vault.configured, mediaReady: Boolean(this.media.signingKey) })));
+    app.get("/api/bridge/config", route((req, res) => res.json({ name: "Meadow", localPreview: this.localPreview, platforms: this.registry.catalog(), maxBatchSize: 100, maxUploadBytes: this.media.maxBytes, features: { analytics: true, publishing: this.worker.enabled }, connectionsReady: this.vault.configured, mediaReady: Boolean(this.media.signingKey) })));
     app.get("/api/bridge/api-keys", route((req, res) => res.json({ apiKeys: this.apiKeys.list(req.uid) })));
     app.post("/api/bridge/api-keys", route((req, res) => res.status(201).json(this.apiKeys.create(req.uid, req.body))));
     app.delete("/api/bridge/api-keys/:id", route((req, res) => res.json(this.apiKeys.remove(req.uid, req.params.id))));
-    app.get("/api/bridge/affiliate", route((req, res) => res.json(this.affiliates.dashboard(req.uid))));
-    app.post("/api/bridge/affiliate", route((req, res) => res.status(201).json(this.affiliates.enroll(req.uid, req.body))));
-    app.post("/api/bridge/affiliate/claim", route((req, res) => res.json(this.affiliates.claim(req.uid, req.body))));
     app.get("/api/bridge/projects", route((req, res) => res.json({ projects: this.projects.list(req.uid) })));
     app.post("/api/bridge/projects/default", route((req, res) => res.json({ project: this.projects.ensureDefault(req.uid, req.body) })));
-    app.post("/api/bridge/projects", route((req, res) => res.status(201).json({ project: this.projects.create(req.uid, req.body) })));
     app.patch(root, route((req, res) => res.json({ project: this.projects.update(req.uid, req.params.projectId, req.body) })));
     app.post("/api/bridge/schedule/resolve", route((req, res) => res.json(this.schedules.resolve(req.body))));
     app.get(`${root}/accounts`, route((req, res) => res.json({ accounts: this.accounts.list(req.uid, req.params.projectId) })));
@@ -185,12 +149,6 @@ export class BridgeApplication {
       finally { await fs.promises.unlink(req.file.path).catch(() => {}); }
     }));
     app.delete(`${root}/media/:id`, route(async (req, res) => res.json(await this.media.remove(req.uid, req.params.projectId, req.params.id))));
-    app.get(`${root}/media-download`, route((req, res) => {
-      const ids = String(req.query.ids || "").split(",").filter(Boolean);
-      invariant(ids.length > 0 && ids.length <= 100, "Select between 1 and 100 files to download.");
-      return this.sendArchive(req, res, ids);
-    }));
-    app.post(`${root}/downloads`, route((req, res) => res.json(this.downloads.create(req.uid, req.params.projectId, req.body.ids))));
     app.get(`${root}/posts`, route((req, res) => res.json({ posts: this.posts.list(req.uid, req.params.projectId) })));
     app.post(`${root}/posts/preview`, route(async (req, res) => res.json(await this.posts.preview(req.uid, req.params.projectId, req.body))));
     app.post(`${root}/posts`, route(async (req, res) => res.status(201).json(await this.posts.submit(req.uid, req.params.projectId, req.body))));
@@ -201,40 +159,19 @@ export class BridgeApplication {
     app.post(`${root}/deliveries/:id/retry`, route((req, res) => res.json({ post: this.posts.retry(req.uid, req.params.projectId, req.params.id, req.body) })));
     app.get(`${root}/analytics`, route((req, res) => res.json(this.analytics.report(req.uid, req.params.projectId))));
     app.post(`${root}/analytics/refresh`, route(async (req, res) => res.json(await this.analytics.refresh(req.uid, req.params.projectId, req.body))));
-    app.get(`${root}/clips`, route((req, res) => res.json({ jobs: this.clipping.list(req.uid, req.params.projectId) })));
-    app.post(`${root}/clips`, route((req, res) => {
-      invariant(this.env.BRIDGE_CLIPPING_ENABLED !== "false", "Clipping is disabled on this server.", { status: 503 });
-      invariant(this.env.GEMINI_API_KEY, "Clipping is not configured on this server yet.", { status: 503 });
-      res.status(201).json({ job: this.clipping.create(req.uid, req.params.projectId, req.body) });
-    }));
-    app.get(`${root}/clips/:id`, route((req, res) => res.json({ job: this.clipping.get(req.uid, req.params.projectId, req.params.id) })));
-    app.get(`${root}/clips/:id/download`, route((req, res) => this.sendArchive(req, res, this.clipping.get(req.uid, req.params.projectId, req.params.id).clips.filter(clip => !clip.unavailable).map(clip => clip.mediaId))));
-  }
-
-  async sendArchive(req, res, ids) {
-    invariant(ids.length, "There are no files to download.");
-    const records = ids.map(id => this.media.require(req.uid, req.params.projectId, id));
-    invariant(records.every(item => item.status === "ready"), "Some files are not available yet.");
-    const archive = new ZipArchive({ store: true });
-    res.attachment("meadow-media.zip");
-    const completion = new Promise((resolve, reject) => { archive.on("error", reject); res.on("finish", resolve); res.on("close", () => { archive.abort(); resolve(); }); });
-    archive.pipe(res);
-    records.forEach((record, index) => archive.file(this.storage.path(record.storageKey), { name: `${String(index + 1).padStart(2, "0")}-${record.filename}` }));
-    await archive.finalize(); await completion;
   }
   start() {
     this.worker.start();
-    if (this.env.BRIDGE_CLIPPING_ENABLED !== "false") this.clipping.startWorker();
     if (!this.localPreview) {
       this.analyticsTimer = setInterval(() => this.analytics.tick().catch(error => console.error("Analytics worker:", error.code || error.name)), 60000);
       this.analyticsTimer.unref?.();
     }
   }
-  stopWorkers() { this.worker.stop(); this.clipping.stopWorker(); clearInterval(this.analyticsTimer); }
+  stopWorkers() { this.worker.stop(); clearInterval(this.analyticsTimer); }
   async shutdown({ timeoutMs = 25000 } = {}) {
     this.stopWorkers();
     const deadline = Date.now() + timeoutMs;
-    while (this.worker.running || this.clipping.running || this.analytics.running) {
+    while (this.worker.running || this.analytics.running) {
       if (Date.now() >= deadline) return false;
       await new Promise(resolve => setTimeout(resolve, 50));
     }

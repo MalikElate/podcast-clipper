@@ -4,10 +4,9 @@ import Auth from "../components/Auth.jsx";
 import { firebaseConfigured } from "../firebase.js";
 import { api, localPreview } from "./BridgeApi.js";
 import { Icon, BridgeMark } from "./Icons.jsx";
-import { Alert, Field, Modal, TimezoneField, useProjectResource } from "./ui.jsx";
+import { Alert, useProjectResource } from "./ui.jsx";
 import Composer from "./Composer.jsx";
 import Accounts from "./Accounts.jsx";
-import ClippingStudio from "./ClippingStudio.jsx";
 import ClippingStudioComingSoon from "./ClippingStudioComingSoon.jsx";
 import PostsQueue from "./PostsQueue.jsx";
 import PostsCalendar from "./PostsCalendar.jsx";
@@ -15,7 +14,6 @@ import Analytics from "./Analytics.jsx";
 import ConfigurationSettings from "./ConfigurationSettings.jsx";
 import ApiKeys from "./ApiKeys.jsx";
 import Billing from "./Billing.jsx";
-import Affiliate from "./Affiliate.jsx";
 import "./bridge.css";
 
 export const modules = [
@@ -34,55 +32,17 @@ export const postModules = [
   { id: "analytics", name: "Analytics", icon: "analytics" },
 ];
 
-const SHOW_AFFILIATE_PROGRAM = false;
-
 export const configurationModules = [
   { id: "settings", name: "Settings", icon: "settings" },
   { id: "api-keys", name: "API Keys", title: "Agents & API keys", icon: "key" },
   { id: "billing", name: "Billing", title: "Billing & plans", icon: "billing" },
-  ...(SHOW_AFFILIATE_PROGRAM ? [{ id: "affiliate", name: "Affiliate program", icon: "affiliate" }] : []),
 ];
 
 const allModules = [...modules, ...postModules, ...configurationModules];
 const postViewIds = new Set(postModules.map(item => item.id));
 const configurationViewIds = new Set(configurationModules.map(item => item.id));
-const SHOW_WORKSPACE_CONTROLS = false;
-const SHOW_CLIPPING_STUDIO = false;
-const AFFILIATE_ATTRIBUTION_KEY = "bridge-affiliate-attribution";
-
-function savedAttribution() {
-  try {
-    const value = JSON.parse(localStorage.getItem(AFFILIATE_ATTRIBUTION_KEY));
-    if (value?.code && value?.expiresAt > Date.now()) return value;
-    localStorage.removeItem(AFFILIATE_ATTRIBUTION_KEY);
-  } catch {}
-  return null;
-}
-
 export default function BridgeApp() {
   const { user, signOut } = useAuth();
-  const initialReferralCode = useRef(new URLSearchParams(window.location.search).get("ref"));
-  const [attribution, setAttribution] = useState(savedAttribution);
-  useEffect(() => {
-    const code = initialReferralCode.current;
-    if (!code || attribution) return;
-    api.trackAffiliate(code).then(value => {
-      try { localStorage.setItem(AFFILIATE_ATTRIBUTION_KEY, JSON.stringify(value)); } catch {}
-      setAttribution(value);
-    }).catch(() => {});
-  }, [attribution]);
-  useEffect(() => {
-    if ((!user && !localPreview) || !attribution) return;
-    api.claimAffiliate(attribution).then(() => {
-      try { localStorage.removeItem(AFFILIATE_ATTRIBUTION_KEY); } catch {}
-      setAttribution(null);
-    }).catch(error => {
-      if ([404, 410].includes(error.status)) {
-        try { localStorage.removeItem(AFFILIATE_ATTRIBUTION_KEY); } catch {}
-        setAttribution(null);
-      }
-    });
-  }, [user, attribution]);
   if (user === undefined && !localPreview) return <div className="bridge bridge-loading" data-theme="light">Loading Meadow…</div>;
   if (!user && !localPreview) return <div className="bridge bridge-signin" data-theme="light"><div className="bridge-signin-brand"><BridgeMark/><span>meadow</span></div>{firebaseConfigured ? <Auth onBack={() => {}}/> : <div className="bridge-panel"><h1>Your content, connected.</h1><p>Sign-in is being configured. Please check back shortly.</p></div>}</div>;
   return <Workspace key={user?.uid || "preview"} user={user} signOut={signOut}/>;
@@ -90,7 +50,7 @@ export default function BridgeApp() {
 function Workspace({ user, signOut }) {
   const initial = useRef(new URLSearchParams(window.location.search));
   const [view, setView] = useState(allModules.some(item => item.id === initial.current.get("view")) ? initial.current.get("view") : "compose");
-  const [projects, setProjects] = useState([]), [projectId, setProjectId] = useState(""), [config, setConfig] = useState(null), [projectForm, setProjectForm] = useState(null), [error, setError] = useState(initial.current.get("connectionError") || ""), [notice, setNotice] = useState(""), [busy, setBusy] = useState(false), [menuOpen, setMenuOpen] = useState(false), [connectionId, setConnectionId] = useState(initial.current.get("connection") || ""), [seed, setSeed] = useState(null), [scheduledDate, setScheduledDate] = useState(""), [seedVersion, setSeedVersion] = useState(0);
+  const [projects, setProjects] = useState([]), [projectId, setProjectId] = useState(""), [config, setConfig] = useState(null), [error, setError] = useState(initial.current.get("connectionError") || ""), [notice, setNotice] = useState(""), [menuOpen, setMenuOpen] = useState(false), [connectionId, setConnectionId] = useState(initial.current.get("connection") || ""), [scheduledDate, setScheduledDate] = useState(""), [draftVersion, setDraftVersion] = useState(0);
   const [postsOpen, setPostsOpen] = useState(!configurationViewIds.has(initial.current.get("view")));
   const [configurationOpen, setConfigurationOpen] = useState(configurationViewIds.has(initial.current.get("view")));
   const project = projects.find(item => item.id === projectId);
@@ -101,7 +61,7 @@ function Workspace({ user, signOut }) {
     const controller = new AbortController();
     Promise.all([api.getProjects(controller.signal), api.request("/config", { signal: controller.signal })]).then(async ([data, configuration]) => {
       let availableProjects = data.projects;
-      if (!SHOW_WORKSPACE_CONTROLS && !availableProjects.length) {
+      if (!availableProjects.length) {
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
         const { project: defaultProject } = await api.ensureDefaultProject({ name: "Meadow", timeZone }, controller.signal);
         availableProjects = [defaultProject];
@@ -113,17 +73,11 @@ function Workspace({ user, signOut }) {
     return () => controller.abort();
   }, []);
   function navigate(next) { setView(next); if (postViewIds.has(next)) { setPostsOpen(true); setConfigurationOpen(false); } if (configurationViewIds.has(next)) { setConfigurationOpen(true); setPostsOpen(false); } setMenuOpen(false); setError(""); setNotice(""); }
-  function compose(media = [], date = "") { setSeed(media); setScheduledDate(date); setSeedVersion(value => value + 1); navigate("compose"); }
-  async function saveProject(event) {
-    event.preventDefault(); setError(""); setBusy(true);
-    try { const result = projectForm.id ? await api.updateProject(projectForm.id, projectForm) : await api.createProject(projectForm); setProjects(current => projectForm.id ? current.map(item => item.id === result.project.id ? result.project : item) : [...current, result.project]); setProjectId(result.project.id); setProjectForm(null); }
-    catch (error) { setError(error.message); } finally { setBusy(false); }
-  }
+  function compose(date = "") { setScheduledDate(date); setDraftVersion(value => value + 1); navigate("compose"); }
   return <div className="bridge" data-theme="light">
     {menuOpen && <button className="bridge-scrim" onClick={() => setMenuOpen(false)} aria-label="Close navigation"/>}
     <aside className={`bridge-sidebar ${menuOpen ? "is-open" : ""}`}>
       <a className="bridge-logo" href="#" onClick={event => { event.preventDefault(); navigate("compose"); }}><BridgeMark/><span>meadow<span className="bridge-logo-dot">.</span></span></a>
-      {SHOW_WORKSPACE_CONTROLS && <div className="bridge-project-picker"><label htmlFor="project-select">WORKSPACE</label><div className="bridge-project-select"><span className="bridge-project-avatar">{(project?.name || "B").slice(0, 1).toUpperCase()}</span><select id="project-select" value={projectId} onChange={event => { setProjectId(event.target.value); setSeed(null); setError(""); setNotice(""); setConnectionId(""); }}><option value="" disabled>Choose a workspace</option>{projects.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div><div className="bridge-project-actions"><button className="bridge-text-button" onClick={() => setProjectForm({ name: "", timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })}><Icon name="plus" size={15}/> New workspace</button>{project && <button className="bridge-text-button" onClick={() => setProjectForm({ id: project.id, name: project.name, timeZone: project.timeZone })} aria-label="Workspace settings"><Icon name="compose" size={14}/></button>}</div></div>}
       <nav aria-label="Main navigation">
         <button className={`bridge-nav-item ${view === "compose" ? "active" : ""}`} onClick={() => navigate("compose")} aria-current={view === "compose" ? "page" : undefined}><Icon name="compose"/><span>Create post</span></button>
         <div className={`bridge-nav-group ${isPostView ? "active" : ""}`}>
@@ -140,10 +94,9 @@ function Workspace({ user, signOut }) {
     </aside>
     <main className="bridge-main"><header className="bridge-topbar"><button className="bridge-icon-button bridge-menu-toggle" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Icon name="menu"/></button></header>
       <div className="bridge-content"><Alert message={error}/><Alert message={notice} success/><div className="bridge-page-heading"><h1>{activeModule?.title || activeModule?.name}</h1></div>
-        {!config ? <div className="bridge-panel bridge-empty"><p>{error ? "Meadow could not load. Check your connection and refresh this page." : "Loading Meadow…"}</p></div> : isConfigurationView ? <ConfigurationWorkspace user={user} project={project} config={config} view={view} onProjectUpdated={updated => setProjects(current => current.map(item => item.id === updated.id ? updated : item))}/> : !project ? SHOW_WORKSPACE_CONTROLS ? <div className="bridge-onboarding bridge-panel"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Start with a workspace</h2><p>Keep a brand or client’s accounts, content, and results together.</p><button className="bridge-button" onClick={() => setProjectForm({ name: "", timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })}><Icon name="plus" size={17}/> Create workspace</button></div> : <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Meadow is getting ready</h2><p>Your publishing account is not available yet.</p></div> : <ProjectWorkspace key={project.id} project={project} config={config} view={view} navigate={navigate} compose={compose} seed={seed} scheduledDate={scheduledDate} seedVersion={seedVersion} clearSeed={() => { setSeed(null); setScheduledDate(""); }} connectionId={connectionId} clearConnection={() => setConnectionId("")} notify={setNotice}/>}
+        {!config ? <div className="bridge-panel bridge-empty"><p>{error ? "Meadow could not load. Check your connection and refresh this page." : "Loading Meadow…"}</p></div> : isConfigurationView ? <ConfigurationWorkspace user={user} project={project} config={config} view={view} onProjectUpdated={updated => setProjects(current => current.map(item => item.id === updated.id ? updated : item))}/> : !project ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Meadow is getting ready</h2><p>Your publishing account is not available yet.</p></div> : <ProjectWorkspace key={project.id} project={project} config={config} view={view} navigate={navigate} compose={compose} scheduledDate={scheduledDate} clearScheduledDate={() => setScheduledDate("")} draftVersion={draftVersion} connectionId={connectionId} clearConnection={() => setConnectionId("")} notify={setNotice}/>}
       </div>
     </main>
-    {SHOW_WORKSPACE_CONTROLS && projectForm && <Modal title={projectForm.id ? "Workspace settings" : "Create a workspace"} onClose={() => setProjectForm(null)} busy={busy}><p>Keep this workspace’s accounts, content, and results together.</p><Alert message={error}/><form onSubmit={saveProject}><Field label="Workspace name"><input required maxLength={80} value={projectForm.name} onChange={event => setProjectForm(current => ({ ...current, name: event.target.value }))} placeholder="e.g. My podcast"/></Field><TimezoneField value={projectForm.timeZone} onChange={timeZone => setProjectForm(current => ({ ...current, timeZone }))}/><button className="bridge-button" disabled={busy}>{busy ? "Saving…" : projectForm.id ? "Save workspace" : "Create workspace"}<Icon name="arrow" size={16}/></button></form></Modal>}
   </div>;
 }
 function ConfigurationWorkspace({ user, project, config, view, onProjectUpdated }) {
@@ -151,14 +104,13 @@ function ConfigurationWorkspace({ user, project, config, view, onProjectUpdated 
     {view === "settings" && <ConfigurationSettings user={user} project={project} config={config} onProjectUpdated={onProjectUpdated}/>}
     {view === "api-keys" && <ApiKeys timeZone={project?.timeZone}/>}
     {view === "billing" && <Billing localPreview={config.localPreview}/>}
-    {SHOW_AFFILIATE_PROGRAM && view === "affiliate" && <Affiliate user={user}/>}
   </>;
 }
-function ProjectWorkspace({ project, config, view, navigate, compose, seed, scheduledDate, seedVersion, clearSeed, connectionId, clearConnection, notify }) {
+function ProjectWorkspace({ project, config, view, navigate, compose, scheduledDate, clearScheduledDate, draftVersion, connectionId, clearConnection, notify }) {
   const accountResource = useProjectResource(project.id, "/accounts", { accounts: [] });
   const mediaResource = useProjectResource(project.id, "/media", { media: [] });
   const catalog = config.platforms || [];
-  const media = [...new Map([...mediaResource.data.media, ...(seed || [])].map(item => [item.id, item])).values()];
+  const media = mediaResource.data.media;
   const [uploadError, setUploadError] = useState("");
   async function upload(files, onProgress = () => {}) {
     const uploaded = [], failures = []; setUploadError("");
@@ -174,10 +126,10 @@ function ProjectWorkspace({ project, config, view, navigate, compose, seed, sche
   }
   const common = { project, config, catalog, media, accounts: accountResource.data.accounts };
   return <><Alert message={accountResource.error || mediaResource.error || uploadError}/>
-    {view === "compose" && <Composer key={seedVersion} {...common} seed={seed} scheduledDate={scheduledDate} onClearSeed={clearSeed} onAccounts={() => navigate("accounts")} onUpload={upload} onSubmitted={result => { navigate("posts"); notify(`${result.posts.length} ${result.posts.length === 1 ? "post" : "posts"} added to your publishing queue.`); }}/>}
+    {view === "compose" && <Composer key={draftVersion} {...common} scheduledDate={scheduledDate} onDraftStarted={clearScheduledDate} onAccounts={() => navigate("accounts")} onUpload={upload} onSubmitted={result => { navigate("posts"); notify(`${result.posts.length} ${result.posts.length === 1 ? "post" : "posts"} added to your publishing queue.`); }}/>}
     {view === "accounts" && <Accounts {...common} connectionId={connectionId} clearConnection={clearConnection} onChanged={accountResource.reload}/>}
-    {view === "clips" && (SHOW_CLIPPING_STUDIO ? <ClippingStudio {...common} onChanged={mediaResource.reload} onCompose={compose}/> : <ClippingStudioComingSoon/>)}
-    {view === "calendar" && <PostsCalendar {...common} onCreate={date => compose([], date)}/>}
+    {view === "clips" && <ClippingStudioComingSoon/>}
+    {view === "calendar" && <PostsCalendar {...common} onCreate={compose}/>}
     {["posts", "scheduled", "posted", "drafts", "failed"].includes(view) && <PostsQueue {...common} section={view} onCreate={() => navigate("compose")} onUpload={upload}/>}
     {view === "analytics" && <Analytics {...common}/>}
   </>;

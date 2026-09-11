@@ -18,8 +18,6 @@ services:
       BRIDGE_LOCAL_PREVIEW: "0"
       BRIDGE_SERVE_FRONTEND: "true"
       BRIDGE_DATA_DIR: /data
-      PYTHON_BIN: /opt/bridge-python/bin/python
-      HF_HOME: /data/model-cache
     volumes:
       - bridge-data:/data
     ports:

@@ -1,6 +1,6 @@
 # Deployment
 
-Meadow needs a persistent Node/Python server with FFmpeg. The frontend can be served by Express from the same HTTPS origin. This backend cannot run as a static site or a Cloudflare Worker because it uses child processes and a local SQLite/media volume.
+Meadow needs a persistent Node server with FFmpeg. The frontend can be served by Express from the same HTTPS origin. This backend cannot run as a static site or a Cloudflare Worker because it uses child processes and a local SQLite/media volume.
 
 The Docker/Compose files are provided for this topology. They were not built in this workspace because Docker is unavailable here. The native backend test suite and frontend build are validated separately. Nothing has been deployed to a public host by this implementation.
 
@@ -16,7 +16,6 @@ The Docker/Compose files are provided for this topology. They were not built in 
 
 4. Set `BRIDGE_APP_URL` and `BRIDGE_PUBLIC_URL` to the same canonical public HTTPS origin for a single-origin deployment. Do not include a trailing path. Set `BRIDGE_TRUST_PROXY` to the exact trusted proxy hop count.
 5. Supply the platform application credentials and callbacks described in [platforms.md](platforms.md). Leave unfinished platforms disabled through `BRIDGE_DISABLED_PLATFORMS` until their applications are approved and tested.
-6. For clipping, supply RapidAPI subscriptions/key and a Gemini key. The retained downloader uses both Cloud API Hub - YouTube Downloader and YouTube MP3. Select a Gemini model available to your account. Whisper and FFmpeg execute on the server; Gemini receives the timestamped transcript for clip selection.
 
 Never copy runtime secrets into `VITE_*` variables. Firebase Web configuration is public and is intentionally a frontend build input. Do not change the encryption key without migrating/re-encrypting stored credentials; doing so makes existing connections unreadable. Keep backups of the keys separately from data backups.
 
@@ -34,7 +33,7 @@ The Compose file passes Firebase's public web settings to the frontend build and
 
 The reverse proxy must support large request bodies, media byte ranges, ZIP streaming, and long upload timeouts. Set its upload body limit consistently with `BRIDGE_MAX_UPLOAD_MB` (default 1 GiB). Provider retrieval of signed `/media/...` URLs and `/oauth/...` endpoints must be publicly reachable without a login wall. Signed URLs authorize only a particular media variant until expiry.
 
-Allow outbound HTTPS to Firebase, the configured providers, the downloader providers, Gemini, Bluesky identity/PDS endpoints, and the Whisper model source. Start with one container. Reserve disk space for the source, extracted audio, generated clips, derivatives, and a cached Whisper model. Inspect actual CPU, memory, disk and queue latency before choosing capacity or increasing workload.
+Allow outbound HTTPS to Firebase, the configured providers, and Bluesky identity/PDS endpoints. Start with one container. Reserve disk space for uploaded media and generated derivatives. Inspect actual CPU, memory, disk and queue latency before choosing capacity or increasing workload.
 
 The `/health` route verifies that the application process is responding. It does not verify platform credentials, remaining provider quota, external service status, or available disk space.
 
@@ -44,7 +43,6 @@ The `/health` route verifies that the application process is responding. It does
 - Stop the application before a simple filesystem backup of `/data`, or use SQLite's online backup API plus a coordinated media snapshot. Copying only `bridge.sqlite` while WAL writes are active can miss transactions.
 - Back up database and media together. The database contains encrypted tokens; the separate encryption key is required to restore connections.
 - Allow at least 40 seconds for shutdown. Claims that outlive the process are recovered after their lease expires. Check `needs_review` deliveries on the social account before approving a retry.
-- Source/audio scratch files are removed when a clipping job finishes. Abrupt termination can leave a job directory under `/data/clipping`; remove it only after confirming no worker owns that job. Generated clips live under `/data/media` and remain available independently.
 - Monitor storage and worker error logs. Durable user media and history do not have an automatic retention/deletion policy in this release.
 
 ## Live acceptance before public launch
@@ -56,14 +54,13 @@ The remaining checks require actual provider credentials and approved test accou
 3. Publish a permitted test item for each enabled format and verify its content, privacy and reported status directly on the platform.
 4. Check supported metrics against provider results; verify unavailable or delayed metrics remain clearly marked.
 5. Schedule a small test batch, restart the server with queued work, and verify continued delivery. Check rate-limit behavior using permitted test responses/allowances rather than deliberately spamming a real account.
-6. Generate a clip from content you control, download one and a ZIP, and publish a selected clip. This verifies the external downloader, real Whisper environment and selected Gemini model together.
-7. Complete provider-required app details, domain verification, privacy/data-deletion instructions, access reviews and public-use approvals. These belong to your platform applications and deployment configuration, not to hard-coded client credentials.
+6. Complete provider-required app details, domain verification, privacy/data-deletion instructions, access reviews and public-use approvals. These belong to your platform applications and deployment configuration, not to hard-coded client credentials.
 
 ## Verified locally
 
-- Backend domain, API, provider contract, clipping and downloader tests.
-- Actual FFmpeg audio extraction, 1080×1920 subtitle rendering, video probing and thumbnail creation on synthetic media.
+- Backend domain, API, provider contract, and media tests.
+- Actual FFmpeg video probing and thumbnail creation on synthetic media.
 - Frontend unit tests and production bundle.
 - Dependency audit and source whitespace checks.
 
-No live social publication, real Whisper/Gemini/downloader end-to-end clipping run, Docker image build, or production deployment is claimed by those checks.
+No live social publication, Docker image build, or production deployment is claimed by those checks.
