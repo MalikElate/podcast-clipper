@@ -34,11 +34,13 @@ export const postModules = [
   { id: "analytics", name: "Analytics", icon: "analytics" },
 ];
 
+const SHOW_AFFILIATE_PROGRAM = false;
+
 export const configurationModules = [
   { id: "settings", name: "Settings", icon: "settings" },
   { id: "api-keys", name: "API Keys", title: "Agents & API keys", icon: "key" },
   { id: "billing", name: "Billing", title: "Billing & plans", icon: "billing" },
-  { id: "affiliate", name: "Affiliate program", icon: "affiliate" },
+  ...(SHOW_AFFILIATE_PROGRAM ? [{ id: "affiliate", name: "Affiliate program", icon: "affiliate" }] : []),
 ];
 
 const allModules = [...modules, ...postModules, ...configurationModules];
@@ -149,7 +151,7 @@ function ConfigurationWorkspace({ user, project, config, view, onProjectUpdated 
     {view === "settings" && <ConfigurationSettings user={user} project={project} config={config} onProjectUpdated={onProjectUpdated}/>}
     {view === "api-keys" && <ApiKeys timeZone={project?.timeZone}/>}
     {view === "billing" && <Billing localPreview={config.localPreview}/>}
-    {view === "affiliate" && <Affiliate user={user}/>}
+    {SHOW_AFFILIATE_PROGRAM && view === "affiliate" && <Affiliate user={user}/>}
   </>;
 }
 function ProjectWorkspace({ project, config, view, navigate, compose, seed, scheduledDate, seedVersion, clearSeed, connectionId, clearConnection, notify }) {

@@ -6,6 +6,13 @@ This file records product surfaces intentionally hidden or removed from the curr
 
 ## Hidden
 
+### Affiliate program
+
+- The **Affiliate program** item is hidden from Configuration.
+- Direct navigation to the affiliate dashboard is disabled.
+- Enrollment, attribution, commission data, and backend routes remain intact.
+- Restore the interface with `SHOW_AFFILIATE_PROGRAM` in `frontend/src/bridge/BridgeApp.jsx`.
+
 ### Workspace controls
 
 - The workspace selector is hidden from the sidebar.
