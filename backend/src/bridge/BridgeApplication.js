@@ -168,6 +168,7 @@ export class BridgeApplication {
     app.post("/api/bridge/affiliate", route((req, res) => res.status(201).json(this.affiliates.enroll(req.uid, req.body))));
     app.post("/api/bridge/affiliate/claim", route((req, res) => res.json(this.affiliates.claim(req.uid, req.body))));
     app.get("/api/bridge/projects", route((req, res) => res.json({ projects: this.projects.list(req.uid) })));
+    app.post("/api/bridge/projects/default", route((req, res) => res.json({ project: this.projects.ensureDefault(req.uid, req.body) })));
     app.post("/api/bridge/projects", route((req, res) => res.status(201).json({ project: this.projects.create(req.uid, req.body) })));
     app.patch(root, route((req, res) => res.json({ project: this.projects.update(req.uid, req.params.projectId, req.body) })));
     app.post("/api/bridge/schedule/resolve", route((req, res) => res.json(this.schedules.resolve(req.body))));

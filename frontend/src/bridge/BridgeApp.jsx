@@ -97,7 +97,16 @@ function Workspace({ user, signOut }) {
   const isConfigurationView = configurationViewIds.has(view);
   useEffect(() => {
     const controller = new AbortController();
-    Promise.all([api.getProjects(controller.signal), api.request("/config", { signal: controller.signal })]).then(([data, configuration]) => { setProjects(data.projects); setConfig(configuration); setProjectId(data.projects.find(item => item.id === initial.current.get("project"))?.id || data.projects[0]?.id || ""); }).catch(error => { if (error.name !== "AbortError") setError(error.message); });
+    Promise.all([api.getProjects(controller.signal), api.request("/config", { signal: controller.signal })]).then(async ([data, configuration]) => {
+      let availableProjects = data.projects;
+      if (!SHOW_WORKSPACE_CONTROLS && !availableProjects.length) {
+        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+        const { project: defaultProject } = await api.ensureDefaultProject({ name: "Meadow", timeZone }, controller.signal);
+        availableProjects = [defaultProject];
+      }
+      if (controller.signal.aborted) return;
+      setProjects(availableProjects); setConfig(configuration); setProjectId(availableProjects.find(item => item.id === initial.current.get("project"))?.id || availableProjects[0]?.id || "");
+    }).catch(error => { if (error.name !== "AbortError") setError(error.message); });
     window.history.replaceState({}, "", window.location.pathname);
     return () => controller.abort();
   }, []);

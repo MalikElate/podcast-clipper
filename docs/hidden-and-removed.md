@@ -1,6 +1,6 @@
 # Hidden and removed product surfaces
 
-Last updated: 2026-09-10
+Last updated: 2026-09-11
 
 This file records product surfaces intentionally hidden or removed from the current Meadow interface. It distinguishes UI changes from backend capabilities that still exist.
 
@@ -12,7 +12,7 @@ This file records product surfaces intentionally hidden or removed from the curr
 - The **New workspace** action is hidden.
 - The sidebar shortcut for workspace settings is hidden.
 - The create/edit workspace modal and empty-account workspace onboarding are hidden.
-- Project ownership, isolation, storage, API routes, and automatic selection of the first available project remain intact.
+- Meadow automatically creates and selects one default workspace for a first-time user. Project ownership, isolation, storage, and API routes remain intact for the later workspace interface.
 - Restore the controls with `SHOW_WORKSPACE_CONTROLS` in `frontend/src/bridge/BridgeApp.jsx`.
 
 ### Clipping studio implementation

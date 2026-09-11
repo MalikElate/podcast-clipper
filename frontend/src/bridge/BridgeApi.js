@@ -18,6 +18,7 @@ export class BridgeApi {
   }
   projectPath(projectId, path = "") { return `/projects/${encodeURIComponent(projectId)}${path}`; }
   getProjects(signal) { return this.request("/projects", { signal }); }
+  ensureDefaultProject(body, signal) { return this.request("/projects/default", { method: "POST", body, signal }); }
   createProject(body) { return this.request("/projects", { method: "POST", body }); }
   updateProject(id, body) { return this.request(this.projectPath(id), { method: "PATCH", body }); }
   project(id, path, options) { return this.request(this.projectPath(id, path), options); }

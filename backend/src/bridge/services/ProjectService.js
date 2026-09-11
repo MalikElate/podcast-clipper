@@ -20,6 +20,10 @@ export class ProjectService {
     return this.store.put("project", { id: randomUUID(), ownerUid, name: name.trim(), timeZone, createdAt: now, updatedAt: now });
   }
 
+  ensureDefault(ownerUid, { name = "Meadow", timeZone = "UTC" } = {}) {
+    return this.store.transaction(() => this.list(ownerUid)[0] || this.create(ownerUid, { name, timeZone }));
+  }
+
   update(ownerUid, projectId, input) {
     const project = this.require(ownerUid, projectId);
     const name = input.name ?? project.name;

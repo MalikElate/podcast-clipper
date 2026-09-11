@@ -32,6 +32,17 @@ test("all project routes require authentication and reject another owner's proje
   const config = await (await h.request("/api/bridge/config")).json(); assert.equal(config.platforms.length, 10); assert.equal(config.connectionsReady, false);
 });
 
+test("a first-time user gets one reusable default workspace", async t => {
+  const h = await setup(t);
+  const first = await h.request("/api/bridge/projects/default", { method: "POST", user: "bob", body: { name: "Meadow", timeZone: "Africa/Douala" } });
+  const second = await h.request("/api/bridge/projects/default", { method: "POST", user: "bob", body: { name: "Ignored", timeZone: "UTC" } });
+  assert.equal(first.status, 200); assert.equal(second.status, 200);
+  const firstProject = (await first.json()).project, secondProject = (await second.json()).project;
+  assert.equal(firstProject.id, secondProject.id); assert.equal(firstProject.name, "Meadow"); assert.equal(firstProject.timeZone, "Africa/Douala");
+  const projects = await (await h.request("/api/bridge/projects", { user: "bob" })).json();
+  assert.deepEqual(projects.projects.map(project => project.id), [firstProject.id]);
+});
+
 test("API keys are shown once, authenticate requests, and can be revoked", async t => {
   const h = await setup(t);
   const created = await h.request("/api/bridge/api-keys", { method: "POST", body: { name: "Automation" } });
