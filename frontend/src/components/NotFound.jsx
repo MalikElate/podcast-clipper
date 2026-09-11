@@ -12,16 +12,17 @@ export default function NotFound() {
         <a href="/pricing">View pricing</a>
       </header>
       <main className="not-found-page">
-        <span className="not-found-code">404</span>
+        <span className="not-found-code">Page not found</span>
         <Waveform className="not-found-waveform" bars={18} />
-        <h1>This page wandered off.</h1>
+        <h1>404</h1>
         <p>The link may be outdated, or the page may have moved. Head back to Meadow and keep your publishing work in one place.</p>
         <div className="not-found-actions">
-          <a className="btn-primary" href="/">Back to Meadow</a>
-          <a className="not-found-secondary" href="mailto:hello@findmeadow.com">Report a broken link</a>
+          <a className="btn-primary" href="/?view=compose">Back to dashboard</a>
+          <a className="not-found-secondary" href="/">Back to homepage</a>
+          <a className="not-found-support" href="mailto:hello@findmeadow.com">Contact support</a>
         </div>
       </main>
-      <footer className="not-found-footer"><span>© {new Date().getFullYear()} Meadow</span><span>Page not found</span></footer>
+      <footer className="not-found-footer"><span>© {new Date().getFullYear()} Meadow</span><span>404</span></footer>
     </div>
   );
 }
