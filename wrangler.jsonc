@@ -40,5 +40,9 @@
     "PYTHON_BIN": "python3",
     "WHISPER_MODEL": "base",
     "GEMINI_MODEL": "gemini-3.6-flash"
-  }
+  },
+  "routes": [
+    { "pattern": "findmeadow.com", "custom_domain": true },
+    { "pattern": "www.findmeadow.com", "custom_domain": true }
+  ]
 }
