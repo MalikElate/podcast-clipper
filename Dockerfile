@@ -11,7 +11,7 @@ ENV VITE_BRIDGE_LOCAL_PREVIEW=false
 RUN npm run build
 
 FROM node:22-bookworm-slim AS runtime
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certificates tini build-essential && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg python3 ca-certificates tini build-essential && rm -rf /var/lib/apt/lists/*
 WORKDIR /app/backend
 COPY backend/package*.json ./
 RUN npm ci --omit=dev

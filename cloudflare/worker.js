@@ -7,20 +7,14 @@ export class PodcastClipperBackend extends Container {
   envVars = {
     HOST: "0.0.0.0",
     PORT: "8787",
-    PYTHON_BIN: "python3",
-    WHISPER_MODEL: env.WHISPER_MODEL,
-    GEMINI_MODEL: env.GEMINI_MODEL,
     CLERK_SECRET_KEY: env.CLERK_SECRET_KEY,
     CLERK_PUBLISHABLE_KEY: env.CLERK_PUBLISHABLE_KEY,
-    RAPIDAPI_KEY: env.RAPIDAPI_KEY,
-    GEMINI_API_KEY: env.GEMINI_API_KEY,
     BRIDGE_APP_URL: env.BRIDGE_APP_URL,
     BRIDGE_PUBLIC_URL: env.BRIDGE_PUBLIC_URL,
     BRIDGE_ENCRYPTION_KEY: env.BRIDGE_ENCRYPTION_KEY,
     BRIDGE_MEDIA_SIGNING_KEY: env.BRIDGE_MEDIA_SIGNING_KEY,
     BRIDGE_MAX_UPLOAD_MB: env.BRIDGE_MAX_UPLOAD_MB,
     BRIDGE_DISABLED_PLATFORMS: env.BRIDGE_DISABLED_PLATFORMS,
-    BRIDGE_CLIPPING_ENABLED: env.BRIDGE_CLIPPING_ENABLED,
     BRIDGE_PUBLISHING_ENABLED: env.BRIDGE_PUBLISHING_ENABLED,
     INSTAGRAM_CLIENT_ID: env.INSTAGRAM_CLIENT_ID,
     INSTAGRAM_CLIENT_SECRET: env.INSTAGRAM_CLIENT_SECRET,
@@ -45,7 +39,7 @@ export class PodcastClipperBackend extends Container {
 export default {
   async fetch(request, workerEnv) {
     const url = new URL(request.url);
-    const backendPath = ["/api/", "/media/", "/oauth/", "/downloads/"].some(prefix => url.pathname.startsWith(prefix));
+    const backendPath = ["/api/", "/media/", "/oauth/"].some(prefix => url.pathname.startsWith(prefix));
     if (backendPath || url.pathname === "/health") {
       const backend = workerEnv.BACKEND.getByName("primary");
       return backend.fetch(request);
