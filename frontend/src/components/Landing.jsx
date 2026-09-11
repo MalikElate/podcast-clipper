@@ -105,7 +105,7 @@ export default function Landing({ onGetStarted }) {
         <section className="landing-hero" id="top">
           <div className="hero-copy">
             <PlatformStrip />
-            <h1 className="landing-title">Publish across every social account from one place.</h1>
+            <h1 className="landing-title">Publish across every social media from one place.</h1>
             <p className="landing-subtitle">
               Create text, image, video, and carousel posts. Publish now or schedule them across your connected accounts, then track every delivery in Meadow.
             </p>
@@ -229,7 +229,7 @@ export default function Landing({ onGetStarted }) {
         </div>
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} Meadow</span>
-          <span>Publish across your social accounts from one place.</span>
+          <span>Publish across your social media from one place.</span>
           <span>Only publish media you have permission to use.</span>
         </div>
       </footer>
