@@ -1,0 +1,14 @@
+/* Grow by ~4%, rounded to whole CSS pixels to keep small marks sharp. */
+.social-brand-icon[data-platform] > svg {
+  shape-rendering: geometricPrecision;
+}
+.platform-card .landing-platform-mark > .social-brand-icon[data-platform] {
+  width: 29px !important;
+  height: 29px !important;
+}
+@media (max-width: 720px) {
+  .hero-platforms .landing-platform-mark > .social-brand-icon[data-platform] {
+    width: 21px !important;
+    height: 21px !important;
+  }
+}

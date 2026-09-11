@@ -43,7 +43,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3 {
+h1:not(:where(.cl-rootBox *)), h2:not(:where(.cl-rootBox *)), h3:not(:where(.cl-rootBox *)) {
   font-family: var(--font-display);
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -213,7 +213,7 @@ h1, h2, h3 {
   text-align: left;
 }
 
-h1 {
+h1:not(:where(.cl-rootBox *)) {
   font-size: 23px;
   margin: 0 0 8px;
 }
@@ -227,7 +227,8 @@ p.subtitle {
 
 /* --- Inputs & buttons --- */
 
-input[type="text"], input[type="url"], input[type="email"], input[type="password"] {
+/* Clerk owns its form styles, including sign-up and recovery screens. */
+input:is([type="text"], [type="url"], [type="email"], [type="password"]):not(:where(.cl-rootBox *)) {
   width: 100%;
   padding: 13px 15px;
   border-radius: var(--radius-sm);
@@ -240,16 +241,16 @@ input[type="text"], input[type="url"], input[type="email"], input[type="password
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-input[type="text"]::placeholder, input[type="url"]::placeholder, input[type="email"]::placeholder, input[type="password"]::placeholder {
+input:is([type="text"], [type="url"], [type="email"], [type="password"]):not(:where(.cl-rootBox *))::placeholder {
   color: var(--text-faint);
 }
 
-input[type="text"]:focus, input[type="url"]:focus, input[type="email"]:focus, input[type="password"]:focus {
+input:is([type="text"], [type="url"], [type="email"], [type="password"]):not(:where(.cl-rootBox *)):focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-button {
+button:not(:where(.cl-rootBox *)) {
   cursor: pointer;
   font-family: var(--font-body);
   font-size: 15px;

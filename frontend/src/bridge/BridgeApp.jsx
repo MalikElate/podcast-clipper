@@ -43,7 +43,7 @@ const postViewIds = new Set(postModules.map(item => item.id));
 const configurationViewIds = new Set(configurationModules.map(item => item.id));
 export default function BridgeApp() {
   const { user, signOut } = useAuth();
-  if (!user && !localPreview) return <div className="bridge bridge-signin" data-theme="light"><div className="bridge-signin-brand"><img src={MEADOW_LOGO_URL} alt="" width="38" height="38"/><span>meadow</span></div><Auth onBack={() => {}}/></div>;
+  if (!user && !localPreview) return <div className="bridge-signin"><div className="bridge-signin-brand"><img src={MEADOW_LOGO_URL} alt="" width="38" height="38"/><span>meadow</span></div><Auth /></div>;
   return <Workspace key={user?.id || "preview"} user={user} signOut={signOut}/>;
 }
 function Workspace({ user, signOut }) {

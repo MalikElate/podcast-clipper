@@ -14,6 +14,9 @@ import { SiBluesky } from "react-icons/si";
 import { api } from "./BridgeApi.js";
 import { Icon } from "./Icons.jsx";
 import { PLATFORM_COLORS } from "./platforms.js";
+import "./social-icons.css";
+
+const TIKTOK_PATH = "M448,209.91a210.06,210.06,0,0,1-122.77-39.25V349.38A162.55,162.55,0,1,1,185,188.31V278.2a74.62,74.62,0,1,0,52.23,71.18V0l88,0a121.18,121.18,0,0,0,1.86,22.17h0A122.18,122.18,0,0,0,381,102.39a121.43,121.43,0,0,0,67,20.14Z";
 
 export const number = value => Number.isFinite(value) ? new Intl.NumberFormat(undefined, { notation: value >= 100000 ? "compact" : "standard", maximumFractionDigits: 1 }).format(value) : "—";
 export const dateTime = (value, timeZone) => value ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short", timeZone }).format(new Date(value)) : "—";
@@ -44,9 +47,11 @@ export function PlatformIcon({ platform, size = 22 }) {
       <circle cx="12" cy="12" r="3.6" fill="none" stroke="white" strokeWidth="1.8"/><circle cx="17" cy="7" r="1.1" fill="white"/>
     </svg>;
   } else if (platform === "tiktok") {
-    logo = <span className="social-tiktok-layers">
-      <FaTiktok style={{ color: "#25f4ee", transform: "translate(-1px, -1px)" }}/><FaTiktok style={{ color: "#fe2c55", transform: "translate(1px, 1px)" }}/><FaTiktok style={{ color: "#111111" }}/>
-    </span>;
+    logo = <svg viewBox="-48 -32 544 576" aria-hidden="true" focusable="false">
+      <path d={TIKTOK_PATH} fill="#25f4ee" transform="translate(-20 -16)"/>
+      <path d={TIKTOK_PATH} fill="#fe2c55" transform="translate(20 16)"/>
+      <path d={TIKTOK_PATH} fill="#111111"/>
+    </svg>;
   } else if (platform === "google_business") {
     logo = <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
       <path fill="#4285f4" d="M43.61 24.46c0-1.36-.12-2.66-.35-3.92H24v7.42h11a9.4 9.4 0 0 1-4.08 6.17v5h6.61c3.87-3.56 6.08-8.8 6.08-14.67Z"/>
@@ -57,7 +62,8 @@ export function PlatformIcon({ platform, size = 22 }) {
   } else {
     logo = <PlatformLogo aria-hidden="true" focusable="false"/>;
   }
-  return <span className="social-brand-icon" data-platform={platform} style={{ width: size, height: size, color: PLATFORM_COLORS[platform] }} aria-hidden="true">{logo}</span>;
+  const pixelSize = Math.round(size * 1.04);
+  return <span className="social-brand-icon" data-platform={platform} style={{ width: pixelSize, height: pixelSize, color: PLATFORM_COLORS[platform] }} aria-hidden="true">{logo}</span>;
 }
 export function PlatformBadge({ platform, catalog = [], size = "" }) { const info = catalog.find(item => item.id === platform); return <span className={`bridge-platform-badge ${size}`} style={{ "--platform-color": info?.color || "#8eabef" }} title={info?.name || platform}><PlatformIcon platform={platform} size={size === "large" ? 25 : 20}/></span>; }
 export function Empty({ icon = "media", title, children, action }) { return <div className="bridge-empty"><div className="bridge-empty-icon"><Icon name={icon} size={29}/></div><h2>{title}</h2><p>{children}</p>{action}</div>; }
