@@ -1,4 +1,5 @@
 import { PlatformIcon } from "../bridge/ui.jsx";
+import BrandLogo from "./BrandLogo.jsx";
 import Waveform from "./Waveform.jsx";
 
 const PLATFORMS = [
@@ -55,15 +56,6 @@ function ArrowIcon() {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
-  );
-}
-
-function Logo() {
-  return (
-    <div className="brand">
-      <Waveform className="brand-mark" bars={5} />
-      <span className="brand-name">meadow<span className="brand-accent">.</span></span>
-    </div>
   );
 }
 
@@ -160,7 +152,7 @@ export default function Landing({ onGetStarted }) {
     <div className="landing">
       <header className="landing-header">
         <a className="landing-logo-link" href="#top" aria-label="Meadow home">
-          <Logo />
+          <BrandLogo />
         </a>
         <nav className="landing-nav" aria-label="Main navigation">
           <a href="#how-it-works">How it works</a>
@@ -307,7 +299,7 @@ export default function Landing({ onGetStarted }) {
       <footer className="landing-footer">
         <div className="footer-main">
           <div className="footer-brand">
-            <Logo />
+            <BrandLogo />
             <p>Create, schedule, publish, and track from one workspace.</p>
           </div>
           <div className="footer-links">

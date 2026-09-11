@@ -112,15 +112,12 @@ h1, h2, h3 {
   justify-content: center;
 }
 
-.brand-mark {
-  height: 15px;
-  gap: 2px;
-}
-
-.brand-mark .waveform-bar {
-  width: 2px;
-  background: var(--accent);
-  border-radius: 1px;
+.brand-logo-image {
+  display: block;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 auto;
+  border-radius: 8px;
 }
 
 .brand-name {
@@ -1661,16 +1658,8 @@ input[type="range"]::-moz-range-thumb {
   text-decoration: none;
 }
 
-.legal-brand-mark {
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.04em;
-}
-
-.legal-brand-mark span {
-  color: var(--accent-hover);
-}
+.legal-brand .brand { justify-content: flex-start; }
+.legal-brand .brand-name { font-size: 18px; letter-spacing: -.04em; }
 
 .legal-nav {
   display: flex;

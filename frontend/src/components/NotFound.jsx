@@ -1,9 +1,6 @@
 import { useEffect } from "react";
+import BrandLogo from "./BrandLogo.jsx";
 import Waveform from "./Waveform.jsx";
-
-function Logo() {
-  return <div className="brand"><Waveform className="brand-mark" bars={5} /><span className="brand-name">meadow<span className="brand-accent">.</span></span></div>;
-}
 
 export default function NotFound() {
   useEffect(() => { document.title = "Page not found · Meadow"; }, []);
@@ -11,7 +8,7 @@ export default function NotFound() {
   return (
     <div className="not-found-shell">
       <header className="not-found-header">
-        <a href="/" aria-label="Meadow home"><Logo /></a>
+        <a href="/" aria-label="Meadow home"><BrandLogo /></a>
         <a href="/pricing">View pricing</a>
       </header>
       <main className="not-found-page">
@@ -28,4 +25,3 @@ export default function NotFound() {
     </div>
   );
 }
-

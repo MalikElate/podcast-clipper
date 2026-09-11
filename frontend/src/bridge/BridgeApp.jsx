@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../AuthContext.jsx";
 import Auth from "../components/Auth.jsx";
+import { MEADOW_LOGO_URL } from "../components/BrandLogo.jsx";
 import { api, localPreview } from "./BridgeApi.js";
 import { Icon, BridgeMark } from "./Icons.jsx";
 import { Alert, useProjectResource } from "./ui.jsx";
@@ -42,7 +43,7 @@ const postViewIds = new Set(postModules.map(item => item.id));
 const configurationViewIds = new Set(configurationModules.map(item => item.id));
 export default function BridgeApp() {
   const { user, signOut } = useAuth();
-  if (!user && !localPreview) return <div className="bridge bridge-signin" data-theme="light"><div className="bridge-signin-brand"><BridgeMark/><span>meadow</span></div><Auth onBack={() => {}}/></div>;
+  if (!user && !localPreview) return <div className="bridge bridge-signin" data-theme="light"><div className="bridge-signin-brand"><img src={MEADOW_LOGO_URL} alt="" width="38" height="38"/><span>meadow</span></div><Auth onBack={() => {}}/></div>;
   return <Workspace key={user?.id || "preview"} user={user} signOut={signOut}/>;
 }
 function Workspace({ user, signOut }) {
@@ -75,7 +76,7 @@ function Workspace({ user, signOut }) {
   return <div className="bridge" data-theme="light">
     {menuOpen && <button className="bridge-scrim" onClick={() => setMenuOpen(false)} aria-label="Close navigation"/>}
     <aside className={`bridge-sidebar ${menuOpen ? "is-open" : ""}`}>
-      <a className="bridge-logo" href="#" onClick={event => { event.preventDefault(); navigate("compose"); }}><BridgeMark/><span>meadow<span className="bridge-logo-dot">.</span></span></a>
+      <a className="bridge-logo" href="#" onClick={event => { event.preventDefault(); navigate("compose"); }}><img className="bridge-logo-image" src={MEADOW_LOGO_URL} alt="" width="31" height="31"/><span>meadow<span className="bridge-logo-dot">.</span></span></a>
       <nav aria-label="Main navigation">
         <button className={`bridge-nav-item ${view === "compose" ? "active" : ""}`} onClick={() => navigate("compose")} aria-current={view === "compose" ? "page" : undefined}><Icon name="compose"/><span>Create post</span></button>
         <div className={`bridge-nav-group ${isPostView ? "active" : ""}`}>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title description">
+  <title id="title">Meadow</title>
+  <desc id="description">A sunrise over two meadow hills forming the letter M</desc>
+  <rect width="64" height="64" rx="18" fill="#233247"/>
+  <circle cx="45" cy="18" r="6" fill="#df914e"/>
+  <path d="M12 45c5-18 12-25 20-5 8-20 15-13 20 5" fill="none" stroke="#fcfdf8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M13 47c11-3 27-3 38 0" fill="none" stroke="#9ac6a3" stroke-width="4" stroke-linecap="round"/>
+</svg>

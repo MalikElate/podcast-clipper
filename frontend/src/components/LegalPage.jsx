@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import BrandLogo from "./BrandLogo.jsx";
 
 const PAGE_COPY = {
   terms: {
@@ -120,7 +121,7 @@ export default function LegalPage({ kind }) {
     <div className="legal-shell">
       <header className="legal-header">
         <a className="legal-brand" href="/" aria-label="Meadow home">
-          <span className="legal-brand-mark">meadow<span>.</span></span>
+          <BrandLogo />
         </a>
         <nav className="legal-nav" aria-label="Legal navigation">
           <a className={kind === "terms" ? "active" : ""} href="/terms">Terms</a>
