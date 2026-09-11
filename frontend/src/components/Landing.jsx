@@ -64,7 +64,7 @@ function WorkspacePreview() {
       <div className="preview-window">
         <div className="preview-window-bar">
           <span className="preview-dots"><i /><i /><i /></span>
-          <span className="preview-window-title">bridge / campaign-042</span>
+          <span className="preview-window-title">meadow / campaign-042</span>
           <span className="preview-live"><span /> ready</span>
         </div>
         <div className="preview-window-body">

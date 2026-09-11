@@ -2,6 +2,10 @@
 .section-eyebrow, .feature-row-eyebrow, .hero-kicker, .bridge-eyebrow { display: none; }
 .preview-window { background: var(--surface); box-shadow: 0 30px 70px -28px #23324750; }
 .preview-thumb { color: #fff; }
+.preview-window-bar, .preview-sidebar, .preview-clip { background: var(--surface-2); }
+.preview-clip.selected { background: var(--surface-3); border-color: var(--border-strong); }
+.preview-note { background: #233247; color: #fcfdf8; }
+.preview-thumb .waveform-bar { background: #9ac6a3; }
 .landing-header, .legal-header, .legal-footer { border-color: var(--border); }
 .bridge[data-theme=light] {
   --b-bg: #edf2e4; --b-panel: #fcfdf8; --b-raised: #e4ebd9;
