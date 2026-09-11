@@ -15,4 +15,4 @@ ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=8787
 EXPOSE 8787
-CMD ["node", "/app/src/server.js"]
+CMD ["node", "/app/src/bootstrap.js"]

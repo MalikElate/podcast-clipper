@@ -4,7 +4,7 @@ import { env } from "cloudflare:workers";
 export class PodcastClipperBackend extends Container {
   defaultPort = 8787;
   sleepAfter = "2h";
-  entrypoint = ["/usr/local/bin/node", "/app/src/server.js"];
+  entrypoint = ["/usr/local/bin/node", "/app/src/bootstrap.js"];
   envVars = {
     HOST: "0.0.0.0",
     PORT: "8787",
