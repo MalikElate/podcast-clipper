@@ -113,20 +113,6 @@ export default function Landing({ onGetStarted }) {
               <button className="btn-primary landing-cta" onClick={onGetStarted}>Create your first post <ArrowIcon /></button>
               <a className="text-link" href="#platforms">See supported platforms <ArrowIcon /></a>
             </div>
-            <div className="hero-proof">
-              <span><strong>10</strong> platforms</span>
-              <span><i /> publish now or schedule</span>
-              <span><i /> analytics in one place</span>
-            </div>
-          </div>
-        </section>
-
-        <section className="signal-strip" aria-label="Meadow benefits">
-          <span className="signal-label">One place to run your social publishing</span>
-          <div className="signal-items">
-            <span><strong>01</strong> Create</span>
-            <span><strong>02</strong> Schedule</span>
-            <span><strong>03</strong> Track</span>
           </div>
         </section>
 
