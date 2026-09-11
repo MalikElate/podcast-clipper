@@ -1,2 +1,2 @@
-// Bridge is the application entry point; the clipping pipeline remains a module.
+// Meadow application entry point.
 import "./bridge/server.js";

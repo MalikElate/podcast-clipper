@@ -220,7 +220,7 @@ export default function Landing({ onGetStarted }) {
             </details>
             <details>
               <summary>Can Meadow help with clips?</summary>
-              <p>Yes. The clipping studio can turn permitted source media into vertical, captioned clips that are ready to add to your publishing queue.</p>
+              <p>Clipping is coming soon. For now, upload finished media and use Meadow to adapt, schedule, publish, and track each post.</p>
             </details>
           </div>
         </section>

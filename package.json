@@ -1,5 +1,5 @@
 {
-  "name": "podcast-clipper-cloudflare",
+  "name": "meadow-cloudflare",
   "private": true,
   "type": "module",
   "scripts": {

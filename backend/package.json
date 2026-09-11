@@ -1,5 +1,5 @@
 {
-  "name": "podcast-clipper-backend",
+  "name": "meadow-backend",
   "version": "1.0.0",
   "type": "module",
   "engines": {
@@ -14,11 +14,9 @@
   "dependencies": {
     "@clerk/express": "^2.1.67",
     "@atproto/api": "^0.20.42",
-    "@atproto/oauth-client-node": "^0.5.4",
     "@atproto/jwk-jose": "^0.2.4",
-    "@google/genai": "^0.10.0",
+    "@atproto/oauth-client-node": "^0.5.4",
     "@js-temporal/polyfill": "^0.5.1",
-    "archiver": "^8.0.0",
     "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

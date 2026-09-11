@@ -8,7 +8,7 @@
     "directory": "./frontend/dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/media/*", "/oauth/*", "/downloads/*", "/health"]
+    "run_worker_first": ["/api/*", "/media/*", "/oauth/*", "/health"]
   },
   "containers": [
     {
@@ -37,13 +37,9 @@
   },
   "vars": {
     "PORT": "8787",
-    "PYTHON_BIN": "python3",
-    "WHISPER_MODEL": "base",
-    "GEMINI_MODEL": "gemini-3.6-flash",
     "BRIDGE_APP_URL": "https://findmeadow.com",
     "BRIDGE_PUBLIC_URL": "https://findmeadow.com",
     "BRIDGE_MAX_UPLOAD_MB": "1024",
-    "BRIDGE_CLIPPING_ENABLED": "true",
     "BRIDGE_PUBLISHING_ENABLED": "true"
   },
   "routes": [

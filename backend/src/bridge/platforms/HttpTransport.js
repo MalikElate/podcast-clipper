@@ -13,7 +13,7 @@ export class HttpTransport {
     try {
       response = await this.fetcher(url, { method, headers: requestHeaders, body, redirect: "error", signal: AbortSignal.timeout(timeoutMs), ...(body?.pipe ? { duplex: "half" } : {}), ...options });
     } catch {
-      throw new ProviderError(safeToRetry ? "The platform did not respond. Bridge will try again." : "The platform did not confirm the request. Check its result before retrying.", { retryable: safeToRetry, uncertain: !safeToRetry, code: "provider_connection" });
+      throw new ProviderError(safeToRetry ? "The platform did not respond. Meadow will try again." : "The platform did not confirm the request. Check its result before retrying.", { retryable: safeToRetry, uncertain: !safeToRetry, code: "provider_connection" });
     }
     if (response.status === 429) {
       const after = response.headers.get("retry-after");
@@ -27,7 +27,7 @@ export class HttpTransport {
     if (raw && (response.ok || acceptStatuses.includes(response.status))) return response;
     let text;
     try { text = await response.text(); }
-    catch { throw new ProviderError(safeToRetry ? "The platform response was interrupted. Bridge will try again." : "The platform response was interrupted. Check whether it published before retrying.", { retryable: safeToRetry, uncertain: !safeToRetry, code: "provider_connection" }); }
+    catch { throw new ProviderError(safeToRetry ? "The platform response was interrupted. Meadow will try again." : "The platform response was interrupted. Check whether it published before retrying.", { retryable: safeToRetry, uncertain: !safeToRetry, code: "provider_connection" }); }
     let data;
     try { data = text ? JSON.parse(text) : {}; } catch {
       if (response.ok && text.trim()) throw new ProviderError("The platform returned an unreadable response.", { retryable: safeToRetry, uncertain: !safeToRetry, code: "provider_response" });

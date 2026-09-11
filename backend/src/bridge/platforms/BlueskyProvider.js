@@ -19,7 +19,7 @@ export class BlueskyProvider extends PlatformProvider {
   async client() {
     invariant(this.configured, "Bluesky connections are not configured on this server.", { status: 503 });
     if (!this.clientPromise) this.clientPromise = (async () => new NodeOAuthClient({
-      clientMetadata: { client_id: `${this.publicUrl}/oauth/bluesky/client-metadata.json`, client_name: "Bridge", client_uri: this.env.BRIDGE_APP_URL || this.publicUrl, redirect_uris: [this.redirectUri], grant_types: ["authorization_code", "refresh_token"], response_types: ["code"], scope: "atproto transition:generic", application_type: "web", token_endpoint_auth_method: "private_key_jwt", token_endpoint_auth_signing_alg: "ES256", dpop_bound_access_tokens: true, jwks_uri: `${this.publicUrl}/oauth/bluesky/jwks.json` },
+      clientMetadata: { client_id: `${this.publicUrl}/oauth/bluesky/client-metadata.json`, client_name: "Meadow", client_uri: this.env.BRIDGE_APP_URL || this.publicUrl, redirect_uris: [this.redirectUri], grant_types: ["authorization_code", "refresh_token"], response_types: ["code"], scope: "atproto transition:generic", application_type: "web", token_endpoint_auth_method: "private_key_jwt", token_endpoint_auth_signing_alg: "ES256", dpop_bound_access_tokens: true, jwks_uri: `${this.publicUrl}/oauth/bluesky/jwks.json` },
       keyset: [await JoseKey.fromImportable(this.env.BLUESKY_PRIVATE_KEY.replaceAll("\\n", "\n"), "bridge-1")],
       stateStore: this.encryptedStore("blueskyState"), sessionStore: this.encryptedStore("blueskySession"),
       requestLock: (key, fn) => this.locks.withLock(`bluesky:${key}`, fn),
@@ -50,7 +50,7 @@ export class BlueskyProvider extends PlatformProvider {
     }
     if (error.status === 401) return new ProviderError("Reconnect this Bluesky account.", { reconnect: true, code: "reconnect_required" });
     if (error.status >= 400 && error.status < 500) return new ProviderError("Bluesky rejected the post. Check its media and text.");
-    return new ProviderError(publishing ? "Bluesky did not confirm this post. Check the account before retrying." : "Bluesky could not prepare the media. Bridge will try again.", { uncertain: publishing, retryable: !publishing });
+    return new ProviderError(publishing ? "Bluesky did not confirm this post. Check the account before retrying." : "Bluesky could not prepare the media. Meadow will try again.", { uncertain: publishing, retryable: !publishing });
   }
   async publishContent(ctx) {
     const agent = await this.agent(ctx.credentials), images = [], video = ctx.content.media[0]?.kind === "video";

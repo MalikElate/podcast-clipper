@@ -1,8 +1,8 @@
 # Native platform setup and supported formats
 
-Bridge connects directly to each platform's API. Provider access depends on the application's approved products/scopes and the selected account's eligibility. Features available only in a platform's own app are not implied by an adapter entry. Live publication has not been verified with production credentials.
+Meadow connects directly to each platform's API. Provider access depends on the application's approved products/scopes and the selected account's eligibility. Features available only in a platform's own app are not implied by an adapter entry. Live publication has not been verified with production credentials.
 
-The following is the implemented Bridge capability set. Defaults live in `backend/src/bridge/platforms/catalog.js`; dynamic account information is checked again before delivery. The media library accepts JPEG, PNG, WebP, GIF, MP4, MOV, WebM, PDF, Word and PowerPoint files. Delivery adapters convert images to JPEG and videos to H.264 MP4 where needed. GIF animation is preserved by the X adapter; other image adapters send a still image. The default server upload limit is 1 GiB regardless of a platform's higher limit.
+The following is the implemented Meadow capability set. Defaults live in `backend/src/bridge/platforms/catalog.js`; dynamic account information is checked again before delivery. The media library accepts JPEG, PNG, WebP, GIF, MP4, MOV, WebM, PDF, Word and PowerPoint files. Delivery adapters convert images to JPEG and videos to H.264 MP4 where needed. GIF animation is preserved by the X adapter; other image adapters send a still image. The default server upload limit is 1 GiB regardless of a platform's higher limit.
 
 | Platform ID | Eligible destination | Implemented publishing formats |
 | --- | --- | --- |
@@ -24,16 +24,16 @@ API-native event/offer posts, polls, paid-ad flows, livestreaming, platform musi
 Register callback URLs using the exact production API origin and platform ID:
 
 ```text
-https://your-bridge-domain.example/oauth/instagram/callback
-https://your-bridge-domain.example/oauth/tiktok/callback
-https://your-bridge-domain.example/oauth/youtube/callback
-https://your-bridge-domain.example/oauth/facebook/callback
-https://your-bridge-domain.example/oauth/x/callback
-https://your-bridge-domain.example/oauth/linkedin/callback
-https://your-bridge-domain.example/oauth/pinterest/callback
-https://your-bridge-domain.example/oauth/threads/callback
-https://your-bridge-domain.example/oauth/bluesky/callback
-https://your-bridge-domain.example/oauth/google_business/callback
+https://your-meadow-domain.example/oauth/instagram/callback
+https://your-meadow-domain.example/oauth/tiktok/callback
+https://your-meadow-domain.example/oauth/youtube/callback
+https://your-meadow-domain.example/oauth/facebook/callback
+https://your-meadow-domain.example/oauth/x/callback
+https://your-meadow-domain.example/oauth/linkedin/callback
+https://your-meadow-domain.example/oauth/pinterest/callback
+https://your-meadow-domain.example/oauth/threads/callback
+https://your-meadow-domain.example/oauth/bluesky/callback
+https://your-meadow-domain.example/oauth/google_business/callback
 ```
 
 | Provider | Environment credentials | Requested scopes/configuration |
@@ -57,13 +57,13 @@ For Bluesky, supply a PKCS#8 ES256 private PEM as a backend secret. The official
 
 ## Publication constraints and quotas
 
-TikTok requires the latest creator information, explicit privacy selection, permitted interaction choices, and posting consent. Bridge renders those controls without a default privacy value. Its URL-pull flow requires verification of the serving domain or URL prefix. Unaudited clients are restricted to private viewing; approval is necessary for public publishing. [TikTok Direct Post setup](https://developers.tiktok.com/docs/en/content-posting-api-get-started)
+TikTok requires the latest creator information, explicit privacy selection, permitted interaction choices, and posting consent. Meadow renders those controls without a default privacy value. Its URL-pull flow requires verification of the serving domain or URL prefix. Unaudited clients are restricted to private viewing; approval is necessary for public publishing. [TikTok Direct Post setup](https://developers.tiktok.com/docs/en/content-posting-api-get-started)
 
-YouTube's API can restrict uploads from unverified API projects to private visibility. Bridge preserves the requested visibility and reports a restricted public upload for review rather than claiming public success. [YouTube video insertion](https://developers.google.com/youtube/v3/docs/videos/insert)
+YouTube's API can restrict uploads from unverified API projects to private visibility. Meadow preserves the requested visibility and reports a restricted public upload for review rather than claiming public success. [YouTube video insertion](https://developers.google.com/youtube/v3/docs/videos/insert)
 
-Instagram and Threads expose publishing allowance information that the adapters use when available. Other providers do not consistently return a reliable account-wide remaining-post count. Bridge does not invent a fixed “10 posts per day” rule for TikTok or any other platform. It plans known limits, tracks local submissions, respects reported blocks/resets, and queues uncertain allowances until the provider allows delivery. Reset estimates are conservative when remote usage timestamps are unavailable.
+Instagram and Threads expose publishing allowance information that the adapters use when available. Other providers do not consistently return a reliable account-wide remaining-post count. Meadow does not invent a fixed “10 posts per day” rule for TikTok or any other platform. It plans known limits, tracks local submissions, respects reported blocks/resets, and queues uncertain allowances until the provider allows delivery. Reset estimates are conservative when remote usage timestamps are unavailable.
 
-Provider application-wide quotas and account restrictions can change independently from Bridge. A 429 or recognizable quota rejection preserves the delivery and does not spend the normal five temporary-failure attempts. When no reset is supplied, Bridge checks again after a delay. The queue preview explains when an allowance is unknown. [X API rate limits](https://docs.x.com/x-api/fundamentals/rate-limits)
+Provider application-wide quotas and account restrictions can change independently from Meadow. A 429 or recognizable quota rejection preserves the delivery and does not spend the normal five temporary-failure attempts. When no reset is supplied, Meadow checks again after a delay. The queue preview explains when an allowance is unknown. [X API rate limits](https://docs.x.com/x-api/fundamentals/rate-limits)
 
 X media follows initialize, append, finalize and status checks before post creation. Pinterest video Pins use the provider's media registration/upload/status flow and a cover image before Pin creation. [X upload API](https://docs.x.com/x-api/media/initialize-media-upload), [Pinterest boards and Pins](https://developers.pinterest.com/docs/work-with-organic-content-and-users/create-boards-and-pins/)
 

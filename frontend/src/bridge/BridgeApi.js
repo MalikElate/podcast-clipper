@@ -18,18 +18,8 @@ export class BridgeApi {
   }
   projectPath(projectId, path = "") { return `/projects/${encodeURIComponent(projectId)}${path}`; }
   getProjects(signal) { return this.request("/projects", { signal }); }
-  createProject(body) { return this.request("/projects", { method: "POST", body }); }
+  ensureDefaultProject(body, signal) { return this.request("/projects/default", { method: "POST", body, signal }); }
   updateProject(id, body) { return this.request(this.projectPath(id), { method: "PATCH", body }); }
   project(id, path, options) { return this.request(this.projectPath(id, path), options); }
-  async download(projectId, path, filename) {
-    let ids;
-    if (path.startsWith("/clips/")) {
-      const { job } = await this.project(projectId, path.replace(/\/download$/, ""));
-      ids = job.clips.filter(clip => !clip.unavailable).map(clip => clip.mediaId);
-    } else ids = new URLSearchParams(path.split("?")[1]).get("ids")?.split(",") || [];
-    const { url } = await this.project(projectId, "/downloads", { method: "POST", body: { ids } });
-    const anchor = document.createElement("a");
-    anchor.href = url; anchor.download = filename; document.body.appendChild(anchor); anchor.click(); anchor.remove();
-  }
 }
 export const api = new BridgeApi();

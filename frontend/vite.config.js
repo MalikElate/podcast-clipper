@@ -25,7 +25,6 @@ export default defineConfig(({ mode }) => {
       "/api": "http://localhost:8787",
       "/media": "http://localhost:8787",
       "/oauth": "http://localhost:8787",
-      "/downloads": "http://localhost:8787",
     },
   },
 };
