@@ -5,6 +5,7 @@ export class PodcastClipperBackend extends Container {
   defaultPort = 8787;
   sleepAfter = "2h";
   envVars = {
+    HOST: "0.0.0.0",
     PORT: "8787",
     PYTHON_BIN: "python3",
     WHISPER_MODEL: env.WHISPER_MODEL,
