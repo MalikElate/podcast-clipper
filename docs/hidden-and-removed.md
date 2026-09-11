@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-10
 
-This file records product surfaces intentionally hidden or removed from the current Bridge interface. It distinguishes UI changes from backend capabilities that still exist.
+This file records product surfaces intentionally hidden or removed from the current Meadow interface. It distinguishes UI changes from backend capabilities that still exist.
 
 ## Hidden
 

@@ -19,7 +19,7 @@ export default function MediaLibrary({ project, media, onUpload, onChanged, onCo
   }
   async function download() {
     setBusy(true); setError("");
-    try { await api.download(project.id, `/media-download?ids=${selectedMedia.map(item => item.id).join(",")}`, "bridge-media.zip"); }
+    try { await api.download(project.id, `/media-download?ids=${selectedMedia.map(item => item.id).join(",")}`, "meadow-media.zip"); }
     catch (error) { setError(error.message); } finally { setBusy(false); }
   }
   return <><div className="bridge-intro-row"><p>Your uploads and generated clips, ready for their next destination.</p><input ref={input} type="file" hidden multiple accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx" onChange={event => { upload(event.target.files); event.target.value = ""; }}/><button className="bridge-button" disabled={busy || !config.mediaReady} onClick={() => input.current.click()}><Icon name="upload" size={17}/>{busy ? progress || "Working…" : "Upload media"}</button></div><Alert message={error}/>

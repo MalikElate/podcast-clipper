@@ -87,7 +87,7 @@ export class BridgeApplication {
     if (this.localPreview) { origins.add("http://127.0.0.1:5173"); origins.add("http://localhost:5173"); }
     this.app.use(cors({ origin: (origin, done) => done(null, !origin || origins.has(origin)), methods: ["GET", "POST", "PATCH", "DELETE"], allowedHeaders: ["Content-Type", "Authorization", "X-Bridge-Preview"] }));
     this.app.use(express.json({ limit: "2mb" }));
-    this.app.get("/health", (req, res) => res.json({ status: "ok", app: "Bridge" }));
+    this.app.get("/health", (req, res) => res.json({ status: "ok", app: "Meadow" }));
     this.registerPublicRoutes();
     const userAuth = authMiddleware || ((req, res, next) => {
       const loopback = ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress);
@@ -114,7 +114,7 @@ export class BridgeApplication {
       if (res.headersSent) return next(error);
       if (error instanceof multer.MulterError) error = new BridgeError(error.code === "LIMIT_FILE_SIZE" ? `Files can be up to ${this.media.maxBytes / 1024 ** 2} MB.` : "Upload one file at a time.", { status: 413, code: "upload_limit" });
       if (error.type === "entity.parse.failed") error = new BridgeError("Invalid JSON request.");
-      if (!(error instanceof BridgeError)) console.error("Bridge request failed:", error.code || error.name);
+      if (!(error instanceof BridgeError)) console.error("Meadow request failed:", error.code || error.name);
       res.status(error instanceof BridgeError ? error.status : 500).json(publicError(error));
     });
   }
@@ -160,7 +160,7 @@ export class BridgeApplication {
 
   registerRoutes() {
     const app = this.app, root = "/api/bridge/projects/:projectId";
-    app.get("/api/bridge/config", route((req, res) => res.json({ name: "Bridge", localPreview: this.localPreview, platforms: this.registry.catalog(), maxBatchSize: 100, maxUploadBytes: this.media.maxBytes, features: { clipping: this.env.BRIDGE_CLIPPING_ENABLED !== "false", analytics: true, publishing: this.worker.enabled }, connectionsReady: this.vault.configured, mediaReady: Boolean(this.media.signingKey) })));
+    app.get("/api/bridge/config", route((req, res) => res.json({ name: "Meadow", localPreview: this.localPreview, platforms: this.registry.catalog(), maxBatchSize: 100, maxUploadBytes: this.media.maxBytes, features: { clipping: this.env.BRIDGE_CLIPPING_ENABLED !== "false", analytics: true, publishing: this.worker.enabled }, connectionsReady: this.vault.configured, mediaReady: Boolean(this.media.signingKey) })));
     app.get("/api/bridge/api-keys", route((req, res) => res.json({ apiKeys: this.apiKeys.list(req.uid) })));
     app.post("/api/bridge/api-keys", route((req, res) => res.status(201).json(this.apiKeys.create(req.uid, req.body))));
     app.delete("/api/bridge/api-keys/:id", route((req, res) => res.json(this.apiKeys.remove(req.uid, req.params.id))));
@@ -215,7 +215,7 @@ export class BridgeApplication {
     const records = ids.map(id => this.media.require(req.uid, req.params.projectId, id));
     invariant(records.every(item => item.status === "ready"), "Some files are not available yet.");
     const archive = new ZipArchive({ store: true });
-    res.attachment("bridge-media.zip");
+    res.attachment("meadow-media.zip");
     const completion = new Promise((resolve, reject) => { archive.on("error", reject); res.on("finish", resolve); res.on("close", () => { archive.abort(); resolve(); }); });
     archive.pipe(res);
     records.forEach((record, index) => archive.file(this.storage.path(record.storageKey), { name: `${String(index + 1).padStart(2, "0")}-${record.filename}` }));

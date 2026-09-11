@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { invariant } from "../core/errors.js";
 
-const reservedCodes = new Set(["admin", "affiliate", "api", "app", "bridge", "help", "login", "pricing", "signup", "support"]);
+const reservedCodes = new Set(["admin", "affiliate", "api", "app", "bridge", "meadow", "help", "login", "pricing", "signup", "support"]);
 const statuses = new Set(["pending", "approved", "paid", "reversed"]);
 
 export class AffiliateService {
@@ -160,7 +160,7 @@ export class AffiliateService {
 
   availableCode(name) {
     let base = name.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 24);
-    if (base.length < 4 || reservedCodes.has(base)) base = `partner-${base || "bridge"}`.slice(0, 24);
+    if (base.length < 4 || reservedCodes.has(base)) base = `partner-${base || "meadow"}`.slice(0, 24);
     for (let attempt = 0; attempt < 20; attempt += 1) {
       const candidate = `${base}-${randomBytes(2).toString("hex")}`;
       if (!this.findByCode(candidate)) return candidate;

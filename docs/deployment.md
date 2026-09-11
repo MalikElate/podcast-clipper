@@ -1,6 +1,6 @@
 # Deployment
 
-Bridge needs a persistent Node/Python server with FFmpeg. The frontend can be served by Express from the same HTTPS origin. This backend cannot run as a static site or a Cloudflare Worker because it uses child processes and a local SQLite/media volume.
+Meadow needs a persistent Node/Python server with FFmpeg. The frontend can be served by Express from the same HTTPS origin. This backend cannot run as a static site or a Cloudflare Worker because it uses child processes and a local SQLite/media volume.
 
 The Docker/Compose files are provided for this topology. They were not built in this workspace because Docker is unavailable here. The native backend test suite and frontend build are validated separately. Nothing has been deployed to a public host by this implementation.
 
@@ -30,7 +30,7 @@ From the repository root on a Docker host:
 docker compose --env-file frontend/.env up --build -d
 ```
 
-The Compose file passes Firebase's public web settings to the frontend build and supplies backend secrets only at runtime. It mounts `bridge-data` at `/data`, runs as the unprivileged Node user, and exposes the API only at `127.0.0.1:8787`. Put an HTTPS reverse proxy in front of it. Persist the named volume across updates; do not use `docker compose down -v` unless deleting all Bridge data is intended.
+The Compose file passes Firebase's public web settings to the frontend build and supplies backend secrets only at runtime. It mounts `bridge-data` at `/data`, runs as the unprivileged Node user, and exposes the API only at `127.0.0.1:8787`. Put an HTTPS reverse proxy in front of it. Persist the named volume across updates; do not use `docker compose down -v` unless deleting all Meadow data is intended.
 
 The reverse proxy must support large request bodies, media byte ranges, ZIP streaming, and long upload timeouts. Set its upload body limit consistently with `BRIDGE_MAX_UPLOAD_MB` (default 1 GiB). Provider retrieval of signed `/media/...` URLs and `/oauth/...` endpoints must be publicly reachable without a login wall. Signed URLs authorize only a particular media variant until expiry.
 

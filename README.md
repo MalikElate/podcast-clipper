@@ -1,6 +1,6 @@
-# Bridge
+# Meadow
 
-Bridge is a publishing workspace with a standalone podcast clipping studio. Projects keep each user's social accounts, media, posts, queue, and analytics separate. The original Node/Express, React/Vite, Firebase, Python, and FFmpeg stack is preserved.
+Meadow is a publishing workspace with a standalone podcast clipping studio. Projects keep each user's social accounts, media, posts, queue, and analytics separate. The original Node/Express, React/Vite, Firebase, Python, and FFmpeg stack is preserved.
 
 ## Implemented workflows
 
@@ -55,7 +55,7 @@ cd frontend
 npm run dev
 ```
 
-Open [Bridge locally](http://localhost:5173). Vite proxies `/api`, `/media`, `/oauth`, and `/downloads` to port 8787.
+Open [Meadow locally](http://localhost:5173). Vite proxies `/api`, `/media`, `/oauth`, and `/downloads` to port 8787.
 
 For an explicit local preview without Firebase credentials, run the backend with `BRIDGE_LOCAL_PREVIEW=1` and Vite with `VITE_BRIDGE_LOCAL_PREVIEW=true`. The preview backend binds only to loopback, requires a special preview request header, and disables connections and publishing. Never use a preview frontend build for production.
 
@@ -94,7 +94,7 @@ npm run build
 
 FFmpeg must be installed for the media integration tests. Provider tests use simulated network responses and test credentials; they do not contact or post to real accounts. The clipping integration test uses a synthetic source and simulated transcription/AI selections, with actual audio extraction, caption rendering, media probing, durable storage, and download tickets.
 
-## Extending Bridge
+## Extending Meadow
 
 [Architecture and extension points](docs/architecture.md) describe service boundaries, the provider contract, storage, queue state transitions, and how to add or remove features. `BridgeApplication` is the composition root; services receive their dependencies through constructors rather than locating global singletons.
 
@@ -110,4 +110,4 @@ frontend/src/bridge/        project shell and feature modules
 backend/test/              domain, API, providers, clipping and downloader tests
 ```
 
-Source videos and audio are removed after each clipping job. Generated clips and uploaded media remain until deleted. Bridge retains published history locally; deleting content from a social platform is outside this initial release. Media links are bearer links and expire after 30 minutes for browser access or 24 hours for provider retrieval. ZIP download tickets expire after two minutes and are single-use.
+Source videos and audio are removed after each clipping job. Generated clips and uploaded media remain until deleted. Meadow retains published history locally; deleting content from a social platform is outside this initial release. Media links are bearer links and expire after 30 minutes for browser access or 24 hours for provider retrieval. ZIP download tickets expire after two minutes and are single-use.

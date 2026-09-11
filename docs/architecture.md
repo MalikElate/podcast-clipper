@@ -1,6 +1,6 @@
 # Architecture and extension points
 
-Bridge separates domain behavior, provider integrations, storage, transport, workers, and the interface. Classes own stateful behavior; small pure functions handle formatting and validation. Constructor injection makes services testable without credentials or live platform calls. The React interface is organized into independent feature modules.
+Meadow separates domain behavior, provider integrations, storage, transport, workers, and the interface. Classes own stateful behavior; small pure functions handle formatting and validation. Constructor injection makes services testable without credentials or live platform calls. The React interface is organized into independent feature modules.
 
 ## Composition and boundaries
 
@@ -55,7 +55,7 @@ stateDiagram-v2
 
 Queued deliveries can be changed after another destination succeeds. Published destinations keep their original content snapshot. Editing is blocked while any destination is actively publishing, processing, or awaiting duplicate review. Queue arrows exchange the selected account's requested-time slots and order, then recalculate its allowance. Cancelling affects unpublished deliveries; deleting a partially published post is rejected atomically.
 
-Exactly-once remote publication cannot be guaranteed by an application when a network response is lost. Bridge avoids automatic repeat publication in that case and exposes the uncertainty for review. Bluesky uses a deterministic record key; YouTube saves and queries its resumable upload session.
+Exactly-once remote publication cannot be guaranteed by an application when a network response is lost. Meadow avoids automatic repeat publication in that case and exposes the uncertainty for review. Bluesky uses a deterministic record key; YouTube saves and queries its resumable upload session.
 
 ## Provider contract
 

@@ -1,13 +1,13 @@
 # Affiliate program
 
-Bridge includes self-serve affiliate enrollment, first-touch referral attribution, and a commission ledger. The default program pays 20% on attributed subscription payments and keeps a referral click valid for 30 days. Both values are configurable.
+Meadow includes self-serve affiliate enrollment, first-touch referral attribution, and a commission ledger. The default program pays 20% on attributed subscription payments and keeps a referral click valid for 30 days. Both values are configurable.
 
 ## Customer flow
 
 1. An authenticated user joins from **Configuration → Affiliate program**.
-2. Bridge issues a link in the form `https://findmeadow.com/?ref=partner-code`.
+2. Meadow issues a link in the form `https://findmeadow.com/?ref=partner-code`.
 3. The browser records the click without personal data and keeps the attribution locally until it expires.
-4. After the referred visitor signs in or creates an account, Bridge locks the first valid affiliate to that customer. Self-referrals are rejected.
+4. After the referred visitor signs in or creates an account, Meadow locks the first valid affiliate to that customer. Self-referrals are rejected.
 5. Successful billing events add commission to the affiliate's pending balance. Refunds create negative adjustments.
 
 ## Billing integration
@@ -29,7 +29,7 @@ Content-Type: application/json
 }
 ```
 
-Use a unique `externalId` for every provider event. Repeating the same event is safe and returns the existing ledger entry; reusing its ID with different data is rejected. Send refunds with `type: "refund"`, a new external ID, a positive `amountCents`, and the original payment ID as `relatedExternalId`. Bridge stores both the refunded amount and commission as negative values and applies the original payment's commission rate.
+Use a unique `externalId` for every provider event. Repeating the same event is safe and returns the existing ledger entry; reusing its ID with different data is rejected. Send refunds with `type: "refund"`, a new external ID, a positive `amountCents`, and the original payment ID as `relatedExternalId`. Meadow stores both the refunded amount and commission as negative values and applies the original payment's commission rate.
 
 After review or payout, move a ledger entry through its settlement state:
 

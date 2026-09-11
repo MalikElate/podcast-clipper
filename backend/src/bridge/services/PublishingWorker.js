@@ -108,7 +108,7 @@ export class PublishingWorker {
           if (!polling || error.restartPublishing) this.store.removeRateEvent(id);
           const retryAt = error.retryAt || this.clock() + 15 * 60000;
           this.store.put("delivery", { ...current, status: polling && !error.restartPublishing ? "processing" : "retrying", ...(error.restartPublishing ? { progress: {}, startedAt: null } : {}), dueAt: retryAt, retryAt, attempts: Math.max(0, current.attempts - (claimed && !polling ? 1 : 0)), error: error.message, leaseUntil: null, updatedAt: this.clock() });
-          this.rates.block(account.rateKey, retryAt, error.retryAt ? "Waiting for the provider's reset time." : "The platform did not give a reset time. Bridge will check its allowance again.");
+          this.rates.block(account.rateKey, retryAt, error.retryAt ? "Waiting for the provider's reset time." : "The platform did not give a reset time. Meadow will check its allowance again.");
         } else if (error.retryable && current.attempts < 5) {
           if (!polling) this.store.removeRateEvent(id);
           const retryAt = this.clock() + Math.min(60 * 60000, 60000 * 2 ** Math.max(0, current.attempts - 1));

@@ -51,7 +51,7 @@ export class PlatformProvider {
     const caps = this.capabilities;
     const format = content.format === "auto" || !content.format ? inferFormat(content.media) : content.format;
     const messages = [];
-    if (!caps.formats.includes(format)) messages.push(`${caps.name} does not support this ${format} format through Bridge.`);
+    if (!caps.formats.includes(format)) messages.push(`${caps.name} does not support this ${format} format through Meadow.`);
     const caption = content.caption || "";
     const length = this.id === "bluesky" ? [...new Intl.Segmenter("en", { granularity: "grapheme" }).segment(caption)].length : [...caption].length;
     if (length > caps.captionLimit) messages.push(`${caps.name} captions can contain up to ${caps.captionLimit.toLocaleString()} characters.`);
@@ -76,7 +76,7 @@ export class PlatformProvider {
     return [...new Set(messages)];
   }
 
-  async options() { return { limit: null, remaining: null, resetAt: null, limits: [], note: "The platform does not expose an exact remaining posting allowance. Bridge will queue deliveries if it reports a limit." }; }
+  async options() { return { limit: null, remaining: null, resetAt: null, limits: [], note: "The platform does not expose an exact remaining posting allowance. Meadow will queue deliveries if it reports a limit." }; }
   async accounts() { throw new Error(`${this.id}: accounts() is not implemented.`); }
   async publish() { throw new Error(`${this.id}: publish() is not implemented.`); }
   async poll() { throw new ProviderError("This delivery needs its result checked before retrying.", { uncertain: true }); }

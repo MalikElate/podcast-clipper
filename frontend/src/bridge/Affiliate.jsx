@@ -35,7 +35,7 @@ export default function Affiliate({ user }) {
 
   if (!affiliate) return <>
     <div className="bridge-affiliate-hero bridge-panel">
-      <div className="bridge-affiliate-hero-copy"><span className="bridge-affiliate-kicker">Bridge partners</span><h2>Share Bridge. Earn {program.commissionPercent}%.</h2><p>Recommend the publishing workspace to creators, brands, and agencies. You earn recurring commission when a referred customer pays for Bridge.</p></div>
+      <div className="bridge-affiliate-hero-copy"><span className="bridge-affiliate-kicker">Meadow partners</span><h2>Share Meadow. Earn {program.commissionPercent}%.</h2><p>Recommend the publishing workspace to creators, brands, and agencies. You earn recurring commission when a referred customer pays for Meadow.</p></div>
       <div className="bridge-affiliate-rate"><strong>{program.commissionPercent}%</strong><span>commission</span></div>
     </div>
     <Alert message={error}/><Alert message={notice} success/>
@@ -44,7 +44,7 @@ export default function Affiliate({ user }) {
         <h2>How it works</h2>
         <ol>
           <li><span>1</span><div><strong>Join instantly</strong><p>Create your personal referral link from this page.</p></div></li>
-          <li><span>2</span><div><strong>Share Bridge</strong><p>Send your link to people who publish social content.</p></div></li>
+          <li><span>2</span><div><strong>Share Meadow</strong><p>Send your link to people who publish social content.</p></div></li>
           <li><span>3</span><div><strong>Earn commission</strong><p>Get {program.commissionPercent}% of attributed subscription payments.</p></div></li>
         </ol>
       </section>
@@ -55,7 +55,7 @@ export default function Affiliate({ user }) {
           <Field label="Your name"><input required maxLength="80" value={form.displayName} onChange={event => setForm(current => ({ ...current, displayName: event.target.value }))} autoComplete="name"/></Field>
           <Field label="Email for affiliate updates"><input required type="email" maxLength="254" value={form.email} onChange={event => setForm(current => ({ ...current, email: event.target.value }))} autoComplete="email"/></Field>
           <Field label="Custom referral code" hint="Optional · 4–32 lowercase letters, numbers, or hyphens"><input minLength="4" maxLength="32" pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?" value={form.code} onChange={event => setForm(current => ({ ...current, code: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }))} placeholder="your-name" autoCapitalize="none"/></Field>
-          <Check checked={form.acceptedTerms} onChange={event => setForm(current => ({ ...current, acceptedTerms: event.target.checked }))}>I agree to promote Bridge honestly, avoid self-referrals, and accept that refunded or fraudulent purchases do not earn commission.</Check>
+          <Check checked={form.acceptedTerms} onChange={event => setForm(current => ({ ...current, acceptedTerms: event.target.checked }))}>I agree to promote Meadow honestly, avoid self-referrals, and accept that refunded or fraudulent purchases do not earn commission.</Check>
           <button className="bridge-button full" disabled={busy || !form.acceptedTerms}>{busy ? "Creating your link…" : "Join and get my link"}<Icon name="arrow" size={16}/></button>
         </form>
       </section>

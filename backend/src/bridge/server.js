@@ -6,7 +6,7 @@ const bridge = new BridgeApplication();
 bridge.start();
 const port = Number(process.env.PORT || 8787);
 const host = bridge.localPreview ? "127.0.0.1" : process.env.HOST || "127.0.0.1";
-const server = bridge.app.listen(port, host, () => console.log(`Bridge API listening on http://${host}:${port}`));
+const server = bridge.app.listen(port, host, () => console.log(`Meadow API listening on http://${host}:${port}`));
 let stopping = false;
 async function shutdown() {
   if (stopping) return;
