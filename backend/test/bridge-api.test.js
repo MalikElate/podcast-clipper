@@ -10,7 +10,7 @@ import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 async function setup(t, { localPreview = false, auth = true, pipeline } = {}) {
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bridge-api-test-"));
   const dir = path.join(temporaryRoot, ".bridge");
-  const application = new BridgeApplication({ store: new SqliteStore(), pipeline, env: { NODE_ENV: localPreview ? "development" : "test", BRIDGE_LOCAL_PREVIEW: localPreview ? "1" : "0", BRIDGE_DATA_DIR: dir, BRIDGE_APP_URL: "http://localhost:5173", BRIDGE_MEDIA_SIGNING_KEY: "test-signing-key", BRIDGE_CLIPPING_ENABLED: "false", BRIDGE_PUBLISHING_ENABLED: "false" }, ...(auth ? { authMiddleware: (req, res, next) => { if (!/^Bearer (alice|bob)$/.test(req.headers.authorization || "")) return res.status(401).json({ error: "Sign in required" }); req.uid = req.headers.authorization.split(" ")[1]; next(); } } : {}) });
+  const application = new BridgeApplication({ store: new SqliteStore(), pipeline, env: { NODE_ENV: localPreview ? "development" : "test", BRIDGE_LOCAL_PREVIEW: localPreview ? "1" : "0", BRIDGE_DATA_DIR: dir, BRIDGE_APP_URL: "http://localhost:5173", BRIDGE_MEDIA_SIGNING_KEY: "test-signing-key", BRIDGE_AFFILIATE_SECRET: "test-affiliate-secret", BRIDGE_CLIPPING_ENABLED: "false", BRIDGE_PUBLISHING_ENABLED: "false" }, ...(auth ? { authMiddleware: (req, res, next) => { if (!/^Bearer (alice|bob)$/.test(req.headers.authorization || "")) return res.status(401).json({ error: "Sign in required" }); req.uid = req.headers.authorization.split(" ")[1]; next(); } } : {}) });
   const server = await new Promise((resolve, reject) => { const server = application.app.listen(0, "127.0.0.1", () => resolve(server)); server.on("error", reject); });
   const base = `http://127.0.0.1:${server.address().port}`;
   t.after(async () => { await new Promise(resolve => server.close(resolve)); application.close(); fs.rmSync(temporaryRoot, { recursive: true, force: true }); });
@@ -90,4 +90,40 @@ test("OAuth callbacks reject unknown and reused state without connecting account
   assert.equal(response.status, 303); assert.match(response.headers.get("location"), /^http:\/\/localhost:5173/); assert.match(response.headers.get("location"), /connectionError/);
   assert.equal(h.application.store.list("account").length, 0);
   const malformed = await h.request(`${h.root}/posts`, { method: "POST", body: { items: [], requestId: "invalid-items-12345" } }); assert.equal(malformed.status, 400);
+});
+
+test("affiliate links attribute customers and build an idempotent commission ledger", async t => {
+  const h = await setup(t);
+  const enrolled = await h.request("/api/bridge/affiliate", { method: "POST", body: { displayName: "Alice Creator", email: "alice@example.com", code: "alice-media", acceptedTerms: true } });
+  assert.equal(enrolled.status, 201);
+  const affiliate = await enrolled.json();
+  assert.equal(affiliate.affiliate.referralLink, "http://localhost:5173/?ref=alice-media");
+  assert.equal(affiliate.program.commissionPercent, 20);
+
+  const tracked = await h.request("/api/bridge/affiliate/track", { user: null, method: "POST", body: { code: "alice-media" } });
+  assert.equal(tracked.status, 201);
+  const attribution = await tracked.json();
+  const claimed = await h.request("/api/bridge/affiliate/claim", { user: "bob", method: "POST", body: attribution });
+  assert.equal(claimed.status, 200);
+  assert.equal((await claimed.json()).attributed, true);
+
+  const selfReferral = await h.request("/api/bridge/affiliate/claim", { method: "POST", body: attribution });
+  assert.equal((await selfReferral.json()).reason, "self_referral");
+  const hook = "/api/bridge/internal/affiliate/conversions";
+  assert.equal((await h.request(hook, { user: null, method: "POST", headers: { "X-Bridge-Affiliate-Secret": "wrong" }, body: { customerUid: "bob", externalId: "invoice-1", amountCents: 3900 } })).status, 401);
+  const purchase = await h.request(hook, { user: null, method: "POST", headers: { "X-Bridge-Affiliate-Secret": "test-affiliate-secret" }, body: { customerUid: "bob", externalId: "invoice-1", amountCents: 3900 } });
+  assert.equal(purchase.status, 201);
+  const purchaseData = await purchase.json();
+  assert.equal(purchaseData.conversion.commissionCents, 780);
+  const duplicate = await h.request(hook, { user: null, method: "POST", headers: { "X-Bridge-Affiliate-Secret": "test-affiliate-secret" }, body: { customerUid: "bob", externalId: "invoice-1", amountCents: 3900 } });
+  assert.equal((await duplicate.json()).idempotent, true);
+  const refund = await h.request(hook, { user: null, method: "POST", headers: { "X-Bridge-Affiliate-Secret": "test-affiliate-secret" }, body: { customerUid: "bob", externalId: "refund-1", amountCents: 1000, type: "refund" } });
+  assert.equal((await refund.json()).conversion.commissionCents, -200);
+
+  const paid = await h.request(`${hook}/${purchaseData.conversion.id}`, { user: null, method: "PATCH", headers: { "X-Bridge-Affiliate-Secret": "test-affiliate-secret" }, body: { status: "paid" } });
+  assert.equal(paid.status, 200);
+  const dashboard = await (await h.request("/api/bridge/affiliate")).json();
+  assert.deepEqual({ clicks: dashboard.stats.clicks, referrals: dashboard.stats.referrals, customers: dashboard.stats.customers, conversions: dashboard.stats.conversions }, { clicks: 1, referrals: 1, customers: 1, conversions: 1 });
+  assert.equal(dashboard.stats.pendingCents, -200);
+  assert.equal(dashboard.stats.paidCents, 780);
 });

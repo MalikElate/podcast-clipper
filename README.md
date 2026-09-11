@@ -13,6 +13,7 @@ Bridge is a publishing workspace with a standalone podcast clipping studio. Proj
 - Per-post and per-account analytics, the same post across accounts, combined post totals, comparison of selected posts, and an account's best-performing posts. Missing metrics remain unavailable instead of becoming zero.
 - YouTube source clipping with local Whisper timestamps, Gemini moment selection, vertical FFmpeg rendering, subtitles, clip ranking, and individual or bulk ZIP downloads. Clips can be downloaded without connecting social accounts or publishing anything.
 - Configuration screens for workspace/project settings, service readiness, API-key management, and plan comparison. API keys are stored as hashes, shown only once, and can authenticate REST and CLI requests until revoked.
+- Self-serve affiliate enrollment, 30-day referral attribution, and an idempotent commission ledger for billing integrations.
 
 Collaborators and payment-provider checkout are intentionally deferred. The Billing screen presents the planned tiers but cannot change a subscription yet. Provider restrictions mean the publishing API supports a subset of each platform's native app features; see [platform setup and formats](docs/platforms.md).
 
@@ -70,8 +71,13 @@ Sanitized templates: [backend/.env.example](backend/.env.example) and [frontend/
 - `BRIDGE_DISABLED_PLATFORMS`: comma-separated adapter IDs to hide/disable.
 - `BRIDGE_CLIPPING_ENABLED=false`: remove the clipping tool and stop its worker.
 - `BRIDGE_PUBLISHING_ENABLED=false`: pause the publishing worker while keeping saved queues.
+- `BRIDGE_AFFILIATE_SECRET`: private shared secret used by the billing provider to record and settle affiliate commissions.
+- `BRIDGE_AFFILIATE_COMMISSION_BPS`: commission in basis points; defaults to `2000` (20%).
+- `BRIDGE_AFFILIATE_ATTRIBUTION_DAYS`: first-touch referral window; defaults to 30 days.
 
 A public deployment can serve the frontend and API from one origin. The included Dockerfile and Compose configuration provide that topology. [Deployment instructions](docs/deployment.md) include secrets, persistent storage, reverse proxy expectations, backups, and the remaining live acceptance checks.
+
+See [Affiliate program](docs/affiliate-program.md) for referral behavior and the payment-webhook contract.
 
 ## Validation
 

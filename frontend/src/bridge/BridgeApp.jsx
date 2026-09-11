@@ -15,6 +15,7 @@ import Analytics from "./Analytics.jsx";
 import ConfigurationSettings from "./ConfigurationSettings.jsx";
 import ApiKeys from "./ApiKeys.jsx";
 import Billing from "./Billing.jsx";
+import Affiliate from "./Affiliate.jsx";
 import "./bridge.css";
 
 export const modules = [
@@ -37,6 +38,7 @@ export const configurationModules = [
   { id: "settings", name: "Settings", icon: "settings" },
   { id: "api-keys", name: "API Keys", title: "Agents & API keys", icon: "key" },
   { id: "billing", name: "Billing", title: "Billing & plans", icon: "billing" },
+  { id: "affiliate", name: "Affiliate program", icon: "affiliate" },
 ];
 
 const allModules = [...modules, ...postModules, ...configurationModules];
@@ -44,9 +46,41 @@ const postViewIds = new Set(postModules.map(item => item.id));
 const configurationViewIds = new Set(configurationModules.map(item => item.id));
 const SHOW_WORKSPACE_CONTROLS = false;
 const SHOW_CLIPPING_STUDIO = false;
+const AFFILIATE_ATTRIBUTION_KEY = "bridge-affiliate-attribution";
+
+function savedAttribution() {
+  try {
+    const value = JSON.parse(localStorage.getItem(AFFILIATE_ATTRIBUTION_KEY));
+    if (value?.code && value?.expiresAt > Date.now()) return value;
+    localStorage.removeItem(AFFILIATE_ATTRIBUTION_KEY);
+  } catch {}
+  return null;
+}
 
 export default function BridgeApp() {
   const { user, signOut } = useAuth();
+  const initialReferralCode = useRef(new URLSearchParams(window.location.search).get("ref"));
+  const [attribution, setAttribution] = useState(savedAttribution);
+  useEffect(() => {
+    const code = initialReferralCode.current;
+    if (!code || attribution) return;
+    api.trackAffiliate(code).then(value => {
+      try { localStorage.setItem(AFFILIATE_ATTRIBUTION_KEY, JSON.stringify(value)); } catch {}
+      setAttribution(value);
+    }).catch(() => {});
+  }, [attribution]);
+  useEffect(() => {
+    if ((!user && !localPreview) || !attribution) return;
+    api.claimAffiliate(attribution).then(() => {
+      try { localStorage.removeItem(AFFILIATE_ATTRIBUTION_KEY); } catch {}
+      setAttribution(null);
+    }).catch(error => {
+      if ([404, 410].includes(error.status)) {
+        try { localStorage.removeItem(AFFILIATE_ATTRIBUTION_KEY); } catch {}
+        setAttribution(null);
+      }
+    });
+  }, [user, attribution]);
   if (user === undefined && !localPreview) return <div className="bridge bridge-loading" data-theme="light">Loading Bridge…</div>;
   if (!user && !localPreview) return <div className="bridge bridge-signin" data-theme="light"><div className="bridge-signin-brand"><BridgeMark/><span>bridge</span></div>{firebaseConfigured ? <Auth onBack={() => {}}/> : <div className="bridge-panel"><h1>Your content, connected.</h1><p>Sign-in is being configured. Please check back shortly.</p></div>}</div>;
   return <Workspace key={user?.uid || "preview"} user={user} signOut={signOut}/>;
@@ -106,6 +140,7 @@ function ConfigurationWorkspace({ user, project, config, view, onProjectUpdated 
     {view === "settings" && <ConfigurationSettings user={user} project={project} config={config} onProjectUpdated={onProjectUpdated}/>}
     {view === "api-keys" && <ApiKeys timeZone={project?.timeZone}/>}
     {view === "billing" && <Billing localPreview={config.localPreview}/>}
+    {view === "affiliate" && <Affiliate user={user}/>}
   </>;
 }
 function ProjectWorkspace({ project, config, view, navigate, compose, seed, scheduledDate, seedVersion, clearSeed, connectionId, clearConnection, notify }) {

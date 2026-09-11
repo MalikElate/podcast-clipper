@@ -20,6 +20,7 @@ import { AnalyticsService } from "./services/AnalyticsService.js";
 import { ClippingService } from "./services/ClippingService.js";
 import { DownloadService } from "./services/DownloadService.js";
 import { ApiKeyService } from "./services/ApiKeyService.js";
+import { AffiliateService } from "./services/AffiliateService.js";
 import { PublishingWorker } from "./services/PublishingWorker.js";
 import { SecretVault } from "./core/SecretVault.js";
 import { LockService } from "./core/LockService.js";
@@ -48,6 +49,14 @@ export class BridgeApplication {
     fs.mkdirSync(this.dataDir, { recursive: true, mode: 0o700 });
     this.store = store || new SqliteStore(path.join(this.dataDir, "bridge.sqlite"));
     this.apiKeys = new ApiKeyService(this.store, { clock });
+    this.affiliates = new AffiliateService({
+      store: this.store,
+      appUrl: this.appUrl,
+      internalSecret: env.BRIDGE_AFFILIATE_SECRET,
+      commissionRateBps: Number(env.BRIDGE_AFFILIATE_COMMISSION_BPS || 2000),
+      attributionDays: Number(env.BRIDGE_AFFILIATE_ATTRIBUTION_DAYS || 30),
+      clock,
+    });
     this.vault = new SecretVault(env.BRIDGE_ENCRYPTION_KEY);
     this.projects = new ProjectService(this.store);
     this.schedules = new ScheduleService({ clock });
@@ -112,6 +121,18 @@ export class BridgeApplication {
 
   registerPublicRoutes() {
     const app = this.app;
+    app.post("/api/bridge/affiliate/track", rateLimit({ windowMs: 60000, limit: 30, standardHeaders: "draft-7", legacyHeaders: false }), route((req, res) => {
+      res.setHeader("Cache-Control", "no-store");
+      res.status(201).json(this.affiliates.track(req.body.code));
+    }));
+    app.post("/api/bridge/internal/affiliate/conversions", route((req, res) => {
+      res.setHeader("Cache-Control", "no-store");
+      res.status(201).json(this.affiliates.recordConversion(req.headers["x-bridge-affiliate-secret"], req.body));
+    }));
+    app.patch("/api/bridge/internal/affiliate/conversions/:id", route((req, res) => {
+      res.setHeader("Cache-Control", "no-store");
+      res.json(this.affiliates.updateConversionStatus(req.headers["x-bridge-affiliate-secret"], req.params.id, req.body.status));
+    }));
     app.get("/downloads/:ticket", route((req, res) => {
       const download = this.downloads.consume(req.params.ticket);
       req.uid = download.uid; req.params.projectId = download.projectId;
@@ -143,6 +164,9 @@ export class BridgeApplication {
     app.get("/api/bridge/api-keys", route((req, res) => res.json({ apiKeys: this.apiKeys.list(req.uid) })));
     app.post("/api/bridge/api-keys", route((req, res) => res.status(201).json(this.apiKeys.create(req.uid, req.body))));
     app.delete("/api/bridge/api-keys/:id", route((req, res) => res.json(this.apiKeys.remove(req.uid, req.params.id))));
+    app.get("/api/bridge/affiliate", route((req, res) => res.json(this.affiliates.dashboard(req.uid))));
+    app.post("/api/bridge/affiliate", route((req, res) => res.status(201).json(this.affiliates.enroll(req.uid, req.body))));
+    app.post("/api/bridge/affiliate/claim", route((req, res) => res.json(this.affiliates.claim(req.uid, req.body))));
     app.get("/api/bridge/projects", route((req, res) => res.json({ projects: this.projects.list(req.uid) })));
     app.post("/api/bridge/projects", route((req, res) => res.status(201).json({ project: this.projects.create(req.uid, req.body) })));
     app.patch(root, route((req, res) => res.json({ project: this.projects.update(req.uid, req.params.projectId, req.body) })));

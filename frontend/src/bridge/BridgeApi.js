@@ -21,6 +21,10 @@ export class BridgeApi {
   createProject(body) { return this.request("/projects", { method: "POST", body }); }
   updateProject(id, body) { return this.request(this.projectPath(id), { method: "PATCH", body }); }
   project(id, path, options) { return this.request(this.projectPath(id, path), options); }
+  affiliate(signal) { return this.request("/affiliate", { signal }); }
+  enrollAffiliate(body) { return this.request("/affiliate", { method: "POST", body }); }
+  trackAffiliate(code) { return this.request("/affiliate/track", { method: "POST", body: { code } }); }
+  claimAffiliate(body) { return this.request("/affiliate/claim", { method: "POST", body }); }
   async download(projectId, path, filename) {
     let ids;
     if (path.startsWith("/clips/")) {
