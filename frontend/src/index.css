@@ -1495,6 +1495,7 @@ input[type="range"]::-moz-range-thumb {
 
 /* --- Public pricing --- */
 .pricing-main { padding: 82px 0 0; }
+.pricing-page .landing-header { border-bottom: 0; }
 .pricing-intro { max-width: 760px; margin: 0 auto 50px; text-align: center; }
 .pricing-intro h1 { margin: 0; font-size: clamp(44px,6vw,72px); line-height: 1; letter-spacing: -.055em; }
 .pricing-intro > p { max-width: 610px; margin: 20px auto 0; color: var(--text-muted); font-size: 15px; line-height: 1.65; }
