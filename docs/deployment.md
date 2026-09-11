@@ -11,6 +11,7 @@ The Docker and Compose files support self-hosting. Production on `findmeadow.com
 3. Generate separate random values for `BRIDGE_ENCRYPTION_KEY` and `BRIDGE_MEDIA_SIGNING_KEY`.
 4. Set `BRIDGE_APP_URL` and `BRIDGE_PUBLIC_URL` to the canonical public HTTPS origin without a trailing path. Set `BRIDGE_TRUST_PROXY` to the exact trusted proxy hop count.
 5. Supply the platform application credentials and callbacks described in [platforms.md](platforms.md). Leave unfinished platforms disabled through `BRIDGE_DISABLED_PLATFORMS` until their applications are approved and tested.
+6. Create monthly and yearly recurring Stripe Prices for Starter, Creator, Growth, and Pro. Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and the eight `STRIPE_PRICE_*` values listed in `backend/.env.example`. Register `https://findmeadow.com/api/stripe/webhook` for `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, and `customer.subscription.deleted`, and configure the Stripe Customer Portal.
 
 Never copy runtime secrets into `VITE_*` variables. The Clerk publishable key and analytics project tokens are public frontend build inputs. Do not change the encryption key without migrating or re-encrypting stored credentials. Keep copies of signing and encryption keys separate from data backups.
 
@@ -50,6 +51,7 @@ These checks require actual provider credentials and approved test accounts:
 4. Compare supported metrics with provider results and confirm that unavailable or delayed values stay marked as unavailable.
 5. Schedule a small test set, restart the server while work is queued, and verify continued delivery and permitted rate-limit behavior.
 6. Complete provider app details, domain verification, privacy and deletion instructions, access reviews, and public-use approvals.
+7. Complete one Stripe test-mode Checkout for each billing frequency, confirm the webhook updates Meadow's Billing page, open the Customer Portal, and test cancellation before replacing test keys and Price IDs with live-mode values.
 
 ## Verified locally
 

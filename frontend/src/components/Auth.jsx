@@ -21,7 +21,7 @@ const clerkAppearance = {
   },
 };
 
-export default function Auth({ onBack }) {
+export default function Auth({ onBack, redirectUrl = "/" }) {
   const [mode, setMode] = useState("signin"); // "signin" | "signup"
 
   function switchMode(next) {
@@ -57,9 +57,9 @@ export default function Auth({ onBack }) {
 
       <div className="clerk-auth-shell">
         {mode === "signin" ? (
-          <SignIn routing="virtual" forceRedirectUrl="/" appearance={clerkAppearance} />
+          <SignIn routing="virtual" forceRedirectUrl={redirectUrl} appearance={clerkAppearance} />
         ) : (
-          <SignUp routing="virtual" forceRedirectUrl="/" appearance={clerkAppearance} />
+          <SignUp routing="virtual" forceRedirectUrl={redirectUrl} appearance={clerkAppearance} />
         )}
       </div>
     </div>

@@ -1,0 +1,41 @@
+export const PLANS = [
+  {
+    id: "starter",
+    name: "Starter",
+    description: "For new creators",
+    monthly: 29,
+    yearly: 24,
+    accounts: "5 connected social accounts",
+    features: ["Multiple accounts per platform", "Unlimited posts", "Schedule posts", "AI agent access", "Carousel posts", "Human support"],
+  },
+  {
+    id: "creator",
+    name: "Creator",
+    description: "For growing creators",
+    monthly: 39,
+    yearly: 33,
+    accounts: "15 connected social accounts",
+    popular: true,
+    features: ["Everything in Starter", "Bulk video scheduling", "Content studio access", "Analytics", "Human support"],
+  },
+  {
+    id: "growth",
+    name: "Growth",
+    description: "For growing teams and agencies",
+    monthly: 59,
+    yearly: 49,
+    accounts: "50 connected social accounts",
+    features: ["Everything in Creator", "Viral growth reports", "Priority human support", "Invite team members"],
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    description: "For scaling brands",
+    monthly: 99,
+    yearly: 83,
+    accounts: "Unlimited connected accounts",
+    best: true,
+    features: ["Everything in Growth", "Advanced API access", "Priority processing", "Viral growth consulting"],
+  },
+];
+

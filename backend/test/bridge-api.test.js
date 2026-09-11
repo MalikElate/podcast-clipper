@@ -7,10 +7,10 @@ import { execFileSync } from "node:child_process";
 import { BridgeApplication } from "../src/bridge/BridgeApplication.js";
 import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 
-async function setup(t, { localPreview = false, auth = true } = {}) {
+async function setup(t, { localPreview = false, auth = true, stripe, envOverrides = {} } = {}) {
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bridge-api-test-"));
   const dir = path.join(temporaryRoot, ".bridge");
-  const application = new BridgeApplication({ store: new SqliteStore(), env: { NODE_ENV: localPreview ? "development" : "test", BRIDGE_LOCAL_PREVIEW: localPreview ? "1" : "0", BRIDGE_DATA_DIR: dir, BRIDGE_APP_URL: "http://localhost:5173", BRIDGE_MEDIA_SIGNING_KEY: "test-signing-key", BRIDGE_PUBLISHING_ENABLED: "false" }, ...(auth ? { authMiddleware: (req, res, next) => { if (!/^Bearer (alice|bob)$/.test(req.headers.authorization || "")) return res.status(401).json({ error: "Sign in required" }); req.uid = req.headers.authorization.split(" ")[1]; next(); } } : {}) });
+  const application = new BridgeApplication({ store: new SqliteStore(), stripe, env: { NODE_ENV: localPreview ? "development" : "test", BRIDGE_LOCAL_PREVIEW: localPreview ? "1" : "0", BRIDGE_DATA_DIR: dir, BRIDGE_APP_URL: "http://localhost:5173", BRIDGE_MEDIA_SIGNING_KEY: "test-signing-key", BRIDGE_PUBLISHING_ENABLED: "false", ...envOverrides }, ...(auth ? { authMiddleware: (req, res, next) => { if (!/^Bearer (alice|bob)$/.test(req.headers.authorization || "")) return res.status(401).json({ error: "Sign in required" }); req.uid = req.headers.authorization.split(" ")[1]; next(); } } : {}) });
   const server = await new Promise((resolve, reject) => { const server = application.app.listen(0, "127.0.0.1", () => resolve(server)); server.on("error", reject); });
   const base = `http://127.0.0.1:${server.address().port}`;
   t.after(async () => { await new Promise(resolve => server.close(resolve)); application.close(); fs.rmSync(temporaryRoot, { recursive: true, force: true }); });
@@ -109,4 +109,53 @@ test("deferred feature endpoints are absent from the launch application", async 
     h.request(`${h.root}/downloads`, { method: "POST", body: { ids: [] } }),
   ];
   for (const response of await Promise.all(checks)) assert.equal(response.status, 404);
+});
+
+test("Stripe checkout, webhooks, subscription state, and billing portal stay linked to the signed-in user", async t => {
+  const calls = { checkout: [], portal: [], retrieved: [] };
+  const subscription = {
+    id: "sub_creator_yearly",
+    customer: "cus_alice",
+    status: "active",
+    cancel_at_period_end: false,
+    metadata: { meadowUserId: "alice", meadowPlanId: "creator", meadowBillingCycle: "yearly" },
+    items: { data: [{ price: { id: "price_creator_yearly" }, current_period_end: 1800000000 }] },
+  };
+  const stripe = {
+    checkout: { sessions: { create: async input => { calls.checkout.push(input); return { url: "https://checkout.stripe.test/session" }; } } },
+    billingPortal: { sessions: { create: async input => { calls.portal.push(input); return { url: "https://billing.stripe.test/portal" }; } } },
+    subscriptions: { retrieve: async id => { calls.retrieved.push(id); return subscription; } },
+    webhooks: { constructEvent: (body, signature) => {
+      assert.ok(Buffer.isBuffer(body));
+      if (signature !== "valid_signature") throw new Error("bad signature");
+      return { type: "checkout.session.completed", data: { object: { mode: "subscription", client_reference_id: "alice", subscription: subscription.id } } };
+    } },
+  };
+  const h = await setup(t, { stripe, envOverrides: {
+    STRIPE_WEBHOOK_SECRET: "whsec_test",
+    STRIPE_PRICE_STARTER_MONTHLY: "price_starter_monthly", STRIPE_PRICE_STARTER_YEARLY: "price_starter_yearly",
+    STRIPE_PRICE_CREATOR_MONTHLY: "price_creator_monthly", STRIPE_PRICE_CREATOR_YEARLY: "price_creator_yearly",
+    STRIPE_PRICE_GROWTH_MONTHLY: "price_growth_monthly", STRIPE_PRICE_GROWTH_YEARLY: "price_growth_yearly",
+    STRIPE_PRICE_PRO_MONTHLY: "price_pro_monthly", STRIPE_PRICE_PRO_YEARLY: "price_pro_yearly",
+  } });
+
+  const before = await (await h.request("/api/bridge/billing")).json();
+  assert.deepEqual(before, { configured: true, planId: null, cycle: null, status: "free", cancelAtPeriodEnd: false, currentPeriodEnd: null, canManage: false });
+  const checkout = await h.request("/api/bridge/billing/checkout", { method: "POST", body: { planId: "creator", cycle: "yearly" } });
+  assert.equal(checkout.status, 200); assert.equal((await checkout.json()).url, "https://checkout.stripe.test/session");
+  assert.equal(calls.checkout[0].line_items[0].price, "price_creator_yearly");
+  assert.equal(calls.checkout[0].client_reference_id, "alice");
+  assert.equal(calls.checkout[0].subscription_data.metadata.meadowPlanId, "creator");
+
+  const unsigned = await fetch(`${h.base}/api/stripe/webhook`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  assert.equal(unsigned.status, 400);
+  const webhook = await fetch(`${h.base}/api/stripe/webhook`, { method: "POST", headers: { "Content-Type": "application/json", "Stripe-Signature": "valid_signature" }, body: "{}" });
+  assert.equal(webhook.status, 200); assert.deepEqual(await webhook.json(), { received: true }); assert.deepEqual(calls.retrieved, [subscription.id]);
+
+  const after = await (await h.request("/api/bridge/billing")).json();
+  assert.equal(after.planId, "creator"); assert.equal(after.cycle, "yearly"); assert.equal(after.status, "active"); assert.equal(after.canManage, true); assert.equal(after.currentPeriodEnd, 1800000000000);
+  const duplicate = await h.request("/api/bridge/billing/checkout", { method: "POST", body: { planId: "pro", cycle: "monthly" } });
+  assert.equal(duplicate.status, 409);
+  const portal = await h.request("/api/bridge/billing/portal", { method: "POST", body: {} });
+  assert.equal(portal.status, 200); assert.equal((await portal.json()).url, "https://billing.stripe.test/portal"); assert.equal(calls.portal[0].customer, "cus_alice");
 });

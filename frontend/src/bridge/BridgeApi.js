@@ -18,6 +18,9 @@ export class BridgeApi {
   }
   projectPath(projectId, path = "") { return `/projects/${encodeURIComponent(projectId)}${path}`; }
   getProjects(signal) { return this.request("/projects", { signal }); }
+  getBilling(signal) { return this.request("/billing", { signal }); }
+  createCheckout(planId, cycle) { return this.request("/billing/checkout", { method: "POST", body: { planId, cycle } }); }
+  createBillingPortal() { return this.request("/billing/portal", { method: "POST", body: {} }); }
   ensureDefaultProject(body, signal) { return this.request("/projects/default", { method: "POST", body, signal }); }
   updateProject(id, body) { return this.request(this.projectPath(id), { method: "PATCH", body }); }
   project(id, path, options) { return this.request(this.projectPath(id, path), options); }

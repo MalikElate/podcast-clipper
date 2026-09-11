@@ -75,7 +75,7 @@ To add a platform, implement this contract, add a catalog entry, register the pr
 
 The shell mounts `Composer`, `PostsQueue`, `Accounts`, and `Analytics` for the user's default project. The API client obtains a fresh Clerk session token for authenticated requests.
 
-The interface includes plan comparison while payment-provider checkout and entitlement enforcement remain separate future services. Collaborators can be introduced through a project-access service later. Neither concern is embedded in provider code or the media pipeline.
+The public and authenticated interfaces share one plan catalog. `BillingService` creates Stripe subscription Checkout and Customer Portal sessions, verifies signed webhooks, and stores customer/subscription state by Clerk user ID. Paid-plan entitlement enforcement remains a separate future service. Collaborators can be introduced through a project-access service later. Neither concern is embedded in provider code or the media pipeline.
 
 ## Storage and operations
 

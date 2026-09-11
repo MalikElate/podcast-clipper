@@ -4,7 +4,7 @@ The complete implementations of features intentionally excluded from the launch 
 
 That branch contains:
 
-- the affiliate dashboard, referral attribution, commission ledger, and billing integration routes;
+- the affiliate dashboard, referral attribution, commission ledger, and its legacy affiliate-linked billing routes;
 - the working AI clipping studio, downloader, transcription, selection, rendering pipeline, and ZIP downloads;
 - multi-workspace creation, selection, editing, and onboarding controls;
 - the standalone media library interface and bulk-download flow; and

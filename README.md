@@ -10,9 +10,10 @@ Meadow is a publishing workspace for creating, scheduling, and analyzing social 
 - Single-post composition with manual date, time, and timezone scheduling.
 - Durable deliveries for every account, automatic quota overflow queues, queue editing, deletion, reordering, and independent retries.
 - Per-post and per-account analytics, combined totals, post comparisons, and best-performing posts. Missing metrics remain unavailable instead of becoming zero.
+- Public pricing, Stripe subscription Checkout, webhook-backed billing status, and Stripe Customer Portal management.
 - Configuration screens for project settings, service readiness, API-key management, and plan comparison.
 
-The working clipping studio, affiliate program, multi-workspace controls, standalone media library, and bulk composer controls are deferred. Their complete implementations are preserved on the `deferred-features` branch and are absent from the active application code. The Clipping studio page remains as a coming-soon notice. Collaborators and payment-provider checkout are also deferred. See [deferred features](docs/deferred-features.md) for the preserved scope and [platform setup and formats](docs/platforms.md) for provider limitations.
+The working clipping studio, affiliate program, multi-workspace controls, standalone media library, and bulk composer controls are deferred. Their complete implementations are preserved on the `deferred-features` branch and are absent from the active application code. The Clipping studio page remains as a coming-soon notice. Collaborators and paid-plan entitlement enforcement are also deferred. See [deferred features](docs/deferred-features.md) for the preserved scope and [platform setup and formats](docs/platforms.md) for provider limitations.
 
 The local preview disables real account connections and publishing. It does not fabricate accounts, published posts, quotas, or analytics.
 

@@ -19,32 +19,38 @@ const PAGE_COPY = {
         ],
       },
       {
-        heading: "3. Your content and connected accounts",
+        heading: "3. Paid subscriptions",
+        paragraphs: [
+          "Paid plans renew automatically at the billing frequency shown at checkout until cancelled. Stripe processes payments and provides the billing portal. You can manage or cancel a subscription from Meadow’s Billing page; cancellation takes effect according to the date shown in the portal. Prices, taxes, and the amount due are shown before you subscribe.",
+        ],
+      },
+      {
+        heading: "4. Your content and connected accounts",
         paragraphs: [
           "You keep ownership of the media, text, and other material you provide to Meadow. You give Meadow permission to process that material only as needed to provide the features you request. You must have the rights and permissions needed to upload, transform, schedule, and publish your content.",
           "When you connect a third-party account, you authorize Meadow to use the permissions you grant through that platform. You are responsible for following the platform’s rules, including its privacy, music, copyright, and publishing requirements.",
         ],
       },
       {
-        heading: "4. Acceptable use",
+        heading: "5. Acceptable use",
         paragraphs: [
           "Do not use Meadow to break the law, infringe another person’s rights, distribute harmful or malicious material, bypass platform safeguards, or interfere with the service. We may suspend access when necessary to protect the service, users, or connected platforms.",
         ],
       },
       {
-        heading: "5. Service changes and availability",
+        heading: "6. Service changes and availability",
         paragraphs: [
           "Meadow is evolving, so features may change, be limited, or be discontinued. We work to keep the service available, but we do not promise that it will be uninterrupted or error-free.",
         ],
       },
       {
-        heading: "6. Disclaimers",
+        heading: "7. Disclaimers",
         paragraphs: [
           "Meadow is provided as available. To the extent allowed by law, Meadow is not responsible for losses caused by content you publish, actions taken by connected platforms, or interruptions outside our reasonable control.",
         ],
       },
       {
-        heading: "7. Contact",
+        heading: "8. Contact",
         paragraphs: [
           <>Questions about these terms can be sent to <a href="mailto:hello@findmeadow.com">hello@findmeadow.com</a>.</>,
         ],
@@ -72,7 +78,7 @@ const PAGE_COPY = {
       {
         heading: "3. When information is shared",
         paragraphs: [
-          "We share information with service providers that help operate Meadow, such as authentication, hosting, analytics, media-processing, and infrastructure providers. We send content to a connected platform only when you request an action that requires it. We may also disclose information when required by law or when needed to protect the service and its users.",
+          "We share information with service providers that help operate Meadow, such as authentication, payment processing through Stripe, hosting, analytics, media-processing, and infrastructure providers. We send content to a connected platform only when you request an action that requires it. We may also disclose information when required by law or when needed to protect the service and its users.",
         ],
       },
       {

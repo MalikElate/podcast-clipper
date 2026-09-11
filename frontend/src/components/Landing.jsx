@@ -166,6 +166,7 @@ export default function Landing({ onGetStarted }) {
           <a href="#how-it-works">How it works</a>
           <a href="#platforms">Platforms</a>
           <a href="#features">Features</a>
+          <a href="/pricing">Pricing</a>
           <a href="#faq">FAQ</a>
         </nav>
         <div className="landing-actions">
@@ -310,7 +311,7 @@ export default function Landing({ onGetStarted }) {
             <p>Create, schedule, publish, and track from one workspace.</p>
           </div>
           <div className="footer-links">
-            <div><span>Explore</span><a href="#how-it-works">How it works</a><a href="#platforms">Platforms</a><a href="#features">Features</a><a href="#faq">FAQ</a></div>
+            <div><span>Explore</span><a href="#how-it-works">How it works</a><a href="#platforms">Platforms</a><a href="#features">Features</a><a href="/pricing">Pricing</a><a href="#faq">FAQ</a></div>
             <div><span>Get started</span><button onClick={onGetStarted}>Create your first post</button><a href="mailto:hello@findmeadow.com">Contact us</a></div>
             <div><span>Legal</span><a href="/terms">Terms of service</a><a href="/privacy">Privacy policy</a></div>
           </div>

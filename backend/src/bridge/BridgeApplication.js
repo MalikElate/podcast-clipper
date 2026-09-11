@@ -18,6 +18,7 @@ import { RateLimitService } from "./services/RateLimitService.js";
 import { AnalyticsService } from "./services/AnalyticsService.js";
 import { ApiKeyService } from "./services/ApiKeyService.js";
 import { PublishingWorker } from "./services/PublishingWorker.js";
+import { BillingService } from "./services/BillingService.js";
 import { SecretVault } from "./core/SecretVault.js";
 import { LockService } from "./core/LockService.js";
 import { BridgeError, invariant, publicError } from "./core/errors.js";
@@ -37,7 +38,7 @@ export const route = fn => (req, res, next) => Promise.resolve().then(() => fn(r
 
 /** Composition root. Services, repository, adapters and authentication are replaceable. */
 export class BridgeApplication {
-  constructor({ env = process.env, store, registry, storage, authMiddleware, clock = () => Date.now() } = {}) {
+  constructor({ env = process.env, store, registry, storage, authMiddleware, stripe, clock = () => Date.now() } = {}) {
     this.env = env; this.clock = clock;
     this.localPreview = env.BRIDGE_LOCAL_PREVIEW === "1" && env.NODE_ENV !== "production";
     this.dataDir = path.resolve(env.BRIDGE_DATA_DIR || path.join(backendDir, ".bridge"));
@@ -64,12 +65,14 @@ export class BridgeApplication {
     this.accounts = new AccountService({ ...deps, registry: this.registry, projects: this.projects, clock, localPreview: this.localPreview });
     this.posts = new PostService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, media: this.media, schedules: this.schedules, rates: this.rates, clock, localPreview: this.localPreview });
     this.analytics = new AnalyticsService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, posts: this.posts, clock });
+    this.billing = new BillingService({ store: this.store, env, appUrl: this.appUrl, stripe });
     this.worker = new PublishingWorker({ store: this.store, accounts: this.accounts, registry: this.registry, posts: this.posts, rates: this.rates, media: this.media, locks: this.locks, analytics: this.analytics, clock, enabled: !this.localPreview && env.BRIDGE_PUBLISHING_ENABLED !== "false" });
     const incoming = path.join(this.dataDir, "incoming"); fs.mkdirSync(incoming, { recursive: true, mode: 0o700 });
     this.upload = multer({ dest: incoming, limits: { fileSize: this.media.maxBytes, files: 1, fields: 0 } });
     this.app = express(); this.app.disable("x-powered-by");
     if (env.BRIDGE_TRUST_PROXY) this.app.set("trust proxy", Number(env.BRIDGE_TRUST_PROXY));
     this.app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } }));
+    this.app.post("/api/stripe/webhook", express.raw({ type: "application/json", limit: "1mb" }), route(async (req, res) => res.json(await this.billing.webhook(req.body, req.headers["stripe-signature"]))));
     const origins = new Set([new URL(this.appUrl).origin, new URL(this.publicUrl).origin]);
     if (this.localPreview) { origins.add("http://127.0.0.1:5173"); origins.add("http://localhost:5173"); }
     this.app.use(cors({ origin: (origin, done) => done(null, !origin || origins.has(origin)), methods: ["GET", "POST", "PATCH", "DELETE"], allowedHeaders: ["Content-Type", "Authorization", "X-Bridge-Preview"] }));
@@ -132,6 +135,9 @@ export class BridgeApplication {
   registerRoutes() {
     const app = this.app, root = "/api/bridge/projects/:projectId";
     app.get("/api/bridge/config", route((req, res) => res.json({ name: "Meadow", localPreview: this.localPreview, platforms: this.registry.catalog(), maxBatchSize: 100, maxUploadBytes: this.media.maxBytes, features: { analytics: true, publishing: this.worker.enabled }, connectionsReady: this.vault.configured, mediaReady: Boolean(this.media.signingKey) })));
+    app.get("/api/bridge/billing", route((req, res) => res.json(this.billing.publicRecord(req.uid))));
+    app.post("/api/bridge/billing/checkout", route(async (req, res) => res.json(await this.billing.checkout(req.uid, req.userEmail, req.body))));
+    app.post("/api/bridge/billing/portal", route(async (req, res) => res.json(await this.billing.portal(req.uid))));
     app.get("/api/bridge/api-keys", route((req, res) => res.json({ apiKeys: this.apiKeys.list(req.uid) })));
     app.post("/api/bridge/api-keys", route((req, res) => res.status(201).json(this.apiKeys.create(req.uid, req.body))));
     app.delete("/api/bridge/api-keys/:id", route((req, res) => res.json(this.apiKeys.remove(req.uid, req.params.id))));

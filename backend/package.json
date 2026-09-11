@@ -24,7 +24,8 @@
     "express-rate-limit": "^8.7.0",
     "file-type": "^22.0.2",
     "helmet": "^8.3.0",
-    "multer": "^2.3.0"
+    "multer": "^2.3.0",
+    "stripe": "^22.6.2"
   },
   "overrides": {
     "jose": "^4.15.9",
