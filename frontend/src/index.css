@@ -54,8 +54,20 @@ h1, h2, h3 {
 .app {
   position: relative;
   min-height: 100vh;
+  background: var(--bg);
   /* Clip decorative glows without creating a nested vertical scroll area. */
   overflow: clip;
+}
+
+.app::before {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(237, 242, 228, 0.6), rgba(237, 242, 228, 0.72)),
+    url("/meadow-background.webp") center / cover no-repeat;
+  content: "";
 }
 
 .centered-shell {
@@ -92,6 +104,12 @@ h1, h2, h3 {
   right: -140px;
   background: radial-gradient(circle, rgba(70, 217, 201, 0.28), transparent 70%);
   opacity: 0.4;
+}
+
+@media (max-width: 720px) {
+  .app::before {
+    background-position: 18% center;
+  }
 }
 
 .page-shell {
