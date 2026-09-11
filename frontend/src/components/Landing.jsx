@@ -16,24 +16,6 @@ const PLATFORMS = sortPlatforms([
   { id: "google_business", name: "Google Business", color: "#4285f4", formats: "Updates, images, carousels" },
 ]);
 
-const STEPS = [
-  {
-    number: "01",
-    title: "Connect your social accounts",
-    text: "Add the profiles, pages, channels, and business locations you already publish to.",
-  },
-  {
-    number: "02",
-    title: "Build one post for every destination",
-    text: "Add text, images, video, or a carousel, then tailor the caption and settings for each account.",
-  },
-  {
-    number: "03",
-    title: "Publish now or schedule it",
-    text: "Send the post immediately or choose a time, then follow every delivery from the queue and calendar.",
-  },
-];
-
 const FEATURES = [
   {
     eyebrow: "Create",
@@ -90,7 +72,6 @@ export default function Landing({ onGetStarted }) {
           <BrandLogo />
         </a>
         <nav className="landing-nav" aria-label="Main navigation">
-          <a href="#how-it-works">How it works</a>
           <a href="#platforms">Platforms</a>
           <a href="#features">Features</a>
           <a href="/pricing">Pricing</a>
@@ -127,24 +108,6 @@ export default function Landing({ onGetStarted }) {
               <article className="platform-card" key={platform.id} style={{ "--platform-color": platform.color }}>
                 <PlatformMark platform={platform} />
                 <div><h3>{platform.name}</h3><p>{platform.formats}</p></div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="landing-section steps-section" id="how-it-works">
-          <div className="section-heading">
-            <span className="section-eyebrow">How Meadow works</span>
-            <h2>From connected account to published post.</h2>
-            <p>Choose your destinations once. Meadow keeps the media, schedule, and delivery state together.</p>
-          </div>
-          <div className="step-grid">
-            {STEPS.map((step) => (
-              <article className="step-card" key={step.number}>
-                <span className="step-number">{step.number}</span>
-                <div className="step-line" />
-                <h3>{step.title}</h3>
-                <p>{step.text}</p>
               </article>
             ))}
           </div>
@@ -206,13 +169,6 @@ export default function Landing({ onGetStarted }) {
           </div>
         </section>
 
-        <section className="landing-cta-panel">
-          <div>
-            <span className="section-eyebrow">Your social schedule, one place</span>
-            <h2>Connect your accounts and send your first post.</h2>
-          </div>
-          <button className="btn-primary landing-cta" onClick={onGetStarted}>Start posting with Meadow <ArrowIcon /></button>
-        </section>
       </main>
 
       <footer className="landing-footer">
@@ -222,7 +178,7 @@ export default function Landing({ onGetStarted }) {
             <p>Create, schedule, publish, and track from one workspace.</p>
           </div>
           <div className="footer-links">
-            <div><h2>Use Cases</h2><a href="#how-it-works">How it works</a><a href="#platforms">Platforms</a><a href="#features">Features</a><a href="/pricing">Pricing</a></div>
+            <div><h2>Use Cases</h2><a href="#platforms">Platforms</a><a href="#features">Features</a><a href="/pricing">Pricing</a></div>
             <div><h2>About</h2><a href="#faq">FAQ</a><a href="/terms">Terms of service</a><a href="/privacy">Privacy policy</a></div>
             <div><h2>Community</h2><button onClick={onGetStarted}>Create your first post</button><a href="mailto:hello@findmeadow.com">Contact support</a></div>
           </div>
