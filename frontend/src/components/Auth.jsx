@@ -4,7 +4,7 @@ import Waveform from "./Waveform.jsx";
 
 const clerkAppearance = {
   variables: {
-    colorPrimary: "#8b5cf6",
+    colorPrimary: "#4569f5",
     colorBackground: "transparent",
     colorText: "#f5f3ff",
     colorTextSecondary: "#a7a2b8",
