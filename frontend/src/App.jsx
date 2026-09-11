@@ -59,7 +59,7 @@ function PricingSurface() {
 
   if (showAuth && !user && !localPreview) {
     const redirectUrl = pending ? `/pricing?checkout=${encodeURIComponent(pending.planId)}&cycle=${encodeURIComponent(pending.cycle)}` : "/";
-    return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth redirectUrl={redirectUrl} onBack={() => { setShowAuth(false); setPending(null); window.history.replaceState({}, "", "/pricing"); }} /></div></div>;
+    return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth redirectUrl={redirectUrl} /></div></div>;
   }
 
   return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><Pricing onSignIn={() => { if (user || localPreview) window.location.assign("/"); else setShowAuth(true); }} onChoosePlan={beginCheckout} busyPlan={busyPlan} error={error} cancelled={requestedCheckout === "cancelled"} /></div></div>;
@@ -77,7 +77,7 @@ function AppSurface() {
         <div className="app-glow app-glow-a" />
         <div className="app-glow app-glow-b" />
         <div className="centered-shell">
-          <Auth onBack={() => setShowAuth(false)} />
+          <Auth />
         </div>
       </div>
     );
