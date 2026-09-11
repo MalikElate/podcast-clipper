@@ -9,6 +9,25 @@ export async function getAuthToken() {
 }
 
 export function AuthProvider({ children }) {
+  if (import.meta.env.VITE_BRIDGE_LOCAL_PREVIEW === "true") {
+    return (
+      <AuthContext.Provider
+        value={{
+          user: null,
+          loading: false,
+          signOut: async () => {},
+          getIdToken: async () => null,
+        }}
+      >
+        {children}
+      </AuthContext.Provider>
+    );
+  }
+
+  return <ClerkAuthProvider>{children}</ClerkAuthProvider>;
+}
+
+function ClerkAuthProvider({ children }) {
   const { isLoaded, user: clerkUser } = useUser();
   const { getToken } = useClerkAuth();
   const clerk = useClerk();

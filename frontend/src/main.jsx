@@ -9,8 +9,9 @@ import "./meadow.css";
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const posthogKey = import.meta.env.VITE_POSTHOG_KEY;
+const localPreview = import.meta.env.VITE_BRIDGE_LOCAL_PREVIEW === "true";
 
-if (!clerkPublishableKey) {
+if (!clerkPublishableKey && !localPreview) {
   throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY.");
 }
 
@@ -62,8 +63,6 @@ function Application() {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <ClerkProvider publishableKey={clerkPublishableKey}>
-      <Application />
-    </ClerkProvider>
+    {localPreview ? <Application /> : <ClerkProvider publishableKey={clerkPublishableKey}><Application /></ClerkProvider>}
   </React.StrictMode>
 );
