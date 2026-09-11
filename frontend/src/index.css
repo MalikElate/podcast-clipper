@@ -1482,7 +1482,7 @@ input[type="range"]::-moz-range-thumb {
 .faq-card { min-width: 0; min-height: 188px; padding: 25px 24px 27px; border: 1px solid var(--border); border-radius: var(--radius-md); background: rgba(252,253,248,.74); box-shadow: 0 16px 30px -30px #233247; }
 .faq-card h3 { margin: 0 0 13px; color: var(--text); font-size: 16px; line-height: 1.28; letter-spacing: -.035em; }
 .faq-card p { margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.65; }
-.landing-footer { margin-top: 96px; padding: 44px 0 25px; border-top: 1px solid rgba(67,80,119,.32); }
+.landing-footer { margin-top: 96px; padding: 44px 0 25px; }
 .footer-main { display: flex; justify-content: space-between; gap: 60px; }
 .footer-brand p { margin: 17px 0 0; color: var(--text-faint); font-size: 12px; }
 .footer-links { display: flex; gap: clamp(50px,8vw,120px); }
