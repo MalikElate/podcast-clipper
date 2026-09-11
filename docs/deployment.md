@@ -2,7 +2,7 @@
 
 Bridge needs a Node/Python server with FFmpeg and a writable SQLite/media directory. The frontend can be served by Express from the same HTTPS origin, or by a Cloudflare Worker that routes backend paths to a Cloudflare Container. The backend itself cannot run in the Worker runtime because it uses child processes and local files.
 
-The Docker/Compose files are provided for this topology. They were not built in this workspace because Docker is unavailable here. The native backend test suite and frontend build are validated separately. Nothing has been deployed to a public host by this implementation.
+The Docker/Compose files support self-hosted environments. Production on `findmeadow.com` is managed by Cloudflare Workers Builds: only pushes to the `main` branch trigger a build and deployment, and non-production builds are disabled. Do not run Wrangler production deployment commands from a local machine.
 
 ## Prepare configuration
 

@@ -3,6 +3,7 @@
 **/dist/
 **/.venv/
 **/__pycache__/
+.wrangler/
 
 # Local environment files (keep sanitized templates)
 **/.env

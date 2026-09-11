@@ -21,7 +21,7 @@ The production topology combines a Cloudflare Worker and one named Cloudflare Co
 - The Worker serves the compiled Vite app.
 - `/api/*`, `/media/*`, `/oauth/*`, `/downloads/*`, and `/health` are routed to the Express backend container.
 - The container runs Node.js, SQLite, Python, FFmpeg, and faster-whisper on port 8787.
-- Cloudflare Workers Builds deploys the `main` branch. Pushing to `main` triggers deployment.
+- Cloudflare Workers Builds deploys the `main` branch. Pushing to `main` is the only production deployment path; non-production builds are disabled.
 
 The configured `standard-2` container requires a Workers Paid plan. Bridge data and generated media are stored on the container filesystem. Back them up or move them to durable external storage before relying on the deployment for production records; container replacement can remove local state.
 
@@ -48,7 +48,7 @@ Add platform client IDs and secrets for each enabled provider. The complete list
 
 The RapidAPI key must be subscribed to the two downloader providers used by the backend: Cloud API Hub - YouTube Downloader and YouTube MP3.
 
-For GitHub-triggered deployment, connect `MalikElate/podcast-clipper` in Cloudflare Workers Builds, choose `main` as the production branch, use `npm run build` as the build command, and use `npm run deploy` as the deploy command. The Worker is configured for `findmeadow.com` and `www.findmeadow.com`.
+Cloudflare Workers Builds is connected to `MalikElate/podcast-clipper` with `main` as the production branch, `npm run build` as the build command, and `npx wrangler deploy` as the remote deploy command. Preview builds are disabled. Do not run production deployment commands from a local machine; push the reviewed commit to `main` and let Cloudflare build and deploy it. The Worker is configured for `findmeadow.com` and `www.findmeadow.com`.
 
 ## Local development
 
