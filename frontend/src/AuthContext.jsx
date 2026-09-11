@@ -67,7 +67,7 @@ function ClerkAuthProvider({ children }) {
       value={{
         user,
         loading: user === undefined,
-        signOut: () => clerk.signOut(),
+        signOut: () => clerk.signOut({ redirectUrl: "/" }),
         getIdToken: getToken,
       }}
     >

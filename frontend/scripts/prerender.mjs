@@ -1,5 +1,6 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { createServer } from "vite";
+import { DASHBOARD_PATHS } from "../src/bridge/dashboardRoutes.js";
 
 // Build public HTML once; no auth, API calls, or container startup at request time.
 const server = await createServer({ server: { middlewareMode: true }, appType: "custom" });
@@ -12,6 +13,12 @@ try {
     const directory = path && path !== "404" ? `dist/${path}` : "dist";
     await mkdir(directory, { recursive: true });
     await writeFile(path === "404" ? "dist/404.html" : `${directory}/index.html`, html);
+  }
+  const dashboardHtml = template.replace(/<title>.*?<\/title>/, "<title>Dashboard · Meadow</title>");
+  for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
+    const directory = `dist${route}`;
+    await mkdir(directory, { recursive: true });
+    await writeFile(`${directory}/index.html`, dashboardHtml);
   }
 } finally {
   await server.close();

@@ -116,7 +116,7 @@ export class BridgeApplication {
     app.get("/oauth/bluesky/client-metadata.json", route(async (req, res) => res.json((await this.registry.get("bluesky").client()).clientMetadata)));
     app.get("/oauth/bluesky/jwks.json", route(async (req, res) => res.json((await this.registry.get("bluesky").client()).jwks)));
     app.get("/oauth/:platform/callback", route(async (req, res) => {
-      const target = new URL(this.appUrl); target.searchParams.set("view", "accounts");
+      const target = new URL("/dashboard/connections", this.appUrl);
       try {
         const result = await this.accounts.callback(req.params.platform, new URL(req.originalUrl, this.publicUrl).searchParams);
         target.searchParams.set("project", result.projectId); target.searchParams.set("connection", result.connectionId);

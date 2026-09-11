@@ -14,6 +14,7 @@ import Analytics from "./Analytics.jsx";
 import ConfigurationSettings from "./ConfigurationSettings.jsx";
 import ApiKeys from "./ApiKeys.jsx";
 import Billing from "./Billing.jsx";
+import { dashboardPath, dashboardView } from "./dashboardRoutes.js";
 import "./bridge.css";
 
 export const modules = [
@@ -47,11 +48,11 @@ export default function BridgeApp() {
   return <Workspace key={user?.id || "preview"} user={user} signOut={signOut}/>;
 }
 function Workspace({ user, signOut }) {
-  const initial = useRef(new URLSearchParams(window.location.search));
-  const [view, setView] = useState(allModules.some(item => item.id === initial.current.get("view")) ? initial.current.get("view") : "compose");
-  const [projects, setProjects] = useState([]), [projectId, setProjectId] = useState(""), [config, setConfig] = useState(null), [error, setError] = useState(initial.current.get("connectionError") || ""), [notice, setNotice] = useState(""), [menuOpen, setMenuOpen] = useState(false), [connectionId, setConnectionId] = useState(initial.current.get("connection") || ""), [scheduledDate, setScheduledDate] = useState(""), [draftVersion, setDraftVersion] = useState(0);
-  const [postsOpen, setPostsOpen] = useState(!configurationViewIds.has(initial.current.get("view")));
-  const [configurationOpen, setConfigurationOpen] = useState(configurationViewIds.has(initial.current.get("view")));
+  const initial = useRef({ params: new URLSearchParams(window.location.search), view: dashboardView(window.location.pathname, window.location.search) });
+  const [view, setView] = useState(initial.current.view);
+  const [projects, setProjects] = useState([]), [projectId, setProjectId] = useState(""), [config, setConfig] = useState(null), [error, setError] = useState(initial.current.params.get("connectionError") || ""), [notice, setNotice] = useState(""), [menuOpen, setMenuOpen] = useState(false), [connectionId, setConnectionId] = useState(initial.current.params.get("connection") || ""), [scheduledDate, setScheduledDate] = useState(""), [draftVersion, setDraftVersion] = useState(0);
+  const [postsOpen, setPostsOpen] = useState(postViewIds.has(initial.current.view));
+  const [configurationOpen, setConfigurationOpen] = useState(configurationViewIds.has(initial.current.view));
   const project = projects.find(item => item.id === projectId);
   const activeModule = allModules.find(item => item.id === view);
   const isPostView = postViewIds.has(view);
@@ -66,27 +67,44 @@ function Workspace({ user, signOut }) {
         availableProjects = [defaultProject];
       }
       if (controller.signal.aborted) return;
-      setProjects(availableProjects); setConfig(configuration); setProjectId(availableProjects.find(item => item.id === initial.current.get("project"))?.id || availableProjects[0]?.id || "");
+      setProjects(availableProjects); setConfig(configuration); setProjectId(availableProjects.find(item => item.id === initial.current.params.get("project"))?.id || availableProjects[0]?.id || "");
     }).catch(error => { if (error.name !== "AbortError") setError(error.message); });
-    window.history.replaceState({}, "", window.location.pathname);
+    window.history.replaceState({}, "", dashboardPath(initial.current.view));
     return () => controller.abort();
   }, []);
-  function navigate(next) { setView(next); if (postViewIds.has(next)) { setPostsOpen(true); setConfigurationOpen(false); } if (configurationViewIds.has(next)) { setConfigurationOpen(true); setPostsOpen(false); } setMenuOpen(false); setError(""); setNotice(""); }
+  useEffect(() => {
+    const onPopState = () => {
+      const next = dashboardView(window.location.pathname, window.location.search);
+      setView(next);
+      setPostsOpen(postViewIds.has(next));
+      setConfigurationOpen(configurationViewIds.has(next));
+      setMenuOpen(false);
+      setError("");
+      setNotice("");
+      if (window.location.pathname !== dashboardPath(next) || window.location.search) window.history.replaceState({}, "", dashboardPath(next));
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+  useEffect(() => { document.title = `${activeModule?.title || activeModule?.name || "Dashboard"} · Meadow`; }, [activeModule]);
+  function selectView(next) { setView(next); if (postViewIds.has(next)) { setPostsOpen(true); setConfigurationOpen(false); } else if (configurationViewIds.has(next)) { setConfigurationOpen(true); setPostsOpen(false); } else { setPostsOpen(false); setConfigurationOpen(false); } setMenuOpen(false); setError(""); setNotice(""); }
+  function navigate(next) { selectView(next); const path = dashboardPath(next); if (window.location.pathname !== path || window.location.search) window.history.pushState({}, "", path); }
+  function follow(event, next) { if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); navigate(next); }
   function compose(date = "") { setScheduledDate(date); setDraftVersion(value => value + 1); navigate("compose"); }
   return <div className="bridge" data-theme="light">
     {menuOpen && <button className="bridge-scrim" onClick={() => setMenuOpen(false)} aria-label="Close navigation"/>}
     <aside className={`bridge-sidebar ${menuOpen ? "is-open" : ""}`}>
-      <a className="bridge-logo" href="#" onClick={event => { event.preventDefault(); navigate("compose"); }}><img className="bridge-logo-image" src={MEADOW_LOGO_URL} alt="" width="31" height="31"/><span>meadow<span className="bridge-logo-dot">.</span></span></a>
+      <a className="bridge-logo" href={dashboardPath("compose")} onClick={event => follow(event, "compose")}><img className="bridge-logo-image" src={MEADOW_LOGO_URL} alt="" width="31" height="31"/><span>meadow<span className="bridge-logo-dot">.</span></span></a>
       <nav aria-label="Main navigation">
-        <button className={`bridge-nav-item ${view === "compose" ? "active" : ""}`} onClick={() => navigate("compose")} aria-current={view === "compose" ? "page" : undefined}><Icon name="compose"/><span>Create post</span></button>
+        <a className={`bridge-nav-item ${view === "compose" ? "active" : ""}`} href={dashboardPath("compose")} onClick={event => follow(event, "compose")} aria-current={view === "compose" ? "page" : undefined}><Icon name="compose"/><span>Create post</span></a>
         <div className={`bridge-nav-group ${isPostView ? "active" : ""}`}>
           <button className="bridge-nav-parent" onClick={() => setPostsOpen(open => { if (!open) setConfigurationOpen(false); return !open; })} aria-expanded={postsOpen}><span>Posts</span><Icon name={postsOpen ? "up" : "chevron"} size={15}/></button>
-          {postsOpen && <div className="bridge-nav-sub">{postModules.map(item => <button key={item.id} className={view === item.id ? "active" : ""} onClick={() => navigate(item.id)} aria-current={view === item.id ? "page" : undefined}><Icon name={item.icon} size={18}/><span>{item.name}</span></button>)}</div>}
+          {postsOpen && <div className="bridge-nav-sub">{postModules.map(item => <a key={item.id} className={view === item.id ? "active" : ""} href={dashboardPath(item.id)} onClick={event => follow(event, item.id)} aria-current={view === item.id ? "page" : undefined}><Icon name={item.icon} size={18}/><span>{item.name}</span></a>)}</div>}
         </div>
-        {modules.filter(item => item.id !== "compose").map(item => <button key={item.id} className={`bridge-nav-item ${view === item.id ? "active" : ""}`} onClick={() => navigate(item.id)} aria-current={view === item.id ? "page" : undefined}><Icon name={item.icon}/><span>{item.name}</span></button>)}
+        {modules.filter(item => item.id !== "compose").map(item => <a key={item.id} className={`bridge-nav-item ${view === item.id ? "active" : ""}`} href={dashboardPath(item.id)} onClick={event => follow(event, item.id)} aria-current={view === item.id ? "page" : undefined}><Icon name={item.icon}/><span>{item.name}</span></a>)}
         <div className={`bridge-nav-group ${isConfigurationView ? "active" : ""}`}>
           <button className="bridge-nav-parent" onClick={() => setConfigurationOpen(open => { if (!open) setPostsOpen(false); return !open; })} aria-expanded={configurationOpen}><span>Configuration</span><Icon name={configurationOpen ? "up" : "chevron"} size={15}/></button>
-          {configurationOpen && <div className="bridge-nav-sub">{configurationModules.map(item => <button key={item.id} className={view === item.id ? "active" : ""} onClick={() => navigate(item.id)} aria-current={view === item.id ? "page" : undefined}><Icon name={item.icon} size={18}/><span>{item.name}</span></button>)}</div>}
+          {configurationOpen && <div className="bridge-nav-sub">{configurationModules.map(item => <a key={item.id} className={view === item.id ? "active" : ""} href={dashboardPath(item.id)} onClick={event => follow(event, item.id)} aria-current={view === item.id ? "page" : undefined}><Icon name={item.icon} size={18}/><span>{item.name}</span></a>)}</div>}
         </div>
       </nav>
       <div className="bridge-sidebar-footer"><span className="bridge-person-avatar">{(user?.email || "Dashboard").slice(0, 1).toUpperCase()}</span><div><strong>Dashboard</strong>{user?.email && <span>{user.email}</span>}</div>{!localPreview && <button className="bridge-icon-button" onClick={() => signOut().catch(error => setError(error.message))} aria-label="Sign out"><Icon name="external" size={17}/></button>}</div>

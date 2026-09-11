@@ -94,7 +94,7 @@ test("local preview requires an explicit header and rejects unrecognized origins
 test("OAuth callbacks reject unknown and reused state without connecting accounts", async t => {
   const h = await setup(t);
   const response = await fetch(`${h.base}/oauth/x/callback?state=unknown&code=not-real`, { redirect: "manual" });
-  assert.equal(response.status, 303); assert.match(response.headers.get("location"), /^http:\/\/localhost:5173/); assert.match(response.headers.get("location"), /connectionError/);
+  assert.equal(response.status, 303); assert.match(response.headers.get("location"), /^http:\/\/localhost:5173\/dashboard\/connections/); assert.match(response.headers.get("location"), /connectionError/);
   assert.equal(h.application.store.list("account").length, 0);
   const malformed = await h.request(`${h.root}/posts`, { method: "POST", body: { items: [], requestId: "invalid-items-12345" } }); assert.equal(malformed.status, 400);
 });

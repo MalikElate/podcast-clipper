@@ -7,6 +7,7 @@ import Pricing from "./components/Pricing.jsx";
 import NotFound from "./components/NotFound.jsx";
 import { PLANS } from "./pricing.js";
 import { api, localPreview } from "./bridge/BridgeApi.js";
+import { isDashboardPath } from "./bridge/dashboardRoutes.js";
 const BridgeApp = lazy(() => import("./bridge/BridgeApp.jsx"));
 
 export default function App() {
@@ -17,7 +18,7 @@ export default function App() {
     return <LegalPage kind={isPrivacyPage ? "privacy" : "terms"} />;
   }
   if (pathname === "/pricing") return <PricingSurface />;
-  if (pathname !== "/") return <NotFound />;
+  if (pathname !== "/" && !isDashboardPath(pathname)) return <NotFound />;
 
   return <AppSurface />;
 }
@@ -70,10 +71,11 @@ function PricingSurface() {
 function AppSurface() {
   const { user } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
+  const dashboardPath = isDashboardPath(window.location.pathname);
 
   if (user || localPreview) return <Suspense fallback={<PublicLanding onGetStarted={() => setShowAuth(true)} />}><BridgeApp /></Suspense>;
 
-  if (showAuth) {
+  if (showAuth || dashboardPath) {
     return (
       <div className="app">
         <div className="app-glow app-glow-a" />
