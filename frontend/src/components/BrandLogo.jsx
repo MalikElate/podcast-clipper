@@ -1,4 +1,4 @@
-export const MEADOW_LOGO_URL = "/meadow-flower-logo.png";
+export const MEADOW_LOGO_URL = "/meadow-flower-mark-v2.webp";
 
 export default function BrandLogo({ className = "" }) {
   return (

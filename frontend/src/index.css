@@ -140,7 +140,7 @@ h1:not(:where(.cl-rootBox *)), h2:not(:where(.cl-rootBox *)), h3:not(:where(.cl-
   width: 34px;
   height: 34px;
   flex: 0 0 auto;
-  border-radius: 10px;
+  object-fit: contain;
 }
 
 .brand-name {
@@ -1389,7 +1389,7 @@ input[type="range"]::-moz-range-thumb {
 .landing-header { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid rgba(67,80,119,.32); }
 .landing-logo-link { color: inherit; text-decoration: none; flex-shrink: 0; }
 .landing .brand { justify-content: flex-start; }
-.landing .brand-logo-image { width: 40px; height: 40px; border-radius: 12px; }
+.landing .brand-logo-image { width: 40px; height: 40px; }
 .landing .brand-name { font-size: 24px; letter-spacing: -.035em; }
 .landing-nav { display: flex; align-items: center; gap: 24px; margin-left: auto; }
 .landing-nav a, .footer-links a, .footer-links button { color: var(--text-muted); text-decoration: none; transition: color .15s ease; }
@@ -1484,7 +1484,7 @@ input[type="range"]::-moz-range-thumb {
 @media (max-width: 430px) {
   .landing-header { gap: 12px; }
   .landing .brand { gap: 8px; }
-  .landing .brand-logo-image { width: 36px; height: 36px; border-radius: 11px; }
+  .landing .brand-logo-image { width: 36px; height: 36px; }
   .landing .brand-name { font-size: 21px; }
   .landing-actions .btn-small-primary { padding: 9px 11px; }
   .platform-grid { grid-template-columns: 1fr; }

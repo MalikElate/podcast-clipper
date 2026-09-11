@@ -1,6 +1,15 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
+/meadow-flower-mark-v2.webp
+  Cache-Control: public, max-age=31536000, immutable
+
+/favicon-flower-v2-32.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/favicon.ico
+  Cache-Control: public, max-age=3600
+
 /
   Cache-Control: public, max-age=60, stale-while-revalidate=300
 
