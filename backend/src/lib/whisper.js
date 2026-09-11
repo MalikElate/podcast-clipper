@@ -1,63 +1,22 @@
-import { spawn } from "child_process";
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { ProcessRunner } from "../bridge/core/ProcessRunner.js";
+import { BridgeError } from "../bridge/core/errors.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SCRIPT_PATH = path.join(__dirname, "..", "..", "scripts", "transcribe_whisper.py");
-const PYTHON_BIN = process.env.PYTHON_BIN || "python3";
+const SCRIPT_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../scripts/transcribe_whisper.py");
+const runner = new ProcessRunner();
 
-/**
- * Transcribes an audio file with real word-level timestamps by shelling out
- * to faster-whisper (see scripts/transcribe_whisper.py). Runs locally, no
- * API cost, and gives the tight per-word timing needed for punchy synced
- * captions.
- *
- * Returns: [{ word: "hello", start: 0.12, end: 0.34 }, ...]
- */
+/** Local transcription with real word timestamps, a bounded runtime and output. */
 export async function transcribeAudio(audioPath) {
-  return new Promise((resolve, reject) => {
-    const proc = spawn(PYTHON_BIN, [SCRIPT_PATH, audioPath], { env: process.env });
-
-    let stdout = "";
-    let stderr = "";
-    proc.stdout.on("data", (d) => (stdout += d.toString()));
-    proc.stderr.on("data", (d) => (stderr += d.toString()));
-
-    proc.on("error", (err) => {
-      reject(
-        new Error(
-          `Failed to start ${PYTHON_BIN}. Is Python 3 installed and on PATH? ` +
-            `Set the PYTHON_BIN env var if it's under a different name (e.g. "python"). (${err.message})`
-        )
-      );
-    });
-
-    proc.on("close", (code) => {
-      if (code !== 0) {
-        reject(
-          new Error(
-            `Whisper transcription failed (exit ${code}). ` +
-              `Make sure faster-whisper is installed: pip install faster-whisper\n` +
-              stderr.slice(-2000)
-          )
-        );
-        return;
-      }
-      try {
-        const words = JSON.parse(stdout.trim());
-        if (!Array.isArray(words) || !words.length) {
-          reject(new Error("Whisper returned no words. Check the audio file has speech in it."));
-          return;
-        }
-        resolve(words);
-      } catch (e) {
-        reject(
-          new Error(
-            `Could not parse Whisper output as JSON: ${e.message}\n` +
-              `Raw stdout (truncated): ${stdout.slice(0, 500)}`
-          )
-        );
-      }
-    });
+  const stdout = await runner.run(process.env.PYTHON_BIN || "python3", [SCRIPT_PATH, audioPath], {
+    timeoutMs: Number(process.env.WHISPER_TIMEOUT_MS) || 2 * 3600000,
+    maxOutput: 20 * 1024 ** 2,
   });
+  let words;
+  try { words = JSON.parse(stdout.trim()); }
+  catch { throw new BridgeError("Whisper returned an unreadable transcript. Please try again."); }
+  if (!Array.isArray(words) || !words.length || !words.every(word => typeof word.word === "string" && Number.isFinite(word.start) && Number.isFinite(word.end) && word.end >= word.start)) {
+    throw new BridgeError("Whisper returned no valid spoken words. Check that the source contains speech.");
+  }
+  return words;
 }

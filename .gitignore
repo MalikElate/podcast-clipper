@@ -1,6 +1,8 @@
 # Dependencies and build output
 **/node_modules/
 **/dist/
+**/.venv/
+**/__pycache__/
 
 # Local environment files (keep sanitized templates)
 **/.env
@@ -17,6 +19,8 @@
 **/*.pfx
 
 # Runtime output and local clutter
+backend/.bridge/
+backend/.bridge-*/
 backend/jobs/*
 !backend/jobs/.gitkeep
 *.log

@@ -1,20 +1,31 @@
-# Podcast Clipper
+# Bridge
 
-Podcast Clipper turns a public YouTube podcast into ranked, subtitled vertical clips. The React frontend uses Clerk for authentication and PostHog for product analytics. The media pipeline runs in a Cloudflare Container so it can use Node.js, Python, FFmpeg, and faster-whisper.
+Bridge is a publishing workspace for planning, scheduling, and measuring social content across multiple platforms. It also contains a podcast clipping pipeline that downloads a permitted YouTube source, transcribes it locally with Whisper, asks Gemini to select moments, and renders vertical subtitled clips with FFmpeg.
 
-## Cloudflare architecture
+## Product workflows
 
-- A Cloudflare Worker serves the compiled Vite app as static assets.
-- Requests under `/api/*` and `/files/*` are routed to one named Cloudflare Container.
-- The container runs the Express backend from `backend/Dockerfile` on port 8787.
-- The named instance keeps in-memory job state and generated clips together while it is awake.
-- Cloudflare Workers Builds is connected to the GitHub `main` branch. Pushing to `main` is the only deployment trigger.
+- Clerk sign-in, with ownership enforced on every project API.
+- Project-scoped accounts, media, posts, queues, analytics, and API keys.
+- Native provider adapters for Instagram, TikTok, YouTube, Facebook Pages, X, LinkedIn, Pinterest, Threads, Bluesky, and Google Business Profile.
+- Single and bulk composition for up to 100 posts, with per-account validation and independent delivery state.
+- Manual date, time, and timezone scheduling with daylight-saving handling.
+- Private media storage, expiring media links, and single-use ZIP download tickets.
+- Local Whisper timestamps, Gemini moment selection, FFmpeg rendering, subtitles, clip ranking, and ZIP downloads.
 
-Cloudflare Containers requires a Workers Paid plan. The `standard-2` instance provides 1 vCPU, 6 GiB RAM, and 12 GB disk for video processing. The instance sleeps after two idle hours, so its in-memory history and generated files are temporary. A later production-hardening pass should move job state to durable storage and clips to R2.
+Collaborators and payment-provider checkout are deferred. The Billing screen describes planned tiers but cannot change a subscription. Platform APIs support a subset of each native app's features; see [platform setup and formats](docs/platforms.md).
 
-## Required configuration
+## Cloudflare deployment
 
-The frontend build needs these public variables:
+The production topology combines a Cloudflare Worker and one named Cloudflare Container:
+
+- The Worker serves the compiled Vite app.
+- `/api/*`, `/media/*`, `/oauth/*`, `/downloads/*`, and `/health` are routed to the Express backend container.
+- The container runs Node.js, SQLite, Python, FFmpeg, and faster-whisper on port 8787.
+- Cloudflare Workers Builds deploys the `main` branch. Pushing to `main` triggers deployment.
+
+The configured `standard-2` container requires a Workers Paid plan. Bridge data and generated media are stored on the container filesystem. Back them up or move them to durable external storage before relying on the deployment for production records; container replacement can remove local state.
+
+The frontend build needs:
 
 ```dotenv
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
@@ -22,37 +33,40 @@ VITE_POSTHOG_KEY=phc_...
 VITE_POSTHOG_HOST=https://us.i.posthog.com
 ```
 
-The Worker needs these secrets, which it passes to the backend container:
+The Worker must have these backend secrets:
 
 ```text
 CLERK_SECRET_KEY
 CLERK_PUBLISHABLE_KEY
+BRIDGE_ENCRYPTION_KEY
+BRIDGE_MEDIA_SIGNING_KEY
 RAPIDAPI_KEY
 GEMINI_API_KEY
 ```
 
-Add each secret with `npx wrangler secret put NAME`, or configure it in the Cloudflare dashboard. Never commit secret values.
+Add platform client IDs and secrets for each enabled provider. The complete list is in [backend/.env.example](backend/.env.example). Add secrets with `npx wrangler secret put NAME` or in the Cloudflare dashboard. Never commit secret values.
 
-The RapidAPI key must be subscribed to the two providers used by the backend:
+The RapidAPI key must be subscribed to the two downloader providers used by the backend: Cloud API Hub - YouTube Downloader and YouTube MP3.
 
-- Cloud API Hub - YouTube Downloader
-- YouTube MP3
+For GitHub-triggered deployment, connect `MalikElate/podcast-clipper` in Cloudflare Workers Builds, choose `main` as the production branch, use `npm run build` as the build command, and use `npm run deploy` as the deploy command. The Worker is configured for `findmeadow.com` and `www.findmeadow.com`.
 
 ## Local development
 
 Requirements:
 
 - Node.js 22.12 or newer
-- FFmpeg and ffprobe on `PATH`
-- Python 3 with the packages in `backend/requirements.txt`
+- FFmpeg and ffprobe with ASS subtitle support
+- Python 3 and the packages in `backend/requirements.txt`
 
-Create `frontend/.env` from `frontend/.env.example` and `backend/.env` from `backend/.env.example`, then install dependencies:
+Install dependencies and create local configuration:
 
 ```sh
 npm install
 npm ci --prefix frontend
 npm ci --prefix backend
 python3 -m pip install -r backend/requirements.txt
+cp frontend/.env.example frontend/.env
+cp backend/.env.example backend/.env
 ```
 
 Run the backend and frontend in separate terminals:
@@ -62,32 +76,31 @@ npm run dev --prefix backend
 npm run dev --prefix frontend
 ```
 
-Vite proxies `/api` and `/files` to `http://localhost:8787` during development.
+Vite proxies the backend routes to `http://localhost:8787`. For development without Clerk credentials, set `BRIDGE_LOCAL_PREVIEW=1` in the backend and `VITE_BRIDGE_LOCAL_PREVIEW=true` in the frontend. Preview mode binds the backend to loopback and disables connections and publishing.
 
-## Checks
+The Compose setup builds the frontend and backend into one image, mounts persistent data at `/data`, and exposes the service at `127.0.0.1:8787`. Set `VITE_CLERK_PUBLISHABLE_KEY` before building and put private runtime values in `backend/.env`.
+
+## Validation
 
 ```sh
 npm run check
 ```
 
-This runs the frontend and backend tests and creates the production frontend bundle.
+This runs frontend and backend tests and creates the production frontend bundle. Provider tests use simulated responses and do not publish to real accounts. The clipping integration test uses a synthetic source and real FFmpeg processing.
 
-## Deployment
+## Configuration and extension
 
-The Cloudflare project uses `wrangler.jsonc` and `cloudflare/worker.js`. For a local deployment, run:
+Use [backend/.env.example](backend/.env.example) and [frontend/.env.example](frontend/.env.example) as sanitized templates. The main Bridge settings are:
 
-```sh
-npm run build
-npm run deploy
-```
+- `BRIDGE_ENCRYPTION_KEY`: a base64-encoded 32-byte key for social credentials.
+- `BRIDGE_MEDIA_SIGNING_KEY`: a separate random secret for expiring media links.
+- `BRIDGE_PUBLIC_URL`: the public API, media, and OAuth callback origin.
+- `BRIDGE_APP_URL`: the browser app origin.
+- `BRIDGE_DATA_DIR`: the SQLite, media, and clipping-data directory.
+- `BRIDGE_DISABLED_PLATFORMS`: comma-separated adapter IDs to hide.
+- `BRIDGE_CLIPPING_ENABLED=false`: disable the clipping worker.
+- `BRIDGE_PUBLISHING_ENABLED=false`: pause publishing while retaining queued work.
 
-For GitHub-triggered deployment, connect `MalikElate/podcast-clipper` in Cloudflare Workers Builds, select `main` as the production branch, set the build command to `npm run build`, and set the deploy command to `npm run deploy`.
+[Architecture and extension points](docs/architecture.md) describes the provider contract, storage, queues, and service boundaries. [Deployment instructions](docs/deployment.md) covers secrets, reverse proxies, backups, and live acceptance checks.
 
-## Current product limitations
-
-- Job state and output files are local to the active container and disappear after the instance is replaced or sleeps.
-- The API has no billing, quotas, or per-user processing limits yet.
-- Rendered clip URLs are shareable by URL.
-- The vertical reframe uses a center crop or padded layout and does not track faces.
-- RapidAPI receives the YouTube video ID, Gemini receives the timestamped transcript, and Whisper/FFmpeg processing runs in the Cloudflare Container.
-- Only process media you are authorized to download and reuse.
+Only process media you are authorized to download, publish, and reuse.

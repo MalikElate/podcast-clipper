@@ -49,7 +49,7 @@ function requireApiKey() {
   }
 }
 
-function extractVideoId(youtubeUrl) {
+export function extractVideoId(youtubeUrl) {
   const invalid = () => new Error(`Could not extract a YouTube video ID from: ${youtubeUrl}`);
   if (typeof youtubeUrl !== "string") throw invalid();
 

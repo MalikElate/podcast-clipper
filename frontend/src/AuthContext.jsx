@@ -25,6 +25,7 @@ export function AuthProvider({ children }) {
     if (!clerkUser) return null;
     return {
       id: clerkUser.id,
+      uid: clerkUser.id,
       email: clerkUser.primaryEmailAddress?.emailAddress || "",
       imageUrl: clerkUser.imageUrl,
     };

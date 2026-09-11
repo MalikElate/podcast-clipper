@@ -1,7 +1,7 @@
 FROM node:22-bookworm-slim
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg python3 python3-pip \
+    && apt-get install -y --no-install-recommends build-essential ffmpeg python3 python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

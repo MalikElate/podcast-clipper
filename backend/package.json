@@ -13,14 +13,30 @@
   },
   "dependencies": {
     "@clerk/express": "^2.1.67",
+    "@atproto/api": "^0.20.42",
+    "@atproto/oauth-client-node": "^0.5.4",
+    "@atproto/jwk-jose": "^0.2.4",
     "@google/genai": "^0.10.0",
+    "@js-temporal/polyfill": "^0.5.1",
+    "archiver": "^8.0.0",
+    "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.7.0",
+    "file-type": "^22.0.2",
+    "helmet": "^8.3.0",
+    "multer": "^2.3.0"
   },
   "overrides": {
     "jose": "^4.15.9",
     "qs": "^6.16.0",
-    "uuid": "^11.1.1"
+    "uuid": "^11.1.1",
+    "gaxios": {
+      "uuid": "^11.1.1"
+    },
+    "teeny-request": {
+      "uuid": "^11.1.1"
+    }
   }
 }
