@@ -22,7 +22,7 @@ function AppSurface() {
   const [showAuth, setShowAuth] = useState(false);
 
   if (user === undefined && !localPreview) {
-    return <div className="bridge bridge-loading">Loading Meadow…</div>;
+    return <div className="bridge bridge-loading" data-theme="light">Loading Meadow…</div>;
   }
 
   if (user || localPreview) return <BridgeApp />;
