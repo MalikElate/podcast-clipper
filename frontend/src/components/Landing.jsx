@@ -50,8 +50,14 @@ function PlatformStrip() {
 
 function CrosspostVisual() {
   return (
-    <div className="crosspost-visual" role="img" aria-label="The Meadow flower surrounded by Facebook, Instagram, X, LinkedIn, and TikTok">
-      <img className="crosspost-brand-flower" src="/apple-touch-icon-flower-v2.png" alt="" aria-hidden="true" />
+    <div className="crosspost-visual" role="img" aria-label="A Meadow-style five-petal flower surrounded by Facebook, Instagram, X, LinkedIn, and TikTok">
+      <div className="crosspost-petals" aria-hidden="true">
+        {CROSSPOST_PLATFORMS.map((platform, index) => (
+          <span className="crosspost-petal" key={platform.id} style={{ "--platform-angle": `${CROSSPOST_ANGLES[index]}deg` }} />
+        ))}
+      </div>
+      <span className="crosspost-flower-stem" aria-hidden="true" />
+      <span className="crosspost-flower-center" aria-hidden="true" />
       <div className="crosspost-platform-icons" aria-hidden="true">
         {CROSSPOST_PLATFORMS.map((platform, index) => (
           <span className="crosspost-platform-icon" key={platform.id} style={{ "--platform-angle": `${CROSSPOST_ANGLES[index]}deg`, "--platform-color": platform.color }}>
@@ -100,7 +106,7 @@ export default function Landing({ onGetStarted }) {
             <h2 id="crosspost-title">One post, every platform <span>in sync.</span></h2>
             <p>Create once, then send the right version to every connected account from one calm workspace. Meadow keeps the post and its destinations together.</p>
             <div className="crosspost-actions">
-              <button className="btn-primary crosspost-cta" onClick={onGetStarted}>Start posting <ArrowIcon /></button>
+              <button className="btn-primary crosspost-cta" onClick={onGetStarted}>Start posting for free <ArrowIcon /></button>
               <a className="crosspost-secondary" href="#platforms">View platforms</a>
             </div>
           </div>
