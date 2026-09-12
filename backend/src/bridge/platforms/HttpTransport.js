@@ -23,7 +23,8 @@ export class HttpTransport {
       throw new ProviderError("The platform's posting allowance has been reached. This delivery is queued.", { retryable: true, retryAt, code: "rate_limited" });
     }
     const pinterestHost = ["api.pinterest.com", "api-sandbox.pinterest.com"].includes(parsed.hostname);
-    if (response.status === 401 && !pinterestHost) throw new ProviderError("Reconnect this social account to renew its permissions.", { reconnect: true, code: "reconnect_required" });
+    const googleTokenEndpoint = parsed.hostname === "oauth2.googleapis.com" && parsed.pathname === "/token";
+    if (response.status === 401 && !pinterestHost && !googleTokenEndpoint) throw new ProviderError("Reconnect this social account to renew its permissions.", { reconnect: true, code: "reconnect_required" });
     if (response.status >= 500) throw new ProviderError("The platform is temporarily unavailable.", { retryable: safeToRetry, uncertain: !safeToRetry, code: "provider_unavailable" });
     if (raw && (response.ok || acceptStatuses.includes(response.status))) return response;
     let text;
@@ -36,6 +37,18 @@ export class HttpTransport {
     }
     const providerCode = data?.error?.code || data?.errors?.[0]?.reason || data?.error;
     if (!response.ok) {
+      if (googleTokenEndpoint) {
+        // Token revocation is an account issue; invalid app credentials are not.
+        // Use fixed messages so Google's response cannot expose request data.
+        const knownCode = ["invalid_grant", "invalid_client", "unauthorized_client"].includes(data?.error) ? data.error : null;
+        const details = { provider: "google", httpStatus: response.status, ...(knownCode ? { providerCode: knownCode } : {}) };
+        if (knownCode === "invalid_grant") {
+          throw new ProviderError("Google rejected this account's authorization. Reconnect the account in Meadow to continue publishing.", { code: "reconnect_required", reconnect: true, details });
+        }
+        if (knownCode === "invalid_client" || knownCode === "unauthorized_client" || response.status === 401) {
+          throw new ProviderError("Google rejected Meadow's app authorization. Meadow's administrator must check the Google OAuth client configuration.", { code: "google_app_credentials", details });
+        }
+      }
       if (pinterestHost) {
         // Pinterest uses top-level code/message fields. Keep diagnostics, but
         // never expose the response body, which may contain request data.

@@ -169,6 +169,34 @@ test("X finalizes an upload before creating a post and carries media IDs", async
   const result = await provider.publish(ctx); assert.equal(result.status, "published"); const tweet = http.calls.find(call => call.url.endsWith("tweets")); assert.deepEqual(tweet.options.json.media.media_ids, ["media1"]); assert.equal(http.calls[1].options.body.get("segment_index"), "0");
 });
 
+test("Google token refresh separates revoked account access from app configuration and temporary failures", async () => {
+  const cases = [
+    { status: 400, error: "invalid_grant", code: "reconnect_required", reconnect: true },
+    { status: 400, error: "invalid_client", code: "google_app_credentials", reconnect: false },
+    { status: 401, error: "invalid_client", code: "google_app_credentials", reconnect: false },
+    { status: 400, error: "unauthorized_client", code: "google_app_credentials", reconnect: false },
+    { status: 400, error: "admin_policy_enforced", code: "provider_rejected", reconnect: false },
+    { status: 503, error: "temporarily_unavailable", code: "provider_unavailable", reconnect: false, retryable: true },
+  ];
+  for (const Provider of [YouTubeProvider, GoogleBusinessProvider]) {
+    for (const item of cases) {
+      const http = new HttpTransport({ fetcher: async (url, options) => {
+        assert.equal(url, "https://oauth2.googleapis.com/token");
+        assert.equal(options.body.get("grant_type"), "refresh_token");
+        return new Response(JSON.stringify({ error: item.error, error_description: "Private refresh-token and client-secret" }), { status: item.status });
+      } });
+      const provider = new Provider({ env: { GOOGLE_CLIENT_ID: "client", GOOGLE_CLIENT_SECRET: "client-secret" }, transport: http });
+      await assert.rejects(provider.refresh({ accessToken: "expired", refreshToken: "refresh-token", expiresAt: 1 }), error => {
+        assert.equal(error.code, item.code); assert.equal(error.reconnect, item.reconnect);
+        assert.equal(error.retryable, Boolean(item.retryable)); assert.equal(error.uncertain, false);
+        if (item.reconnect) assert.match(error.message, /Reconnect the account in Meadow/);
+        assert.doesNotMatch(JSON.stringify({ message: error.message, ...error }), /Private|refresh-token|client-secret/);
+        return true;
+      });
+    }
+  }
+});
+
 test("YouTube upload session survives an uncertain response and polls status before confirming", async () => {
   let uploaded = false;
   const http = transport((url, options) => {
@@ -182,10 +210,64 @@ test("YouTube upload session survives an uncertain response and polls status bef
   result = await provider.poll(ctx); assert.equal(result.status, "published"); assert.equal(result.externalId, "video1");
 });
 
+test("YouTube confirms publication only when the processed video's visibility matches the selection", async () => {
+  for (const privacy of ["public", "unlisted", "private"]) {
+    for (const actual of ["public", "unlisted", "private", undefined]) {
+      const http = transport(() => ({ items: [{ status: { uploadStatus: "processed", privacyStatus: actual } }] }));
+      const provider = new YouTubeProvider({ transport: http }), ctx = context([video], { privacy, madeForKids: false });
+      ctx.progress = { phase: "video_processing", videoId: "existing-video" };
+      if (actual === privacy) {
+        const result = await provider.poll(ctx);
+        assert.equal(result.status, "published"); assert.equal(result.externalId, "existing-video");
+      } else {
+        await assert.rejects(provider.poll(ctx), error => error.uncertain && !error.retryable && /visibility does not match/.test(error.message));
+      }
+      assert.equal(http.calls.length, 1); assert.ok(!http.calls[0].options.method, "checking visibility must not upload again");
+    }
+  }
+});
+
 test("Google Business returns a tracked processing post then confirms it is live", async () => {
   const http = transport((url, options) => options.method === "POST" ? { name: "accounts/a/locations/b/localPosts/p", state: "PROCESSING" } : { name: "accounts/a/locations/b/localPosts/p", state: "LIVE", searchUrl: "https://google.com/post" });
   const provider = new GoogleBusinessProvider({ transport: http }), ctx = context([image]); ctx.account.remoteId = "accounts/a/locations/b";
   const result = await provider.publish(ctx); assert.equal(result.status, "processing"); const published = await provider.poll(ctx); assert.equal(published.status, "published");
+});
+
+test("Google Business discovers locations across account and location pages", async () => {
+  const http = transport(url => {
+    const request = new URL(url), pageToken = request.searchParams.get("pageToken");
+    if (request.hostname === "mybusinessaccountmanagement.googleapis.com") {
+      if (!pageToken) return { accounts: [{ name: "accounts/empty" }], nextPageToken: "accounts page+/=" };
+      assert.equal(pageToken, "accounts page+/=");
+      return { accounts: [{ name: "accounts/business" }] };
+    }
+    if (request.pathname.includes("accounts/empty/")) return { locations: [] };
+    assert.equal(request.pathname, "/v1/accounts/business/locations");
+    if (!pageToken) return { locations: [{ name: "locations/one", title: "First location" }], nextPageToken: "locations page+/=" };
+    assert.equal(pageToken, "locations page+/=");
+    return { locations: [{ name: "locations/two", title: "Second location" }] };
+  });
+  const provider = new GoogleBusinessProvider({ transport: http });
+  const accounts = await provider.accounts({ accessToken: "token" });
+  assert.deepEqual(accounts.map(account => account.remoteId), ["accounts/business/locations/one", "accounts/business/locations/two"]);
+  assert.equal(http.calls.length, 5); assert.ok(http.calls.every(call => call.options.token === "token"));
+  assert.equal(accounts[1].metadata.resourceName, "accounts/business/locations/two");
+});
+
+test("Google Business stops discovering locations at Meadow's connection limit", async () => {
+  const http = transport((url, options, count) => {
+    assert.ok(count <= 2, "the connection limit must stop further account and location requests");
+    return url.includes("accountmanagement")
+      ? { accounts: [{ name: "accounts/business" }, { name: "accounts/later" }], nextPageToken: "later-accounts" }
+      : { locations: Array.from({ length: 100 }, (_, i) => ({ name: `locations/${i}`, title: `Location ${i}` })), nextPageToken: "later-locations" };
+  });
+  assert.equal((await new GoogleBusinessProvider({ transport: http }).accounts({ accessToken: "token" })).length, 100);
+});
+
+test("Google Business reports unavailable post metrics without calling the retired endpoint", async () => {
+  const http = transport(() => { assert.fail("Google Business post analytics must not make an API request"); });
+  const result = await new GoogleBusinessProvider({ transport: http }).metrics({});
+  assert.deepEqual(result.values, {}); assert.match(result.unavailableReason, /Google retired/);
 });
 
 test("Bluesky OAuth metadata and encrypted session storage use the official client", async t => {

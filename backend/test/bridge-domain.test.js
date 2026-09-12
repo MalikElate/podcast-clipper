@@ -12,6 +12,7 @@ import { ProviderError } from "../src/bridge/core/errors.js";
 import { ScheduleService } from "../src/bridge/services/ScheduleService.js";
 import { SecretVault } from "../src/bridge/core/SecretVault.js";
 import { HttpTransport } from "../src/bridge/platforms/HttpTransport.js";
+import { YouTubeProvider } from "../src/bridge/platforms/GoogleProviders.js";
 
 class FakeProvider extends PlatformProvider {
   constructor() { super("x"); this.calls = []; this.polls = []; this.behavior = null; this.allowance = { limits: [] }; }
@@ -129,6 +130,31 @@ test("a Pinterest authorization failure during publication keeps its reason on t
   assert.match(delivery.error, /Pinterest code 29/); assert.equal(account.lastError, delivery.error);
 });
 
+test("revoked Google authorization holds queued posts until reconnection and preserves completed deliveries", async t => {
+  const h = setup(t); h.account("two");
+  const { posts: [post] } = await h.submit([h.post("Two destinations", ["one", "two"])]);
+  const completed = post.deliveries.find(delivery => delivery.accountId === "two");
+  const pending = post.deliveries.find(delivery => delivery.accountId === "one");
+  await h.app.worker.deliver(completed.id);
+  const account = h.app.store.get("account", "one");
+  h.app.store.put("account", { ...account, encryptedCredentials: h.app.vault.encrypt({ accessToken: "expired", refreshToken: "revoked", expiresAt: 1 }, "account:one") });
+  const google = new YouTubeProvider({ transport: new HttpTransport({ fetcher: async () => new Response(JSON.stringify({ error: "invalid_grant", error_description: "Token has been expired or revoked." }), { status: 400 }) }) });
+  h.provider.refresh = credentials => google.refresh(credentials);
+  await h.app.worker.deliver(pending.id);
+  const paused = h.app.store.get("delivery", pending.id), disconnected = h.app.store.get("account", "one");
+  assert.equal(paused.status, "needs_account"); assert.equal(paused.resumeStatus, "queued");
+  assert.equal(disconnected.status, "reconnect_required"); assert.equal(paused.error, disconnected.lastError);
+  assert.match(paused.error, /Google rejected this account's authorization/);
+  await h.app.worker.tick(); assert.equal(h.provider.calls.length, 1);
+  const id = "google-reconnect-test";
+  h.app.store.put("connection", { id, ownerUid: "alice", projectId: h.project.id, platform: "x", expiresAt: h.now() + 60000, encrypted: h.app.vault.encrypt([{ remoteId: "one", label: "one", credentials: { accessToken: "renewed" } }], `connection:${id}`) });
+  h.app.accounts.attach("alice", h.project.id, id, ["one"]);
+  await h.app.worker.tick();
+  assert.equal(h.app.posts.get("alice", h.project.id, post.id).status, "published");
+  assert.equal(h.provider.calls.filter(id => id === completed.id).length, 1);
+  assert.equal(h.provider.calls.filter(id => id === pending.id).length, 1);
+});
+
 test("uncertain publication pauses for review and requires confirmation before a retry", async t => {
   const h = setup(t); h.provider.behavior = () => { throw new ProviderError("No confirmation", { uncertain: true }); };
   const { posts: [post] } = await h.submit([h.post()]); await h.app.worker.tick();
@@ -226,7 +252,10 @@ test("reconnecting a processing delivery resumes polling without another upload"
   const h = setup(t);
   h.provider.behavior = () => ({ status: "processing", externalId: "remote-video", progress: { uploadId: "existing-upload" }, pollAfterMs: 5000 });
   const { posts: [post] } = await h.submit([h.post()]); await h.app.worker.tick();
-  h.provider.poll = async () => { throw new ProviderError("Expired", { reconnect: true }); };
+  const account = h.app.store.get("account", "one");
+  h.app.store.put("account", { ...account, encryptedCredentials: h.app.vault.encrypt({ accessToken: "expired", refreshToken: "revoked", expiresAt: 1 }, "account:one") });
+  const google = new YouTubeProvider({ transport: new HttpTransport({ fetcher: async () => new Response(JSON.stringify({ error: "invalid_grant" }), { status: 400 }) }) });
+  h.provider.refresh = credentials => google.refresh(credentials);
   h.advance(5001); await h.app.worker.tick();
   const paused = h.app.store.get("delivery", post.deliveries[0].id);
   assert.equal(paused.status, "needs_account"); assert.equal(paused.resumeStatus, "processing");
