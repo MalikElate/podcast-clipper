@@ -23,9 +23,9 @@ export class MediaService {
     const id = randomUUID(), storageKey = `${id}.${type.ext}`;
     const filename = String(file.originalname || file.filename || `media.${type.ext}`).replace(/[\x00-\x1f/\\]/g, "_").slice(0, 180);
     const record = { id, projectId, ownerUid: uid, filename, kind, mime: type.mime, bytes: stat.size, storageKey, status: "processing", source, metadata, variants: {}, createdAt: this.clock(), updatedAt: this.clock() };
-    await this.storage.importFile(file.path, storageKey);
     this.store.put("media", record);
     try {
+      await this.storage.importFile(file.path, storageKey);
       if (kind === "image" || kind === "video") {
         const result = JSON.parse(await this.runner.run("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-of", "json", this.storage.path(storageKey)]));
         const visual = result.streams?.find(stream => stream.codec_type === "video");
@@ -65,7 +65,7 @@ export class MediaService {
     const actual = Buffer.from(String(signature || ""));
     invariant(actual.length === expected.length && timingSafeEqual(actual, expected), "Invalid media link.", { status: 403 });
     const record = this.store.get("media", id);
-    invariant(record?.status === "ready", "Media not found.", { status: 404 });
+    invariant(record?.status === "ready" && !this.projects.privacy?.blocked(record.ownerUid), "Media not found.", { status: 404 });
     const key = variant === "original" ? record.storageKey : variant === "thumbnail" ? record.thumbnailKey : record.variants?.[variant]?.key;
     invariant(key, "Media version not found.", { status: 404 });
     return { record, key, mime: variant === "original" ? record.mime : variant === "thumbnail" ? "image/jpeg" : record.variants[variant].mime };

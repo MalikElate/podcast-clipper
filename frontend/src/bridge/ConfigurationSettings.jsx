@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "./BridgeApi.js";
 import { Icon } from "./Icons.jsx";
 import { Alert, Field, TimezoneField } from "./ui.jsx";
+import PrivacyAccount from "./PrivacyAccount.jsx";
 
 export default function ConfigurationSettings({ user, project, config, onProjectUpdated }) {
   const [form, setForm] = useState(project ? { name: project.name, timeZone: project.timeZone } : null);
@@ -20,6 +21,7 @@ export default function ConfigurationSettings({ user, project, config, onProject
       <section className="bridge-panel bridge-settings-card"><div className="bridge-settings-card-heading"><span className="bridge-settings-icon"><Icon name="settings"/></span><div><h2>Project settings</h2><p>Used for schedules, calendars, and published timestamps.</p></div></div>{form ? <form onSubmit={save}><Field label="Project name"><input required maxLength={80} value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))}/></Field><TimezoneField value={form.timeZone} onChange={timeZone => setForm(current => ({ ...current, timeZone }))}/><button className="bridge-button" disabled={busy}>{busy ? "Saving…" : "Save settings"}</button></form> : <p>Create a project to configure its publishing defaults.</p>}</section>
       <section className="bridge-panel bridge-settings-card bridge-settings-status"><div className="bridge-settings-card-heading"><span className="bridge-settings-icon"><Icon name="check"/></span><div><h2>Service status</h2><p>Configuration reported by this Meadow server.</p></div></div><div className="bridge-status-list"><Status label="Media storage" ready={config.mediaReady}/><Status label="Social connections" ready={config.connectionsReady}/><Status label="Publishing worker" ready={config.features?.publishing}/><Status label="Analytics" ready={config.features?.analytics}/></div></section>
     </div>
+    <PrivacyAccount/>
   </>;
 }
 

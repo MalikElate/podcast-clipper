@@ -11,7 +11,8 @@ Meadow is a publishing workspace for creating, scheduling, and analyzing social 
 - Durable deliveries for every account, automatic quota overflow queues, queue editing, deletion, reordering, and independent retries.
 - Per-post and per-account analytics, combined totals, post comparisons, and best-performing posts. Missing metrics remain unavailable instead of becoming zero.
 - Public pricing, Stripe subscription Checkout, webhook-backed billing status, and Stripe Customer Portal management.
-- Configuration screens for project settings, service readiness, API-key management, and plan comparison.
+- Configuration screens for project settings, service readiness, API-key management, plan comparison, and Privacy & Account.
+- Versioned policy agreement, durable account and connection erasure, TikTok authorization-removal webhooks, and platform data retention.
 
 The working clipping studio, affiliate program, multi-workspace controls, standalone media library, and bulk composer controls are deferred. Their complete implementations are preserved on the `deferred-features` branch and are absent from the active application code. The Clipping studio page remains as a coming-soon notice. Collaborators and paid-plan entitlement enforcement are also deferred. See [deferred features](docs/deferred-features.md) for the preserved scope and [platform setup and formats](docs/platforms.md) for provider limitations.
 
@@ -23,12 +24,10 @@ Production combines a Cloudflare Worker and a named Cloudflare Container. The Wo
 
 The container stores SQLite data and uploaded media on its filesystem. Back up that data or move it to durable external storage before relying on the deployment for production records because container replacement can remove local state.
 
-The frontend build requires a Clerk publishable key and accepts optional PostHog settings:
+The frontend build requires a Clerk publishable key. Product analytics scripts are disabled:
 
 ```dotenv
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
-VITE_POSTHOG_KEY=phc_...
-VITE_POSTHOG_HOST=https://us.i.posthog.com
 ```
 
 The backend requires Clerk, media-signing, encryption, and enabled platform credentials. The complete list is in [backend/.env.example](backend/.env.example). Add private values with `npx wrangler secret put NAME` or in the Cloudflare dashboard; never commit them.
@@ -66,4 +65,6 @@ This runs the frontend and backend tests and creates the production frontend bun
 
 [Architecture and extension points](docs/architecture.md) describes service boundaries, storage, queue state transitions, and the provider contract. [Deployment instructions](docs/deployment.md) covers secrets, reverse proxies, backups, and remaining live acceptance checks.
 
-Uploaded media remains until deleted. Meadow retains published history locally; deleting content from a social platform is outside this release. Media links are bearer links and expire after 30 minutes for browser access or 24 hours for provider retrieval.
+See [privacy operations](docs/privacy-operations.md) for required deletion secrets, webhooks, maintenance, processor follow-up, and backup handling before rollout.
+
+Uploaded media remains until deleted. Removing a connection also erases its local delivery history and metrics; account deletion removes every owned workspace. Otherwise Meadow retains published history locally; deleting content from a social platform is outside this release. Media links are bearer links and expire after 30 minutes for browser access or 24 hours for provider retrieval.

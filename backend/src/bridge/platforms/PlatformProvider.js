@@ -78,6 +78,7 @@ export class PlatformProvider {
 
   async options() { return { limit: null, remaining: null, resetAt: null, limits: [], note: "The platform does not expose an exact remaining posting allowance. Meadow will queue deliveries if it reports a limit." }; }
   async accounts() { throw new Error(`${this.id}: accounts() is not implemented.`); }
+  async revoke() { return { remoteRevocation: false }; }
   async publish() { throw new Error(`${this.id}: publish() is not implemented.`); }
   async poll() { throw new ProviderError("This delivery needs its result checked before retrying.", { uncertain: true }); }
   async metrics() { return { values: {}, unavailableReason: "This platform does not provide these post metrics through its API." }; }

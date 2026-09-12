@@ -14,6 +14,7 @@ import Analytics from "./Analytics.jsx";
 import ConfigurationSettings from "./ConfigurationSettings.jsx";
 import ApiKeys from "./ApiKeys.jsx";
 import Billing from "./Billing.jsx";
+import { PrivacyGate, PolicyLinks, DeletionReceipt, readDeletionReceipt } from "./PrivacyAccount.jsx";
 import { dashboardPath, dashboardView } from "./dashboardRoutes.js";
 import "./bridge.css";
 
@@ -44,8 +45,15 @@ const postViewIds = new Set(postModules.map(item => item.id));
 const configurationViewIds = new Set(configurationModules.map(item => item.id));
 export default function BridgeApp() {
   const { user, signOut } = useAuth();
+  const [deletion, setDeletion] = useState(readDeletionReceipt);
+  useEffect(() => {
+    const onDeletion = event => setDeletion(event.detail.deletion);
+    window.addEventListener("meadow:account-deletion", onDeletion);
+    return () => window.removeEventListener("meadow:account-deletion", onDeletion);
+  }, []);
+  if (deletion) return <div className="bridge" data-theme="light"><DeletionReceipt deletion={deletion} signOut={signOut}/></div>;
   if (!user && !localPreview) return <div className="bridge-signin"><div className="bridge-signin-brand"><img src={MEADOW_LOGO_URL} alt="" width="38" height="38"/><span>meadow</span></div><Auth /></div>;
-  return <Workspace key={user?.id || "preview"} user={user} signOut={signOut}/>;
+  return <PrivacyGate key={user?.id || "preview"} signOut={signOut}><Workspace user={user} signOut={signOut}/></PrivacyGate>;
 }
 function Workspace({ user, signOut }) {
   const initial = useRef({ params: new URLSearchParams(window.location.search), view: dashboardView(window.location.pathname, window.location.search) });
@@ -113,6 +121,7 @@ function Workspace({ user, signOut }) {
       <div className="bridge-content"><Alert message={error}/><Alert message={notice} success/><div className="bridge-page-heading"><h1>{activeModule?.title || activeModule?.name}</h1></div>
         {!config ? <div className="bridge-panel bridge-empty"><p>{error ? "Meadow could not load. Check your connection and refresh this page." : ""}</p></div> : isConfigurationView ? <ConfigurationWorkspace user={user} project={project} config={config} view={view} onProjectUpdated={updated => setProjects(current => current.map(item => item.id === updated.id ? updated : item))}/> : !project ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Meadow is getting ready</h2><p>Your publishing account is not available yet.</p></div> : <ProjectWorkspace key={project.id} project={project} config={config} view={view} navigate={navigate} compose={compose} scheduledDate={scheduledDate} clearScheduledDate={() => setScheduledDate("")} draftVersion={draftVersion} connectionId={connectionId} clearConnection={() => setConnectionId("")} notify={setNotice}/>}
       </div>
+      <footer className="bridge-dashboard-legal"><PolicyLinks/></footer>
     </main>
   </div>;
 }

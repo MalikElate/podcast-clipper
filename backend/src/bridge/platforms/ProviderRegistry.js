@@ -17,5 +17,11 @@ export class ProviderRegistry {
     return provider;
   }
   list() { return [...this.providers.values()].filter(provider => !this.disabled.has(provider.id)); }
+  forCleanup(id) {
+    // Turning off publishing must not prevent an existing user withdrawing access.
+    const provider = this.providers.get(id);
+    if (!provider) throw new BridgeError("This connection cannot be cleaned up yet.", { code: "platform_missing" });
+    return provider;
+  }
   catalog() { return this.list().map(provider => ({ ...provider.capabilities, configured: provider.configured })); }
 }

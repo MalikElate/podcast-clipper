@@ -118,3 +118,19 @@
 
 /* Coming soon */
 .bridge-coming-soon{min-height:540px;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:70px 28px;text-align:center;overflow:hidden}.bridge-coming-soon-visual{position:relative;display:grid;place-items:center;width:150px;height:150px;margin-bottom:28px}.bridge-coming-soon-ring{position:absolute;border-radius:50%;border:1px solid color-mix(in srgb,var(--b-blue) 22%,transparent)}.bridge-coming-soon-ring.ring-one{inset:15px;background:color-mix(in srgb,var(--b-blue) 5%,transparent)}.bridge-coming-soon-ring.ring-two{inset:34px;border-color:color-mix(in srgb,var(--b-blue) 35%,transparent);background:color-mix(in srgb,var(--b-blue) 8%,var(--b-panel))}.bridge-coming-soon-icon{position:relative;z-index:1;display:grid;place-items:center;width:62px;height:62px;border-radius:18px;background:var(--b-blue);color:#fff;box-shadow:0 16px 34px color-mix(in srgb,var(--b-blue) 30%,transparent)}.bridge-coming-soon-label{display:inline-flex;align-items:center;border-radius:999px;background:color-mix(in srgb,var(--b-blue) 10%,var(--b-panel));color:var(--b-blue);padding:6px 11px;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.bridge-coming-soon h2{margin-top:17px;font-size:1.65rem}.bridge-coming-soon>p{max-width:540px;margin-top:10px;font-size:.95rem;line-height:1.7}.bridge-badge.active,.bridge-badge.approved,.bridge-badge.paid{background:#142f29;color:#8bd4b9;border-color:#295447}.bridge-badge.pending{background:#1c2946;color:#a5bdf6;border-color:#344a76}.bridge-badge.reversed{background:#38242d;color:#f1a7ba;border-color:#694050}
+
+/* Privacy controls use the same workspace surfaces and form controls. */
+.bridge-privacy-card { margin-top: 24px; max-width: 840px; }
+.bridge-privacy-links { display: flex; flex-wrap: wrap; gap: 12px 24px; margin: 18px 0; font-size: 13px; }
+.bridge-privacy-links a { color: var(--bridge-accent, #486744); text-decoration: underline; text-underline-offset: 3px; }
+.bridge-privacy-gate { width: 100%; min-height: 100vh; display: grid; place-items: center; padding: 32px 20px; }
+.bridge-privacy-consent { width: min(100%, 660px); padding: clamp(24px, 5vw, 48px); }
+.bridge-privacy-consent h1 { font-size: clamp(25px, 4vw, 32px); line-height: 1.2; margin: 22px 0; }
+.bridge-privacy-consent p, .bridge-privacy-card p { line-height: 1.65; color: #636a60; }
+.bridge-privacy-consent .bridge-button { margin-top: 18px; }
+.bridge-privacy-decline { border-top: 1px solid #e4e8df; margin-top: 24px; padding-top: 20px; }
+.bridge-dashboard-legal { padding: 0 32px 20px; }
+@media (max-width: 600px) { .bridge-privacy-gate { padding: 16px; } .bridge-dashboard-legal { padding: 0 20px 16px; } }
+
+.bridge-privacy-explanation p + p { margin-top: 12px; }
+.bridge-privacy-consent .bridge-small { margin-top: 12px; }

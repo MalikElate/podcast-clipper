@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { invariant } from "../core/errors.js";
+import { deletionMarker } from "./PrivacyService.js";
 
 const PLAN_PRICE_ENV = {
   starter: { monthly: "STRIPE_PRICE_STARTER_MONTHLY", yearly: "STRIPE_PRICE_STARTER_YEARLY" },
@@ -63,7 +64,27 @@ export class BillingService {
       metadata,
       subscription_data: { metadata },
     });
+    if (session.id) this.store.put("checkout_session", { id: session.id, ownerUid: uid, createdAt: Date.now() });
     return { url: session.url };
+  }
+
+  async cancelForDeletion(uid) {
+    const record = this.store.get("billing", uid);
+    const sessions = this.store.list("checkout_session", { ownerUid: uid, limit: null });
+    if (!record && !sessions.length) return;
+    invariant(this.stripe || !(record?.subscriptionId || sessions.length), "Billing cancellation needs server configuration.", { code: "billing_not_configured" });
+    for (const saved of sessions) {
+      const session = await this.stripe.checkout.sessions.retrieve(saved.id);
+      if (session.status === "open") await this.stripe.checkout.sessions.expire(session.id);
+      if (session.subscription) await this.cancelSubscription(typeof session.subscription === "string" ? session.subscription : session.subscription.id);
+      this.store.remove("checkout_session", saved.id);
+    }
+    if (record?.subscriptionId) await this.cancelSubscription(record.subscriptionId);
+  }
+
+  async cancelSubscription(id) {
+    const subscription = await this.stripe.subscriptions.retrieve(id);
+    if (ACTIVE_STATUSES.has(subscription.status) || subscription.status === "paused") await this.stripe.subscriptions.cancel(id);
   }
 
   async portal(uid) {
@@ -88,7 +109,7 @@ export class BillingService {
   syncSubscription(subscription, fallbackUid = null) {
     const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer?.id;
     const uid = subscription.metadata?.meadowUserId || fallbackUid || this.userForCustomer(customerId);
-    if (!uid) return null;
+    if (!uid || this.store.get("privacyBlock", deletionMarker(uid))) return null;
     const priceId = subscription.items?.data?.[0]?.price?.id || null;
     const mapped = this.identifyPlan(priceId);
     const itemPeriodEnd = subscription.items?.data?.[0]?.current_period_end;
@@ -120,9 +141,11 @@ export class BillingService {
       const uid = object.client_reference_id || object.metadata?.meadowUserId;
       if (uid && object.subscription) {
         const subscription = await this.stripe.subscriptions.retrieve(typeof object.subscription === "string" ? object.subscription : object.subscription.id);
+        if (this.store.get("privacyBlock", deletionMarker(uid)) && (ACTIVE_STATUSES.has(subscription.status) || subscription.status === "paused")) await this.cancelSubscription(subscription.id);
         this.syncSubscription(subscription, uid);
       }
     } else if (["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"].includes(event.type)) {
+      if (object.metadata?.meadowUserId && this.store.get("privacyBlock", deletionMarker(object.metadata.meadowUserId)) && (ACTIVE_STATUSES.has(object.status) || object.status === "paused")) await this.cancelSubscription(object.id);
       this.syncSubscription(object);
     }
     return { received: true };

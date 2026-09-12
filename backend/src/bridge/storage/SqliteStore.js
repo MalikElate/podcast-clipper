@@ -12,6 +12,7 @@ export class SqliteStore {
     if (filename !== ":memory:") fs.mkdirSync(path.dirname(filename), { recursive: true, mode: 0o700 });
     this.db = new Database(filename);
     this.db.pragma("journal_mode = WAL");
+    this.db.pragma("secure_delete = ON");
     this.db.pragma("busy_timeout = 5000");
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER NOT NULL);
@@ -75,6 +76,19 @@ export class SqliteStore {
   }
 
   remove(kind, id) { return this.db.prepare("DELETE FROM entities WHERE kind=? AND id=?").run(kind, id).changes > 0; }
+  removeOwner(ownerUid, { keepKinds = [] } = {}) {
+    return this.transaction(() => {
+      this.db.prepare("DELETE FROM rate_events WHERE id IN (SELECT id FROM entities WHERE kind='delivery' AND owner_uid=?)").run(ownerUid);
+      this.db.prepare("DELETE FROM one_time_states WHERE json_extract(data,'$.uid')=?").run(ownerUid);
+      const exclusion = keepKinds.length ? ` AND kind NOT IN (${keepKinds.map(() => "?").join(",")})` : "";
+      return this.db.prepare(`DELETE FROM entities WHERE owner_uid=?${exclusion}`).run(ownerUid, ...keepKinds).changes;
+    });
+  }
+  pruneStates(now) { this.db.prepare("DELETE FROM one_time_states WHERE expires_at<=?").run(now); }
+  removeStates(ownerUid, platforms) {
+    this.db.prepare(`DELETE FROM one_time_states WHERE json_extract(data,'$.uid')=? AND json_extract(data,'$.platform') IN (${platforms.map(() => "?").join(",")})`).run(ownerUid, ...platforms);
+  }
+  checkpointDeletedData() { this.db.pragma("wal_checkpoint(TRUNCATE)"); }
   transaction(fn) { return this.db.transaction(fn).immediate(); }
   nextSequence(name, minimum = 1) {
     return this.db.prepare("INSERT INTO counters(name,value) VALUES (?,?) ON CONFLICT(name) DO UPDATE SET value=MAX(counters.value+1,excluded.value) RETURNING value").get(name, minimum).value;
@@ -101,6 +115,10 @@ export class SqliteStore {
       this.db.prepare("DELETE FROM one_time_states WHERE key=?").run(key);
       return row && row.expires_at > now ? JSON.parse(row.data) : null;
     });
+  }
+  peekState(key, now = Date.now()) {
+    const row = this.db.prepare("SELECT data,expires_at FROM one_time_states WHERE key=?").get(key);
+    return row && row.expires_at > now ? JSON.parse(row.data) : null;
   }
   close() { this.db.close(); }
 }

@@ -12,7 +12,7 @@ export class BlueskyProvider extends PlatformProvider {
   encryptedStore(kind) {
     return {
       get: async key => { const row = this.store.get(kind, SecretVault.hash(key)); return row && (!row.expiresAt || row.expiresAt > Date.now()) ? this.vault.decrypt(row.encrypted, `${kind}:${key}`) : undefined; },
-      set: async (key, value) => this.store.put(kind, { id: SecretVault.hash(key), encrypted: this.vault.encrypt(value, `${kind}:${key}`), ...(kind === "blueskyState" ? { expiresAt: Date.now() + 15 * 60000 } : {}) }),
+      set: async (key, value) => this.store.put(kind, { id: SecretVault.hash(key), encrypted: this.vault.encrypt(value, `${kind}:${key}`), ...(kind === "blueskyState" ? { ownerUid: value.appState ? this.store.peekState(SecretVault.hash(value.appState))?.uid : undefined, expiresAt: Date.now() + 15 * 60000 } : {}) }),
       del: async key => this.store.remove(kind, SecretVault.hash(key)),
     };
   }
@@ -34,6 +34,9 @@ export class BlueskyProvider extends PlatformProvider {
     const { session, state } = await (await this.client()).callback(params);
     const agent = new Agent(session), { data } = await agent.getProfile({ actor: session.did });
     return { state, credentials: { did: session.did }, candidates: [{ remoteId: session.did, label: `@${data.handle}`, avatar: data.avatar, profileUrl: `https://bsky.app/profile/${data.handle}` }] };
+  }
+  async authorizationState(params) {
+    return (await this.encryptedStore("blueskyState").get(params.get("state") || ""))?.appState;
   }
   async agent(credentials) {
     try { return new Agent(await (await this.client()).restore(credentials.did)); }

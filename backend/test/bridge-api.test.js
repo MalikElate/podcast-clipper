@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { createHmac } from "node:crypto";
 import { BridgeApplication } from "../src/bridge/BridgeApplication.js";
 import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 
@@ -11,6 +12,7 @@ async function setup(t, { localPreview = false, auth = true, stripe, envOverride
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bridge-api-test-"));
   const dir = path.join(temporaryRoot, ".bridge");
   const application = new BridgeApplication({ store: new SqliteStore(), stripe, env: { NODE_ENV: localPreview ? "development" : "test", BRIDGE_LOCAL_PREVIEW: localPreview ? "1" : "0", BRIDGE_DATA_DIR: dir, BRIDGE_APP_URL: "http://localhost:5173", BRIDGE_MEDIA_SIGNING_KEY: "test-signing-key", BRIDGE_PUBLISHING_ENABLED: "false", ...envOverrides }, ...(auth ? { authMiddleware: (req, res, next) => { if (!/^Bearer (alice|bob)$/.test(req.headers.authorization || "")) return res.status(401).json({ error: "Sign in required" }); req.uid = req.headers.authorization.split(" ")[1]; next(); } } : {}) });
+  for (const uid of ["alice", "bob", "bridge-local-preview"]) application.privacy.consent(uid, { accepted: true, version: "2026-09-12" });
   const server = await new Promise((resolve, reject) => { const server = application.app.listen(0, "127.0.0.1", () => resolve(server)); server.on("error", reject); });
   const base = `http://127.0.0.1:${server.address().port}`;
   t.after(async () => { await new Promise(resolve => server.close(resolve)); application.close(); fs.rmSync(temporaryRoot, { recursive: true, force: true }); });
@@ -158,4 +160,49 @@ test("Stripe checkout, webhooks, subscription state, and billing portal stay lin
   assert.equal(duplicate.status, 409);
   const portal = await h.request("/api/bridge/billing/portal", { method: "POST", body: {} });
   assert.equal(portal.status, 200); assert.equal((await portal.json()).url, "https://billing.stripe.test/portal"); assert.equal(calls.portal[0].customer, "cus_alice");
+});
+
+test("privacy agreement and account deletion require the owner's session and cannot target another user", async t => {
+  const h = await setup(t), { application: app } = h;
+  app.privacy.deleteIdentity = async () => {};
+  app.privacy.deleteAnalytics = async () => true;
+  const other = app.projects.create("bob", { name: "Keep Bob" });
+  const { key } = app.apiKeys.create("alice", { name: "Agent" });
+  app.store.remove("privacyConsent", "alice");
+  assert.equal((await h.request("/api/bridge/projects")).status, 403);
+  const privacy = await h.request("/api/bridge/privacy");
+  assert.equal(privacy.headers.get("cache-control"), "no-store");
+  assert.equal((await privacy.json()).accepted, false);
+  const keyHeaders = { Authorization: `Bearer ${key}` };
+  assert.equal((await h.request("/api/bridge/privacy/consent", { method: "POST", headers: keyHeaders, body: { accepted: true, version: "2026-09-12" } })).status, 403);
+  assert.equal((await h.request("/api/bridge/privacy/account", { method: "DELETE", headers: keyHeaders, body: { confirmation: "DELETE" } })).status, 403);
+  assert.equal((await h.request("/api/bridge/privacy/consent", { method: "POST", body: { accepted: true, version: "old" } })).status, 400);
+  assert.equal((await h.request("/api/bridge/privacy/consent", { method: "POST", body: { accepted: true, version: "2026-09-12" } })).status, 200);
+  assert.equal((await h.request("/api/bridge/privacy/account", { method: "DELETE", body: { confirmation: "delete" } })).status, 400);
+  const deleted = await h.request("/api/bridge/privacy/account", { method: "DELETE", body: { confirmation: "DELETE", uid: "bob" } });
+  assert.equal(deleted.status, 202);
+  const reference = (await deleted.json()).deletion.reference;
+  assert.equal((await h.request("/api/bridge/projects")).status, 410);
+  assert.equal((await h.request("/api/bridge/projects", { headers: keyHeaders })).status, 401);
+  await app.privacy.tick();
+  assert.equal(app.store.get("project", h.project.id), null);
+  assert.equal(app.store.get("project", other.id).name, "Keep Bob");
+  assert.equal((await (await h.request("/api/bridge/privacy")).json()).deletion.status, "complete");
+  assert.equal((await (await h.request("/api/bridge/privacy/account", { method: "DELETE", body: { confirmation: "DELETE" } })).json()).deletion.reference, reference);
+});
+
+test("Clerk deletion webhooks verify the raw signature and erase the deleted identity's workspaces", async t => {
+  const signingKey = Buffer.from("meadow-test-clerk-webhook-secret");
+  const h = await setup(t, { envOverrides: { CLERK_WEBHOOK_SIGNING_SECRET: `whsec_${signingKey.toString("base64")}` } });
+  h.application.privacy.deleteAnalytics = async () => true;
+  h.application.privacy.deleteIdentity = async () => assert.fail("Clerk already deleted this identity");
+  const body = { type: "user.deleted", data: { id: "alice", deleted: true } }, timestamp = String(Math.floor(Date.now() / 1000)), id = "msg_test_privacy";
+  const signature = createHmac("sha256", signingKey).update(`${id}.${timestamp}.${JSON.stringify(body)}`).digest("base64");
+  const headers = { "svix-id": id, "svix-timestamp": timestamp, "svix-signature": `v1,${signature}` };
+  assert.equal((await h.request("/api/clerk/webhook", { method: "POST", user: null, body, headers: { ...headers, "svix-signature": "v1,invalid" } })).status, 400);
+  assert.equal(h.application.privacy.blocked("alice"), false);
+  assert.equal((await h.request("/api/clerk/webhook", { method: "POST", user: null, body, headers })).status, 200);
+  await h.application.privacy.tick();
+  assert.equal(h.application.store.get("project", h.project.id), null);
+  assert.equal(h.application.privacy.status("alice").deletion.status, "complete");
 });

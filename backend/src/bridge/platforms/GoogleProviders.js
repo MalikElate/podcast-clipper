@@ -2,6 +2,17 @@ import { PlatformProvider } from "./PlatformProvider.js";
 import { invariant, ProviderError } from "../core/errors.js";
 
 class GoogleProvider extends PlatformProvider {
+  async revoke(credentials) {
+    const response = await this.http.request("https://oauth2.googleapis.com/revoke", {
+      method: "POST", form: { token: credentials.refreshToken || credentials.accessToken },
+      raw: true, acceptStatuses: [400], safeToRetry: true,
+    });
+    if (response.status === 400) {
+      const data = await response.json().catch(() => ({}));
+      if (data.error !== "invalid_token") throw new ProviderError("Google could not revoke this authorization yet.", { retryable: true, code: "revocation_failed" });
+    }
+    return { remoteRevocation: true };
+  }
   get oauth() {
     const prefix = this.id === "google_business" ? "GOOGLE_BUSINESS" : "YOUTUBE";
     return { authorize: "https://accounts.google.com/o/oauth2/v2/auth", token: "https://oauth2.googleapis.com/token", clientId: this.env[`${prefix}_CLIENT_ID`] || this.env.GOOGLE_CLIENT_ID, clientSecret: this.env[`${prefix}_CLIENT_SECRET`] || this.env.GOOGLE_CLIENT_SECRET,
@@ -66,13 +77,14 @@ export class YouTubeProvider extends GoogleProvider {
     if (!video) throw new ProviderError("YouTube has not returned this video. Check the channel before retrying.", { uncertain: true });
     if (["failed", "rejected", "deleted"].includes(video.status?.uploadStatus) || video.processingDetails?.processingStatus === "failed") throw new ProviderError("YouTube rejected this video. Check the upload in YouTube Studio.");
     if (video.status?.uploadStatus === "processed" || video.processingDetails?.processingStatus === "succeeded") {
-      if (ctx.content.settings.privacy === "public" && video.status?.privacyStatus !== "public") throw new ProviderError("YouTube uploaded the video but restricted its visibility. Check your API project's audit status and the video in YouTube Studio.", { uncertain: true });
+      if (video.status?.privacyStatus !== ctx.content.settings.privacy) throw new ProviderError("YouTube uploaded the video, but its visibility does not match your selection. Check the video in YouTube Studio and your API project's audit status before retrying.", { uncertain: true });
       return { status: "published", externalId: videoId, url: `https://www.youtube.com/watch?v=${videoId}`, progress: { videoId } };
     }
     return { status: "processing", progress: { phase: "video_processing", videoId }, pollAfterMs: 30000 };
   }
   async metrics({ credentials, delivery }) {
     const result = await this.http.request(`https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${encodeURIComponent(delivery.externalId)}`, { token: credentials.accessToken });
+    if (!result.items?.length) return { values: {}, removed: true, note: "This video is no longer available from YouTube." };
     const stats = result.items?.[0]?.statistics || {};
     const values = { views: stats.viewCount, likes: stats.likeCount, comments: stats.commentCount };
     let note;
@@ -80,7 +92,7 @@ export class YouTubeProvider extends GoogleProvider {
       const start = new Date(delivery.publishedAt).toISOString().slice(0, 10), end = new Date().toISOString().slice(0, 10);
       const report = await this.http.request(`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel%3D%3DMINE&startDate=${start}&endDate=${end}&metrics=shares&dimensions=video&filters=${encodeURIComponent(`video==${delivery.externalId}`)}`, { token: credentials.accessToken });
       if (report.rows?.length) values.shares = report.rows[0][1];
-    } catch { note = "YouTube share analytics are not available for this account or reporting period."; }
+    } catch (error) { if (error.reconnect) throw error; note = "YouTube share analytics are not available for this account or reporting period."; }
     return { values, note };
   }
 }
@@ -89,17 +101,24 @@ export class GoogleBusinessProvider extends GoogleProvider {
   constructor(deps) { super("google_business", deps); }
   async accounts(credentials) {
     const token = credentials.accessToken;
-    const response = await this.http.request("https://mybusinessaccountmanagement.googleapis.com/v1/accounts?pageSize=20", { token });
     const candidates = [];
-    for (const account of response.accounts || []) {
-      let pageToken = "";
-      do {
-        const page = await this.http.request(`https://mybusinessbusinessinformation.googleapis.com/v1/${account.name}/locations?readMask=name,title&pageSize=100${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ""}`, { token });
-        for (const location of page.locations || []) candidates.push({ remoteId: `${account.name}/${location.name}`, label: location.title, metadata: { resourceName: `${account.name}/${location.name}` } });
-        pageToken = page.nextPageToken || "";
-      } while (pageToken && candidates.length < 100);
-    }
-    return candidates.slice(0, 100);
+    let accountPageToken = "";
+    do {
+      const response = await this.http.request(`https://mybusinessaccountmanagement.googleapis.com/v1/accounts?pageSize=20${accountPageToken ? `&pageToken=${encodeURIComponent(accountPageToken)}` : ""}`, { token });
+      for (const account of response.accounts || []) {
+        let locationPageToken = "";
+        do {
+          const page = await this.http.request(`https://mybusinessbusinessinformation.googleapis.com/v1/${account.name}/locations?readMask=name,title&pageSize=100${locationPageToken ? `&pageToken=${encodeURIComponent(locationPageToken)}` : ""}`, { token });
+          for (const location of page.locations || []) {
+            candidates.push({ remoteId: `${account.name}/${location.name}`, label: location.title, metadata: { resourceName: `${account.name}/${location.name}` } });
+            if (candidates.length === 100) return candidates;
+          }
+          locationPageToken = page.nextPageToken || "";
+        } while (locationPageToken);
+      }
+      accountPageToken = response.nextPageToken || "";
+    } while (accountPageToken);
+    return candidates;
   }
   async publish(ctx) {
     const media = [];
@@ -117,10 +136,7 @@ export class GoogleBusinessProvider extends GoogleProvider {
     if (result.state === "REJECTED") throw new ProviderError("Google Business rejected this post. Check the content in your Business Profile.");
     return result.state === "LIVE" ? { status: "published", externalId: result.name, url: result.searchUrl } : { status: "processing", progress: ctx.progress, pollAfterMs: 30000 };
   }
-  async metrics({ account, credentials, delivery }) {
-    const result = await this.http.request(`https://mybusiness.googleapis.com/v4/${account.remoteId}/localPosts:reportInsights`, { method: "POST", token: credentials.accessToken, safeToRetry: true, json: { localPostNames: [delivery.externalId], basicRequest: { metricRequests: [{ metric: "LOCAL_POST_VIEWS_SEARCH" }, { metric: "LOCAL_POST_ACTIONS_CALL_TO_ACTION" }], timeRange: { startTime: new Date(delivery.publishedAt).toISOString(), endTime: new Date().toISOString() } } } });
-    const data = result.localPostMetrics?.[0]?.metricValues || [];
-    const value = name => data.find(item => item.metric === name)?.totalValue?.value;
-    return { values: { views: value("LOCAL_POST_VIEWS_SEARCH"), clicks: value("LOCAL_POST_ACTIONS_CALL_TO_ACTION") }, note: "Google Business does not report likes, comments, shares, or saves for local posts." };
+  async metrics() {
+    return { values: {}, unavailableReason: "Google retired Business Profile post analytics. Metrics for individual local posts are unavailable through its API." };
   }
 }

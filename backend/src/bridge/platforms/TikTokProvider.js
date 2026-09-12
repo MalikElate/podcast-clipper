@@ -3,6 +3,12 @@ import { invariant, ProviderError } from "../core/errors.js";
 
 export class TikTokProvider extends PlatformProvider {
   constructor(deps) { super("tiktok", deps); }
+  async revoke(credentials) {
+    await this.http.request("https://open.tiktokapis.com/v2/oauth/revoke/", {
+      method: "POST", form: { client_key: this.oauth.clientId, client_secret: this.oauth.clientSecret, token: credentials.accessToken }, safeToRetry: true,
+    });
+    return { remoteRevocation: true };
+  }
   get oauth() { return { authorize: "https://www.tiktok.com/v2/auth/authorize/", token: "https://open.tiktokapis.com/v2/oauth/token/", clientId: this.env.TIKTOK_CLIENT_KEY, clientSecret: this.env.TIKTOK_CLIENT_SECRET, clientIdParam: "client_key", scopes: ["user.info.basic", "video.publish", "video.list"], scopeSeparator: "," }; }
   request(endpoint, credentials, json) { return this.http.request(`https://open.tiktokapis.com/v2/${endpoint}`, { token: credentials.accessToken, ...(json ? { method: "POST", json } : {}) }); }
   async accounts(credentials) {

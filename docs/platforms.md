@@ -61,7 +61,7 @@ For Bluesky, supply a PKCS#8 ES256 private PEM as a backend secret. The official
 
 TikTok requires the latest creator information, explicit privacy selection, permitted interaction choices, and posting consent. Meadow renders those controls without a default privacy value. Its URL-pull flow requires verification of the serving domain or URL prefix. Unaudited clients are restricted to private viewing; approval is necessary for public publishing. [TikTok Direct Post setup](https://developers.tiktok.com/docs/en/content-posting-api-get-started)
 
-YouTube's API can restrict uploads from unverified API projects to private visibility. Meadow preserves the requested visibility and reports a restricted public upload for review rather than claiming public success. [YouTube video insertion](https://developers.google.com/youtube/v3/docs/videos/insert)
+YouTube's API can restrict uploads from unverified API projects to private visibility. Meadow confirms publication only when the processed video's visibility matches the user's selection (public, unlisted, or private). A mismatch requires review in YouTube Studio before a retry, because the upload already exists. [YouTube video insertion](https://developers.google.com/youtube/v3/docs/videos/insert)
 
 Instagram and Threads expose publishing allowance information that the adapters use when available. Other providers do not consistently return a reliable account-wide remaining-post count. Meadow does not invent a fixed “10 posts per day” rule for TikTok or any other platform. It plans known limits, tracks local submissions, respects reported blocks/resets, and queues uncertain allowances until the provider allows delivery. Reset estimates are conservative when remote usage timestamps are unavailable.
 
@@ -82,8 +82,8 @@ X media follows initialize, append, finalize and status checks before post creat
 | Pinterest | Pin impressions, engagements, saves, outbound clicks and available video views |
 | Threads | Views, likes, replies, reposts/quotes and shares where returned |
 | Bluesky | Likes, replies and reposts + quotes; no fabricated view count |
-| Google Business | Local post views and call-to-action actions; no likes/comments/shares/saves |
+| Google Business | Individual local post metrics unavailable; Google retired the post insights endpoint |
 
 Metrics are normalized into views, impressions, likes, comments, shares, saves and clicks. Engagement is the sum of available likes, comments, shares and saves. Components differ by provider, so comparisons are directional activity comparisons rather than identical measurements or deduplicated audience reach. Pinterest engagements are not relabeled as likes. Missing values are `null`, not zero. A provider failure preserves the last successful reading and displays its age/error.
 
-Background synchronization handles up to ten eligible published deliveries per minute, normally at least fifteen minutes apart per delivery. Manual refresh handles up to fifty oldest eligible deliveries and is throttled per delivery. New, private, deleted or permission-restricted content may have no metrics. Google Business standard local posts and their insight resource are documented in the [Business Profile API](https://developers.google.com/my-business/reference/rest/v4/accounts.locations.localPosts).
+Background synchronization handles up to ten eligible published deliveries per minute, normally at least fifteen minutes apart per delivery. Manual refresh handles up to fifty oldest eligible deliveries and is throttled per delivery. New, private, deleted or permission-restricted content may have no metrics. Google Business standard local posts remain supported, but Google retired their insights endpoint on February 20, 2023, with no replacement for individual post metrics. Meadow displays these metrics as unavailable. [Business Profile API sunset dates](https://developers.google.com/my-business/content/sunset-dates)
