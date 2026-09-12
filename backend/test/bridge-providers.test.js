@@ -25,6 +25,37 @@ function context(media = [], settings = {}) {
 }
 function transport(handler) { const calls = []; return { calls, request: async (url, options = {}) => { calls.push({ url, options }); return handler(url, options, calls.length); } }; }
 
+test("every direct OAuth adapter sends account connections to its native authorization page", async () => {
+  const cases = [
+    [TikTokProvider, "TIKTOK", "https://www.tiktok.com/v2/auth/authorize/"],
+    [YouTubeProvider, "YOUTUBE", "https://accounts.google.com/o/oauth2/v2/auth"],
+    [GoogleBusinessProvider, "GOOGLE_BUSINESS", "https://accounts.google.com/o/oauth2/v2/auth"],
+    [PinterestProvider, "PINTEREST", "https://www.pinterest.com/oauth/"],
+    [InstagramProvider, "INSTAGRAM", "https://www.instagram.com/oauth/authorize"],
+    [ThreadsProvider, "THREADS", "https://threads.com/oauth/authorize"],
+    [FacebookProvider, "FACEBOOK", "https://www.facebook.com/v26.0/dialog/oauth"],
+    [LinkedInProvider, "LINKEDIN", "https://www.linkedin.com/oauth/v2/authorization"],
+    [XProvider, "X", "https://x.com/i/oauth2/authorize"],
+  ];
+  for (const [Provider, prefix, endpoint] of cases) {
+    const provider = new Provider({ publicUrl: "https://bridge.example", env: { [`${prefix}_CLIENT_ID`]: "fixture-app", [`${prefix}_CLIENT_KEY`]: "fixture-app", [`${prefix}_CLIENT_SECRET`]: "private-fixture-secret", META_GRAPH_VERSION: "v26.0" } });
+    const url = new URL(await provider.authorizationUrl({ state: "fresh-csrf-state", verifier: "private-pkce-verifier" }));
+    assert.equal(url.origin + url.pathname, endpoint);
+    assert.equal(url.searchParams.get("state"), "fresh-csrf-state");
+    assert.equal(url.searchParams.get("response_type"), "code");
+    assert.equal(url.searchParams.get("redirect_uri"), `https://bridge.example/oauth/${provider.id}/callback`);
+    assert.ok(url.searchParams.get("scope"));
+    assert.ok(!url.href.includes("private-"), "Client secrets and PKCE verifiers must stay on the server");
+    assert.notEqual(url.searchParams.get("prompt"), "none");
+    if (provider.oauth.pkce) assert.equal(url.searchParams.get("code_challenge_method"), "S256");
+    if (provider.id === "instagram") {
+      assert.equal(url.searchParams.get("force_reauth"), "true");
+      assert.equal(url.searchParams.get("enable_fb_login"), "false");
+      assert.equal(url.searchParams.has("force_authentication"), false);
+    }
+  }
+});
+
 test("transport respects reset headers and holds unsafe or interrupted requests for review", async () => {
   const now = 100000;
   let http = new HttpTransport({ clock: () => now, fetcher: async () => new Response("", { status: 429, headers: { "Retry-After": "60" } }) });
@@ -275,6 +306,12 @@ test("Bluesky OAuth metadata and encrypted session storage use the official clie
   const store = new SqliteStore(); t.after(() => store.close());
   const provider = new BlueskyProvider({ env: { BLUESKY_PRIVATE_KEY: privateKey, BRIDGE_APP_URL: "https://bridge.example" }, publicUrl: "https://bridge.example", store, vault: new SecretVault(randomBytes(32).toString("base64")), locks: new LockService(store) });
   const client = await provider.client(); assert.equal(client.clientMetadata.token_endpoint_auth_method, "private_key_jwt"); assert.equal(client.jwks.keys.length, 1); assert.ok(!client.jwks.keys[0].d);
+  assert.equal(client.clientMetadata.policy_uri, "https://bridge.example/privacy");
+  assert.equal(client.clientMetadata.tos_uri, "https://bridge.example/terms");
+  const authorizations = [];
+  client.authorize = async (handle, options) => { authorizations.push({ handle, options }); return new URL("https://bsky.social/oauth/authorize?request_uri=fixture"); };
+  for (const state of ["initial-state", "reconnect-state"]) await provider.authorizationUrl({ handle: "creator.bsky.social", state });
+  assert.deepEqual(authorizations, ["initial-state", "reconnect-state"].map(state => ({ handle: "creator.bsky.social", options: { state, prompt: "consent" } })));
   const storage = provider.encryptedStore("blueskySession"); await storage.set("did:test", { token: "secret" }); assert.deepEqual(await storage.get("did:test"), { token: "secret" }); assert.ok(!JSON.stringify(store.list("blueskySession")).includes('"secret"')); await storage.del("did:test"); assert.equal(await storage.get("did:test"), undefined);
 });
 

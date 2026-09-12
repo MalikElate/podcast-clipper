@@ -18,7 +18,7 @@ class GraphProvider extends PlatformProvider {
 export class InstagramProvider extends GraphProvider {
   constructor(deps) { super("instagram", deps); }
   get graphBase() { return `https://graph.instagram.com/${this.env.META_GRAPH_VERSION || "v24.0"}`; }
-  get oauth() { return { authorize: "https://www.instagram.com/oauth/authorize", token: "https://api.instagram.com/oauth/access_token", clientId: this.env.INSTAGRAM_CLIENT_ID, clientSecret: this.env.INSTAGRAM_CLIENT_SECRET, scopes: ["instagram_business_basic", "instagram_business_content_publish", "instagram_business_manage_insights"], scopeSeparator: ",", extra: { enable_fb_login: "0", force_authentication: "1" } }; }
+  get oauth() { return { authorize: "https://www.instagram.com/oauth/authorize", token: "https://api.instagram.com/oauth/access_token", clientId: this.env.INSTAGRAM_CLIENT_ID, clientSecret: this.env.INSTAGRAM_CLIENT_SECRET, scopes: ["instagram_business_basic", "instagram_business_content_publish", "instagram_business_manage_insights"], scopeSeparator: ",", extra: { enable_fb_login: "false", force_reauth: "true" } }; }
   async exchange(input) {
     const short = await super.exchange(input);
     const result = await this.http.request(`https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${encodeURIComponent(this.oauth.clientSecret)}&access_token=${encodeURIComponent(short.accessToken)}`);
@@ -96,7 +96,7 @@ export class InstagramProvider extends GraphProvider {
 export class ThreadsProvider extends GraphProvider {
   constructor(deps) { super("threads", deps); }
   get graphBase() { return "https://graph.threads.net/v1.0"; }
-  get oauth() { return { authorize: "https://threads.net/oauth/authorize", token: "https://graph.threads.net/oauth/access_token", clientId: this.env.THREADS_CLIENT_ID, clientSecret: this.env.THREADS_CLIENT_SECRET, scopes: ["threads_basic", "threads_content_publish", "threads_manage_insights"], scopeSeparator: "," }; }
+  get oauth() { return { authorize: "https://threads.com/oauth/authorize", token: "https://graph.threads.net/oauth/access_token", clientId: this.env.THREADS_CLIENT_ID, clientSecret: this.env.THREADS_CLIENT_SECRET, scopes: ["threads_basic", "threads_content_publish", "threads_manage_insights"], scopeSeparator: "," }; }
   async exchange(input) {
     const short = await super.exchange(input);
     return this.normalizeToken(await this.http.request(`https://graph.threads.net/access_token?grant_type=th_exchange_token&client_secret=${encodeURIComponent(this.oauth.clientSecret)}&access_token=${encodeURIComponent(short.accessToken)}`));
