@@ -3,8 +3,10 @@ import { invariant, ProviderError } from "../core/errors.js";
 
 export class PinterestProvider extends PlatformProvider {
   constructor(deps) { super("pinterest", deps); }
-  get oauth() { return { authorize: "https://www.pinterest.com/oauth/", token: "https://api.pinterest.com/v5/oauth/token", clientId: this.env.PINTEREST_CLIENT_ID, clientSecret: this.env.PINTEREST_CLIENT_SECRET, basicAuth: true, scopes: ["user_accounts:read", "boards:read", "pins:read", "pins:write"], scopeSeparator: "," }; }
-  request(path, credentials, options = {}) { return this.http.request(`https://api.pinterest.com/v5/${path}`, { token: credentials.accessToken, ...options }); }
+  get sandbox() { return this.env.PINTEREST_ENVIRONMENT?.toLowerCase() === "sandbox"; }
+  get apiBase() { return `https://api${this.sandbox ? "-sandbox" : ""}.pinterest.com/v5`; }
+  get oauth() { return { authorize: "https://www.pinterest.com/oauth/", token: `${this.apiBase}/oauth/token`, clientId: this.env.PINTEREST_CLIENT_ID, clientSecret: this.env.PINTEREST_CLIENT_SECRET, basicAuth: true, scopes: ["user_accounts:read", "boards:read", "pins:read", "pins:write"], scopeSeparator: "," }; }
+  request(path, credentials, options = {}) { return this.http.request(`${this.apiBase}/${path}`, { token: credentials.accessToken, ...options }); }
   async accounts(credentials) {
     const user = await this.request("user_account", credentials);
     invariant(user.username, "Pinterest did not return an account.");
@@ -13,13 +15,14 @@ export class PinterestProvider extends PlatformProvider {
   async options(account, credentials) {
     const boards = []; let bookmark;
     do {
-      const result = await this.request(`boards?page_size=100${bookmark ? `&bookmark=${encodeURIComponent(bookmark)}` : ""}`, credentials);
+      const result = await this.request(`boards?page_size=250${bookmark ? `&bookmark=${encodeURIComponent(bookmark)}` : ""}`, credentials);
       boards.push(...(result.items || []).map(board => ({ id: board.id, name: board.name }))); bookmark = result.bookmark;
     } while (bookmark && boards.length < 1000);
     return { ...await super.options(), boards };
   }
   validate(content) {
     const errors = super.validate(content);
+    if (this.sandbox && content.media[0]?.kind === "video") errors.push("Pinterest Sandbox does not support video Pins. Use an image while testing in Sandbox.");
     if (!content.settings?.boardId || !content.accountOptions?.boards?.some(board => board.id === content.settings.boardId)) errors.push("Choose a board from this Pinterest account.");
     if (content.settings?.link && !/^https?:\/\//.test(content.settings.link)) errors.push("The Pinterest destination link must start with https:// or http://.");
     return errors;
@@ -59,6 +62,7 @@ export class PinterestProvider extends PlatformProvider {
     return { status: "published", externalId: result.id, url: `https://www.pinterest.com/pin/${result.id}/` };
   }
   async metrics({ credentials, delivery }) {
+    if (this.sandbox) return { values: {}, unavailableReason: "Pinterest Sandbox does not provide organic Pin analytics." };
     const start = new Date(Math.max(delivery.publishedAt, Date.now() - 89 * 86400000)).toISOString().slice(0, 10), end = new Date().toISOString().slice(0, 10);
     const result = await this.request(`pins/${delivery.externalId}/analytics?start_date=${start}&end_date=${end}&metric_types=IMPRESSION,SAVE,PIN_CLICK,OUTBOUND_CLICK`, credentials);
     const m = result.all?.summary_metrics || {};

@@ -99,6 +99,15 @@ test("Pinterest creates a carousel with explicit board and media source", async 
   const result = await provider.publish(ctx); assert.equal(result.status, "published"); assert.equal(http.calls[0].options.json.board_id, "board1"); assert.equal(http.calls[0].options.json.media_source.source_type, "multiple_image_urls"); assert.equal(http.calls[0].options.json.media_source.items.length, 2);
 });
 
+test("Pinterest Sandbox routes token and API requests to the Sandbox host", async () => {
+  const http = transport(() => ({ items: [], bookmark: null }));
+  const provider = new PinterestProvider({ env: { PINTEREST_CLIENT_ID: "app", PINTEREST_CLIENT_SECRET: "secret", PINTEREST_ENVIRONMENT: "sandbox" }, transport: http, publicUrl: "https://bridge.example" });
+  assert.equal(provider.oauth.token, "https://api-sandbox.pinterest.com/v5/oauth/token");
+  await provider.options({}, { accessToken: "token" });
+  assert.equal(http.calls[0].url, "https://api-sandbox.pinterest.com/v5/boards?page_size=250");
+  assert.deepEqual(await provider.metrics({ credentials: {}, delivery: {} }), { values: {}, unavailableReason: "Pinterest Sandbox does not provide organic Pin analytics." });
+});
+
 test("X finalizes an upload before creating a post and carries media IDs", async t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bridge-x-test-")); t.after(() => fs.rmSync(dir, { recursive: true, force: true })); fs.writeFileSync(path.join(dir, "asset"), Buffer.alloc(500));
   const http = transport(url => url.endsWith("initialize") ? { data: { id: "media1" } } : url.endsWith("finalize") ? { data: {} } : url.endsWith("tweets") ? { data: { id: "post1" } } : {});

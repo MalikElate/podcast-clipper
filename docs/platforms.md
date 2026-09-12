@@ -51,7 +51,7 @@ https://your-meadow-domain.example/oauth/google_business/callback
 
 `BRIDGE_ENCRYPTION_KEY` is required for connections. Tokens and OAuth sessions are encrypted at rest. OAuth state expires, is consumed once, and remains bound to the authenticated initiating user and project. After authorization, the user selects which returned accounts to attach to that project.
 
-Pinterest requires an approved business-account developer app. Trial access can exercise the integration, but Pins created with Trial access are Sandbox entities visible only to their creator; customer publishing requires Standard access. Use the prepared [Pinterest app setup and review](pinterest-app-review.md) values and demo checklist.
+Pinterest requires an approved business-account developer app. Set `PINTEREST_ENVIRONMENT=sandbox` while testing with Trial access; this routes OAuth token exchange and API requests to Pinterest's Sandbox. Sandbox entities are visible only to their creator and video Pins are unavailable there. Remove the variable when the app has Standard access and is ready for production. Use the prepared [Pinterest app setup and review](pinterest-app-review.md) values and demo checklist.
 
 For LinkedIn organizations, add the approved `rw_organization_admin`, `w_organization_social`, and required read scopes to `LINKEDIN_SCOPES`; the adapter then enumerates eligible organizations. Member read analytics require restricted access and are not granted merely by Share on LinkedIn. The current request header defaults to `LinkedIn-Version: 202607`; keep it on a supported version as the platform retires versions. [LinkedIn Posts API](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api?view=li-lms-2026-07)
 
