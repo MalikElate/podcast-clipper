@@ -1426,19 +1426,18 @@ input[type="range"]::-moz-range-thumb {
 .crosspost-copy h2 span { color: var(--score); }
 .crosspost-copy p { max-width: 520px; margin: 0; color: var(--text-muted); font-size: 16px; line-height: 1.65; }
 .crosspost-actions { display: flex; align-items: center; gap: 13px; margin-top: 30px; }
-.crosspost-cta { display: inline-flex; align-items: center; gap: 9px; width: auto; padding: 14px 20px; }
+.crosspost-cta { display: inline-flex; align-items: center; justify-content: center; gap: 9px; width: auto; min-height: 47px; margin-top: 0; padding: 13px 20px; }
 .crosspost-cta svg { transition: transform .15s ease; }
 .crosspost-cta:hover svg { transform: translateX(2px); }
 .crosspost-secondary { display: inline-flex; align-items: center; min-height: 47px; padding: 0 19px; border: 1px solid var(--border-strong); border-radius: 999px; color: var(--text); font-size: 13px; font-weight: 600; text-decoration: none; transition: border-color .15s ease, background .15s ease; }
 .crosspost-secondary:hover { border-color: var(--score); background: rgba(54,116,91,.07); }
-.crosspost-visual { --crosspost-center-x: 50%; --crosspost-center-y: 47%; --crosspost-petal-length: 176px; --crosspost-petal-width: 88px; position: relative; min-height: 470px; overflow: hidden; border: 1px solid rgba(67,80,119,.14); border-radius: 28px; background: radial-gradient(circle at var(--crosspost-center-x) var(--crosspost-center-y), rgba(255,255,255,.96) 0 9%, rgba(255,255,255,.72) 34%, transparent 64%), linear-gradient(145deg, rgba(252,253,248,.94), rgba(228,235,217,.66)); box-shadow: 0 32px 70px -44px rgba(35,50,71,.55); isolation: isolate; }
-.crosspost-visual::before { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 82% 13%, rgba(184,88,32,.1), transparent 25%), radial-gradient(circle at 15% 86%, rgba(54,116,91,.12), transparent 28%); content: ""; }
-.crosspost-visual::after { position: absolute; inset: 20px; border: 1px solid rgba(165,182,151,.18); border-radius: 21px; pointer-events: none; content: ""; }
+.crosspost-visual { --crosspost-center-x: 50%; --crosspost-center-y: 50%; --crosspost-petal-length: 158px; --crosspost-petal-width: 88px; --crosspost-icon-orbit: 202px; position: relative; min-height: 470px; overflow: hidden; isolation: isolate; }
 .crosspost-petals { position: absolute; inset: 0; z-index: 2; }
-.crosspost-petal { position: absolute; top: var(--crosspost-center-y); left: var(--crosspost-center-x); width: var(--crosspost-petal-length); height: var(--crosspost-petal-width); border: 1px solid rgba(83,112,87,.22); border-radius: 12% 78% 78% 12% / 50% 50% 50% 50%; background: linear-gradient(90deg, rgba(217,230,207,.32), rgba(255,255,252,.9)); box-shadow: 16px 18px 34px -30px rgba(35,50,71,.72); transform: translateY(-50%) rotate(var(--platform-angle)); transform-origin: left center; }
-.crosspost-petal-icon { position: absolute; top: 50%; right: 28px; z-index: 1; display: grid; place-items: center; color: var(--platform-color); transform: translateY(-50%) rotate(calc(-1 * var(--platform-angle))); }
-.crosspost-petal-icon > .social-brand-icon { width: 29px !important; height: 29px !important; }
-.crosspost-visual-caption { position: absolute; right: 0; bottom: 22px; left: 0; z-index: 4; color: var(--text-faint); font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-align: center; text-transform: uppercase; }
+.crosspost-petal { position: absolute; top: var(--crosspost-center-y); left: var(--crosspost-center-x); width: var(--crosspost-petal-length); height: var(--crosspost-petal-width); border: 1px solid rgba(83,112,87,.22); border-radius: 12% 78% 78% 12% / 50% 50% 50% 50%; background: linear-gradient(90deg, rgba(217,230,207,.42), rgba(255,255,252,.92)); box-shadow: 16px 18px 34px -30px rgba(35,50,71,.72); transform: translateY(-50%) rotate(var(--platform-angle)); transform-origin: left center; }
+.crosspost-flower-center { position: absolute; top: var(--crosspost-center-y); left: var(--crosspost-center-x); z-index: 4; width: 66px; height: 66px; border: 1px solid rgba(153,71,25,.28); border-radius: 50%; background: radial-gradient(circle at 36% 30%, #d78955, var(--accent) 58%, #8e3f17); box-shadow: 0 13px 28px -15px rgba(80,44,27,.7); transform: translate(-50%,-50%); }
+.crosspost-platform-icons { position: absolute; inset: 0; z-index: 5; }
+.crosspost-platform-icon { position: absolute; top: var(--crosspost-center-y); left: var(--crosspost-center-x); display: grid; place-items: center; color: var(--platform-color); filter: drop-shadow(0 7px 8px rgba(35,50,71,.16)); transform: translate(-50%,-50%) rotate(var(--platform-angle)) translateX(var(--crosspost-icon-orbit)) rotate(calc(-1 * var(--platform-angle))); }
+.crosspost-platform-icon > .social-brand-icon { width: 31px !important; height: 31px !important; }
 .section-heading { max-width: 590px; }
 .section-heading h2 { margin: 15px 0 12px; color: var(--text); font-size: clamp(32px,4vw,51px); line-height: 1.03; letter-spacing: -.05em; }
 .section-heading p { margin: 0; color: var(--text-muted); font-size: 15px; line-height: 1.6; }
@@ -1487,11 +1486,9 @@ input[type="range"]::-moz-range-thumb {
   .crosspost-section { grid-template-columns: 1fr; gap: 42px; padding: 30px 0 76px; }
   .crosspost-copy h2 { font-size: clamp(42px,10.75vw,56px); }
   .crosspost-copy p { font-size: 15px; }
-  .crosspost-visual { min-height: 390px; border-radius: 22px; }
-  .crosspost-visual::after { inset: 13px; border-radius: 16px; }
-  .crosspost-visual { --crosspost-center-y: 46%; --crosspost-petal-length: 138px; --crosspost-petal-width: 68px; }
-  .crosspost-petal-icon { right: 21px; }
-  .crosspost-petal-icon > .social-brand-icon { width: 24px !important; height: 24px !important; }
+  .crosspost-visual { --crosspost-petal-length: 124px; --crosspost-petal-width: 68px; --crosspost-icon-orbit: 153px; min-height: 360px; }
+  .crosspost-flower-center { width: 54px; height: 54px; }
+  .crosspost-platform-icon > .social-brand-icon { width: 25px !important; height: 25px !important; }
   .crosspost-actions { flex-wrap: wrap; }
   .platform-section { padding-bottom: 72px; }
   .platform-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 22px 18px; margin-top: 34px; }

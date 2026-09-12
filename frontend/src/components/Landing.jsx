@@ -50,15 +50,20 @@ function PlatformStrip() {
 
 function CrosspostVisual() {
   return (
-    <div className="crosspost-visual" role="img" aria-label="Facebook, Instagram, X, LinkedIn, and TikTok arranged as flower petals">
+    <div className="crosspost-visual" role="img" aria-label="A five-petal flower surrounded by Facebook, Instagram, X, LinkedIn, and TikTok">
       <div className="crosspost-petals" aria-hidden="true">
         {CROSSPOST_PLATFORMS.map((platform, index) => (
-          <span className="crosspost-petal" key={platform.id} style={{ "--platform-angle": `${CROSSPOST_ANGLES[index]}deg`, "--platform-color": platform.color }}>
-            <span className="crosspost-petal-icon"><PlatformIcon platform={platform.id} size={29} /></span>
+          <span className="crosspost-petal" key={platform.id} style={{ "--platform-angle": `${CROSSPOST_ANGLES[index]}deg` }} />
+        ))}
+      </div>
+      <span className="crosspost-flower-center" aria-hidden="true" />
+      <div className="crosspost-platform-icons" aria-hidden="true">
+        {CROSSPOST_PLATFORMS.map((platform, index) => (
+          <span className="crosspost-platform-icon" key={platform.id} style={{ "--platform-angle": `${CROSSPOST_ANGLES[index]}deg`, "--platform-color": platform.color }}>
+            <PlatformIcon platform={platform.id} size={31} />
           </span>
         ))}
       </div>
-      <span className="crosspost-visual-caption" aria-hidden="true">One post · many destinations</span>
     </div>
   );
 }
