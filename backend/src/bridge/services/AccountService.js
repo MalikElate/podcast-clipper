@@ -25,16 +25,17 @@ export class AccountService {
   }
   require(uid, projectId, accountId) { return this.projects.requireRecord(uid, projectId, "account", accountId); }
 
-  async start(uid, projectId, platform, { handle } = {}) {
+  async start(uid, projectId, platform, { handle, consent } = {}) {
     this.projects.require(uid, projectId);
     invariant(!this.store.list("account", { ownerUid: uid, status: "deleting", limit: null }).some(item => item.platform === platform || [item.platform, platform].every(value => ["youtube", "google_business"].includes(value))), "Connection removal is still finishing. Try again shortly.", { status: 409 });
     invariant(!this.store.list("revocation", { ownerUid: uid, status: "pending", limit: null }).some(item => item.platform === platform || [item.platform, platform].every(value => ["youtube", "google_business"].includes(value))), "Authorization removal is still finishing. Try connecting again shortly.", { status: 409 });
     invariant(!this.localPreview, "Live account connections are disabled in local preview.", { status: 409, code: "preview_mode" });
     invariant(this.vault.configured, "Social account connections are not configured on this server.", { status: 503 });
     const provider = this.registry.get(platform);
+    const privacyConsent = this.privacy?.connectionConsent(platform, consent) || null;
     const state = randomBytes(32).toString("base64url");
     const verifier = randomBytes(48).toString("base64url");
-    this.store.saveState(SecretVault.hash(state), { uid, projectId, platform, verifier, createdAt: this.clock() }, this.clock() + 10 * 60000);
+    this.store.saveState(SecretVault.hash(state), { uid, projectId, platform, verifier, privacyConsent, createdAt: this.clock() }, this.clock() + 10 * 60000);
     return { url: await provider.authorizationUrl({ state, verifier, handle }) };
   }
 
@@ -52,6 +53,7 @@ export class AccountService {
         saved = this.store.consumeState(SecretVault.hash(state || ""), this.clock());
         invariant(saved && saved.platform === platform, "This connection request has expired. Start again.");
         this.projects.require(saved.uid, saved.projectId);
+        this.privacy?.requireConnectionConsent(platform, saved.privacyConsent);
       }
       const result = await provider.finishAuthorization(params);
       saved ||= this.store.consumeState(SecretVault.hash(result.state || ""), this.clock());
@@ -61,16 +63,18 @@ export class AccountService {
       saved = this.store.consumeState(SecretVault.hash(params.get("state") || ""), this.clock());
       invariant(saved && saved.platform === platform, "This connection request has expired. Start again.");
       this.projects.require(saved.uid, saved.projectId);
+      this.privacy?.requireConnectionConsent(platform, saved.privacyConsent);
       invariant(!params.get("error") && params.get("code"), "The account connection was not authorized.");
       credentials = await provider.exchange({ code: params.get("code"), verifier: saved.verifier });
       candidates = await provider.accounts(credentials);
     }
     invariant(saved && saved.platform === platform, "This connection request has expired. Start again.");
     this.projects.require(saved.uid, saved.projectId);
+    this.privacy?.requireConnectionConsent(platform, saved.privacyConsent);
     invariant(!this.privacy?.connectionBarrier(saved.uid, platform) || (saved.createdAt || 0) > this.privacy.connectionBarrier(saved.uid, platform), "This authorization request predates connection removal. Connect again.");
     invariant(Array.isArray(candidates) && candidates.length, "No eligible accounts were returned. Check your account type and permissions.");
     const id = randomUUID();
-    this.store.put("connection", { id, ownerUid: saved.uid, projectId: saved.projectId, platform, createdAt: this.clock(), expiresAt: this.clock() + 10 * 60000,
+    this.store.put("connection", { id, ownerUid: saved.uid, projectId: saved.projectId, platform, privacyConsent: saved.privacyConsent || null, createdAt: this.clock(), expiresAt: this.clock() + 10 * 60000,
       encrypted: this.vault.encrypt(candidates.map(candidate => ({ ...(platform === "pinterest" ? { remoteId: candidate.remoteId, label: "Pinterest account" } : candidate), credentials: { ...credentials, ...(candidate.credentials || {}) } })), `connection:${id}`) });
     return { projectId: saved.projectId, connectionId: id };
   }
@@ -89,6 +93,7 @@ export class AccountService {
 
   attach(uid, projectId, connectionId, selectedIds) {
     const connection = this.projects.requireRecord(uid, projectId, "connection", connectionId);
+    this.privacy?.requireConnectionConsent(connection.platform, connection.privacyConsent);
     invariant(connection.expiresAt > this.clock(), "This connection has expired. Connect the account again.");
     invariant(Array.isArray(selectedIds) && selectedIds.length && selectedIds.length <= 100, "Select at least one account.");
     const candidates = this.vault.decrypt(connection.encrypted, `connection:${connectionId}`);
@@ -101,7 +106,7 @@ export class AccountService {
         const id = existing?.id || randomUUID();
         const { credentials, ...profile } = candidate;
         const account = this.store.put("account", { ...existing, ...profile, id, ownerUid: uid, projectId, platform: connection.platform, status: "connected", rateKey: `${connection.platform}:${candidate.remoteId}`,
-          encryptedCredentials: this.vault.encrypt(credentials, `account:${id}`), authorizationId: connectionId, authorizationGrantedAt: connection.createdAt, profileUpdatedAt: this.clock(), createdAt: existing?.createdAt || this.clock(), updatedAt: this.clock(), options: null, optionsUpdatedAt: null, lastError: null });
+          encryptedCredentials: this.vault.encrypt(credentials, `account:${id}`), authorizationId: connectionId, authorizationGrantedAt: connection.createdAt, privacyConsent: connection.privacyConsent || null, profileUpdatedAt: this.clock(), createdAt: existing?.createdAt || this.clock(), updatedAt: this.clock(), options: null, optionsUpdatedAt: null, lastError: null });
         accounts.push(this.toPublic(account));
         for (const delivery of this.store.list("delivery", { projectId, status: "needs_account" }).filter(item => item.accountId === id)) {
           this.store.put("delivery", { ...delivery, status: delivery.resumeStatus === "processing" ? "processing" : "queued", resumeStatus: null, dueAt: Math.max(this.clock(), delivery.requestedAt), error: null, updatedAt: this.clock() });
@@ -170,7 +175,7 @@ export class AccountService {
     for (const account of accounts) {
       if ((account.status !== "connected" || (account.profileUpdatedAt || account.createdAt) < now - 30 * day) && this.privacy) this.privacy.requestConnection(account.ownerUid, account.projectId, account.id, { alreadyRevoked: true });
     }
-    for (const account of accounts.filter(item => (item.profileAttemptedAt || 0) <= now - day && this.privacy?.accepted(item.ownerUid)).sort((a, b) => (a.profileAttemptedAt || 0) - (b.profileAttemptedAt || 0)).slice(0, 10)) {
+    for (const account of accounts.filter(item => (item.profileAttemptedAt || 0) <= now - day).sort((a, b) => (a.profileAttemptedAt || 0) - (b.profileAttemptedAt || 0)).slice(0, 10)) {
       if (this.store.get("account", account.id)?.status !== "connected") continue;
       this.store.put("account", { ...account, profileAttemptedAt: now });
       try {

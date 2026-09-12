@@ -33,7 +33,6 @@ function fixture(t, { persistent = false } = {}) {
   const options = { env, clock: () => now, registry: new ProviderRegistry(Object.values(providers)), deleteIdentity: async () => {}, deleteAnalytics: async () => true };
   let app = new BridgeApplication({ ...options, ...(persistent ? {} : { store: new SqliteStore() }) });
   const project = app.projects.create("alice", { name: "Alice" });
-  app.privacy.consent("alice", { accepted: true, version: "2026-09-12" });
   const account = (id = "one", platform = "x", overrides = {}) => app.store.put("account", { id, ownerUid: "alice", projectId: project.id, platform, remoteId: id, label: `Profile ${id}`, avatar: "https://example.com/avatar", options: null, status: "connected", rateKey: `${platform}:${overrides.remoteId || id}`, authorizationId: id, authorizationGrantedAt: now, profileUpdatedAt: now, profileAttemptedAt: now, createdAt: now, encryptedCredentials: app.vault.encrypt({ accessToken: `token-${id}`, refreshToken: `refresh-${id}` }, `account:${id}`), ...overrides });
   const post = (id, accounts, extra = {}) => {
     app.store.put("post", { id, ownerUid: "alice", projectId: project.id, caption: "My original caption", title: "", format: "auto", accountIds: accounts.map(item => item.id), mediaIds: [], overrides: Object.fromEntries(accounts.map(item => [item.id, { settings: {} }])), createdAt: now, ...extra });
@@ -199,13 +198,13 @@ test("YouTube data expires after thirty days and a missing video removes its sto
   assert.equal(h.app.store.get("account", "yt"), null);
 });
 
-test("publication and analytics remain paused without the current policy agreement", async t => {
+test("existing publication and analytics work without a workspace-wide policy agreement", async t => {
   const h = fixture(t), account = h.account(); h.post("hold", [account]);
-  h.app.store.remove("privacyConsent", "alice");
+  assert.deepEqual(h.app.store.list("privacyConsent"), []);
   let calls = 0; h.providers.x.publish = async () => { calls++; return { status: "published", externalId: "post" }; };
-  await h.app.worker.tick(); assert.equal(calls, 0); assert.equal(h.app.store.get("delivery", "hold:one").status, "queued");
-  h.app.privacy.consent("alice", { accepted: true, version: "2026-09-12" });
   await h.app.worker.tick(); assert.equal(calls, 1);
+  await h.app.analytics.syncDelivery(h.app.store.get("delivery", "hold:one"));
+  assert.equal(h.app.store.get("delivery", "hold:one").metrics.likes, 8);
 });
 
 test("legacy PostHog deletion persists its person lookup and waits for verified external completion", async t => {
