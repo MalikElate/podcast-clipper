@@ -134,6 +134,7 @@ export default function LegalPage({ kind }) {
         <div className="legal-intro">
           <h1>{copy.title}</h1>
           <p>{copy.intro}</p>
+          <p>Meadow is operated by MALIK SEITU MUNYENGE, trading as Woodbark Software.</p>
           <span className="legal-effective">Effective September 11, 2026</span>
         </div>
         <div className="legal-body">

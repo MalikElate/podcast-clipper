@@ -224,6 +224,7 @@ export default function Landing({ onGetStarted }) {
           <div className="footer-brand">
             <BrandLogo />
             <p>Create, schedule, publish, and track from one workspace.</p>
+            <p>Meadow is operated by MALIK SEITU MUNYENGE, trading as Woodbark Software.</p>
           </div>
           <div className="footer-links">
             <div><h2>Use Cases</h2><a href="#platforms">Platforms</a><a href="#features">Features</a><a href="/pricing">Pricing</a></div>
