@@ -8,6 +8,7 @@ export default function Auth({ redirectUrl = "/dashboard" }) {
     appearance={{
       elements: {
         socialButtonsBlockButton__apple: { display: "none" },
+        socialButtonsIconButton__apple: { display: "none" },
       },
     }}
   />;
