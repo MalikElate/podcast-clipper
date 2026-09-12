@@ -31,7 +31,7 @@ The callback must be registered exactly as written. Pinterest rejects OAuth requ
 2. From **My apps**, accept the Pinterest Developer Terms and submit Meadow for Trial access.
 3. After Trial approval, copy the app ID and secret from the app's **Configure** page and register the production redirect URI.
 4. Add the app ID as `PINTEREST_CLIENT_ID` and the secret as `PINTEREST_CLIENT_SECRET` in the Cloudflare production environment. Never put either value in a `VITE_*` variable or commit it.
-5. Test OAuth, board selection, and publication with Trial access. Pins created under Trial access are Sandbox entities visible only to their creator.
+5. Set `PINTEREST_ENVIRONMENT=sandbox`, then test OAuth, board selection, and publication with Trial access. Pins created under Trial access are Sandbox entities visible only to their creator.
 6. Record the complete live integration and submit an upgrade request for Standard access. Standard access is required before Meadow can publish ordinary Pins for customers.
 
 ## Standard access demo
@@ -52,6 +52,19 @@ Pinterest requires the demo to show the real OAuth flow and a working Pinterest 
 
 ## Production acceptance
 
-After Standard approval, run one live test for each enabled format: a single-image Pin, a multi-image Pin where the account supports it, and a video Pin. Confirm the board, title, description, destination link, Pinterest URL, and delayed analytics. Then test token refresh, account disconnection, and reconnection without re-publishing the test Pin.
+After Standard approval, remove `PINTEREST_ENVIRONMENT=sandbox`, deploy, and reconnect each Pinterest account through Meadow. Sandbox and Production tokens are not interchangeable. Select a board from the new connection for any pending posts; Sandbox board IDs must not be carried into production.
+
+Then run one live test for each enabled format: a single-image Pin, a multi-image Pin where the account supports it, and a video Pin. Confirm the board, title, description, destination link, Pinterest URL, and delayed analytics. Then test token refresh, account disconnection, and reconnection without re-publishing the test Pin.
+
+## Diagnosing a failed connection or publish
+
+- `HTTP 401, Pinterest code 2` means Pinterest rejected the access token. Reconnect through Meadow. Check whether the environment changed after the connection was created; new credentials record their issuing environment and Meadow rejects a mismatch before contacting Pinterest.
+- A missing-scope error means the OAuth response did not grant all four requested permissions. Meadow refuses the connection before saving it as a publishing account. Developer-dashboard Production Limited tokens are not a substitute for this OAuth flow.
+- An app-access error requires the administrator to use Sandbox for Trial testing or obtain Standard access for production publishing. Reconnecting a user's account does not upgrade the app.
+- An app-credentials error at the token endpoint requires checking the configured app ID and secret.
+
+Meadow preserves the safe Pinterest error code and actionable explanation on failed deliveries and connections. It does not store or display Pinterest's raw response body. Older failures that were already replaced with the generic reconnect message cannot recover their original error code.
+
+See Pinterest's [authentication guide](https://developers.pinterest.com/docs/getting-started/set-up-authentication-and-authorization/) and [Sandbox environment guide](https://developers.pinterest.com/docs/developer-tools/sandbox/).
 
 Pinterest's current setup and access requirements are documented in [Connect app](https://developer.pinterest.com/docs/getting-started/connect-app/), [Access tiers](https://developer.pinterest.com/docs/key-concepts/access-tiers/), and the [Developer guidelines](https://policy.pinterest.com/en/developer-guidelines).

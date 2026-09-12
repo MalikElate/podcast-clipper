@@ -11,6 +11,7 @@ import { ProviderRegistry } from "../src/bridge/platforms/ProviderRegistry.js";
 import { ProviderError } from "../src/bridge/core/errors.js";
 import { ScheduleService } from "../src/bridge/services/ScheduleService.js";
 import { SecretVault } from "../src/bridge/core/SecretVault.js";
+import { HttpTransport } from "../src/bridge/platforms/HttpTransport.js";
 
 class FakeProvider extends PlatformProvider {
   constructor() { super("x"); this.calls = []; this.polls = []; this.behavior = null; this.allowance = { limits: [] }; }
@@ -87,6 +88,45 @@ test("failure retry is independent and never resends a successful destination", 
   assert.equal(current.deliveries.filter(d => d.status === "published").length, 1); assert.equal(current.deliveries.filter(d => d.status === "retrying").length, 1);
   h.advance(60001); await h.app.worker.tick(); current = h.app.posts.get("alice", h.project.id, post.id);
   assert.equal(current.status, "published"); assert.equal(h.provider.calls.filter(id => id === post.deliveries.find(d => d.accountId === "one").id).length, 1); assert.equal(h.provider.calls.length, 3);
+});
+
+test("Pinterest app access failures stop a delivery without disconnecting a valid account", async t => {
+  const h = setup(t);
+  const http = new HttpTransport({ fetcher: async () => new Response(JSON.stringify({ code: 3, message: "Apps with Trial access may not create Pins in production." }), { status: 403 }) });
+  h.provider.behavior = () => http.request("https://api.pinterest.com/v5/pins", { method: "POST" });
+  const { posts: [post] } = await h.submit([h.post()]);
+  await h.app.worker.tick();
+  const delivery = h.app.store.get("delivery", post.deliveries[0].id);
+  assert.equal(delivery.status, "failed"); assert.match(delivery.error, /Standard access/);
+  assert.equal(h.app.store.get("account", "one").status, "connected");
+  await h.app.worker.tick(); assert.equal(h.provider.calls.length, 1);
+});
+
+test("account refresh and queued deliveries retain the actionable Pinterest authorization error", async t => {
+  const h = setup(t);
+  const { posts } = await h.submit([h.post("First"), h.post("Second")]);
+  const http = new HttpTransport({ fetcher: async () => new Response(JSON.stringify({ code: 2, message: "Authentication failed." }), { status: 401 }) });
+  h.provider.options = () => http.request("https://api.pinterest.com/v5/boards");
+  await assert.rejects(h.app.accounts.options("alice", h.project.id, "one", { force: true }), /Pinterest code 2/);
+  const account = h.app.store.get("account", "one");
+  assert.equal(account.status, "reconnect_required"); assert.match(account.lastError, /Pinterest code 2/);
+  for (const post of posts) {
+    await h.app.worker.deliver(post.deliveries[0].id);
+    const delivery = h.app.store.get("delivery", post.deliveries[0].id);
+    assert.equal(delivery.status, "needs_account"); assert.equal(delivery.error, account.lastError);
+  }
+  assert.equal(h.provider.calls.length, 0);
+});
+
+test("a Pinterest authorization failure during publication keeps its reason on the account and delivery", async t => {
+  const h = setup(t);
+  const http = new HttpTransport({ fetcher: async () => new Response(JSON.stringify({ code: 29, message: "Your token does not have sufficient permissions to perform this operation." }), { status: 403 }) });
+  h.provider.behavior = () => http.request("https://api.pinterest.com/v5/pins", { method: "POST" });
+  const { posts: [post] } = await h.submit([h.post()]);
+  await h.app.worker.tick();
+  const delivery = h.app.store.get("delivery", post.deliveries[0].id), account = h.app.store.get("account", "one");
+  assert.equal(delivery.status, "needs_account"); assert.equal(delivery.resumeStatus, "queued");
+  assert.match(delivery.error, /Pinterest code 29/); assert.equal(account.lastError, delivery.error);
 });
 
 test("uncertain publication pauses for review and requires confirmation before a retry", async t => {

@@ -31,7 +31,7 @@ export class AnalyticsService {
     } catch (error) {
       const current = this.store.get("delivery", delivery.id);
       this.store.put("delivery", { ...current, metricsAttemptedAt: this.clock(), metricsError: error.message });
-      if (error.reconnect) this.accounts.markReconnect(account.id);
+      if (error.reconnect) this.accounts.markReconnect(account.id, error.message);
     }
   }
 

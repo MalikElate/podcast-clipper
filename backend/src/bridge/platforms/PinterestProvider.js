@@ -4,9 +4,29 @@ import { invariant, ProviderError } from "../core/errors.js";
 export class PinterestProvider extends PlatformProvider {
   constructor(deps) { super("pinterest", deps); }
   get sandbox() { return this.env.PINTEREST_ENVIRONMENT?.toLowerCase() === "sandbox"; }
+  get environment() { return this.sandbox ? "sandbox" : "production"; }
   get apiBase() { return `https://api${this.sandbox ? "-sandbox" : ""}.pinterest.com/v5`; }
   get oauth() { return { authorize: "https://www.pinterest.com/oauth/", token: `${this.apiBase}/oauth/token`, clientId: this.env.PINTEREST_CLIENT_ID, clientSecret: this.env.PINTEREST_CLIENT_SECRET, basicAuth: true, scopes: ["user_accounts:read", "boards:read", "pins:read", "pins:write"], scopeSeparator: "," }; }
-  request(path, credentials, options = {}) { return this.http.request(`${this.apiBase}/${path}`, { token: credentials.accessToken, ...options }); }
+  normalizeToken(data) {
+    const credentials = super.normalizeToken(data);
+    const scopes = new Set((Array.isArray(credentials.scope) ? credentials.scope : String(credentials.scope || "").split(/[\s,]+/)).filter(Boolean));
+    const missing = this.oauth.scopes.filter(scope => !scopes.has(scope));
+    if (missing.length) throw new ProviderError(`Pinterest did not grant all permissions needed to publish (${missing.join(", ")}). Connect Pinterest again and allow the requested permissions.`, { reconnect: true, code: "reconnect_required" });
+    return { ...credentials, pinterestEnvironment: this.environment };
+  }
+  assertEnvironment(credentials) {
+    // Older credentials have no environment marker. Let Pinterest validate
+    // those tokens; new connections and refreshes are explicitly bound.
+    if (credentials.pinterestEnvironment && credentials.pinterestEnvironment !== this.environment) throw new ProviderError("Meadow's Pinterest environment changed between Sandbox and Production. Reconnect Pinterest, then select a board from the new connection.", { reconnect: true, code: "reconnect_required" });
+  }
+  async refresh(credentials) {
+    this.assertEnvironment(credentials);
+    return super.refresh(credentials);
+  }
+  async request(path, credentials, options = {}) {
+    this.assertEnvironment(credentials);
+    return this.http.request(`${this.apiBase}/${path}`, { token: credentials.accessToken, ...options });
+  }
   async accounts(credentials) {
     const user = await this.request("user_account", credentials);
     invariant(user.username, "Pinterest did not return an account.");

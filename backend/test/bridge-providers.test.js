@@ -108,6 +108,60 @@ test("Pinterest Sandbox routes token and API requests to the Sandbox host", asyn
   assert.deepEqual(await provider.metrics({ credentials: {}, delivery: {} }), { values: {}, unavailableReason: "Pinterest Sandbox does not provide organic Pin analytics." });
 });
 
+test("Pinterest distinguishes invalid tokens, missing scopes, and app access restrictions without exposing response data", async () => {
+  const cases = [
+    { status: 401, data: { code: 2, message: "Authentication failed. private-token" }, reconnect: true, code: "reconnect_required", text: /Pinterest code 2/ },
+    { status: 403, data: { code: 29, message: "Your token does not have sufficient permissions to perform this operation. private-token" }, reconnect: true, code: "reconnect_required", text: /permissions needed/ },
+    { status: 403, data: { code: 3, message: "Apps with Trial access may not create Pins in production. private-token" }, reconnect: false, code: "pinterest_app_access_required", text: /Standard access/ },
+    { status: 401, data: { code: 3, message: "This app requires Standard access. private-token" }, reconnect: false, code: "pinterest_app_access_required", text: /Standard access/ },
+    { status: 404, data: { code: 100, message: "Board private-token not found." }, reconnect: false, code: "provider_rejected", text: /Pinterest code 100/ },
+  ];
+  for (const item of cases) {
+    const http = new HttpTransport({ fetcher: async () => new Response(JSON.stringify(item.data), { status: item.status }) });
+    await assert.rejects(http.request("https://api.pinterest.com/v5/pins", { method: "POST", token: "private-token" }), error => {
+      assert.equal(error.code, item.code); assert.equal(error.reconnect, item.reconnect);
+      assert.equal(error.retryable, false); assert.equal(error.uncertain, false);
+      assert.match(error.message, item.text);
+      assert.deepEqual(error.details, { provider: "pinterest", httpStatus: item.status, providerCode: item.data.code });
+      assert.ok(!JSON.stringify({ message: error.message, ...error }).includes("private-token"));
+      return true;
+    });
+  }
+  const http = new HttpTransport({ fetcher: async () => new Response("Unauthorized", { status: 401 }) });
+  await assert.rejects(http.request("https://api-sandbox.pinterest.com/v5/boards"), error => error.reconnect && /HTTP 401/.test(error.message));
+  await assert.rejects(http.request("https://api.example/posts"), error => error.reconnect && error.message === "Reconnect this social account to renew its permissions.");
+});
+
+test("Pinterest token exchange identifies app credentials separately from an invalid authorization grant", async () => {
+  for (const [providerError, code, reconnect] of [["invalid_client", "pinterest_app_credentials", false], ["invalid_grant", "reconnect_required", true]]) {
+    const http = new HttpTransport({ fetcher: async () => new Response(JSON.stringify({ error: providerError }), { status: 401 }) });
+    await assert.rejects(http.request("https://api.pinterest.com/v5/oauth/token", { method: "POST" }), error => error.code === code && error.reconnect === reconnect);
+  }
+});
+
+test("Pinterest refuses incomplete OAuth permissions and binds new tokens to their issuing environment", async () => {
+  const http = transport(() => ({ access_token: "access", refresh_token: "refresh", expires_in: 3600, scope: "user_accounts:read,boards:read,pins:read,pins:write" }));
+  const provider = new PinterestProvider({ env: { PINTEREST_CLIENT_ID: "app", PINTEREST_CLIENT_SECRET: "secret", PINTEREST_ENVIRONMENT: "sandbox" }, transport: http, publicUrl: "https://bridge.example" });
+  const authorization = new URL(await provider.authorizationUrl({ state: "state" }));
+  assert.equal(authorization.searchParams.get("scope"), "user_accounts:read,boards:read,pins:read,pins:write");
+  const credentials = await provider.exchange({ code: "code" });
+  assert.equal(credentials.pinterestEnvironment, "sandbox");
+  assert.equal(http.calls[0].url, "https://api-sandbox.pinterest.com/v5/oauth/token");
+  const refreshed = await provider.refresh(credentials);
+  assert.equal(refreshed.pinterestEnvironment, "sandbox");
+  assert.equal(http.calls[1].url, "https://api-sandbox.pinterest.com/v5/oauth/token");
+  assert.throws(() => provider.normalizeToken({ access_token: "limited", scope: "user_accounts:read boards:read pins:read" }), /pins:write/);
+  assert.throws(() => provider.normalizeToken({ access_token: "limited" }), /permissions needed to publish/);
+  assert.equal(provider.normalizeToken({ access_token: "full", scope: "user_accounts:read boards:read pins:read pins:write" }).pinterestEnvironment, "sandbox");
+  const production = new PinterestProvider({ transport: http });
+  const callCount = http.calls.length;
+  await assert.rejects(production.options({}, credentials), /environment changed/);
+  await assert.rejects(production.refresh(credentials), /environment changed/);
+  assert.equal(http.calls.length, callCount, "mismatched tokens must not be sent to the other environment");
+  await production.request("user_account", { accessToken: "legacy-token" });
+  assert.equal(http.calls.at(-1).url, "https://api.pinterest.com/v5/user_account");
+});
+
 test("X finalizes an upload before creating a post and carries media IDs", async t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bridge-x-test-")); t.after(() => fs.rmSync(dir, { recursive: true, force: true })); fs.writeFileSync(path.join(dir, "asset"), Buffer.alloc(500));
   const http = transport(url => url.endsWith("initialize") ? { data: { id: "media1" } } : url.endsWith("finalize") ? { data: {} } : url.endsWith("tweets") ? { data: { id: "post1" } } : {});
