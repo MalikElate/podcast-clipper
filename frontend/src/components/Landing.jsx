@@ -193,6 +193,17 @@ export default function Landing({ onGetStarted }) {
           </div>
         </section>
 
+        <section className="landing-cta-section" aria-labelledby="landing-cta-title">
+          <div className="landing-cta-content">
+            <h2 id="landing-cta-title">Ready to publish?</h2>
+            <p>Start posting across every platform from one calm workspace.</p>
+            <div className="landing-cta-actions">
+              <button className="landing-cta-primary" onClick={onGetStarted}>Start posting free <ArrowIcon /></button>
+              <a className="landing-cta-secondary" href="#pricing">View pricing</a>
+            </div>
+          </div>
+        </section>
+
       </main>
 
       <footer className="landing-footer">
