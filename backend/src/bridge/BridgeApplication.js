@@ -25,6 +25,7 @@ import { SecretVault } from "./core/SecretVault.js";
 import { LockService } from "./core/LockService.js";
 import { BridgeError, invariant, publicError } from "./core/errors.js";
 import { ProviderRegistry } from "./platforms/ProviderRegistry.js";
+import { connectionDisclosures, connectionDisclosure } from "./platforms/connectionPrivacy.js";
 import { InstagramProvider, FacebookProvider, ThreadsProvider } from "./platforms/MetaProviders.js";
 import { YouTubeProvider, GoogleBusinessProvider } from "./platforms/GoogleProviders.js";
 import { TikTokProvider } from "./platforms/TikTokProvider.js";
@@ -117,7 +118,6 @@ export class BridgeApplication {
         req.privacyRelease = this.privacy.track(req.uid, res);
         if (!req.path.startsWith("/privacy")) {
           this.privacy.assertActive(req.uid);
-          invariant(this.privacy.accepted(req.uid), "Review and accept Meadow's Privacy Policy and Terms in the dashboard before using this workspace.", { status: 403, code: "consent_required" });
         }
         next();
       } catch (error) { next(error); }
@@ -164,9 +164,14 @@ export class BridgeApplication {
     const app = this.app, root = "/api/bridge/projects/:projectId";
     app.get("/api/bridge/privacy", route((req, res) => res.json(this.privacy.status(req.uid))));
     const requireSession = req => invariant(req.authType === "session", "Use your signed-in Meadow account for this action.", { status: 403, code: "session_required" });
-    app.post("/api/bridge/privacy/consent", route((req, res) => { requireSession(req); res.json(this.privacy.consent(req.uid, req.body)); }));
+    app.get("/api/bridge/privacy/connections", route((req, res) => res.json({ disclosures: connectionDisclosures })));
+    app.get("/api/bridge/privacy/connections/:platform", route((req, res) => {
+      const disclosure = connectionDisclosure(req.params.platform);
+      invariant(disclosure, "Connection privacy notice not found.", { status: 404 });
+      res.json({ disclosure });
+    }));
     app.delete("/api/bridge/privacy/account", route((req, res) => { requireSession(req); res.status(202).json(this.privacy.requestAccount(req.uid, req.body)); }));
-    app.get("/api/bridge/config", route((req, res) => res.json({ name: "Meadow", localPreview: this.localPreview, platforms: this.registry.catalog(), maxBatchSize: 100, maxUploadBytes: this.media.maxBytes, features: { analytics: true, publishing: this.worker.enabled }, connectionsReady: this.vault.configured, mediaReady: Boolean(this.media.signingKey) })));
+    app.get("/api/bridge/config", route((req, res) => res.json({ name: "Meadow", localPreview: this.localPreview, platforms: this.registry.catalog().map(platform => ({ ...platform, privacyDisclosure: Boolean(connectionDisclosure(platform.id)) })), maxBatchSize: 100, maxUploadBytes: this.media.maxBytes, features: { analytics: true, publishing: this.worker.enabled }, connectionsReady: this.vault.configured, mediaReady: Boolean(this.media.signingKey) })));
     app.get("/api/bridge/billing", route((req, res) => res.json(this.billing.publicRecord(req.uid))));
     app.post("/api/bridge/billing/checkout", route(async (req, res) => res.json(await this.billing.checkout(req.uid, req.userEmail, req.body))));
     app.post("/api/bridge/billing/portal", route(async (req, res) => res.json(await this.billing.portal(req.uid))));
@@ -178,7 +183,10 @@ export class BridgeApplication {
     app.patch(root, route((req, res) => res.json({ project: this.projects.update(req.uid, req.params.projectId, req.body) })));
     app.post("/api/bridge/schedule/resolve", route((req, res) => res.json(this.schedules.resolve(req.body))));
     app.get(`${root}/accounts`, route(async (req, res) => res.json({ accounts: await this.accounts.listFresh(req.uid, req.params.projectId) })));
-    app.post(`${root}/accounts/connect/:platform`, route(async (req, res) => res.json(await this.accounts.start(req.uid, req.params.projectId, req.params.platform, req.body))));
+    app.post(`${root}/accounts/connect/:platform`, route(async (req, res) => {
+      if (connectionDisclosure(req.params.platform)) requireSession(req);
+      res.json(await this.accounts.start(req.uid, req.params.projectId, req.params.platform, req.body));
+    }));
     app.get(`${root}/connections/:id`, route(async (req, res) => res.json(await this.accounts.pending(req.uid, req.params.projectId, req.params.id))));
     app.post(`${root}/connections/:id`, route((req, res) => res.json({ accounts: this.accounts.attach(req.uid, req.params.projectId, req.params.id, req.body.selectedIds) })));
     app.get(`${root}/accounts/:id/options`, route(async (req, res) => res.json({ options: await this.accounts.options(req.uid, req.params.projectId, req.params.id, { force: req.query.refresh === "1" }) })));

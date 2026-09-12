@@ -23,7 +23,7 @@ export class AnalyticsService {
     if (delivery.status !== "published" || !delivery.externalId) return;
     const account = this.store.get("account", delivery.accountId);
     if (!account || account.status !== "connected") return;
-    if (this.accounts.privacy && (this.accounts.privacy.blocked(account.ownerUid) || !this.accounts.privacy.accepted(account.ownerUid))) return;
+    if (this.accounts.privacy?.blocked(account.ownerUid)) return;
     try {
       const credentials = await this.accounts.credentials(account);
       const result = await this.registry.get(account.platform).metrics({ account, credentials, delivery });

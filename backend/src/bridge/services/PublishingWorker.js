@@ -48,7 +48,7 @@ export class PublishingWorker {
       if (!delivery || !(isPendingDelivery(delivery) || delivery.status === "processing") || delivery.dueAt > this.clock()) return;
       const polling = delivery.status === "processing";
       let account = this.store.get("account", delivery.accountId);
-      if (this.accounts.privacy && (this.accounts.privacy.blocked(delivery.ownerUid) || !this.accounts.privacy.accepted(delivery.ownerUid))) return;
+      if (this.accounts.privacy?.blocked(delivery.ownerUid)) return;
       if (account?.status !== "connected") {
         this.store.put("delivery", { ...delivery, status: "needs_account", resumeStatus: polling ? "processing" : "queued", error: account?.lastError || "Reconnect this account to continue publishing.", updatedAt: this.clock() });
         return;

@@ -12,7 +12,7 @@ Meadow is a publishing workspace for creating, scheduling, and analyzing social 
 - Per-post and per-account analytics, combined totals, post comparisons, and best-performing posts. Missing metrics remain unavailable instead of becoming zero.
 - Public pricing, Stripe subscription Checkout, webhook-backed billing status, and Stripe Customer Portal management.
 - Configuration screens for project settings, service readiness, API-key management, plan comparison, and Privacy & Account.
-- Versioned policy agreement, durable account and connection erasure, TikTok authorization-removal webhooks, and platform data retention.
+- Platform-specific privacy notices before Pinterest, TikTok, YouTube, and Google Business Profile connections, durable account and connection erasure, TikTok authorization-removal webhooks, and platform data retention.
 
 The working clipping studio, affiliate program, multi-workspace controls, standalone media library, and bulk composer controls are deferred. Their complete implementations are preserved on the `deferred-features` branch and are absent from the active application code. The Clipping studio page remains as a coming-soon notice. Collaborators and paid-plan entitlement enforcement are also deferred. See [deferred features](docs/deferred-features.md) for the preserved scope and [platform setup and formats](docs/platforms.md) for provider limitations.
 

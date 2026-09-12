@@ -3,6 +3,7 @@ import { invariant } from "../core/errors.js";
 import { SecretVault } from "../core/SecretVault.js";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { connectionDisclosure } from "../platforms/connectionPrivacy.js";
 
 export const POLICY_VERSION = "2026-09-12";
 const DAY = 86400000;
@@ -15,20 +16,23 @@ export class PrivacyService {
     this.activeRequests = new Map();
   }
   blocked(uid) { return Boolean(this.store.get("privacyBlock", deletionMarker(uid))); }
-  accepted(uid) { return this.store.get("privacyConsent", uid)?.version === POLICY_VERSION; }
   connectionBarrier(uid, platform) { return this.store.get("connectionBarrier", SecretVault.hash(`${uid}:${["youtube", "google_business"].includes(platform) ? "google" : platform}`))?.createdAt || 0; }
   assertActive(uid) { invariant(!this.blocked(uid), "Account deletion has been requested. This workspace is closed.", { status: 410, code: "account_deleting" }); }
   status(uid) {
-    const consent = this.store.get("privacyConsent", uid), block = this.store.get("privacyBlock", deletionMarker(uid));
+    const block = this.store.get("privacyBlock", deletionMarker(uid));
     const job = block && this.store.get("erasure", block.jobId);
-    return { version: POLICY_VERSION, accepted: consent?.version === POLICY_VERSION, acceptedAt: consent?.acceptedAt || null,
+    return { version: POLICY_VERSION,
       deletion: block ? { requestedAt: block.createdAt, status: block.status, reference: block.jobId, pending: job?.pending || [] } : null };
   }
-  consent(uid, input) {
-    this.assertActive(uid);
-    invariant(input?.accepted === true && input.version === POLICY_VERSION, "Accept the current Privacy Policy and Terms to continue.");
-    this.store.put("privacyConsent", { id: uid, ownerUid: uid, version: POLICY_VERSION, acceptedAt: this.clock(), createdAt: this.clock() });
-    return this.status(uid);
+  requireConnectionConsent(platform, consent) {
+    const disclosure = connectionDisclosure(platform);
+    if (!disclosure) return;
+    invariant(consent?.accepted === true && consent.platform === platform && consent.version === disclosure.version,
+      `Review and accept the ${disclosure.name} connection privacy notice before connecting.`, { status: 400, code: "connection_consent_required" });
+  }
+  connectionConsent(platform, input) {
+    this.requireConnectionConsent(platform, input);
+    return connectionDisclosure(platform) ? { platform, version: input.version, accepted: true, acceptedAt: this.clock() } : null;
   }
   track(uid, res) {
     this.activeRequests.set(uid, (this.activeRequests.get(uid) || 0) + 1);

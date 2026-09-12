@@ -4,15 +4,16 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { createHmac } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { BridgeApplication } from "../src/bridge/BridgeApplication.js";
 import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
+import { SecretVault } from "../src/bridge/core/SecretVault.js";
+import { CONNECTION_PRIVACY_VERSION } from "../src/bridge/platforms/connectionPrivacy.js";
 
 async function setup(t, { localPreview = false, auth = true, stripe, envOverrides = {} } = {}) {
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bridge-api-test-"));
   const dir = path.join(temporaryRoot, ".bridge");
   const application = new BridgeApplication({ store: new SqliteStore(), stripe, env: { NODE_ENV: localPreview ? "development" : "test", BRIDGE_LOCAL_PREVIEW: localPreview ? "1" : "0", BRIDGE_DATA_DIR: dir, BRIDGE_APP_URL: "http://localhost:5173", BRIDGE_MEDIA_SIGNING_KEY: "test-signing-key", BRIDGE_PUBLISHING_ENABLED: "false", ...envOverrides }, ...(auth ? { authMiddleware: (req, res, next) => { if (!/^Bearer (alice|bob)$/.test(req.headers.authorization || "")) return res.status(401).json({ error: "Sign in required" }); req.uid = req.headers.authorization.split(" ")[1]; next(); } } : {}) });
-  for (const uid of ["alice", "bob", "bridge-local-preview"]) application.privacy.consent(uid, { accepted: true, version: "2026-09-12" });
   const server = await new Promise((resolve, reject) => { const server = application.app.listen(0, "127.0.0.1", () => resolve(server)); server.on("error", reject); });
   const base = `http://127.0.0.1:${server.address().port}`;
   t.after(async () => { await new Promise(resolve => server.close(resolve)); application.close(); fs.rmSync(temporaryRoot, { recursive: true, force: true }); });
@@ -162,22 +163,21 @@ test("Stripe checkout, webhooks, subscription state, and billing portal stay lin
   assert.equal(portal.status, 200); assert.equal((await portal.json()).url, "https://billing.stripe.test/portal"); assert.equal(calls.portal[0].customer, "cus_alice");
 });
 
-test("privacy agreement and account deletion require the owner's session and cannot target another user", async t => {
+test("workspace access needs no policy agreement while account deletion still requires the owner's session", async t => {
   const h = await setup(t), { application: app } = h;
   app.privacy.deleteIdentity = async () => {};
   app.privacy.deleteAnalytics = async () => true;
   const other = app.projects.create("bob", { name: "Keep Bob" });
   const { key } = app.apiKeys.create("alice", { name: "Agent" });
-  app.store.remove("privacyConsent", "alice");
-  assert.equal((await h.request("/api/bridge/projects")).status, 403);
+  assert.deepEqual(app.store.list("privacyConsent"), []);
+  assert.equal((await h.request("/api/bridge/projects")).status, 200);
+  assert.equal((await h.request("/api/bridge/config")).status, 200);
   const privacy = await h.request("/api/bridge/privacy");
   assert.equal(privacy.headers.get("cache-control"), "no-store");
-  assert.equal((await privacy.json()).accepted, false);
+  assert.equal((await privacy.json()).deletion, null);
   const keyHeaders = { Authorization: `Bearer ${key}` };
-  assert.equal((await h.request("/api/bridge/privacy/consent", { method: "POST", headers: keyHeaders, body: { accepted: true, version: "2026-09-12" } })).status, 403);
+  assert.equal((await h.request("/api/bridge/projects", { headers: keyHeaders })).status, 200);
   assert.equal((await h.request("/api/bridge/privacy/account", { method: "DELETE", headers: keyHeaders, body: { confirmation: "DELETE" } })).status, 403);
-  assert.equal((await h.request("/api/bridge/privacy/consent", { method: "POST", body: { accepted: true, version: "old" } })).status, 400);
-  assert.equal((await h.request("/api/bridge/privacy/consent", { method: "POST", body: { accepted: true, version: "2026-09-12" } })).status, 200);
   assert.equal((await h.request("/api/bridge/privacy/account", { method: "DELETE", body: { confirmation: "delete" } })).status, 400);
   const deleted = await h.request("/api/bridge/privacy/account", { method: "DELETE", body: { confirmation: "DELETE", uid: "bob" } });
   assert.equal(deleted.status, 202);
@@ -189,6 +189,64 @@ test("privacy agreement and account deletion require the owner's session and can
   assert.equal(app.store.get("project", other.id).name, "Keep Bob");
   assert.equal((await (await h.request("/api/bridge/privacy")).json()).deletion.status, "complete");
   assert.equal((await (await h.request("/api/bridge/privacy/account", { method: "DELETE", body: { confirmation: "DELETE" } })).json()).deletion.reference, reference);
+});
+
+for (const platform of ["pinterest", "youtube", "google_business", "tiktok"]) test(`${platform} requires fresh, specific session consent and binds it to the OAuth account`, async t => {
+  const h = await setup(t, { envOverrides: {
+    BRIDGE_ENCRYPTION_KEY: randomBytes(32).toString("base64"),
+    PINTEREST_CLIENT_ID: "test", PINTEREST_CLIENT_SECRET: "test",
+    GOOGLE_CLIENT_ID: "test", GOOGLE_CLIENT_SECRET: "test",
+    TIKTOK_CLIENT_KEY: "test", TIKTOK_CLIENT_SECRET: "test",
+  } });
+  const { application: app } = h, provider = app.registry.get(platform);
+  let authorizations = 0, exchanges = 0;
+  provider.authorizationUrl = async ({ state }) => { authorizations++; return `https://provider.example/authorize?state=${state}`; };
+  provider.exchange = async () => { exchanges++; return { accessToken: "fixture-token", refreshToken: "fixture-refresh" }; };
+  provider.accounts = async () => [{ remoteId: "selected-account", label: "Selected account" }];
+  const config = await (await h.request("/api/bridge/config")).json();
+  assert.equal(config.platforms.find(item => item.id === platform).privacyDisclosure, true);
+  assert.equal(config.platforms.find(item => item.id === "x").privacyDisclosure, false);
+  const noticeResponse = await h.request(`/api/bridge/privacy/connections/${platform}`);
+  assert.equal(noticeResponse.headers.get("cache-control"), "no-store");
+  const { disclosure } = await noticeResponse.json();
+  assert.equal(disclosure.platform, platform);
+  assert.equal(disclosure.version, CONNECTION_PRIVACY_VERSION);
+  assert.equal((await (await h.request("/api/bridge/privacy/connections")).json()).disclosures.length, 4);
+  assert.equal((await h.request(`/api/bridge/privacy/connections/${platform}`, { user: null })).status, 401);
+
+  const endpoint = `${h.root}/accounts/connect/${platform}`;
+  const consent = { accepted: true, platform, version: disclosure.version };
+  for (const input of [undefined, { ...consent, accepted: false }, { ...consent, version: "old" }, { ...consent, platform: platform === "tiktok" ? "pinterest" : "tiktok" }]) {
+    const response = await h.request(endpoint, { method: "POST", body: { consent: input } });
+    assert.equal(response.status, 400); assert.equal((await response.json()).code, "connection_consent_required");
+  }
+  const { key } = app.apiKeys.create("alice", { name: "Automation" });
+  assert.equal((await h.request(endpoint, { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: { consent } })).status, 403);
+  assert.equal(authorizations, 0);
+
+  const before = Date.now();
+  const response = await h.request(endpoint, { method: "POST", body: { consent: { ...consent, acceptedAt: 1 }, uid: "bob" } });
+  assert.equal(response.status, 200); assert.equal(authorizations, 1);
+  const state = new URL((await response.json()).url).searchParams.get("state");
+  const saved = app.store.peekState(SecretVault.hash(state));
+  assert.equal(saved.uid, "alice"); assert.ok(saved.privacyConsent.acceptedAt >= before);
+  const pending = await app.accounts.callback(platform, new URLSearchParams({ code: "fixture-code", state }));
+  assert.equal(exchanges, 1);
+  assert.equal((await h.request(`${h.root}/connections/${pending.connectionId}`, { method: "POST", user: "bob", body: { selectedIds: ["selected-account"] } })).status, 404);
+  const attached = await h.request(`${h.root}/connections/${pending.connectionId}`, { method: "POST", body: { selectedIds: ["selected-account"], consent: { accepted: false } } });
+  assert.equal(attached.status, 200);
+  const account = (await attached.json()).accounts[0];
+  assert.deepEqual(account.privacyConsent, saved.privacyConsent);
+  assert.equal((await h.request(endpoint, { method: "POST", body: {} })).status, 400);
+  assert.equal(authorizations, 1, "An earlier agreement cannot authorize another connection attempt");
+  assert.deepEqual(app.store.list("privacyConsent"), [], "Consent is attached to the connection, not a workspace-wide flag");
+
+  for (const receipt of [null, { ...consent, version: "old" }, { ...consent, platform: "x" }]) {
+    const oldState = randomBytes(16).toString("hex");
+    app.store.saveState(SecretVault.hash(oldState), { uid: "alice", projectId: h.project.id, platform, verifier: "fixture", privacyConsent: receipt }, Date.now() + 60000);
+    await assert.rejects(app.accounts.callback(platform, new URLSearchParams({ code: "fixture-code", state: oldState })), error => error.code === "connection_consent_required");
+  }
+  assert.equal(exchanges, 1, "Missing or stale callback consent is rejected before token exchange");
 });
 
 test("Clerk deletion webhooks verify the raw signature and erase the deleted identity's workspaces", async t => {

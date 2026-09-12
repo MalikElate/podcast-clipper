@@ -1,6 +1,6 @@
 # Privacy and account deletion
 
-The policy version is `2026-09-12`. The dashboard requires a recorded agreement before loading workspace features. API keys cannot accept policies or close an account. Existing queued work remains paused until its owner accepts the current version. The public policy and terms are built into `/privacy` and `/terms`.
+The policy version is `2026-09-12`; connection notices use `2026-09-12-connections-1`. Users enter the dashboard without a policy gate. Each Pinterest, TikTok, YouTube, or Google Business Profile connection and reconnection requires its own explicit agreement before OAuth starts. API keys cannot give that agreement or close an account. Existing authorized connections, queued work, and analytics do not depend on the former workspace-wide agreement. Full policy links and all four data notices are available under Settings → Privacy & Account; the public policy and terms remain available at `/privacy` and `/terms`.
 
 ## Before production rollout
 
@@ -15,7 +15,8 @@ This change does not deploy itself or configure external app dashboards. Product
 
 ## What the workflows do
 
-- `GET /api/bridge/privacy` returns current policy agreement and account-deletion status. `POST /api/bridge/privacy/consent` requires the current version and an explicit `accepted: true`. Authenticated data responses use `Cache-Control: no-store`.
+- `GET /api/bridge/privacy` returns account-deletion status. `GET /api/bridge/privacy/connections` lists the four notices; `GET /api/bridge/privacy/connections/:platform` retrieves one. Authenticated data responses use `Cache-Control: no-store`.
+- A covered platform’s existing `POST /api/bridge/projects/:projectId/accounts/connect/:platform` endpoint requires a browser session and `consent: { accepted: true, platform, version }` for that exact platform and current notice. The server stamps acceptance time and binds the receipt to its single-use OAuth state, pending connection, and attached account. Missing, stale, and cross-platform consent is rejected before token exchange. A previous receipt does not skip the prompt on another connection attempt. Legacy pending OAuth requests for these platforms need to restart; existing attached accounts remain usable.
 - `DELETE /api/bridge/privacy/account` requires a signed-in session and `{"confirmation":"DELETE"}`. It derives ownership from authentication, ignores supplied user identifiers, revokes API keys immediately, blocks future workspace requests, and returns a deletion reference with HTTP 202.
 - A durable job waits for active authenticated work and publishing/credential leases, then removes every owned workspace record, original upload, thumbnail, prepared variant, pending OAuth state, and social connection. It retries billing cancellation, Clerk deletion, and historical PostHog cleanup separately. Late Stripe webhooks cannot recreate a deleted account; active subscriptions reported for that account are canceled.
 - Removing a connection erases its profile, credentials, options, delivery records, metrics, and destination overrides. Matching remote accounts or shared authorizations across the same owner's workspaces are included. Other owners' workspace data and the user's original content remain. Existing OAuth requests for that platform are invalidated so a late callback cannot restore the connection.
