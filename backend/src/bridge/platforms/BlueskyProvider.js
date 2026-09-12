@@ -19,7 +19,7 @@ export class BlueskyProvider extends PlatformProvider {
   async client() {
     invariant(this.configured, "Bluesky connections are not configured on this server.", { status: 503 });
     if (!this.clientPromise) this.clientPromise = (async () => new NodeOAuthClient({
-      clientMetadata: { client_id: `${this.publicUrl}/oauth/bluesky/client-metadata.json`, client_name: "Meadow", client_uri: this.env.BRIDGE_APP_URL || this.publicUrl, redirect_uris: [this.redirectUri], grant_types: ["authorization_code", "refresh_token"], response_types: ["code"], scope: "atproto transition:generic", application_type: "web", token_endpoint_auth_method: "private_key_jwt", token_endpoint_auth_signing_alg: "ES256", dpop_bound_access_tokens: true, jwks_uri: `${this.publicUrl}/oauth/bluesky/jwks.json` },
+      clientMetadata: { client_id: `${this.publicUrl}/oauth/bluesky/client-metadata.json`, client_name: "Meadow", client_uri: this.env.BRIDGE_APP_URL || this.publicUrl, policy_uri: new URL("/privacy", this.env.BRIDGE_APP_URL || this.publicUrl).href, tos_uri: new URL("/terms", this.env.BRIDGE_APP_URL || this.publicUrl).href, redirect_uris: [this.redirectUri], grant_types: ["authorization_code", "refresh_token"], response_types: ["code"], scope: "atproto transition:generic", application_type: "web", token_endpoint_auth_method: "private_key_jwt", token_endpoint_auth_signing_alg: "ES256", dpop_bound_access_tokens: true, jwks_uri: `${this.publicUrl}/oauth/bluesky/jwks.json` },
       keyset: [await JoseKey.fromImportable(this.env.BLUESKY_PRIVATE_KEY.replaceAll("\\n", "\n"), "bridge-1")],
       stateStore: this.encryptedStore("blueskyState"), sessionStore: this.encryptedStore("blueskySession"),
       requestLock: (key, fn) => this.locks.withLock(`bluesky:${key}`, fn),
@@ -28,7 +28,7 @@ export class BlueskyProvider extends PlatformProvider {
   }
   async authorizationUrl({ state, handle }) {
     invariant(typeof handle === "string" && /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(handle) && handle.length <= 253, "Enter your Bluesky handle, such as name.bsky.social.");
-    return String(await (await this.client()).authorize(handle, { state }));
+    return String(await (await this.client()).authorize(handle, { state, prompt: "consent" }));
   }
   async finishAuthorization(params) {
     const { session, state } = await (await this.client()).callback(params);

@@ -21,6 +21,8 @@ API-native event/offer posts, polls, paid-ad flows, livestreaming, platform musi
 
 ## OAuth and permissions
 
+Connect and Reconnect both use the platform's native authorization flow. See [platform authorization screens](connection-authorization.md) for consent settings, app policy links, and platform-specific limits on showing repeat permission reviews.
+
 Register callback URLs using the exact production API origin and platform ID:
 
 ```text

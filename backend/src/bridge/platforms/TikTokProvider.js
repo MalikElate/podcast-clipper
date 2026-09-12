@@ -9,7 +9,7 @@ export class TikTokProvider extends PlatformProvider {
     });
     return { remoteRevocation: true };
   }
-  get oauth() { return { authorize: "https://www.tiktok.com/v2/auth/authorize/", token: "https://open.tiktokapis.com/v2/oauth/token/", clientId: this.env.TIKTOK_CLIENT_KEY, clientSecret: this.env.TIKTOK_CLIENT_SECRET, clientIdParam: "client_key", scopes: ["user.info.basic", "video.publish", "video.list"], scopeSeparator: "," }; }
+  get oauth() { return { authorize: "https://www.tiktok.com/v2/auth/authorize/", token: "https://open.tiktokapis.com/v2/oauth/token/", clientId: this.env.TIKTOK_CLIENT_KEY, clientSecret: this.env.TIKTOK_CLIENT_SECRET, clientIdParam: "client_key", scopes: ["user.info.basic", "video.publish", "video.list"], scopeSeparator: ",", extra: { disable_auto_auth: "1" } }; }
   request(endpoint, credentials, json) { return this.http.request(`https://open.tiktokapis.com/v2/${endpoint}`, { token: credentials.accessToken, ...(json ? { method: "POST", json } : {}) }); }
   async accounts(credentials) {
     const result = await this.request("user/info/?fields=open_id,display_name,avatar_url", credentials);

@@ -200,7 +200,8 @@ for (const platform of ["pinterest", "youtube", "google_business", "tiktok"]) te
   } });
   const { application: app } = h, provider = app.registry.get(platform);
   let authorizations = 0, exchanges = 0;
-  provider.authorizationUrl = async ({ state }) => { authorizations++; return `https://provider.example/authorize?state=${state}`; };
+  const nativeAuthorizationUrl = provider.authorizationUrl.bind(provider);
+  provider.authorizationUrl = async params => { authorizations++; return nativeAuthorizationUrl(params); };
   provider.exchange = async () => { exchanges++; return { accessToken: "fixture-token", refreshToken: "fixture-refresh" }; };
   provider.accounts = async () => [{ remoteId: "selected-account", label: "Selected account" }];
   const config = await (await h.request("/api/bridge/config")).json();
@@ -227,7 +228,11 @@ for (const platform of ["pinterest", "youtube", "google_business", "tiktok"]) te
   const before = Date.now();
   const response = await h.request(endpoint, { method: "POST", body: { consent: { ...consent, acceptedAt: 1 }, uid: "bob" } });
   assert.equal(response.status, 200); assert.equal(authorizations, 1);
-  const state = new URL((await response.json()).url).searchParams.get("state");
+  const authorization = new URL((await response.json()).url);
+  assert.equal(authorization.hostname, { pinterest: "www.pinterest.com", youtube: "accounts.google.com", google_business: "accounts.google.com", tiktok: "www.tiktok.com" }[platform]);
+  if (platform === "tiktok") assert.equal(authorization.searchParams.get("disable_auto_auth"), "1");
+  if (["youtube", "google_business"].includes(platform)) assert.equal(authorization.searchParams.get("prompt"), "consent select_account");
+  const state = authorization.searchParams.get("state");
   const saved = app.store.peekState(SecretVault.hash(state));
   assert.equal(saved.uid, "alice"); assert.ok(saved.privacyConsent.acceptedAt >= before);
   const pending = await app.accounts.callback(platform, new URLSearchParams({ code: "fixture-code", state }));
@@ -240,6 +245,13 @@ for (const platform of ["pinterest", "youtube", "google_business", "tiktok"]) te
   assert.equal((await h.request(endpoint, { method: "POST", body: {} })).status, 400);
   assert.equal(authorizations, 1, "An earlier agreement cannot authorize another connection attempt");
   assert.deepEqual(app.store.list("privacyConsent"), [], "Consent is attached to the connection, not a workspace-wide flag");
+  const reconnect = await h.request(endpoint, { method: "POST", body: { consent } });
+  assert.equal(reconnect.status, 200);
+  const reconnectAuthorization = new URL((await reconnect.json()).url);
+  assert.notEqual(reconnectAuthorization.searchParams.get("state"), state);
+  reconnectAuthorization.searchParams.delete("state"); authorization.searchParams.delete("state");
+  reconnectAuthorization.searchParams.delete("code_challenge"); authorization.searchParams.delete("code_challenge");
+  assert.equal(reconnectAuthorization.href, authorization.href, "Reconnect must request the same native permissions review");
 
   for (const receipt of [null, { ...consent, version: "old" }, { ...consent, platform: "x" }]) {
     const oldState = randomBytes(16).toString("hex");
