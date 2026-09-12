@@ -49,7 +49,7 @@ export class PublishingWorker {
       const polling = delivery.status === "processing";
       let account = this.store.get("account", delivery.accountId);
       if (account?.status !== "connected") {
-        this.store.put("delivery", { ...delivery, status: "needs_account", resumeStatus: polling ? "processing" : "queued", error: "Reconnect this account to continue publishing.", updatedAt: this.clock() });
+        this.store.put("delivery", { ...delivery, status: "needs_account", resumeStatus: polling ? "processing" : "queued", error: account?.lastError || "Reconnect this account to continue publishing.", updatedAt: this.clock() });
         return;
       }
       let claimed = false, timer;
@@ -101,8 +101,9 @@ export class PublishingWorker {
         if (error.uncertain || ["processing_timeout", "unconfirmed_publication"].includes(error.code)) {
           this.store.put("delivery", { ...current, status: "needs_review", error: error.message, leaseUntil: null, updatedAt: this.clock() });
         } else if (error.reconnect || error.code === "reconnect_required") {
-          this.accounts.markReconnect(account.id);
-          this.store.put("delivery", { ...current, status: "needs_account", resumeStatus: polling ? "processing" : "queued", error: "Reconnect this account to renew its permissions.", leaseUntil: null, updatedAt: this.clock() });
+          const message = error instanceof BridgeError ? error.message : "Reconnect this account to renew its permissions.";
+          this.accounts.markReconnect(account.id, message);
+          this.store.put("delivery", { ...current, status: "needs_account", resumeStatus: polling ? "processing" : "queued", error: message, leaseUntil: null, updatedAt: this.clock() });
           if (!polling) this.store.removeRateEvent(id);
         } else if (error.code === "rate_limited") {
           if (!polling || error.restartPublishing) this.store.removeRateEvent(id);

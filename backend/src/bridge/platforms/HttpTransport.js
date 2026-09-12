@@ -22,7 +22,8 @@ export class HttpTransport {
       if (!Number.isFinite(retryAt) || retryAt <= this.clock()) retryAt = null;
       throw new ProviderError("The platform's posting allowance has been reached. This delivery is queued.", { retryable: true, retryAt, code: "rate_limited" });
     }
-    if (response.status === 401) throw new ProviderError("Reconnect this social account to renew its permissions.", { reconnect: true, code: "reconnect_required" });
+    const pinterestHost = ["api.pinterest.com", "api-sandbox.pinterest.com"].includes(parsed.hostname);
+    if (response.status === 401 && !pinterestHost) throw new ProviderError("Reconnect this social account to renew its permissions.", { reconnect: true, code: "reconnect_required" });
     if (response.status >= 500) throw new ProviderError("The platform is temporarily unavailable.", { retryable: safeToRetry, uncertain: !safeToRetry, code: "provider_unavailable" });
     if (raw && (response.ok || acceptStatuses.includes(response.status))) return response;
     let text;
@@ -35,6 +36,27 @@ export class HttpTransport {
     }
     const providerCode = data?.error?.code || data?.errors?.[0]?.reason || data?.error;
     if (!response.ok) {
+      if (pinterestHost) {
+        // Pinterest uses top-level code/message fields. Keep diagnostics, but
+        // never expose the response body, which may contain request data.
+        const code = Number.isInteger(data?.code) ? data.code : null;
+        const details = { provider: "pinterest", httpStatus: response.status, ...(code !== null ? { providerCode: code } : {}) };
+        const reference = ` (HTTP ${response.status}${code !== null ? `, Pinterest code ${code}` : ""})`;
+        const message = typeof data?.message === "string" ? data.message : "";
+        if (/trial access|standard access|app.*access tier/i.test(message)) {
+          throw new ProviderError(`Pinterest requires a different app access tier for this action. Meadow's administrator must use Sandbox for Trial testing or obtain Standard access for production publishing.${reference}`, { code: "pinterest_app_access_required", details });
+        }
+        if (parsed.pathname.endsWith("/oauth/token") && (response.status === 401 && data?.error !== "invalid_grant" || data?.error === "invalid_client")) {
+          throw new ProviderError(`Pinterest rejected Meadow's app credentials. Meadow's administrator must check the Pinterest app ID and secret.${reference}`, { code: "pinterest_app_credentials", details });
+        }
+        if (data?.error === "invalid_grant" || response.status === 401) {
+          throw new ProviderError(`Pinterest rejected this account's authorization. Reconnect Pinterest in Meadow. If the integration changed between Sandbox and Production, a new connection is required.${reference}`, { code: "reconnect_required", reconnect: true, details });
+        }
+        if (response.status === 403 && /scope|token.*(?:permission|access)|insufficient permission/i.test(message)) {
+          throw new ProviderError(`Pinterest has not granted the permissions needed for this action. Reconnect Pinterest and allow the requested permissions.${reference}`, { code: "reconnect_required", reconnect: true, details });
+        }
+        throw new ProviderError(`Pinterest rejected the request. Check the selected board, media, and app access.${reference}`, { code: "provider_rejected", details });
+      }
       const graphHost = ["graph.facebook.com", "graph.instagram.com", "graph.threads.net"].includes(parsed.hostname);
       const rateLimited = graphHost && [4, 17, 32, 341, 613, 80001, 80002, 80004, 80006].includes(Number(data?.error?.code)) || /quotaExceeded|dailyLimitExceeded|rate.limit|too_many|spam_risk_too_many_posts|publishing.limit|request.limit/i.test(JSON.stringify(data?.error || data?.errors || {}));
       const auth = graphHost && Number(data?.error?.code) === 190 || /permission|scope|expired|invalid_token/i.test(JSON.stringify(data?.error || data?.errors || {}));

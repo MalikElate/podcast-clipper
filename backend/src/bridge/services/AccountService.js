@@ -82,7 +82,7 @@ export class AccountService {
   async credentials(account) {
     return this.locks.withLock(`credentials:${account.id}`, async () => {
       const current = this.store.get("account", account.id);
-      invariant(current?.status === "connected" && current.encryptedCredentials, "Reconnect this account before publishing.", { code: "reconnect_required" });
+      invariant(current?.status === "connected" && current.encryptedCredentials, current?.lastError || "Reconnect this account before publishing.", { code: "reconnect_required" });
       let credentials = this.vault.decrypt(current.encryptedCredentials, `account:${current.id}`);
       if (credentials.expiresAt && credentials.expiresAt < this.clock() + 5 * 60000) {
         const provider = this.registry.get(current.platform);
@@ -93,7 +93,7 @@ export class AccountService {
           invariant(latest?.status === "connected", "This account was disconnected. Reconnect it before publishing.", { code: "reconnect_required" });
           this.store.put("account", { ...latest, encryptedCredentials: this.vault.encrypt(credentials, `account:${current.id}`), updatedAt: this.clock() });
         } catch (error) {
-          if (error.reconnect) this.markReconnect(current.id);
+          if (error.reconnect) this.markReconnect(current.id, error.message);
           throw error;
         }
       }
@@ -101,16 +101,18 @@ export class AccountService {
     });
   }
 
-  markReconnect(id) {
+  markReconnect(id, message = "Reconnect this account to renew its permissions.") {
     const account = this.store.get("account", id);
-    if (account && account.status !== "disconnected") this.store.put("account", { ...account, status: "reconnect_required", lastError: "Reconnect this account to renew its permissions." });
+    if (account && account.status !== "disconnected") this.store.put("account", { ...account, status: "reconnect_required", lastError: message, updatedAt: this.clock() });
   }
 
   async options(uid, projectId, accountId, { force = false } = {}) {
     const account = this.require(uid, projectId, accountId);
     if (!force && account.options && account.optionsUpdatedAt > this.clock() - 60000) return account.options;
     const credentials = await this.credentials(account);
-    const options = await this.registry.get(account.platform).options(account, credentials);
+    let options;
+    try { options = await this.registry.get(account.platform).options(account, credentials); }
+    catch (error) { if (error.reconnect) this.markReconnect(account.id, error.message); throw error; }
     const current = this.store.get("account", account.id);
     this.store.put("account", { ...current, options, optionsUpdatedAt: this.clock() });
     return options;
