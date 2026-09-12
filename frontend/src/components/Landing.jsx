@@ -15,24 +15,6 @@ const PLATFORMS = sortPlatforms([
   { id: "google_business", name: "Google Business", color: "#4285f4", formats: "Updates, images, carousels" },
 ]);
 
-const FEATURES = [
-  {
-    eyebrow: "Create",
-    title: "One composer for every connected account.",
-    text: "Choose several destinations at once, reuse the same media, and make platform-specific changes before anything goes live.",
-  },
-  {
-    eyebrow: "Schedule",
-    title: "A clear calendar and queue for every post.",
-    text: "See drafts, scheduled posts, published posts, and failed deliveries without checking ten separate apps.",
-  },
-  {
-    eyebrow: "Learn and automate",
-    title: "Analytics and API access stay close to the work.",
-    text: "Compare post performance, spot what is working, and create private API keys for your own tools or AI agent.",
-  },
-];
-
 const CROSSPOST_PLATFORMS = PLATFORMS.filter((platform) => ["facebook", "instagram", "x", "linkedin", "tiktok"].includes(platform.id));
 const CROSSPOST_ANGLES = [-90, -18, 54, 126, 198];
 
@@ -40,16 +22,6 @@ function ArrowIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function FaqIcon() {
-  return (
-    <svg className="faq-heading-icon" width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
-      <circle cx="18.5" cy="18.5" r="11.5" stroke="currentColor" strokeWidth="2.2" />
-      <path d="m27 27 8.5 8.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M18.5 13.5v10M13.5 18.5h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".7" />
     </svg>
   );
 }
@@ -78,25 +50,11 @@ function PlatformStrip() {
 
 function CrosspostVisual() {
   return (
-    <div className="crosspost-visual" role="img" aria-label="A Meadow post connected to Facebook, Instagram, X, LinkedIn, and TikTok">
-      <div className="crosspost-lines" aria-hidden="true">
+    <div className="crosspost-visual" role="img" aria-label="Facebook, Instagram, X, LinkedIn, and TikTok arranged as flower petals">
+      <div className="crosspost-petals" aria-hidden="true">
         {CROSSPOST_PLATFORMS.map((platform, index) => (
-          <span className="crosspost-line" key={platform.id} style={{ "--platform-angle": `${CROSSPOST_ANGLES[index]}deg` }} />
-        ))}
-      </div>
-      <span className="crosspost-flower-node" aria-hidden="true">
-        <svg className="crosspost-line-mark" viewBox="0 0 92 92" fill="none">
-          <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M46 39c-3-18-2-27 0-32M46 39c9-17 15-23 20-26M46 39c18-9 27-10 32-9M46 39c17 9 23 15 26 20M46 39c9 18 10 27 9 32M46 39c-9 17-15 23-20 26M46 39c-18 9-27 10-32 9M46 39C29 39 23 33 20 28" strokeWidth="2.4" opacity=".72" />
-            <path d="M46 42c-2 15-1 29-7 39M40 69c-8-4-14-3-19 1M48 50c8 2 13 5 17 10" stroke="#36745b" strokeWidth="2.6" />
-            <circle cx="46" cy="39" r="5.5" fill="var(--accent)" stroke="none" />
-          </g>
-        </svg>
-      </span>
-      <div className="crosspost-platform-nodes" aria-hidden="true">
-        {CROSSPOST_PLATFORMS.map((platform, index) => (
-          <span className="crosspost-platform-node" key={platform.id} style={{ "--platform-angle": `${CROSSPOST_ANGLES[index]}deg`, "--platform-color": platform.color }}>
-            <PlatformIcon platform={platform.id} size={25} />
+          <span className="crosspost-petal" key={platform.id} style={{ "--platform-angle": `${CROSSPOST_ANGLES[index]}deg`, "--platform-color": platform.color }}>
+            <span className="crosspost-petal-icon"><PlatformIcon platform={platform.id} size={29} /></span>
           </span>
         ))}
       </div>
@@ -113,7 +71,7 @@ export default function Landing({ onGetStarted }) {
           <BrandLogo />
         </a>
         <nav className="landing-nav" aria-label="Main navigation">
-          <a href="#features">Features</a>
+          <a href="#platforms">Platforms</a>
           <a href="/pricing">Pricing</a>
           <a href="#faq">FAQ</a>
         </nav>
@@ -165,33 +123,9 @@ export default function Landing({ onGetStarted }) {
           </div>
         </section>
 
-        <section className="landing-section feature-section" id="features">
-          <div className="feature-intro">
-            <span className="section-eyebrow">Built for daily publishing</span>
-            <h2>Everything between upload and published, in one workspace.</h2>
-            <p>Meadow gives the work a clear place to move from draft to delivery.</p>
-          </div>
-          <div className="feature-list">
-            {FEATURES.map((feature, index) => (
-              <article className="feature-row" key={feature.title}>
-                <span className="feature-row-number">0{index + 1}</span>
-                <div>
-                  <span className="feature-row-eyebrow">{feature.eyebrow}</span>
-                  <h3>{feature.title}</h3>
-                  <p>{feature.text}</p>
-                </div>
-                <ArrowIcon />
-              </article>
-            ))}
-          </div>
-        </section>
-
         <section className="landing-section faq-section" id="faq">
           <div className="faq-heading">
-            <FaqIcon />
-            <span className="section-eyebrow">Good to know</span>
             <h2>FAQs</h2>
-            <p>Everything you need to know before your first post.</p>
           </div>
           <div className="faq-grid">
             <article className="faq-card">
@@ -227,7 +161,7 @@ export default function Landing({ onGetStarted }) {
             <p>Meadow is operated by MALIK SEITU MUNYENGE, trading as Woodbark Software.</p>
           </div>
           <div className="footer-links">
-            <div><h2>Use Cases</h2><a href="#platforms">Platforms</a><a href="#features">Features</a><a href="/pricing">Pricing</a></div>
+            <div><h2>Use Cases</h2><a href="#platforms">Platforms</a><a href="/pricing">Pricing</a></div>
             <div><h2>About</h2><a href="#faq">FAQ</a><a href="/terms">Terms of service</a><a href="/privacy">Privacy policy</a></div>
             <div><h2>Community</h2><button onClick={onGetStarted}>Create your first post</button><a href="mailto:hello@findmeadow.com">Contact support</a></div>
           </div>
