@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { PlatformIcon } from "../bridge/ui.jsx";
 import BrandLogo from "./BrandLogo.jsx";
 import { sortPlatforms } from "../bridge/platforms.js";
+import { PLANS } from "../pricing.js";
 
 const PLATFORMS = sortPlatforms([
   { id: "x", name: "X", color: "#171717", formats: "Text, images, video" },
@@ -24,6 +26,10 @@ function ArrowIcon() {
       <path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
+}
+
+function CheckIcon() {
+  return <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true"><path d="m3.5 8.8 3.1 3.1 6.9-7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
 function PlatformMark({ platform, className = "", variant = "default" }) {
@@ -70,6 +76,8 @@ function CrosspostVisual() {
 }
 
 export default function Landing({ onGetStarted }) {
+  const [yearlyPricing, setYearlyPricing] = useState(true);
+
   return (
     <div className="landing">
       <header className="landing-header">
@@ -78,7 +86,7 @@ export default function Landing({ onGetStarted }) {
         </a>
         <nav className="landing-nav" aria-label="Main navigation">
           <a href="#platforms">Platforms</a>
-          <a href="/pricing">Pricing</a>
+          <a href="#pricing">Pricing</a>
           <a href="#faq">FAQ</a>
         </nav>
         <div className="landing-actions">
@@ -129,6 +137,34 @@ export default function Landing({ onGetStarted }) {
           </div>
         </section>
 
+        <section className="landing-section home-pricing-section" id="pricing" aria-labelledby="home-pricing-title">
+          <div className="home-pricing-heading">
+            <h2 id="home-pricing-title">Choose the space your publishing needs.</h2>
+            <p>Every plan includes unlimited posts and scheduling. Pick the number of connected accounts and level of support that fit your workflow.</p>
+            <div className="pricing-cycle" role="group" aria-label="Billing frequency">
+              <button className={!yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(false)}>Monthly</button>
+              <button className={yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(true)}>Yearly <span>Save up to 17%</span></button>
+            </div>
+          </div>
+          <div className="pricing-grid" aria-label="Meadow plans">
+            {PLANS.map((plan) => {
+              const price = yearlyPricing ? plan.yearly : plan.monthly;
+              const cycle = yearlyPricing ? "yearly" : "monthly";
+              return <article className={`pricing-card ${plan.popular ? "featured" : ""}`} key={plan.id}>
+                <div className="pricing-card-top">
+                  <div><h3>{plan.name}</h3><p>{plan.description}</p></div>
+                  {(plan.popular || plan.best) && <span className="pricing-badge">{plan.popular ? "Most popular" : "Best value"}</span>}
+                </div>
+                <div className="pricing-price"><strong>${price}</strong><span>/month</span></div>
+                <p className="pricing-billing-note">{yearlyPricing ? `Billed $${price * 12} yearly` : "Billed monthly"}</p>
+                <ul><li className="pricing-account"><CheckIcon />{plan.accounts}</li>{plan.features.map(feature => <li key={feature}><CheckIcon />{feature}</li>)}</ul>
+                <a className={plan.popular ? "btn-primary" : "pricing-button"} href={`/pricing?checkout=${encodeURIComponent(plan.id)}&cycle=${cycle}`}>Choose {plan.name} <ArrowIcon /></a>
+              </article>;
+            })}
+          </div>
+          <div className="pricing-assurance"><span><CheckIcon /> Unlimited scheduled and published posts</span><span><CheckIcon /> Secure checkout powered by Stripe</span><span><CheckIcon /> Manage or cancel from your billing portal</span></div>
+        </section>
+
         <section className="landing-section faq-section" id="faq">
           <div className="faq-heading">
             <h2>FAQs</h2>
@@ -167,7 +203,7 @@ export default function Landing({ onGetStarted }) {
             <p>Meadow is operated by MALIK SEITU MUNYENGE, trading as Woodbark Software.</p>
           </div>
           <div className="footer-links">
-            <div><h2>Use Cases</h2><a href="#platforms">Platforms</a><a href="/pricing">Pricing</a></div>
+            <div><h2>Use Cases</h2><a href="#platforms">Platforms</a><a href="#pricing">Pricing</a></div>
             <div><h2>About</h2><a href="#faq">FAQ</a><a href="/terms">Terms of service</a><a href="/privacy">Privacy policy</a></div>
             <div><h2>Community</h2><button onClick={onGetStarted}>Create your first post</button><a href="mailto:hello@findmeadow.com">Contact support</a></div>
           </div>
