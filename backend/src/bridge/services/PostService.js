@@ -48,15 +48,16 @@ export class PostService {
     invariant(Array.isArray(items) && items.length > 0 && items.length <= 100, "Submit between 1 and 100 posts at a time.");
     const normalized = items.map(item => this.normalize(uid, projectId, item));
     const accountIds = [...new Set(normalized.flatMap(item => item.accountIds))];
-    const optionErrors = new Map();
+    const optionErrors = new Map(), freshOptions = new Map();
     if (refreshOptions) {
       for (const accountId of accountIds) {
-        try { await this.accounts.options(uid, projectId, accountId); } catch (error) { optionErrors.set(accountId, error.message); }
+        try { freshOptions.set(accountId, await this.accounts.options(uid, projectId, accountId)); } catch (error) { optionErrors.set(accountId, error.message); }
       }
     }
     const proposed = [];
     const rows = normalized.map((post, index) => ({ index, caption: post.caption, title: post.title, destinations: post.accountIds.map(accountId => {
-      const account = this.accounts.require(uid, projectId, accountId);
+      const savedAccount = this.accounts.require(uid, projectId, accountId);
+      const account = { ...savedAccount, options: freshOptions.get(accountId) || savedAccount.options };
       const provider = this.registry.get(account.platform);
       const errors = provider.validate(this.content(post, account));
       if (account.status !== "connected") errors.push("Reconnect this account before publishing.");
@@ -128,7 +129,7 @@ export class PostService {
       const account = this.store.get("account", delivery.accountId);
       return { ...visible, accountName: account?.label || "Disconnected account", accountStatus: account?.status || "disconnected" };
     });
-    const status = deliveries.every(item => item.status === "published") ? "published" : deliveries.every(item => item.status === "cancelled") ? "cancelled" : deliveries.some(item => ["publishing", "processing"].includes(item.status)) ? "publishing" : deliveries.some(item => ["failed", "needs_review", "needs_account"].includes(item.status)) ? "needs_attention" : deliveries.some(item => item.status === "published") ? "partially_published" : "scheduled";
+    const status = !deliveries.length ? "draft" : deliveries.every(item => item.status === "published") ? "published" : deliveries.every(item => item.status === "cancelled") ? "cancelled" : deliveries.some(item => ["publishing", "processing"].includes(item.status)) ? "publishing" : deliveries.some(item => ["failed", "needs_review", "needs_account"].includes(item.status)) ? "needs_attention" : deliveries.some(item => item.status === "published") ? "partially_published" : "scheduled";
     return { ...post, status, deliveries, media: post.mediaIds.map(id => this.store.get("media", id)).filter(Boolean).map(item => this.media.toPublic(item)), editable: deliveries.some(editableDelivery) && deliveries.every(item => editableDelivery(item) || terminal.has(item.status)), deletable: deliveries.every(item => !["publishing", "processing"].includes(item.status)) };
   }
 

@@ -26,6 +26,7 @@ function setup(t) {
   let now = Date.parse("2026-09-09T12:00:00Z");
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bridge-test-")), provider = new FakeProvider();
   const app = new BridgeApplication({ store: new SqliteStore(), registry: new ProviderRegistry([provider]), clock: () => now, env: { BRIDGE_DATA_DIR: dir, BRIDGE_ENCRYPTION_KEY: randomBytes(32).toString("base64"), BRIDGE_MEDIA_SIGNING_KEY: "test-signing-key", BRIDGE_PUBLIC_URL: "https://bridge.example", BRIDGE_APP_URL: "https://bridge.example" } });
+  for (const uid of ["alice", "bob", "bridge-local-preview"]) app.privacy.consent(uid, { accepted: true, version: "2026-09-12" });
   const project = app.projects.create("alice", { name: "Podcast", timeZone: "Africa/Douala" });
   function account(id, { projectId = project.id, ownerUid = "alice", remoteId = id } = {}) { return app.store.put("account", { id, ownerUid, projectId, platform: "x", remoteId, label: id, rateKey: `x:${remoteId}`, status: "connected", encryptedCredentials: app.vault.encrypt({ accessToken: "test-token" }, `account:${id}`) }); }
   account("one");
@@ -235,9 +236,9 @@ test("disconnecting during token refresh never restores the removed credentials"
   const refreshing = h.app.accounts.credentials(original);
   await started;
   h.app.accounts.disconnect("alice", h.project.id, "one"); release();
-  await assert.rejects(refreshing, /disconnected/i);
-  assert.equal(h.app.store.get("account", "one").encryptedCredentials, null);
-  assert.equal(h.app.store.get("account", "one").status, "disconnected");
+  await assert.rejects(refreshing, /connection changed/i);
+  await h.app.privacy.tick();
+  assert.equal(h.app.store.get("account", "one"), null);
 });
 
 test("deleting partially published content is atomic and leaves pending deliveries intact", async t => {

@@ -7,12 +7,14 @@ export class ProjectService {
   list(ownerUid) { return this.store.list("project", { ownerUid }); }
 
   require(ownerUid, projectId) {
+    this.privacy?.assertActive(ownerUid);
     const project = this.store.get("project", projectId);
     invariant(project && project.ownerUid === ownerUid, "Project not found.", { status: 404, code: "not_found" });
     return project;
   }
 
   create(ownerUid, { name, timeZone = "UTC" } = {}) {
+    this.privacy?.assertActive(ownerUid);
     invariant(typeof name === "string" && name.trim().length >= 1 && name.trim().length <= 80, "Give your project a name between 1 and 80 characters.");
     this.validateTimeZone(timeZone);
     invariant(this.list(ownerUid).length < 100, "You have reached the project limit.");
@@ -21,6 +23,7 @@ export class ProjectService {
   }
 
   ensureDefault(ownerUid, { name = "Meadow", timeZone = "UTC" } = {}) {
+    this.privacy?.assertActive(ownerUid);
     return this.store.transaction(() => this.list(ownerUid)[0] || this.create(ownerUid, { name, timeZone }));
   }
 

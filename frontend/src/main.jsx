@@ -1,7 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { ClerkProvider, useUser } from "@clerk/react";
-import { PostHogProvider, usePostHog } from "posthog-js/react";
+import { ClerkProvider } from "@clerk/react";
 import App from "./App.jsx";
 import { AuthProvider } from "./AuthContext.jsx";
 import "./index.css";
@@ -15,50 +14,15 @@ if (!clerkPublishableKey && !localPreview) {
   throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY.");
 }
 
-function PostHogIdentity() {
-  const { isLoaded, user } = useUser();
-  const posthog = usePostHog();
-
-  React.useEffect(() => {
-    if (!isLoaded) return;
-    if (!user) {
-      posthog.reset();
-      return;
-    }
-
-    posthog.identify(user.id, {
-      email: user.primaryEmailAddress?.emailAddress,
-      name: user.fullName || undefined,
-    });
-  }, [isLoaded, posthog, user]);
-
-  return null;
+function Application() {
+  return <AuthProvider><App /></AuthProvider>;
 }
 
-function Application() {
-  const app = (
-    <AuthProvider>
-      <App />
-    </AuthProvider>
-  );
-
-  if (!posthogKey) return app;
-
-  return (
-    <PostHogProvider
-      apiKey={posthogKey}
-      options={{
-        api_host: import.meta.env.VITE_POSTHOG_HOST || "https://us.i.posthog.com",
-        defaults: "2026-05-30",
-        person_profiles: "identified_only",
-        capture_pageview: true,
-        capture_pageleave: true,
-      }}
-    >
-      <PostHogIdentity />
-      {app}
-    </PostHogProvider>
-  );
+// Product tracking is disabled. Remove the old deployment's browser identifier.
+if (posthogKey) {
+  const key = `ph_${posthogKey}_posthog`;
+  try { localStorage.removeItem(key); sessionStorage.removeItem(key); } catch { /* Browser storage may be disabled. */ }
+  document.cookie = `${key}=; Max-Age=0; Path=/; SameSite=Lax`;
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(

@@ -2,6 +2,17 @@ import { PlatformProvider } from "./PlatformProvider.js";
 import { invariant, ProviderError } from "../core/errors.js";
 
 class GoogleProvider extends PlatformProvider {
+  async revoke(credentials) {
+    const response = await this.http.request("https://oauth2.googleapis.com/revoke", {
+      method: "POST", form: { token: credentials.refreshToken || credentials.accessToken },
+      raw: true, acceptStatuses: [400], safeToRetry: true,
+    });
+    if (response.status === 400) {
+      const data = await response.json().catch(() => ({}));
+      if (data.error !== "invalid_token") throw new ProviderError("Google could not revoke this authorization yet.", { retryable: true, code: "revocation_failed" });
+    }
+    return { remoteRevocation: true };
+  }
   get oauth() {
     const prefix = this.id === "google_business" ? "GOOGLE_BUSINESS" : "YOUTUBE";
     return { authorize: "https://accounts.google.com/o/oauth2/v2/auth", token: "https://oauth2.googleapis.com/token", clientId: this.env[`${prefix}_CLIENT_ID`] || this.env.GOOGLE_CLIENT_ID, clientSecret: this.env[`${prefix}_CLIENT_SECRET`] || this.env.GOOGLE_CLIENT_SECRET,
@@ -73,6 +84,7 @@ export class YouTubeProvider extends GoogleProvider {
   }
   async metrics({ credentials, delivery }) {
     const result = await this.http.request(`https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${encodeURIComponent(delivery.externalId)}`, { token: credentials.accessToken });
+    if (!result.items?.length) return { values: {}, removed: true, note: "This video is no longer available from YouTube." };
     const stats = result.items?.[0]?.statistics || {};
     const values = { views: stats.viewCount, likes: stats.likeCount, comments: stats.commentCount };
     let note;
@@ -80,7 +92,7 @@ export class YouTubeProvider extends GoogleProvider {
       const start = new Date(delivery.publishedAt).toISOString().slice(0, 10), end = new Date().toISOString().slice(0, 10);
       const report = await this.http.request(`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel%3D%3DMINE&startDate=${start}&endDate=${end}&metrics=shares&dimensions=video&filters=${encodeURIComponent(`video==${delivery.externalId}`)}`, { token: credentials.accessToken });
       if (report.rows?.length) values.shares = report.rows[0][1];
-    } catch { note = "YouTube share analytics are not available for this account or reporting period."; }
+    } catch (error) { if (error.reconnect) throw error; note = "YouTube share analytics are not available for this account or reporting period."; }
     return { values, note };
   }
 }

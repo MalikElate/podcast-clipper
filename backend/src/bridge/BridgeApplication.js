@@ -19,6 +19,8 @@ import { AnalyticsService } from "./services/AnalyticsService.js";
 import { ApiKeyService } from "./services/ApiKeyService.js";
 import { PublishingWorker } from "./services/PublishingWorker.js";
 import { BillingService } from "./services/BillingService.js";
+import { AnalyticsErasureService } from "./services/AnalyticsErasureService.js";
+import { PrivacyService } from "./services/PrivacyService.js";
 import { SecretVault } from "./core/SecretVault.js";
 import { LockService } from "./core/LockService.js";
 import { BridgeError, invariant, publicError } from "./core/errors.js";
@@ -30,15 +32,16 @@ import { XProvider } from "./platforms/XProvider.js";
 import { LinkedInProvider } from "./platforms/LinkedInProvider.js";
 import { PinterestProvider } from "./platforms/PinterestProvider.js";
 import { BlueskyProvider } from "./platforms/BlueskyProvider.js";
-import { clerkMiddleware } from "@clerk/express";
+import { clerkMiddleware, clerkClient } from "@clerk/express";
+import { verifyWebhook } from "@clerk/express/webhooks";
 import { requireAuth } from "../lib/clerkAuth.js";
 
 const backendDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-export const route = fn => (req, res, next) => Promise.resolve().then(() => fn(req, res)).catch(next);
+export const route = fn => (req, res, next) => Promise.resolve().then(() => fn(req, res)).catch(next).finally(() => req.privacyRelease?.());
 
 /** Composition root. Services, repository, adapters and authentication are replaceable. */
 export class BridgeApplication {
-  constructor({ env = process.env, store, registry, storage, authMiddleware, stripe, clock = () => Date.now() } = {}) {
+  constructor({ env = process.env, store, registry, storage, authMiddleware, stripe, deleteIdentity, deleteAnalytics, clock = () => Date.now() } = {}) {
     this.env = env; this.clock = clock;
     this.localPreview = env.BRIDGE_LOCAL_PREVIEW === "1" && env.NODE_ENV !== "production";
     this.dataDir = path.resolve(env.BRIDGE_DATA_DIR || path.join(backendDir, ".bridge"));
@@ -66,13 +69,25 @@ export class BridgeApplication {
     this.posts = new PostService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, media: this.media, schedules: this.schedules, rates: this.rates, clock, localPreview: this.localPreview });
     this.analytics = new AnalyticsService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, posts: this.posts, clock });
     this.billing = new BillingService({ store: this.store, env, appUrl: this.appUrl, stripe });
+    this.privacy = new PrivacyService({ ...deps, registry: this.registry, storage: this.storage, projects: this.projects, billing: this.billing, clock,
+      deleteIdentity: deleteIdentity || (async uid => { if (this.localPreview) return; try { await clerkClient.users.deleteUser(uid); } catch (error) { if (error.status !== 404) throw error; } }),
+      deleteAnalytics: deleteAnalytics || (uid => this.localPreview ? Promise.resolve(true) : new AnalyticsErasureService({ store: this.store, env }).deleteForOwner(uid)) });
+    this.projects.privacy = this.privacy; this.accounts.privacy = this.privacy; this.privacy.accounts = this.accounts;
     this.worker = new PublishingWorker({ store: this.store, accounts: this.accounts, registry: this.registry, posts: this.posts, rates: this.rates, media: this.media, locks: this.locks, analytics: this.analytics, clock, enabled: !this.localPreview && env.BRIDGE_PUBLISHING_ENABLED !== "false" });
     const incoming = path.join(this.dataDir, "incoming"); fs.mkdirSync(incoming, { recursive: true, mode: 0o700 });
+    this.privacy.incomingDirectory = incoming;
     this.upload = multer({ dest: incoming, limits: { fileSize: this.media.maxBytes, files: 1, fields: 0 } });
     this.app = express(); this.app.disable("x-powered-by");
     if (env.BRIDGE_TRUST_PROXY) this.app.set("trust proxy", Number(env.BRIDGE_TRUST_PROXY));
     this.app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } }));
     this.app.post("/api/stripe/webhook", express.raw({ type: "application/json", limit: "1mb" }), route(async (req, res) => res.json(await this.billing.webhook(req.body, req.headers["stripe-signature"]))));
+    this.app.post("/api/tiktok/webhook", express.raw({ type: "application/json", limit: "1mb" }), route((req, res) => res.json(this.privacy.tiktokWebhook(req.body, req.headers["tiktok-signature"]))));
+    this.app.post("/api/clerk/webhook", express.raw({ type: "application/json", limit: "1mb" }), route(async (req, res) => {
+      invariant(env.CLERK_WEBHOOK_SIGNING_SECRET, "Account webhooks are not configured.", { status: 503 });
+      let event; try { event = await verifyWebhook(req, { signingSecret: env.CLERK_WEBHOOK_SIGNING_SECRET }); } catch { invariant(false, "Invalid account webhook signature."); }
+      if (event.type === "user.deleted" && event.data.id) this.privacy.requestAccount(event.data.id, {}, { identityAlreadyDeleted: true });
+      res.json({ received: true });
+    }));
     const origins = new Set([new URL(this.appUrl).origin, new URL(this.publicUrl).origin]);
     if (this.localPreview) { origins.add("http://127.0.0.1:5173"); origins.add("http://localhost:5173"); }
     this.app.use(cors({ origin: (origin, done) => done(null, !origin || origins.has(origin)), methods: ["GET", "POST", "PATCH", "DELETE"], allowedHeaders: ["Content-Type", "Authorization", "X-Bridge-Preview"] }));
@@ -91,10 +106,22 @@ export class BridgeApplication {
     });
     this.app.use("/api/bridge", (req, res, next) => {
       const key = this.apiKeys.token(req.headers.authorization);
+      req.authType = key ? "api_key" : "session";
       if (!key) return userAuth(req, res, next);
       try { req.uid = this.apiKeys.authenticate(key); return next(); } catch (error) { return next(error); }
     });
     this.app.use("/api/bridge", rateLimit({ windowMs: 60000, limit: 180, standardHeaders: "draft-7", legacyHeaders: false, keyGenerator: req => req.uid || "anonymous", message: { error: "Too many requests. Please wait a moment." } }));
+    this.app.use("/api/bridge", (req, res, next) => {
+      try {
+        res.setHeader("Cache-Control", "no-store");
+        req.privacyRelease = this.privacy.track(req.uid, res);
+        if (!req.path.startsWith("/privacy")) {
+          this.privacy.assertActive(req.uid);
+          invariant(this.privacy.accepted(req.uid), "Review and accept Meadow's Privacy Policy and Terms in the dashboard before using this workspace.", { status: 403, code: "consent_required" });
+        }
+        next();
+      } catch (error) { next(error); }
+    });
     this.registerRoutes();
     this.app.use("/api", (req, res) => res.status(404).json({ error: "Endpoint not found." }));
     const frontend = path.resolve(backendDir, "../frontend/dist");
@@ -103,6 +130,7 @@ export class BridgeApplication {
       this.app.get("*", (req, res) => res.sendFile(path.join(frontend, "index.html")));
     }
     this.app.use((error, req, res, next) => {
+      req.privacyRelease?.();
       if (res.headersSent) return next(error);
       if (error instanceof multer.MulterError) error = new BridgeError(error.code === "LIMIT_FILE_SIZE" ? `Files can be up to ${this.media.maxBytes / 1024 ** 2} MB.` : "Upload one file at a time.", { status: 413, code: "upload_limit" });
       if (error.type === "entity.parse.failed") error = new BridgeError("Invalid JSON request.");
@@ -125,7 +153,7 @@ export class BridgeApplication {
     }));
     app.get("/media/:id/:variant", route((req, res) => {
       const result = this.media.verify(req.params.id, req.params.variant, req.query.expires, req.query.signature, req.query.download === "1");
-      res.setHeader("Cache-Control", "private, max-age=300");
+      res.setHeader("Cache-Control", "private, no-store");
       res.type(result.mime);
       if (req.query.download === "1" || result.record.kind === "document") res.attachment(result.record.filename);
       res.sendFile(result.key, { root: this.storage.root, dotfiles: "deny" });
@@ -134,6 +162,10 @@ export class BridgeApplication {
 
   registerRoutes() {
     const app = this.app, root = "/api/bridge/projects/:projectId";
+    app.get("/api/bridge/privacy", route((req, res) => res.json(this.privacy.status(req.uid))));
+    const requireSession = req => invariant(req.authType === "session", "Use your signed-in Meadow account for this action.", { status: 403, code: "session_required" });
+    app.post("/api/bridge/privacy/consent", route((req, res) => { requireSession(req); res.json(this.privacy.consent(req.uid, req.body)); }));
+    app.delete("/api/bridge/privacy/account", route((req, res) => { requireSession(req); res.status(202).json(this.privacy.requestAccount(req.uid, req.body)); }));
     app.get("/api/bridge/config", route((req, res) => res.json({ name: "Meadow", localPreview: this.localPreview, platforms: this.registry.catalog(), maxBatchSize: 100, maxUploadBytes: this.media.maxBytes, features: { analytics: true, publishing: this.worker.enabled }, connectionsReady: this.vault.configured, mediaReady: Boolean(this.media.signingKey) })));
     app.get("/api/bridge/billing", route((req, res) => res.json(this.billing.publicRecord(req.uid))));
     app.post("/api/bridge/billing/checkout", route(async (req, res) => res.json(await this.billing.checkout(req.uid, req.userEmail, req.body))));
@@ -145,12 +177,12 @@ export class BridgeApplication {
     app.post("/api/bridge/projects/default", route((req, res) => res.json({ project: this.projects.ensureDefault(req.uid, req.body) })));
     app.patch(root, route((req, res) => res.json({ project: this.projects.update(req.uid, req.params.projectId, req.body) })));
     app.post("/api/bridge/schedule/resolve", route((req, res) => res.json(this.schedules.resolve(req.body))));
-    app.get(`${root}/accounts`, route((req, res) => res.json({ accounts: this.accounts.list(req.uid, req.params.projectId) })));
+    app.get(`${root}/accounts`, route(async (req, res) => res.json({ accounts: await this.accounts.listFresh(req.uid, req.params.projectId) })));
     app.post(`${root}/accounts/connect/:platform`, route(async (req, res) => res.json(await this.accounts.start(req.uid, req.params.projectId, req.params.platform, req.body))));
-    app.get(`${root}/connections/:id`, route((req, res) => res.json(this.accounts.pending(req.uid, req.params.projectId, req.params.id))));
+    app.get(`${root}/connections/:id`, route(async (req, res) => res.json(await this.accounts.pending(req.uid, req.params.projectId, req.params.id))));
     app.post(`${root}/connections/:id`, route((req, res) => res.json({ accounts: this.accounts.attach(req.uid, req.params.projectId, req.params.id, req.body.selectedIds) })));
     app.get(`${root}/accounts/:id/options`, route(async (req, res) => res.json({ options: await this.accounts.options(req.uid, req.params.projectId, req.params.id, { force: req.query.refresh === "1" }) })));
-    app.delete(`${root}/accounts/:id`, route((req, res) => res.json(this.accounts.disconnect(req.uid, req.params.projectId, req.params.id))));
+    app.delete(`${root}/accounts/:id`, route((req, res) => res.status(202).json(this.privacy.requestConnection(req.uid, req.params.projectId, req.params.id))));
     app.get(`${root}/media`, route((req, res) => res.json({ media: this.media.list(req.uid, req.params.projectId) })));
     app.post(`${root}/media`, (req, res, next) => { try { this.projects.require(req.uid, req.params.projectId); invariant(this.media.signingKey, "Media storage is not configured on this server.", { status: 503 }); next(); } catch (error) { next(error); } }, this.upload.single("file"), route(async (req, res) => {
       invariant(req.file, "Choose a file to upload.");
@@ -171,16 +203,19 @@ export class BridgeApplication {
   }
   start() {
     this.worker.start();
+    this.privacy.tick().catch(error => console.error("Privacy worker:", error.code || error.name));
+    this.privacyTimer = setInterval(() => this.privacy.tick().catch(error => console.error("Privacy worker:", error.code || error.name)), 15000);
+    this.privacyTimer.unref?.();
     if (!this.localPreview) {
       this.analyticsTimer = setInterval(() => this.analytics.tick().catch(error => console.error("Analytics worker:", error.code || error.name)), 60000);
       this.analyticsTimer.unref?.();
     }
   }
-  stopWorkers() { this.worker.stop(); clearInterval(this.analyticsTimer); }
+  stopWorkers() { this.worker.stop(); clearInterval(this.analyticsTimer); clearInterval(this.privacyTimer); }
   async shutdown({ timeoutMs = 25000 } = {}) {
     this.stopWorkers();
     const deadline = Date.now() + timeoutMs;
-    while (this.worker.running || this.analytics.running) {
+    while (this.worker.running || this.analytics.running || this.privacy.running) {
       if (Date.now() >= deadline) return false;
       await new Promise(resolve => setTimeout(resolve, 50));
     }

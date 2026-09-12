@@ -48,6 +48,7 @@ export class PublishingWorker {
       if (!delivery || !(isPendingDelivery(delivery) || delivery.status === "processing") || delivery.dueAt > this.clock()) return;
       const polling = delivery.status === "processing";
       let account = this.store.get("account", delivery.accountId);
+      if (this.accounts.privacy && (this.accounts.privacy.blocked(delivery.ownerUid) || !this.accounts.privacy.accepted(delivery.ownerUid))) return;
       if (account?.status !== "connected") {
         this.store.put("delivery", { ...delivery, status: "needs_account", resumeStatus: polling ? "processing" : "queued", error: account?.lastError || "Reconnect this account to continue publishing.", updatedAt: this.clock() });
         return;
@@ -56,14 +57,18 @@ export class PublishingWorker {
       try {
         if (polling && delivery.startedAt && this.clock() - delivery.startedAt > 24 * 3600000) throw new BridgeError("The platform has not confirmed this post after 24 hours. Check the account before retrying.", { code: "processing_timeout" });
         const provider = this.registry.get(account.platform);
+        let freshOptions = account.options;
+        if (polling && account.platform === "pinterest") freshOptions = await this.accounts.options(account.ownerUid, account.projectId, account.id, { force: true });
         if (!polling) {
-          await this.accounts.options(account.ownerUid, account.projectId, account.id, { force: true });
+          freshOptions = await this.accounts.options(account.ownerUid, account.projectId, account.id, { force: true });
           this.rates.replan(account.rateKey);
           delivery = this.store.get("delivery", id);
           if (!isPendingDelivery(delivery) || delivery.dueAt > this.clock() + 50) return;
         }
         const credentials = await this.accounts.credentials(account);
         account = this.store.get("account", account.id);
+        if (account?.status !== "connected") return;
+        account = { ...account, options: freshOptions };
         const post = this.store.get("post", delivery.postId);
         if (!post) throw new BridgeError("The post is no longer available.");
         const content = polling && delivery.contentSnapshot ? { ...delivery.contentSnapshot, accountOptions: account.options || {}, media: delivery.contentSnapshot.mediaIds.map(id => this.store.get("media", id)).filter(Boolean) } : this.posts.content(post, account);
@@ -79,6 +84,7 @@ export class PublishingWorker {
         claimed = true;
         const checkpoint = patch => {
           const current = this.store.get("delivery", id);
+          if (!current) return;
           this.store.put("delivery", { ...current, progress: { ...current.progress, ...patch }, leaseUntil: this.clock() + 90000, updatedAt: this.clock() });
         };
         timer = setInterval(() => checkpoint({}), 20000); timer.unref?.();
@@ -86,6 +92,7 @@ export class PublishingWorker {
         const context = { account, credentials, delivery, post, content, media: this.media, progress: delivery.progress || {}, checkpoint };
         const result = await (polling ? provider.poll(context) : provider.publish(context));
         const current = this.store.get("delivery", id);
+        if (!current) return;
         if (result.status === "processing") {
           if (this.clock() - current.startedAt > 24 * 3600000) throw new BridgeError("The platform is still processing after 24 hours. Check the account before retrying.", { code: "processing_timeout" });
           this.store.put("delivery", { ...current, status: "processing", externalId: result.externalId || current.externalId || null, progress: { ...current.progress, ...result.progress }, dueAt: this.clock() + Math.max(5000, Math.min(result.pollAfterMs || 15000, 300000)), leaseUntil: null, updatedAt: this.clock() });
