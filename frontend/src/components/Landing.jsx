@@ -17,8 +17,6 @@ const PLATFORMS = sortPlatforms([
   { id: "google_business", name: "Google Business", color: "#4285f4", formats: "Updates, images, carousels" },
 ]);
 
-const CROSSPOST_PLATFORMS = PLATFORMS.filter((platform) => ["facebook", "instagram", "x", "linkedin", "tiktok"].includes(platform.id));
-const CROSSPOST_ANGLES = [-90, -18, 54, 126, 198];
 
 function ArrowIcon() {
   return (
@@ -54,26 +52,6 @@ function PlatformStrip() {
   );
 }
 
-function CrosspostVisual() {
-  return (
-    <div className="crosspost-visual" role="img" aria-label="A Meadow-style five-petal flower surrounded by Facebook, Instagram, X, LinkedIn, and TikTok">
-      <div className="crosspost-petals" aria-hidden="true">
-        {CROSSPOST_PLATFORMS.map((platform, index) => (
-          <span className="crosspost-petal" key={platform.id} style={{ "--platform-angle": `${CROSSPOST_ANGLES[index]}deg` }} />
-        ))}
-      </div>
-      <span className="crosspost-flower-stem" aria-hidden="true" />
-      <span className="crosspost-flower-center" aria-hidden="true" />
-      <div className="crosspost-platform-icons" aria-hidden="true">
-        {CROSSPOST_PLATFORMS.map((platform, index) => (
-          <span className="crosspost-platform-icon" key={platform.id} style={{ "--platform-angle": `${CROSSPOST_ANGLES[index]}deg`, "--platform-color": platform.color }}>
-            <PlatformIcon platform={platform.id} size={31} />
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export default function Landing({ onGetStarted }) {
   const [yearlyPricing, setYearlyPricing] = useState(true);
@@ -109,17 +87,6 @@ export default function Landing({ onGetStarted }) {
           </div>
         </section>
 
-        <section className="landing-section crosspost-section" aria-labelledby="crosspost-title">
-          <div className="crosspost-copy">
-            <h2 id="crosspost-title">One post, every platform <span>in sync.</span></h2>
-            <p>Create once, then send the right version to every connected account from one calm workspace. Meadow keeps the post and its destinations together.</p>
-            <div className="crosspost-actions">
-              <button className="btn-primary crosspost-cta" onClick={onGetStarted}>Start posting for free <ArrowIcon /></button>
-              <a className="crosspost-secondary" href="#platforms">View platforms</a>
-            </div>
-          </div>
-          <CrosspostVisual />
-        </section>
 
         <section className="landing-section platform-section" id="platforms">
           <div className="section-heading platform-heading">
