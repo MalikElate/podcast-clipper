@@ -91,6 +91,7 @@ h1:not(:where(.cl-rootBox *)), h2:not(:where(.cl-rootBox *)), h3:not(:where(.cl-
 }
 
 .app-glow-a {
+  display: none;
   width: 620px;
   height: 620px;
   top: -220px;
