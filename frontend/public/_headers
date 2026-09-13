@@ -10,6 +10,9 @@
 /favicon.ico
   Cache-Control: public, max-age=3600
 
+/trybe-pixel.js
+  Cache-Control: public, max-age=300
+
 /
   Cache-Control: public, max-age=60, stale-while-revalidate=300
 

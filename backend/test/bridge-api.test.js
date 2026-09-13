@@ -136,6 +136,7 @@ test("Stripe checkout, webhooks, subscription state, and billing portal stay lin
   };
   const h = await setup(t, { stripe, envOverrides: {
     STRIPE_WEBHOOK_SECRET: "whsec_test",
+    TRYBE_STORE_ID: "store-123",
     STRIPE_PRICE_STARTER_MONTHLY: "price_starter_monthly", STRIPE_PRICE_STARTER_YEARLY: "price_starter_yearly",
     STRIPE_PRICE_CREATOR_MONTHLY: "price_creator_monthly", STRIPE_PRICE_CREATOR_YEARLY: "price_creator_yearly",
     STRIPE_PRICE_GROWTH_MONTHLY: "price_growth_monthly", STRIPE_PRICE_GROWTH_YEARLY: "price_growth_yearly",
@@ -144,11 +145,13 @@ test("Stripe checkout, webhooks, subscription state, and billing portal stay lin
 
   const before = await (await h.request("/api/bridge/billing")).json();
   assert.deepEqual(before, { configured: true, planId: null, cycle: null, status: "free", cancelAtPeriodEnd: false, currentPeriodEnd: null, canManage: false });
-  const checkout = await h.request("/api/bridge/billing/checkout", { method: "POST", body: { planId: "creator", cycle: "yearly" } });
+  const checkout = await h.request("/api/bridge/billing/checkout", { method: "POST", body: { planId: "creator", cycle: "yearly", trybeVisitorId: "ignore-client-body" }, headers: { Cookie: "ugc_vid_store-123=visitor-123" } });
   assert.equal(checkout.status, 200); assert.equal((await checkout.json()).url, "https://checkout.stripe.test/session");
   assert.equal(calls.checkout[0].line_items[0].price, "price_creator_yearly");
   assert.equal(calls.checkout[0].client_reference_id, "alice");
   assert.equal(calls.checkout[0].subscription_data.metadata.meadowPlanId, "creator");
+  assert.equal(calls.checkout[0].subscription_data.metadata.trybeVisitorId, "visitor-123");
+  assert.equal(calls.checkout[0].metadata.trybeVisitorId, "visitor-123");
 
   const unsigned = await fetch(`${h.base}/api/stripe/webhook`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
   assert.equal(unsigned.status, 400);

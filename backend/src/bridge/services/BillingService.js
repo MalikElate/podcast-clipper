@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { invariant } from "../core/errors.js";
 import { deletionMarker } from "./PrivacyService.js";
+import { TrybeService } from "./TrybeService.js";
 
 const PLAN_PRICE_ENV = {
   starter: { monthly: "STRIPE_PRICE_STARTER_MONTHLY", yearly: "STRIPE_PRICE_STARTER_YEARLY" },
@@ -12,11 +13,12 @@ const PLAN_PRICE_ENV = {
 const ACTIVE_STATUSES = new Set(["active", "trialing", "past_due", "unpaid", "incomplete"]);
 
 export class BillingService {
-  constructor({ store, env = process.env, appUrl, stripe }) {
+  constructor({ store, env = process.env, appUrl, stripe, trybe }) {
     this.store = store;
     this.env = env;
     this.appUrl = appUrl;
     this.stripe = stripe || (env.STRIPE_SECRET_KEY ? new Stripe(env.STRIPE_SECRET_KEY) : null);
+    this.trybe = trybe || new TrybeService({ store, env });
   }
 
   get configured() {
@@ -46,12 +48,14 @@ export class BillingService {
     };
   }
 
-  async checkout(uid, email, { planId, cycle }) {
+  async checkout(uid, email, { planId, cycle }, cookieHeader) {
     invariant(this.configured, "Stripe checkout is not configured.", { status: 503, code: "billing_not_configured" });
     const current = this.store.get("billing", uid);
     invariant(!(current?.subscriptionId && ACTIVE_STATUSES.has(current.status)), "You already have a subscription. Use Manage billing to change or cancel it.", { status: 409, code: "subscription_exists" });
     const price = this.priceId(planId, cycle);
     const metadata = { meadowUserId: uid, meadowPlanId: planId, meadowBillingCycle: cycle };
+    const visitorId = this.trybe.visitorId(cookieHeader);
+    if (visitorId) metadata.trybeVisitorId = visitorId;
     const session = await this.stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price, quantity: 1 }],
@@ -147,6 +151,9 @@ export class BillingService {
     } else if (["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"].includes(event.type)) {
       if (object.metadata?.meadowUserId && this.store.get("privacyBlock", deletionMarker(object.metadata.meadowUserId)) && (ACTIVE_STATUSES.has(object.status) || object.status === "paused")) await this.cancelSubscription(object.id);
       this.syncSubscription(object);
+    } else if (event.type === "invoice.payment_succeeded") {
+      // Covers the first payment and renewals, without counting Checkout twice.
+      await this.trybe.invoicePaid(object, this.stripe);
     }
     return { received: true };
   }

@@ -11,7 +11,17 @@ The Docker and Compose files support self-hosting. Production on `findmeadow.com
 3. Generate separate random values for `BRIDGE_ENCRYPTION_KEY` and `BRIDGE_MEDIA_SIGNING_KEY`.
 4. Set `BRIDGE_APP_URL` and `BRIDGE_PUBLIC_URL` to the canonical public HTTPS origin without a trailing path. Set `BRIDGE_TRUST_PROXY` to the exact trusted proxy hop count.
 5. Supply the platform application credentials and callbacks described in [platforms.md](platforms.md). Leave unfinished platforms disabled through `BRIDGE_DISABLED_PLATFORMS` until their applications are approved and tested.
-6. Create monthly and yearly recurring Stripe Prices for Starter, Creator, Growth, and Pro. Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and the eight `STRIPE_PRICE_*` values listed in `backend/.env.example`. Register `https://findmeadow.com/api/stripe/webhook` for `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, and `customer.subscription.deleted`, and configure the Stripe Customer Portal.
+6. Create monthly and yearly recurring Stripe Prices for Starter, Creator, Growth, and Pro. Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and the eight `STRIPE_PRICE_*` values listed in `backend/.env.example`. Register `https://findmeadow.com/api/stripe/webhook` for `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, and `invoice.payment_succeeded`, and configure the Stripe Customer Portal.
+
+## Trybe purchase attribution
+
+Set `TRYBE_ORDERS_API_KEY` to the private `sk_` Orders API key from Trybe → Integrations → Universal Pixel, and set `TRYBE_STORE_ID` to that pixel's store ID. The read-only Brand API `tk_live_` key cannot submit orders. The public pixel configuration lives in `frontend/public/trybe-pixel.js`; its store ID must match the backend. `track.findmeadow.com` is a DNS-only CNAME to `proxy.jointrybe.com`, verified in Trybe before enabling the script.
+
+Checkout copies the pixel's `ugc_vid_{storeId}` cookie into Stripe Checkout and subscription metadata. The verified `invoice.payment_succeeded` webhook submits paid live-mode invoices (initial purchases and renewals) to `https://jointrybe.com/attribution/v1/orders`. Values use the invoice's actual amount paid and currency, including Stripe's zero/three-decimal currency rules. The invoice ID is the order ID; local delivery receipts and Trybe's duplicate-order response prevent double counting when Stripe retries, including after container replacement. Non-2xx or unsuccessful Trybe responses cause a 503 so Stripe can retry. Never log request payloads or API keys.
+
+Test-mode, unpaid, zero-value, unrelated-product invoices and invoices without a Trybe visitor ID are not sent. Missing visitor IDs are logged without customer details. Attribution needs the browser pixel to load before checkout; the server never fabricates a visitor ID. Renewals retain the original subscription's visitor attribution. No retroactive orders or refund adjustments are sent by this integration.
+
+Run `node --test test/trybe.test.js` in `backend` for signed webhook, currency, retry and deduplication checks. For live acceptance, confirm the tracking script sets its visitor cookie, the cookie is copied into a real Checkout's subscription metadata, and a genuine successful payment appears in Trybe. Do not submit fake purchases to the live Orders API.
 
 Never copy runtime secrets into `VITE_*` variables. The Clerk publishable key and analytics project tokens are public frontend build inputs. Do not change the encryption key without migrating or re-encrypting stored credentials. Keep copies of signing and encryption keys separate from data backups.
 
