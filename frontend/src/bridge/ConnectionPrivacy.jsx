@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { api } from "./BridgeApi.js";
 import { Icon } from "./Icons.jsx";
-import { Alert, Check, Modal, PlatformIcon } from "./ui.jsx";
+import { Alert, Check, Modal } from "./ui.jsx";
 
 export function ConnectionPrivacyContent({ disclosure }) {
   return <div className="bridge-connection-privacy-content">
@@ -50,14 +49,4 @@ export function ConnectionPrivacyModal({ disclosure, busy, error, onClose, onCon
       <div className="bridge-modal-actions"><button className="bridge-button secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="bridge-button" disabled={!accepted || busy} onClick={() => onContinue({ accepted: true, platform: disclosure.platform, version: disclosure.version })}>{busy ? "Connecting…" : "Connect"}</button></div>
     </div>
   </Modal>;
-}
-
-export function ConnectionPrivacySettings() {
-  const [disclosures, setDisclosures] = useState([]), [error, setError] = useState("");
-  useEffect(() => {
-    const controller = new AbortController();
-    api.request("/privacy/connections", { signal: controller.signal }).then(data => setDisclosures(data.disclosures)).catch(error => { if (error.name !== "AbortError") setError(error.message); });
-    return () => controller.abort();
-  }, []);
-  return <div className="bridge-connection-privacy-settings"><h3>Connected platform privacy</h3><p>Review the data notice for each platform. You will be asked to agree when you connect or reconnect an account.</p><Alert message={error}/>{disclosures.map(disclosure => <details key={disclosure.platform}><summary><PlatformIcon platform={disclosure.platform} size={20}/><span>{disclosure.name}</span></summary><ConnectionPrivacyContent disclosure={disclosure}/><ConnectionPolicyLinks disclosure={disclosure}/></details>)}</div>;
 }

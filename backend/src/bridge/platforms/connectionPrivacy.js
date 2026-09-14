@@ -1,5 +1,5 @@
 // Keep these notices aligned with the fields and scopes used by each adapter.
-// The compact summary is shown before OAuth; the full notice remains in Settings → Privacy & Account.
+// The compact summary and full notice are shown before OAuth. The public privacy page mirrors each supported platform's data handling.
 export const CONNECTION_PRIVACY_VERSION = "2026-09-14-connections-2";
 
 const authorization = {
