@@ -90,7 +90,7 @@ export function Empty({ icon = "media", title, children, action }) { return <div
 export function Alert({ message, success = false }) { return message ? <div className={`bridge-alert ${success ? "success" : ""}`} role={success ? "status" : "alert"}>{message}</div> : null; }
 export function Field({ label, children, hint }) { return <label className="bridge-field"><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>; }
 export function Check({ children, ...props }) { return <label className="bridge-check"><input type="checkbox" {...props}/><span>{children}</span></label>; }
-export function Modal({ title, children, onClose, wide = false, busy = false }) {
+export function Modal({ title, children, onClose, wide = false, busy = false, className = "" }) {
   const ref = useRef(null), id = useId(), controls = useRef({ onClose, busy });
   controls.current = { onClose, busy };
   useEffect(() => {
@@ -109,7 +109,7 @@ export function Modal({ title, children, onClose, wide = false, busy = false }) 
     const overflow = document.body.style.overflow; document.body.style.overflow = "hidden";
     return () => { dialog.removeEventListener("keydown", keydown); document.body.style.overflow = overflow; previous?.focus(); };
   }, []);
-  return <div className="bridge-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget && !busy) onClose(); }}><section ref={ref} tabIndex={-1} className={`bridge-modal ${wide ? "wide" : ""}`} role="dialog" aria-modal="true" aria-labelledby={id}><button className="bridge-modal-close bridge-icon-button" onClick={onClose} disabled={busy} aria-label="Close dialog"><Icon name="close"/></button><h2 id={id}>{title}</h2>{children}</section></div>;
+  return <div className="bridge-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget && !busy) onClose(); }}><section ref={ref} tabIndex={-1} className={`bridge-modal ${wide ? "wide" : ""} ${className}`.trim()} role="dialog" aria-modal="true" aria-labelledby={id}><button className="bridge-modal-close bridge-icon-button" onClick={onClose} disabled={busy} aria-label="Close dialog"><Icon name="close"/></button><h2 id={id}>{title}</h2>{children}</section></div>;
 }
 export function useProjectResource(projectId, endpoint, initial, { interval = 0, revision = 0 } = {}) {
   const [data, setData] = useState(initial), [error, setError] = useState(""), [loading, setLoading] = useState(true), [version, setVersion] = useState(0);
