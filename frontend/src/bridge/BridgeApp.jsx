@@ -61,6 +61,7 @@ function Workspace({ user, signOut }) {
   const [projects, setProjects] = useState([]), [projectId, setProjectId] = useState(""), [config, setConfig] = useState(null), [error, setError] = useState(initial.current.params.get("connectionError") || ""), [notice, setNotice] = useState(""), [menuOpen, setMenuOpen] = useState(false), [connectionId, setConnectionId] = useState(initial.current.params.get("connection") || ""), [scheduledDate, setScheduledDate] = useState(""), [draftVersion, setDraftVersion] = useState(0);
   const [postsOpen, setPostsOpen] = useState(postViewIds.has(initial.current.view));
   const [configurationOpen, setConfigurationOpen] = useState(configurationViewIds.has(initial.current.view));
+  const [signingOut, setSigningOut] = useState(false);
   const project = projects.find(item => item.id === projectId);
   const activeModule = allModules.find(item => item.id === view);
   const isPostView = postViewIds.has(view);
@@ -99,6 +100,12 @@ function Workspace({ user, signOut }) {
   function navigate(next) { selectView(next); const path = dashboardPath(next); if (window.location.pathname !== path || window.location.search) window.history.pushState({}, "", path); }
   function follow(event, next) { if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); navigate(next); }
   function compose(date = "") { setScheduledDate(date); setDraftVersion(value => value + 1); navigate("compose"); }
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true); setError(""); setNotice("");
+    try { await signOut(); }
+    catch (error) { setError(error.message || "Could not sign out. Please try again."); setSigningOut(false); setMenuOpen(false); }
+  }
   return <div className="bridge" data-theme="light">
     {menuOpen && <button className="bridge-scrim" onClick={() => setMenuOpen(false)} aria-label="Close navigation"/>}
     <aside className={`bridge-sidebar ${menuOpen ? "is-open" : ""}`}>
@@ -115,18 +122,21 @@ function Workspace({ user, signOut }) {
           {configurationOpen && <div className="bridge-nav-sub">{configurationModules.map(item => <a key={item.id} className={view === item.id ? "active" : ""} href={dashboardPath(item.id)} onClick={event => follow(event, item.id)} aria-current={view === item.id ? "page" : undefined}><Icon name={item.icon} size={18}/><span>{item.name}</span></a>)}</div>}
         </div>
       </nav>
-      <div className="bridge-sidebar-footer"><span className="bridge-person-avatar">{(user?.email || "Dashboard").slice(0, 1).toUpperCase()}</span><div><strong>Dashboard</strong>{user?.email && <span>{user.email}</span>}</div>{!localPreview && <button className="bridge-icon-button" onClick={() => signOut().catch(error => setError(error.message))} aria-label="Sign out"><Icon name="external" size={17}/></button>}</div>
+      <div className="bridge-sidebar-footer">
+        <div className="bridge-sidebar-person"><span className="bridge-person-avatar">{(user?.email || "Dashboard").slice(0, 1).toUpperCase()}</span><div className="bridge-sidebar-person-text"><strong>Dashboard</strong>{user?.email && <span>{user.email}</span>}</div></div>
+        {!localPreview && <button type="button" className="bridge-button secondary" onClick={handleSignOut} disabled={signingOut}><Icon name="logout" size={17}/>{signingOut ? "Signing out…" : "Sign out"}</button>}
+      </div>
     </aside>
     <main className="bridge-main"><header className="bridge-topbar"><button className="bridge-icon-button bridge-menu-toggle" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Icon name="menu"/></button></header>
       <div className="bridge-content"><Alert message={error}/><Alert message={notice} success/><div className="bridge-page-heading"><h1>{activeModule?.title || activeModule?.name}</h1></div>
-        {!config ? <div className="bridge-panel bridge-empty"><p>{error ? "Meadow could not load. Check your connection and refresh this page." : ""}</p></div> : isConfigurationView ? <ConfigurationWorkspace user={user} project={project} config={config} view={view} onProjectUpdated={updated => setProjects(current => current.map(item => item.id === updated.id ? updated : item))}/> : !project ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Meadow is getting ready</h2><p>Your publishing account is not available yet.</p></div> : <ProjectWorkspace key={project.id} project={project} config={config} view={view} navigate={navigate} compose={compose} scheduledDate={scheduledDate} clearScheduledDate={() => setScheduledDate("")} draftVersion={draftVersion} connectionId={connectionId} clearConnection={() => setConnectionId("")} notify={setNotice}/>}
+        {!config ? <div className="bridge-panel bridge-empty"><p>{error ? "Meadow could not load. Check your connection and refresh this page." : ""}</p></div> : isConfigurationView ? <ConfigurationWorkspace user={user} project={project} config={config} view={view} onSignOut={handleSignOut} signingOut={signingOut} onProjectUpdated={updated => setProjects(current => current.map(item => item.id === updated.id ? updated : item))}/> : !project ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Meadow is getting ready</h2><p>Your publishing account is not available yet.</p></div> : <ProjectWorkspace key={project.id} project={project} config={config} view={view} navigate={navigate} compose={compose} scheduledDate={scheduledDate} clearScheduledDate={() => setScheduledDate("")} draftVersion={draftVersion} connectionId={connectionId} clearConnection={() => setConnectionId("")} notify={setNotice}/>}
       </div>
     </main>
   </div>;
 }
-function ConfigurationWorkspace({ user, project, config, view, onProjectUpdated }) {
+function ConfigurationWorkspace({ user, project, config, view, onProjectUpdated, onSignOut, signingOut }) {
   return <>
-    {view === "settings" && <ConfigurationSettings user={user} project={project} config={config} onProjectUpdated={onProjectUpdated}/>}
+    {view === "settings" && <ConfigurationSettings user={user} project={project} config={config} onProjectUpdated={onProjectUpdated} onSignOut={onSignOut} signingOut={signingOut}/>}
     {view === "api-keys" && <ApiKeys timeZone={project?.timeZone}/>}
     {view === "billing" && <Billing localPreview={config.localPreview}/>}
   </>;
