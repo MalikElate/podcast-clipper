@@ -147,7 +147,8 @@ export class BridgeApplication {
       const target = new URL("/dashboard/connections", this.appUrl);
       try {
         const result = await this.accounts.callback(req.params.platform, new URL(req.originalUrl, this.publicUrl).searchParams);
-        target.searchParams.set("project", result.projectId); target.searchParams.set("connection", result.connectionId);
+        target.searchParams.set("project", result.projectId);
+        if (result.connectionId) target.searchParams.set("connection", result.connectionId);
       } catch (error) { target.searchParams.set("connectionError", error instanceof BridgeError ? error.message : "The account could not be connected. Please try again."); }
       res.setHeader("Cache-Control", "no-store"); res.redirect(303, target.toString());
     }));
