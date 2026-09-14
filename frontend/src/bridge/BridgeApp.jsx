@@ -150,8 +150,8 @@ function ProjectWorkspace({ project, config, view, navigate, compose, scheduledD
   async function upload(files, onProgress = () => {}) {
     const uploaded = [], failures = []; setUploadError("");
     for (const [index, file] of files.slice(0, 100).entries()) {
-      onProgress(`Uploading ${index + 1} of ${Math.min(files.length, 100)}…`);
-      try { if (file.size > config.maxUploadBytes) throw new Error(`exceeds ${Math.round(config.maxUploadBytes / 1024 ** 2)} MB`); const form = new FormData(); form.append("file", file); const data = await api.project(project.id, "/media", { method: "POST", body: form }); uploaded.push(data.media); }
+      const progress = event => onProgress({ ...event, filename: file.name, fileIndex: index + 1, fileCount: Math.min(files.length, 100) });
+      try { if (file.size > config.maxUploadBytes) throw new Error(`exceeds ${Math.round(config.maxUploadBytes / 1024 ** 2)} MB`); const data = await api.uploadMedia(project.id, file, { onProgress: progress }); uploaded.push(data.media); }
       catch (error) { failures.push(`${file.name}: ${error.message}`); }
     }
     mediaResource.setData(current => ({ media: [...uploaded, ...current.media.filter(item => !uploaded.some(newItem => newItem.id === item.id))] }));

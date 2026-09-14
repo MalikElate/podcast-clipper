@@ -75,6 +75,8 @@ To add a platform, implement this contract, add a catalog entry, register the pr
 
 The shell mounts `Composer`, `PostsQueue`, `Accounts`, and `Analytics` for the user's default project. The API client obtains a fresh Clerk session token for authenticated requests.
 
+Browser uploads first send authenticated JSON `{ bytes }` to `POST /api/bridge/projects/:projectId/media/uploads`. The response contains a single-use `uploadToken` and `expiresAt`. The browser sends that token in the Authorization bearer header of the multipart `POST /media`; the grant lasts thirty minutes and permits only that project's exact declared file size. Its SHA-256 digest and owner are stored in one-time state, so replay and account deletion invalidate it. This avoids checking a one-minute Clerk JWT after a slow file transfer. Only the small authorization request may retry automatically; file transfers are sent once. The composer displays byte progress and then a separate media-preparation stage.
+
 The public and authenticated interfaces share one plan catalog. `BillingService` creates Stripe subscription Checkout and Customer Portal sessions, verifies signed webhooks, and stores customer/subscription state by Clerk user ID. Paid-plan entitlement enforcement remains a separate future service. Collaborators can be introduced through a project-access service later. Neither concern is embedded in provider code or the media pipeline.
 
 ## Storage and operations
