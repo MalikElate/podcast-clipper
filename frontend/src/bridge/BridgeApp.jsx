@@ -152,7 +152,7 @@ function ProjectWorkspace({ project, config, view, navigate, compose, scheduledD
   const common = { project, config, catalog, media, accounts: accountResource.data.accounts };
   return <><Alert message={accountResource.error || mediaResource.error || uploadError}/>
     {view === "compose" && <Composer key={draftVersion} {...common} scheduledDate={scheduledDate} onDraftStarted={clearScheduledDate} onAccounts={() => navigate("accounts")} onUpload={upload} onSubmitted={result => { navigate("posts"); notify(`${result.posts.length} ${result.posts.length === 1 ? "post" : "posts"} added to your publishing queue.`); }}/>}
-    {view === "accounts" && <Accounts {...common} connectionId={connectionId} clearConnection={clearConnection} onChanged={accountResource.reload} onOpenSettings={() => navigate("settings")}/>}
+    {view === "accounts" && <Accounts {...common} connectionId={connectionId} clearConnection={clearConnection} onChanged={accountResource.reload}/>}
     {view === "clips" && <ClippingStudioComingSoon/>}
     {view === "calendar" && <PostsCalendar {...common} onCreate={compose}/>}
     {["posts", "scheduled", "posted", "drafts", "failed"].includes(view) && <PostsQueue {...common} section={view} onCreate={() => navigate("compose")} onUpload={upload}/>}

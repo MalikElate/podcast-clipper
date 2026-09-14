@@ -138,6 +138,8 @@
 .bridge-connection-privacy-content dl { display: grid; gap: 14px; }
 .bridge-connection-privacy-content dt { font-weight: 650; color: var(--b-text); }
 .bridge-connection-privacy-content dd { margin: 3px 0 0; color: var(--b-muted); }
+.bridge-modal.bridge-connection-privacy-modal { height: min(520px, calc(100vh - 30px)); max-height: none; display: flex; flex-direction: column; overflow: hidden; }
+.bridge-connection-privacy-scroll { flex: 1; min-height: 0; overflow-y: auto; padding-right: 9px; margin-right: -9px; scrollbar-gutter: stable; }
 .bridge-connection-summary { display: grid; gap: 14px; padding-top: 2px; }
 .bridge-connection-summary > p { font-size: 14px; line-height: 1.6; }
 .bridge-connection-summary h3 { margin-top: 4px; font-size: 14px; }
@@ -145,8 +147,12 @@
 .bridge-connection-requirement svg { flex: 0 0 auto; margin-top: 2px; color: #d0a94e; }
 .bridge-connection-requirement p { font-size: 13px; line-height: 1.5; }
 .bridge-connection-revoke { margin-top: 2px; }
-.bridge-connection-summary > .bridge-text-button { width: max-content; margin-top: -7px; padding-top: 0; }
-.bridge-connection-privacy-consent { border-top: 1px solid var(--b-line); margin-top: 18px; padding-top: 14px; }
+.bridge-connection-details-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin-top: -4px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--b-blue) 48%, var(--b-line)); border-radius: 7px; background: color-mix(in srgb, var(--b-blue) 12%, var(--b-raised)); color: var(--b-blue); font-size: 13px; font-weight: 650; text-align: left; }
+.bridge-connection-details-toggle:hover:not(:disabled) { border-color: var(--b-blue); background: color-mix(in srgb, var(--b-blue) 18%, var(--b-raised)); }
+.bridge-connection-details-toggle svg { flex: 0 0 auto; color: currentColor; }
+.bridge-connection-privacy-dropdown { margin-top: 12px; padding: 2px 12px 14px; border: 1px solid var(--b-line); border-radius: 8px; background: var(--b-raised); }
+.bridge-connection-privacy-dropdown .bridge-connection-privacy-content > p:first-child { margin-top: 10px; }
+.bridge-connection-privacy-consent { flex: 0 0 auto; border-top: 1px solid var(--b-line); margin-top: 14px; padding-top: 14px; }
 .bridge-connection-privacy-consent .bridge-modal-actions { margin-top: 18px; }
 .bridge-connection-privacy-settings { margin: 24px 0; }
 .bridge-connection-privacy-settings > h3 { font-size: 16px; margin-bottom: 8px; }
