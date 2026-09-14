@@ -76,6 +76,7 @@ export class AccountService {
     const id = randomUUID();
     this.store.put("connection", { id, ownerUid: saved.uid, projectId: saved.projectId, platform, privacyConsent: saved.privacyConsent || null, createdAt: this.clock(), expiresAt: this.clock() + 10 * 60000,
       encrypted: this.vault.encrypt(candidates.map(candidate => ({ ...(platform === "pinterest" ? { remoteId: candidate.remoteId, label: "Pinterest account" } : candidate), credentials: { ...credentials, ...(candidate.credentials || {}) } })), `connection:${id}`) });
+    if (candidates.length === 1) return { projectId: saved.projectId, accounts: this.attach(saved.uid, saved.projectId, id, [candidates[0].remoteId]) };
     return { projectId: saved.projectId, connectionId: id };
   }
 

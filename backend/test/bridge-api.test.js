@@ -243,12 +243,15 @@ for (const platform of ["pinterest", "youtube", "google_business", "tiktok"]) te
   const state = authorization.searchParams.get("state");
   const saved = app.store.peekState(SecretVault.hash(state));
   assert.equal(saved.uid, "alice"); assert.ok(saved.privacyConsent.acceptedAt >= before);
-  const pending = await app.accounts.callback(platform, new URLSearchParams({ code: "fixture-code", state }));
+  const callbackResponse = await fetch(`${h.base}/oauth/${platform}/callback?code=fixture-code&state=${encodeURIComponent(state)}`, { redirect: "manual" });
   assert.equal(exchanges, 1);
-  assert.equal((await h.request(`${h.root}/connections/${pending.connectionId}`, { method: "POST", user: "bob", body: { selectedIds: ["selected-account"] } })).status, 404);
-  const attached = await h.request(`${h.root}/connections/${pending.connectionId}`, { method: "POST", body: { selectedIds: ["selected-account"], consent: { accepted: false } } });
-  assert.equal(attached.status, 200);
-  const account = (await attached.json()).accounts[0];
+  assert.equal(callbackResponse.status, 303);
+  const callbackLocation = new URL(callbackResponse.headers.get("location"));
+  assert.equal(callbackLocation.searchParams.get("project"), h.project.id);
+  assert.equal(callbackLocation.searchParams.has("connection"), false);
+  assert.deepEqual(app.store.list("connection"), []);
+  const [account] = app.accounts.list("alice", h.project.id);
+  assert.equal(account.remoteId, "selected-account");
   assert.deepEqual(account.privacyConsent, saved.privacyConsent);
   assert.equal((await h.request(endpoint, { method: "POST", body: {} })).status, 400);
   assert.equal(authorizations, 1, "An earlier agreement cannot authorize another connection attempt");
@@ -256,17 +259,26 @@ for (const platform of ["pinterest", "youtube", "google_business", "tiktok"]) te
   const reconnect = await h.request(endpoint, { method: "POST", body: { consent } });
   assert.equal(reconnect.status, 200);
   const reconnectAuthorization = new URL((await reconnect.json()).url);
+  const reconnectState = reconnectAuthorization.searchParams.get("state");
   assert.notEqual(reconnectAuthorization.searchParams.get("state"), state);
   reconnectAuthorization.searchParams.delete("state"); authorization.searchParams.delete("state");
   reconnectAuthorization.searchParams.delete("code_challenge"); authorization.searchParams.delete("code_challenge");
   assert.equal(reconnectAuthorization.href, authorization.href, "Reconnect must request the same native permissions review");
+
+  provider.accounts = async () => [{ remoteId: "selected-account", label: "Selected account" }, { remoteId: "second-account", label: "Second account" }];
+  const pending = await app.accounts.callback(platform, new URLSearchParams({ code: "fixture-code", state: reconnectState }));
+  assert.ok(pending.connectionId);
+  assert.equal((await h.request(`${h.root}/connections/${pending.connectionId}`, { method: "POST", user: "bob", body: { selectedIds: ["second-account"] } })).status, 404);
+  const attached = await h.request(`${h.root}/connections/${pending.connectionId}`, { method: "POST", body: { selectedIds: ["second-account"] } });
+  assert.equal(attached.status, 200);
+  assert.equal((await attached.json()).accounts[0].remoteId, "second-account");
 
   for (const receipt of [null, { ...consent, version: "old" }, { ...consent, platform: "x" }]) {
     const oldState = randomBytes(16).toString("hex");
     app.store.saveState(SecretVault.hash(oldState), { uid: "alice", projectId: h.project.id, platform, verifier: "fixture", privacyConsent: receipt }, Date.now() + 60000);
     await assert.rejects(app.accounts.callback(platform, new URLSearchParams({ code: "fixture-code", state: oldState })), error => error.code === "connection_consent_required");
   }
-  assert.equal(exchanges, 1, "Missing or stale callback consent is rejected before token exchange");
+  assert.equal(exchanges, 2, "Missing or stale callback consent is rejected before token exchange");
 });
 
 test("Clerk deletion webhooks verify the raw signature and erase the deleted identity's workspaces", async t => {
