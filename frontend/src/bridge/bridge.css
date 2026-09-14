@@ -41,6 +41,12 @@
 .bridge-upload-zone{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; margin:25px 0; min-height:205px; border:1px dashed #344765; border-radius:10px; background:#0d1421; text-align:center; padding:24px; }
 .bridge-upload-zone>svg{ color:#819ee2; margin-bottom:7px; }
 .bridge-upload-zone p{ font-size:.875rem; }
+.bridge-upload-progress{ padding:14px 16px; margin:0 0 20px; border:1px solid var(--b-line); border-radius:9px; background:var(--b-raised); }
+.bridge-upload-progress>div{ display:flex; justify-content:space-between; gap:12px; font-size:.875rem; }
+.bridge-upload-progress>div>span,.bridge-upload-progress p{ color:var(--b-muted); font-size:.75rem; }
+.bridge-upload-progress progress{ display:block; width:100%; height:8px; margin:10px 0; accent-color:var(--b-blue); }
+.bridge-upload-progress p{ margin-top:5px; }
+.bridge-upload-filename{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .bridge-field{ display:flex; flex-direction:column; gap:8px; font-size:.875rem; color:#c7d3e7; margin:20px 0; font-weight:500; }
 .bridge input:not([type=checkbox]):not([type=radio]):not([type=file]),.bridge textarea,.bridge select:not(#project-select){ border:1px solid #2d394e; border-radius:7px; background:#0c121e; color:var(--b-text); padding:11px 12px; width:100%; font-size:.9rem; min-width:0; }
 .bridge textarea{ resize:vertical; min-height:110px; }

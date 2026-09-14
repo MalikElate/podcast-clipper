@@ -4,24 +4,67 @@ import { BridgeApi } from "../src/bridge/BridgeApi.js";
 
 const rejectedSession = () => Response.json({ error: "Authentication required.", code: "authentication_required" }, { status: 401 });
 
-test("uploads refresh authentication and replay the complete file once after a rejected session", async () => {
-  const tokens = [], requests = [], body = new FormData();
-  body.append("file", new Blob(["fixture video bytes"], { type: "video/mp4" }), "recording.MP4");
+test("uploads authorize first, refresh only the small grant request, then send the file once with its grant", async () => {
+  const tokens = [], requests = [], progress = [];
+  const file = new File(["fixture video bytes"], "recording.MP4", { type: "video/mp4" });
+  let uploads = 0;
   const api = new BridgeApi({
     getToken: async options => { tokens.push(options); return `token-${tokens.length}`; },
     fetcher: async (path, options) => {
-      const request = new Request(`https://meadow.example${path}`, options);
-      const file = (await request.formData()).get("file");
-      requests.push({ path, authorization: request.headers.get("authorization"), method: request.method, filename: file.name, type: file.type, content: await file.text() });
-      assert.equal(options.headers["Content-Type"], undefined, "The browser must generate each multipart boundary");
-      return requests.length === 1 ? rejectedSession() : Response.json({ media: { id: "uploaded" } }, { status: 201 });
+      assert.equal(path, "/api/bridge/projects/project/media/uploads");
+      assert.equal(options.method, "POST");
+      assert.deepEqual(JSON.parse(options.body), { bytes: file.size });
+      requests.push(options.headers.Authorization);
+      assert.equal(uploads, 0, "No file bytes may be sent before authorization succeeds");
+      return requests.length === 1 ? rejectedSession() : Response.json({ uploadToken: "meadow_upload_fixture", expiresAt: Date.now() + 1800000 }, { status: 201 });
+    },
+    uploader: async (path, options) => {
+      uploads++;
+      assert.equal(path, "/api/bridge/projects/project/media");
+      assert.equal(options.token, "meadow_upload_fixture");
+      assert.equal(options.body.get("file").name, file.name);
+      assert.equal(await options.body.get("file").text(), await file.text());
+      options.onProgress({ stage: "processing" });
+      return { ok: true, status: 201, data: { media: { id: "uploaded" } } };
     },
   });
-  assert.deepEqual(await api.project("project", "/media", { method: "POST", body }), { media: { id: "uploaded" } });
-  assert.deepEqual(tokens, [{ skipCache: true }, { skipCache: true }]);
-  assert.equal(requests.length, 2);
-  assert.deepEqual(requests.map(({ authorization, ...upload }) => upload), Array(2).fill({ path: "/api/bridge/projects/project/media", method: "POST", filename: "recording.MP4", type: "video/mp4", content: "fixture video bytes" }));
-  assert.deepEqual(requests.map(item => item.authorization), ["Bearer token-1", "Bearer token-2"]);
+  assert.deepEqual(await api.uploadMedia("project", file, { onProgress: event => progress.push(event.stage) }), { media: { id: "uploaded" } });
+  assert.deepEqual(tokens, [{ skipCache: false }, { skipCache: true }]);
+  assert.deepEqual(requests, ["Bearer token-1", "Bearer token-2"]);
+  assert.equal(uploads, 1);
+  assert.deepEqual(progress, ["authorizing", "uploading", "processing"]);
+});
+
+test("failed authorization prevents sending the file", async () => {
+  const api = new BridgeApi({ getToken: async () => null, fetcher: async () => assert.fail("No anonymous grant request"), uploader: async () => assert.fail("No unauthorized file transfer") });
+  await assert.rejects(api.uploadMedia("project", new File(["video"], "video.mp4")), error => error.code === "authentication_required");
+});
+
+test("file transfers never replay after authentication, server, or network failure", async () => {
+  for (const failure of [
+    () => ({ ok: false, status: 401, data: { error: "Retry your upload.", code: "invalid_upload_token" } }),
+    () => ({ ok: false, status: 500, data: { error: "Processing failed." } }),
+    () => { throw new TypeError("Network interrupted"); },
+  ]) {
+    let grants = 0, uploads = 0;
+    const api = new BridgeApi({ getToken: async () => "session", fetcher: async () => { grants++; return Response.json({ uploadToken: "meadow_upload_fixture" }); }, uploader: async () => { uploads++; return failure(); } });
+    await assert.rejects(api.uploadMedia("project", new File(["video"], "video.mp4")));
+    assert.equal(grants, 1);
+    assert.equal(uploads, 1);
+  }
+});
+
+test("legacy multipart requests also stop after a rejected session without replaying the file", async () => {
+  let attempts = 0;
+  const api = new BridgeApi({ getToken: async () => "session", fetcher: async () => { attempts++; return rejectedSession(); } });
+  await assert.rejects(api.project("project", "/media", { method: "POST", body: new FormData() }), error => error.code === "authentication_required");
+  assert.equal(attempts, 1);
+});
+
+test("cancelling during grant issuance stops the file transfer", async () => {
+  const controller = new AbortController();
+  const api = new BridgeApi({ getToken: async () => "session", fetcher: async () => { controller.abort(); return Response.json({ uploadToken: "meadow_upload_fixture" }); }, uploader: async () => assert.fail("Cancelled upload must not start") });
+  await assert.rejects(api.uploadMedia("project", new File(["video"], "video.mp4"), { signal: controller.signal }), { name: "AbortError" });
 });
 
 test("JSON requests refresh a cached session token after the authentication gate rejects it", async () => {

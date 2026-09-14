@@ -1,10 +1,11 @@
 import { getAuthToken } from "../authToken.js";
 import { normalizePlatformCollections } from "./platforms.js";
+import { uploadWithProgress } from "./uploadTransport.js";
 export const localPreview = Boolean(import.meta.env?.DEV && import.meta.env?.VITE_BRIDGE_LOCAL_PREVIEW === "true");
-const sessionError = () => Object.assign(new Error("Your Meadow session has expired. Please sign in again to continue."), { code: "authentication_required", status: 401 });
+const sessionError = () => Object.assign(new Error("Your Meadow sign-in could not be verified. Please sign in again to continue."), { code: "authentication_required", status: 401 });
 export class BridgeApi {
-  constructor({ getToken = getAuthToken, fetcher = (...args) => fetch(...args), preview = localPreview } = {}) {
-    Object.assign(this, { getToken, fetcher, preview });
+  constructor({ getToken = getAuthToken, fetcher = (...args) => fetch(...args), uploader = uploadWithProgress, preview = localPreview } = {}) {
+    Object.assign(this, { getToken, fetcher, uploader, preview });
   }
   async headers(json = true, refresh = false) {
     let token = this.preview ? null : await this.getToken({ skipCache: refresh });
@@ -22,9 +23,9 @@ export class BridgeApi {
       return { res, data: await res.json().catch(() => ({})) };
     };
     let { res, data } = await send(form);
-    // This code is emitted only by Meadow's authentication gate, before an
-    // upload or other write runs. Reusing FormData creates a fresh request body.
-    if (!this.preview && res.status === 401 && data.code === "authentication_required") {
+    // Refresh small requests rejected by the authentication gate. File bodies
+    // are never replayed; uploads use a grant obtained before the transfer.
+    if (!form && !this.preview && res.status === 401 && data.code === "authentication_required") {
       ({ res, data } = await send(true));
     }
     if (!res.ok) {
@@ -43,5 +44,23 @@ export class BridgeApi {
   ensureDefaultProject(body, signal) { return this.request("/projects/default", { method: "POST", body, signal }); }
   updateProject(id, body) { return this.request(this.projectPath(id), { method: "PATCH", body }); }
   project(id, path, options) { return this.request(this.projectPath(id, path), options); }
+  async uploadMedia(projectId, file, { signal, onProgress = () => {} } = {}) {
+    onProgress({ stage: "authorizing", loaded: 0, total: file.size });
+    const { uploadToken } = await this.project(projectId, "/media/uploads", { method: "POST", body: { bytes: file.size }, signal });
+    signal?.throwIfAborted();
+    if (typeof uploadToken !== "string" || !uploadToken.startsWith("meadow_upload_")) throw new Error("Meadow could not start the upload. Please refresh and try again.");
+    const body = new FormData();
+    body.append("file", file);
+    onProgress({ stage: "uploading", loaded: 0, total: file.size });
+    // The single-use grant authorizes this file transfer before its bytes are
+    // sent. A long transfer must not depend on a one-minute session token.
+    const { ok, status, data } = await this.uploader(`/api/bridge${this.projectPath(projectId, "/media")}`, { body, token: uploadToken, signal, onProgress });
+    if (!ok) {
+      const error = new Error(data.error || `Upload failed (${status}). Please try again.`);
+      Object.assign(error, { code: data.code, details: data.details, status });
+      throw error;
+    }
+    return normalizePlatformCollections(data);
+  }
 }
 export const api = new BridgeApi();

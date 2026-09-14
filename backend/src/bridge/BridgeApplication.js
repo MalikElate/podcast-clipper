@@ -12,6 +12,7 @@ import { LocalMediaStorage } from "./storage/LocalMediaStorage.js";
 import { ProjectService } from "./services/ProjectService.js";
 import { ScheduleService } from "./services/ScheduleService.js";
 import { MediaService } from "./services/MediaService.js";
+import { UploadTokenService } from "./services/UploadTokenService.js";
 import { AccountService } from "./services/AccountService.js";
 import { PostService } from "./services/PostService.js";
 import { RateLimitService } from "./services/RateLimitService.js";
@@ -65,6 +66,7 @@ export class BridgeApplication {
     const deps = { env, publicUrl: this.publicUrl, store: this.store, vault: this.vault, locks: this.locks };
     this.registry = registry || new ProviderRegistry([InstagramProvider, TikTokProvider, YouTubeProvider, FacebookProvider, XProvider, LinkedInProvider, PinterestProvider, ThreadsProvider, BlueskyProvider, GoogleBusinessProvider].map(Provider => new Provider(deps)), { disabled: (env.BRIDGE_DISABLED_PLATFORMS || "").split(",").filter(Boolean) });
     this.media = new MediaService({ store: this.store, projects: this.projects, storage: this.storage, publicUrl: this.publicUrl, signingKey, clock, maxBytes: Number(env.BRIDGE_MAX_UPLOAD_MB || 1024) * 1024 ** 2 });
+    this.uploadTokens = new UploadTokenService({ store: this.store, projects: this.projects, maxBytes: this.media.maxBytes, clock });
     this.rates = new RateLimitService({ store: this.store, clock });
     this.accounts = new AccountService({ ...deps, registry: this.registry, projects: this.projects, clock, localPreview: this.localPreview });
     this.posts = new PostService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, media: this.media, schedules: this.schedules, rates: this.rates, clock, localPreview: this.localPreview });
@@ -78,6 +80,10 @@ export class BridgeApplication {
     const incoming = path.join(this.dataDir, "incoming"); fs.mkdirSync(incoming, { recursive: true, mode: 0o700 });
     this.privacy.incomingDirectory = incoming;
     this.upload = multer({ dest: incoming, limits: { fileSize: this.media.maxBytes, files: 1, fields: 0 } });
+    this.receiveUpload = (req, res, next) => {
+      const upload = req.uploadGrant ? multer({ dest: incoming, limits: { fileSize: req.uploadGrant.bytes, files: 1, fields: 0 } }) : this.upload;
+      upload.single("file")(req, res, next);
+    };
     this.app = express(); this.app.disable("x-powered-by");
     if (env.BRIDGE_TRUST_PROXY) this.app.set("trust proxy", Number(env.BRIDGE_TRUST_PROXY));
     this.app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } }));
@@ -106,6 +112,15 @@ export class BridgeApplication {
       return clerkAuth(req, res, error => error ? next(error) : requireAuth(req, res, next));
     });
     this.app.use("/api/bridge", (req, res, next) => {
+      if (this.uploadTokens.matches(req.headers.authorization)) {
+        res.setHeader("Cache-Control", "no-store");
+        try {
+          req.uploadGrant = this.uploadTokens.consume(req.headers.authorization, req.method, req.path);
+          req.uid = req.uploadGrant.uid;
+          req.authType = "upload_token";
+          return next();
+        } catch (error) { return next(error); }
+      }
       const key = this.apiKeys.token(req.headers.authorization);
       req.authType = key ? "api_key" : "session";
       if (!key) return userAuth(req, res, next);
@@ -132,7 +147,7 @@ export class BridgeApplication {
     this.app.use((error, req, res, next) => {
       req.privacyRelease?.();
       if (res.headersSent) return next(error);
-      if (error instanceof multer.MulterError) error = new BridgeError(error.code === "LIMIT_FILE_SIZE" ? `Files can be up to ${this.media.maxBytes / 1024 ** 2} MB.` : "Upload one file at a time.", { status: 413, code: "upload_limit" });
+      if (error instanceof multer.MulterError) error = new BridgeError(error.code === "LIMIT_FILE_SIZE" ? (req.uploadGrant ? "The file exceeds the authorized upload size. Select the file again." : `Files can be up to ${this.media.maxBytes / 1024 ** 2} MB.`) : "Upload one file at a time.", { status: 413, code: "upload_limit" });
       if (error.type === "entity.parse.failed") error = new BridgeError("Invalid JSON request.");
       if (!(error instanceof BridgeError)) console.error("Meadow request failed:", error.code || error.name);
       res.status(error instanceof BridgeError ? error.status : 500).json(publicError(error));
@@ -193,9 +208,16 @@ export class BridgeApplication {
     app.get(`${root}/accounts/:id/options`, route(async (req, res) => res.json({ options: await this.accounts.options(req.uid, req.params.projectId, req.params.id, { force: req.query.refresh === "1" }) })));
     app.delete(`${root}/accounts/:id`, route((req, res) => res.status(202).json(this.privacy.requestConnection(req.uid, req.params.projectId, req.params.id))));
     app.get(`${root}/media`, route((req, res) => res.json({ media: this.media.list(req.uid, req.params.projectId) })));
-    app.post(`${root}/media`, (req, res, next) => { try { this.projects.require(req.uid, req.params.projectId); invariant(this.media.signingKey, "Media storage is not configured on this server.", { status: 503 }); next(); } catch (error) { next(error); } }, this.upload.single("file"), route(async (req, res) => {
+    app.post(`${root}/media/uploads`, route((req, res) => {
+      invariant(this.media.signingKey, "Media storage is not configured on this server.", { status: 503 });
+      res.status(201).json(this.uploadTokens.create(req.uid, req.params.projectId, req.body));
+    }));
+    app.post(`${root}/media`, (req, res, next) => { try { this.projects.require(req.uid, req.params.projectId); invariant(this.media.signingKey, "Media storage is not configured on this server.", { status: 503 }); next(); } catch (error) { next(error); } }, this.receiveUpload, route(async (req, res) => {
       invariant(req.file, "Choose a file to upload.");
-      try { res.status(201).json({ media: this.media.toPublic(await this.media.ingest(req.uid, req.params.projectId, req.file)) }); }
+      try {
+        invariant(!req.uploadGrant || req.file.size === req.uploadGrant.bytes, "The uploaded file size did not match. Select the file again.", { code: "upload_size_mismatch" });
+        res.status(201).json({ media: this.media.toPublic(await this.media.ingest(req.uid, req.params.projectId, req.file)) });
+      }
       finally { await fs.promises.unlink(req.file.path).catch(() => {}); }
     }));
     app.delete(`${root}/media/:id`, route(async (req, res) => res.json(await this.media.remove(req.uid, req.params.projectId, req.params.id))));
