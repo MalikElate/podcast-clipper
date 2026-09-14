@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { api } from "./BridgeApi.js";
 import { Icon } from "./Icons.jsx";
 import { Alert, Check, Modal, PlatformIcon } from "./ui.jsx";
@@ -20,15 +20,27 @@ function ConnectionPolicyLinks({ disclosure }) {
 }
 
 export function ConnectionPrivacyModal({ disclosure, busy, error, onClose, onContinue }) {
-  const [accepted, setAccepted] = useState(false), [detailsOpen, setDetailsOpen] = useState(false), detailsId = useId();
+  const [accepted, setAccepted] = useState(false), [detailsOpen, setDetailsOpen] = useState(false), detailsId = useId(), scrollRef = useRef(null), toggleRef = useRef(null);
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    if (!scroller) return undefined;
+    if (!detailsOpen) { scroller.scrollTop = 0; return undefined; }
+    const frame = requestAnimationFrame(() => {
+      const toggle = toggleRef.current;
+      if (!toggle) return;
+      const top = scroller.scrollTop + toggle.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+      scroller.scrollTop = Math.max(0, top);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [detailsOpen]);
   return <Modal title={`Connect ${disclosure.name}`} onClose={onClose} busy={busy} className="bridge-connection-privacy-modal">
-    <div className="bridge-connection-privacy-scroll">
+    <div ref={scrollRef} className="bridge-connection-privacy-scroll">
       <div className="bridge-connection-summary">
         <p>{disclosure.connectionSummary}</p>
         <h3>Requirement</h3>
         <div className="bridge-connection-requirement"><Icon name="warning" size={18}/><p>{disclosure.requirement}</p></div>
         <p className="bridge-connection-revoke">{disclosure.revokeSummary}</p>
-        <button type="button" className="bridge-connection-details-toggle" disabled={busy} onClick={() => setDetailsOpen(open => !open)} aria-expanded={detailsOpen} aria-controls={detailsId}><span>{detailsOpen ? "Hide full privacy details" : "View full privacy details"}</span><Icon name={detailsOpen ? "up" : "chevron"} size={16}/></button>
+        <button ref={toggleRef} type="button" className="bridge-connection-details-toggle" disabled={busy} onClick={() => setDetailsOpen(open => !open)} aria-expanded={detailsOpen} aria-controls={detailsId}><span>{detailsOpen ? "Hide full privacy details" : "View full privacy details"}</span><Icon name={detailsOpen ? "up" : "chevron"} size={16}/></button>
       </div>
       {detailsOpen && <div id={detailsId} className="bridge-connection-privacy-dropdown"><ConnectionPrivacyContent disclosure={disclosure}/><ConnectionPolicyLinks disclosure={disclosure}/></div>}
     </div>
