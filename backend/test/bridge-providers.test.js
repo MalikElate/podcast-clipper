@@ -72,8 +72,11 @@ test("transport respects reset headers and holds unsafe or interrupted requests 
 test("TikTok requires creator-specific privacy and consent, then maps private publication correctly", async () => {
   const http = transport((url, options) => url.includes("/init/") ? { data: { publish_id: "p_private" } } : { data: { status: "PUBLISH_COMPLETE" } });
   const provider = new TikTokProvider({ transport: http }), ctx = context([video]);
-  assert.ok(provider.validate(ctx.content).some(error => /privacy/.test(error)));
+  assert.ok(provider.validate(ctx.content).some(error => /audience options could not be loaded/.test(error)));
   ctx.content.accountOptions = { creator: { privacyOptions: ["SELF_ONLY"], maxVideoSeconds: 30 } };
+  assert.ok(provider.validate(ctx.content).includes("Choose who can see this TikTok post."));
+  ctx.content.settings = { privacy: "PUBLIC_TO_EVERYONE", consent: true };
+  assert.ok(provider.validate(ctx.content).some(error => /audience is no longer available/.test(error)));
   ctx.content.settings = { privacy: "SELF_ONLY", consent: true };
   assert.deepEqual(provider.validate(ctx.content), []);
   const result = await provider.publish(ctx); assert.equal(result.status, "processing");

@@ -1,47 +1,22 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useState } from "react";
 import { Icon } from "./Icons.jsx";
 import { Alert, Check, Modal } from "./ui.jsx";
 
-export function ConnectionPrivacyContent({ disclosure }) {
-  return <div className="bridge-connection-privacy-content">
-    <p>{disclosure.introduction}</p>
-    <h3>Data Meadow accesses and why</h3>
-    <dl>{disclosure.data.map(item => <div key={item.name}><dt>{item.name}</dt><dd>{item.detail}</dd></div>)}</dl>
-    <h3>How the data is used and shared</h3><p>{disclosure.sharing}</p>
-    <h3>How long it is kept</h3><p>{disclosure.retention}</p>
-    <h3>Your control</h3><p>{disclosure.platformNote}</p><p>{disclosure.removal}</p>
-  </div>;
-}
-
-function ConnectionPolicyLinks({ disclosure }) {
-  if (!disclosure.policies?.length) return null;
-  return <nav className="bridge-privacy-links" aria-label={`${disclosure.name} policies and access`}>{disclosure.policies.map(policy => <a key={policy.url} href={policy.url} target="_blank" rel="noreferrer">{policy.label}</a>)}</nav>;
-}
+const privacySections = { pinterest: "pinterest", youtube: "youtube", google_business: "google-business-profile", tiktok: "tiktok" };
 
 export function ConnectionPrivacyModal({ disclosure, busy, error, onClose, onContinue }) {
-  const [accepted, setAccepted] = useState(false), [detailsOpen, setDetailsOpen] = useState(false), detailsId = useId(), scrollRef = useRef(null), toggleRef = useRef(null);
-  useEffect(() => {
-    const scroller = scrollRef.current;
-    if (!scroller) return undefined;
-    if (!detailsOpen) { scroller.scrollTop = 0; return undefined; }
-    const frame = requestAnimationFrame(() => {
-      const toggle = toggleRef.current;
-      if (!toggle) return;
-      const top = scroller.scrollTop + toggle.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
-      scroller.scrollTop = Math.max(0, top);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [detailsOpen]);
+  const [accepted, setAccepted] = useState(false);
+  const section = privacySections[disclosure.platform];
+  const privacyUrl = section ? `/privacy/#privacy-${section}` : "/privacy/";
   return <Modal title={`Connect ${disclosure.name}`} onClose={onClose} busy={busy} className="bridge-connection-privacy-modal">
-    <div ref={scrollRef} className="bridge-connection-privacy-scroll">
+    <div className="bridge-connection-privacy-scroll">
       <div className="bridge-connection-summary">
         <p>{disclosure.connectionSummary}</p>
         <h3>Requirement</h3>
         <div className="bridge-connection-requirement"><Icon name="warning" size={18}/><p>{disclosure.requirement}</p></div>
         <p className="bridge-connection-revoke">{disclosure.revokeSummary}</p>
-        <button ref={toggleRef} type="button" className="bridge-connection-details-toggle" disabled={busy} onClick={() => setDetailsOpen(open => !open)} aria-expanded={detailsOpen} aria-controls={detailsId}><span>{detailsOpen ? "Hide full privacy details" : "View full privacy details"}</span><Icon name={detailsOpen ? "up" : "chevron"} size={16}/></button>
+        <a className="bridge-privacy-page-link" href={privacyUrl} target="_blank" rel="noreferrer" aria-label={`View Meadow’s privacy policy for ${disclosure.name}`}>View privacy policy</a>
       </div>
-      {detailsOpen && <div id={detailsId} className="bridge-connection-privacy-dropdown"><ConnectionPrivacyContent disclosure={disclosure}/><ConnectionPolicyLinks disclosure={disclosure}/></div>}
     </div>
     <div className="bridge-connection-privacy-consent">
       <Alert message={error}/>

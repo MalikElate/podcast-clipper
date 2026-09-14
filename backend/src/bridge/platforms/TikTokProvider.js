@@ -25,7 +25,9 @@ export class TikTokProvider extends PlatformProvider {
   }
   validate(content) {
     const errors = super.validate(content), s = content.settings || {}, creator = content.accountOptions?.creator;
-    if (!s.privacy || !creator?.privacyOptions?.includes(s.privacy)) errors.push("Choose one of this TikTok creator's available privacy settings.");
+    if (!creator?.privacyOptions?.length) errors.push("TikTok's audience options could not be loaded. Refresh the page and try again.");
+    else if (!s.privacy) errors.push("Choose who can see this TikTok post.");
+    else if (!creator.privacyOptions.includes(s.privacy)) errors.push("This audience is no longer available. Choose who can see this TikTok post again.");
     if (s.consent !== true) errors.push("Accept TikTok's Music Usage Confirmation before posting.");
     if (s.brandedContent && s.privacy === "SELF_ONLY") errors.push("Branded content cannot use TikTok's Only me privacy setting.");
     if (creator?.commentsDisabled && s.allowComments || creator?.duetDisabled && s.allowDuet || creator?.stitchDisabled && s.allowStitch) errors.push("An interaction setting is unavailable for this TikTok creator.");
