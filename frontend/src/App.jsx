@@ -24,7 +24,7 @@ export default function App() {
 }
 
 function PricingSurface() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const params = new URLSearchParams(window.location.search);
   const requestedCheckout = params.get("checkout") || "";
   const checkoutPlan = PLANS.some(plan => plan.id === requestedCheckout) ? requestedCheckout : "";
@@ -60,6 +60,8 @@ function PricingSurface() {
     beginCheckout(pending.planId, pending.cycle);
   }, [user, pending]);
 
+  if (loading && showAuth && !localPreview) return <OpeningMeadow />;
+
   if (showAuth && !user && !localPreview) {
     const redirectUrl = pending ? `/pricing?checkout=${encodeURIComponent(pending.planId)}&cycle=${encodeURIComponent(pending.cycle)}` : "/";
     return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth redirectUrl={redirectUrl} /></div></div>;
@@ -69,11 +71,13 @@ function PricingSurface() {
 }
 
 function AppSurface() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
   const dashboardPath = isDashboardPath(window.location.pathname);
 
-  if (user || localPreview) return <Suspense fallback={<PublicLanding onGetStarted={() => setShowAuth(true)} />}><BridgeApp /></Suspense>;
+  if (loading && !localPreview) return <OpeningMeadow />;
+
+  if (user || localPreview) return <Suspense fallback={<OpeningMeadow />}><BridgeApp /></Suspense>;
 
   if (showAuth || dashboardPath) {
     return (
@@ -88,6 +92,10 @@ function AppSurface() {
   }
 
   return <PublicLanding onGetStarted={() => setShowAuth(true)} />;
+}
+
+function OpeningMeadow() {
+  return <div className="app"><main className="centered-shell"><p role="status">Opening Meadow…</p></main></div>;
 }
 
 export function PublicLanding({ onGetStarted }) {
