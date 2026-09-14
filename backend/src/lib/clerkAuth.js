@@ -8,7 +8,8 @@ export function requireAuth(req, res, next) {
   const { isAuthenticated, userId, sessionClaims } = getAuth(req);
 
   if (!isAuthenticated || !userId) {
-    return res.status(401).json({ error: "Authentication required." });
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(401).json({ error: "Authentication required.", code: "authentication_required" });
   }
 
   req.uid = userId;

@@ -1,20 +1,8 @@
 import { createContext, useContext, useEffect, useMemo } from "react";
 import { useAuth as useClerkAuth, useClerk, useUser } from "@clerk/react";
+import { installTokenProvider } from "./authToken.js";
 
 const AuthContext = createContext(null);
-let tokenProvider = null;
-let resolveTokenProviderReady;
-let tokenProviderReady = new Promise(resolve => { resolveTokenProviderReady = resolve; });
-
-function resetTokenProvider() {
-  tokenProviderReady = new Promise(resolve => { resolveTokenProviderReady = resolve; });
-}
-
-export async function getAuthToken() {
-  if (!tokenProvider) await tokenProviderReady;
-  return tokenProvider ? tokenProvider() : null;
-}
-
 export function AuthProvider({ children }) {
   if (import.meta.env.VITE_BRIDGE_LOCAL_PREVIEW === "true") {
     return (
@@ -36,23 +24,16 @@ export function AuthProvider({ children }) {
 
 function ClerkAuthProvider({ children }) {
   const { isLoaded, user: clerkUser } = useUser();
-  const { getToken } = useClerkAuth();
+  const { isLoaded: authLoaded, getToken } = useClerkAuth();
   const clerk = useClerk();
 
   useEffect(() => {
-    const provider = () => getToken();
-    tokenProvider = provider;
-    resolveTokenProviderReady();
-    return () => {
-      if (tokenProvider === provider) {
-        tokenProvider = null;
-        resetTokenProvider();
-      }
-    };
-  }, [getToken]);
+    if (!authLoaded) return;
+    return installTokenProvider(options => getToken(options));
+  }, [authLoaded, getToken]);
 
   const user = useMemo(() => {
-    if (!isLoaded) return undefined;
+    if (!isLoaded || !authLoaded) return undefined;
     if (!clerkUser) return null;
     return {
       id: clerkUser.id,
@@ -60,7 +41,7 @@ function ClerkAuthProvider({ children }) {
       email: clerkUser.primaryEmailAddress?.emailAddress || "",
       imageUrl: clerkUser.imageUrl,
     };
-  }, [clerkUser, isLoaded]);
+  }, [clerkUser, isLoaded, authLoaded]);
 
   return (
     <AuthContext.Provider
