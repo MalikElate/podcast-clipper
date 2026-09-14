@@ -1,10 +1,12 @@
 import { useEffect } from "react";
 import BrandLogo from "./BrandLogo.jsx";
+import { PLATFORM_PRIVACY } from "./platformPrivacy.js";
 
 const PAGE_COPY = {
   terms: {
     label: "Terms of service",
     title: "Terms of Service",
+    effectiveDate: "September 12, 2026",
     intro: "These terms explain the basic rules for using Meadow to create, schedule, and understand social content.",
     sections: [
       {
@@ -65,6 +67,7 @@ const PAGE_COPY = {
   privacy: {
     label: "Privacy policy",
     title: "Privacy Policy",
+    effectiveDate: "September 14, 2026",
     intro: "This policy explains the information Meadow receives, how we use it, how long we keep it, and how you can withdraw access or delete it.",
     sections: [
       { heading: "1. Account and workspace information", paragraphs: [
@@ -72,13 +75,9 @@ const PAGE_COPY = {
         "We receive technical information needed to operate and protect the service, including request times, IP addresses processed by our infrastructure, and error information. We do not request or store your social-platform password. OAuth access and refresh tokens are encrypted in Meadow’s application database.",
       ] },
       { heading: "2. Connected platforms and purposes", paragraphs: [
-        "You can enter and use your Meadow workspace without connecting a social account. Before each Pinterest, TikTok, YouTube, or Google Business Profile connection or reconnection, Meadow presents a separate data notice and asks for your agreement. The notice explains that connection’s data access, purposes, sharing, retention, and removal. We save its version and acceptance time with the authorization. Full policy links and these notices are available in Settings → Privacy & Account.",
+        "You can enter and use your Meadow workspace without connecting a social account. Before supported connections or reconnections, Meadow may present a separate data notice and ask for your agreement. We save the notice version and acceptance time with the authorization.",
         "For connected platforms, Meadow receives the account identifiers and permissions needed to direct your content to the account you select. Depending on the platform, we also receive account names, profile images, publishing options, delivery identifiers and status, and performance statistics. We use this information to display your connections, validate and deliver your posts, show publishing results, and provide the analytics you request.",
-        "TikTok: we use the basic profile and account identifier to show your connection; creator information to present available privacy and interaction settings; publishing permissions to deliver videos or photos you submit; and available video statistics to show performance. We receive authorization-removal webhooks so that access withdrawn through TikTok can stop publishing and trigger local deletion.",
-        "Pinterest: we retrieve the connected profile and available boards when needed, and use your chosen board and publishing settings to create Pins you authorize. Profile details, board lists, and organic performance metrics are not kept as a database cache. We keep the authorization and routing identifiers needed to operate the connection, your chosen publishing settings, and delivery records needed to prevent duplicate publishing. Pinterest metrics are fetched on refresh and disappear when you leave or reload the analytics screen.",
-        <>YouTube: Meadow uses YouTube API Services. We receive your channel identifier and profile, upload the videos and metadata you request, check processing and delivery status, and obtain available video statistics and authorized analytics. We use this data only to provide the requested connection, publishing, and analytics features. See the <a href="https://www.youtube.com/t/terms">YouTube Terms of Service</a> and <a href="https://policies.google.com/privacy">Google Privacy Policy</a>.</>,
-        "Google Business Profile: we receive business account and location identifiers and location names to select the destination for your business updates. We process the images, text, language, and schedule you submit, and keep the returned post identifier, delivery status, and post link. We do not collect retired Google Business Profile local-post analytics. This connection does not request Gmail, Drive, or Calendar access.",
-        "Other supported connections use the profile, destination, publishing, and performance data required by the features you select. The platform’s authorization screen shows the permissions requested. Connecting an account does not authorize Meadow to publish content you have not submitted.",
+        "The platform-specific notices below describe the data used by each supported connection, its purpose, retention and removal, and provide links to the platform’s official privacy information. A platform’s authorization screen also shows the permissions requested. Connecting an account does not authorize Meadow to publish content you have not submitted.",
       ] },
       { heading: "3. Limits on use and sharing", paragraphs: [
         "We do not sell connected-platform data or use it for advertising, data brokerage, or training general-purpose AI models. We do not use your Google or YouTube data for purposes unrelated to the features you request. Meadow’s use and transfer of information received from Google APIs follows the Google API Services User Data Policy, including its Limited Use requirements.",
@@ -116,13 +115,14 @@ const PAGE_COPY = {
 
 export default function LegalPage({ kind }) {
   const copy = PAGE_COPY[kind] || PAGE_COPY.terms;
+  const privacy = kind === "privacy";
 
   useEffect(() => {
     document.title = `${copy.label} · Meadow`;
   }, [copy.label]);
 
   return (
-    <div className="legal-shell">
+    <div className={`legal-shell ${privacy ? "legal-shell-privacy" : ""}`}>
       <header className="legal-header">
         <a className="legal-brand" href="/" aria-label="Meadow home">
           <BrandLogo />
@@ -135,21 +135,37 @@ export default function LegalPage({ kind }) {
       </header>
 
       <main className="legal-page">
-        <div className="legal-intro">
+        <div className="legal-intro" id={privacy ? "privacy-overview" : undefined}>
           <h1>{copy.title}</h1>
           <p>{copy.intro}</p>
           <p>Meadow is operated by MALIK SEITU MUNYENGE, trading as Woodbark Software.</p>
-          <span className="legal-effective">Effective September 12, 2026</span>
+          <span className="legal-effective">Effective {copy.effectiveDate}</span>
         </div>
-        <div className="legal-body">
-          {copy.sections.map((section) => (
-            <section key={section.heading}>
-              <h2>{section.heading}</h2>
-              {section.paragraphs.map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
-            </section>
-          ))}
+        <div className={privacy ? "legal-layout" : undefined}>
+          {privacy && <aside className="legal-sidebar" aria-label="Social platform privacy policies"><div className="legal-sidebar-card"><span>Social platforms</span><nav>{PLATFORM_PRIVACY.map(platform => <a key={platform.id} href={`#privacy-${platform.id}`}>{platform.name}</a>)}</nav></div></aside>}
+          <div className="legal-body">
+            {copy.sections.map((section) => (
+              <section key={section.heading}>
+                <h2>{section.heading}</h2>
+                {section.paragraphs.map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
+                ))}
+              </section>
+            ))}
+            {privacy && <>
+              <section id="social-platform-privacy" className="legal-platform-intro">
+                <h2>9. Social platform privacy notices</h2>
+                <p>Each notice describes what Meadow accesses through that platform, how the information supports the features you request, and how to remove the connection. The linked platform policies explain how the platform itself handles information.</p>
+              </section>
+              {PLATFORM_PRIVACY.map(platform => <section className="legal-platform-policy" id={`privacy-${platform.id}`} key={platform.id} aria-labelledby={`privacy-${platform.id}-title`}>
+                <span className="legal-platform-label">Connected platform</span>
+                <h2 id={`privacy-${platform.id}-title`}>{platform.name}</h2>
+                <p>{platform.intro}</p>
+                <dl>{platform.details.map(detail => <div key={detail.label}><dt>{detail.label}</dt><dd>{detail.text}</dd></div>)}</dl>
+                <nav className="legal-platform-links" aria-label={`${platform.name} privacy links`}>{platform.links.map(link => <a key={link.url} href={link.url} target="_blank" rel="noreferrer">{link.label}</a>)}</nav>
+              </section>)}
+            </>}
+          </div>
         </div>
       </main>
 
