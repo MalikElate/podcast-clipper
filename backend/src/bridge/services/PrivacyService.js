@@ -88,7 +88,8 @@ export class PrivacyService {
   async eraseConnection(accountId, alreadyRevoked) {
     const initial = this.store.get("account", accountId);
     if (!initial) return;
-    await this.locks.withLock(`publishing:${initial.rateKey}`, () => this.locks.withLock(`credentials:${accountId}`, async () => {
+    const lockCredentials = operation => this.accounts ? this.accounts.withCredentialLock(initial, operation, { waitMs: 0 }) : this.locks.withLock(`credentials:${accountId}`, operation, { waitMs: 0 });
+    await this.locks.withLock(`publishing:${initial.rateKey}`, () => lockCredentials(async () => {
       const account = this.store.get("account", accountId);
       if (!account) return;
       this.store.transaction(() => {
@@ -106,10 +107,12 @@ export class PrivacyService {
         this.store.remove("account", accountId);
       });
       if (account.platform === "bluesky") this.pruneBlueskySessions();
-    }, { waitMs: 0 }), { waitMs: 0, leaseMs: 90000 });
+      await this.store.flush?.();
+    }), { waitMs: 0, leaseMs: 90000 });
   }
   async process(job) {
     if (this.activeRequests.has(job.ownerUid) || this.accounts?.pendingCallbacks) return;
+    await this.store.flush?.();
     const accountIds = job.type === "owner" ? this.store.list("account", { ownerUid: job.ownerUid, limit: null }).map(item => item.id) : job.accountIds;
     for (const id of accountIds) await this.eraseConnection(id, job.alreadyRevoked);
     if (job.type === "connection") { this.store.remove("erasure", job.id); this.store.checkpointDeletedData(); return; }
@@ -119,6 +122,7 @@ export class PrivacyService {
         const fileKeys = this.store.list("media", { ownerUid: job.ownerUid, limit: null }).flatMap(item => [item.storageKey, item.thumbnailKey, `${item.id}-thumb.jpg`, `${item.id}-jpeg.jpg`, `${item.id}-mp4.mp4`, ...Object.values(item.variants || {}).map(asset => asset.key)]).filter(Boolean);
         job = this.store.put("erasure", { ...job, fileKeys: [...new Set(fileKeys)] });
       }
+      await this.store.flush?.();
       for (const key of job.fileKeys) await this.storage.remove(key);
       this.store.removeOwner(job.ownerUid, { keepKinds: ["erasure", "revocation", "billing", "checkout_session", "processor_erasure"] });
       job = this.store.put("erasure", { ...job, localDone: true, fileKeys: null });
@@ -154,11 +158,13 @@ export class PrivacyService {
       return;
     }
     try {
+      await this.store.flush?.();
       let credentials = this.vault.decrypt(job.encrypted, job.aad || `revocation:${job.id}`);
       const provider = this.registry.forCleanup(job.platform);
       if (job.platform === "tiktok" && credentials.refreshToken && credentials.expiresAt && credentials.expiresAt <= this.clock() + 60000) {
         credentials = await provider.refresh(credentials);
         job = this.store.put("revocation", { ...job, aad: `revocation:${job.id}`, encrypted: this.vault.encrypt(credentials, `revocation:${job.id}`) });
+        await this.store.flush?.();
       }
       await provider.revoke(credentials);
       this.store.remove("revocation", job.id);
@@ -176,9 +182,10 @@ export class PrivacyService {
         catch (error) { this.store.put("erasure", { ...this.store.get("erasure", job.id), dueAt: this.clock() + 60000, lastError: error.code === "account_busy" ? "work_finishing" : "cleanup_retry" }); }
       }
       await this.accounts?.maintainApiData();
+      await this.media?.retryRemovals();
       await this.pruneFiles();
       this.pruneBlueskySessions();
-    } finally { this.running = false; }
+    } finally { try { await this.store.flush?.(); } finally { this.running = false; } }
   }
   prune() {
     this.store.pruneStates(this.clock());

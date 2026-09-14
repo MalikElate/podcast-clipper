@@ -1,5 +1,5 @@
 import { Agent, RichText } from "@atproto/api";
-import { NodeOAuthClient } from "@atproto/oauth-client-node";
+import { NodeOAuthClient, OAuthResponseError, TokenInvalidError, TokenRefreshError, TokenRevokedError } from "@atproto/oauth-client-node";
 import { JoseKey } from "@atproto/jwk-jose";
 import { PlatformProvider } from "./PlatformProvider.js";
 import { invariant, ProviderError, BridgeError } from "../core/errors.js";
@@ -12,8 +12,16 @@ export class BlueskyProvider extends PlatformProvider {
   encryptedStore(kind) {
     return {
       get: async key => { const row = this.store.get(kind, SecretVault.hash(key)); return row && (!row.expiresAt || row.expiresAt > Date.now()) ? this.vault.decrypt(row.encrypted, `${kind}:${key}`) : undefined; },
-      set: async (key, value) => this.store.put(kind, { id: SecretVault.hash(key), encrypted: this.vault.encrypt(value, `${kind}:${key}`), ...(kind === "blueskyState" ? { ownerUid: value.appState ? this.store.peekState(SecretVault.hash(value.appState))?.uid : undefined, expiresAt: Date.now() + 15 * 60000 } : {}) }),
-      del: async key => this.store.remove(kind, SecretVault.hash(key)),
+      set: async (key, value) => {
+        const record = this.store.put(kind, { id: SecretVault.hash(key), encrypted: this.vault.encrypt(value, `${kind}:${key}`), ...(kind === "blueskyState" ? { ownerUid: value.appState ? this.store.peekState(SecretVault.hash(value.appState))?.uid : undefined, expiresAt: Date.now() + 15 * 60000 } : {}) });
+        await this.store.flush?.();
+        return record;
+      },
+      del: async key => {
+        const removed = this.store.remove(kind, SecretVault.hash(key));
+        await this.store.flush?.();
+        return removed;
+      },
     };
   }
   async client() {
@@ -38,20 +46,33 @@ export class BlueskyProvider extends PlatformProvider {
   async authorizationState(params) {
     return (await this.encryptedStore("blueskyState").get(params.get("state") || ""))?.appState;
   }
-  async agent(credentials) {
-    try { return new Agent(await (await this.client()).restore(credentials.did)); }
-    catch { throw new ProviderError("Reconnect this Bluesky account.", { reconnect: true, code: "reconnect_required" }); }
+  async agent(credentials, refresh = "auto") {
+    try { return new Agent(await (await this.client()).restore(credentials.did, refresh)); }
+    catch (error) { throw this.sdkError(error, false, { restoring: true }); }
+  }
+  async refresh(credentials) {
+    await this.agent(credentials, true);
+    return credentials;
   }
   async publish(ctx) {
     try { return await this.publishContent(ctx); }
     catch (error) { throw error instanceof BridgeError ? error : this.sdkError(error, false); }
   }
-  sdkError(error, publishing) {
+  sdkError(error, publishing, { restoring = false } = {}) {
+    if (error?.status >= 500) return new ProviderError(publishing ? "Bluesky did not confirm this post. Check the account before retrying." : "Bluesky is temporarily unavailable. Meadow will try again.", { uncertain: publishing, retryable: !publishing, code: "provider_unavailable" });
+    if (error instanceof TokenInvalidError || error instanceof TokenRefreshError || error instanceof TokenRevokedError || error instanceof OAuthResponseError && error.error === "invalid_grant") {
+      return Object.assign(new ProviderError("Reconnect this Bluesky account.", { reconnect: true, code: "reconnect_required" }), { authFailure: "grant" });
+    }
+    if (error?.code === "account_busy") return new ProviderError("Bluesky authorization is being refreshed. Meadow will try again.", { status: 409, retryable: true, code: "account_busy" });
+    if (error instanceof BridgeError) return error;
+    if (error instanceof OAuthResponseError && ["invalid_client", "unauthorized_client"].includes(error.error) || restoring && error?.status === 401) {
+      return new ProviderError("Bluesky rejected Meadow's app authorization. Meadow's administrator must check the app configuration.", { code: "provider_app_credentials" });
+    }
     if (error.status === 429) {
-      const resetAt = Number(error.headers?.["ratelimit-reset"] || error.headers?.["x-ratelimit-reset"]) * 1000;
+      const resetAt = Number(error.headers?.get?.("ratelimit-reset") || error.headers?.get?.("x-ratelimit-reset") || error.headers?.["ratelimit-reset"] || error.headers?.["x-ratelimit-reset"]) * 1000;
       return new ProviderError("Bluesky's posting allowance has been reached.", { retryable: true, code: "rate_limited", retryAt: resetAt > Date.now() ? resetAt : null });
     }
-    if (error.status === 401) return new ProviderError("Reconnect this Bluesky account.", { reconnect: true, code: "reconnect_required" });
+    if (error.status === 401) return Object.assign(new ProviderError("Reconnect this Bluesky account.", { reconnect: true, code: "reconnect_required" }), { authFailure: "access_token" });
     if (error.status >= 400 && error.status < 500) return new ProviderError("Bluesky rejected the post. Check its media and text.");
     return new ProviderError(publishing ? "Bluesky did not confirm this post. Check the account before retrying." : "Bluesky could not prepare the media. Meadow will try again.", { uncertain: publishing, retryable: !publishing });
   }
@@ -76,8 +97,10 @@ export class BlueskyProvider extends PlatformProvider {
     }
   }
   async metrics({ credentials, delivery }) {
-    const agent = await this.agent(credentials), result = await agent.getPosts({ uris: [delivery.externalId] });
-    const post = result.data.posts[0] || {};
-    return { values: { likes: post.likeCount, comments: post.replyCount, shares: post.repostCount === undefined && post.quoteCount === undefined ? null : Number(post.repostCount || 0) + Number(post.quoteCount || 0) } };
+    try {
+      const agent = await this.agent(credentials), result = await agent.getPosts({ uris: [delivery.externalId] });
+      const post = result.data.posts[0] || {};
+      return { values: { likes: post.likeCount, comments: post.replyCount, shares: post.repostCount === undefined && post.quoteCount === undefined ? null : Number(post.repostCount || 0) + Number(post.quoteCount || 0) } };
+    } catch (error) { throw this.sdkError(error, false); }
   }
 }

@@ -30,7 +30,7 @@ export class XProvider extends PlatformProvider {
         }
       } finally { await handle.close(); }
       const result = await this.request(`media/upload/${id}/finalize`, ctx.credentials, { method: "POST", safeToRetry: true });
-      uploads.push({ id, processing: result.data?.processing_info }); ctx.checkpoint({ uploads });
+      uploads.push({ id, processing: result.data?.processing_info }); await ctx.checkpoint({ uploads });
     }
     return this.finish(ctx, uploads);
   }
@@ -44,7 +44,7 @@ export class XProvider extends PlatformProvider {
     }
     if (ctx.progress.publicationId) return { status: "published", externalId: ctx.progress.publicationId, url: `https://x.com/i/status/${ctx.progress.publicationId}` };
     const result = await this.request("tweets", ctx.credentials, { method: "POST", json: { text: ctx.content.caption, ...(uploads.length ? { media: { media_ids: uploads.map(item => item.id) } } : {}) } });
-    invariant(result.data?.id, "X did not confirm a published post.", { code: "unconfirmed_publication" }); ctx.checkpoint({ publicationId: result.data.id });
+    invariant(result.data?.id, "X did not confirm a published post.", { code: "unconfirmed_publication" }); await ctx.checkpoint({ publicationId: result.data.id });
     return { status: "published", externalId: result.data.id, url: `https://x.com/i/status/${result.data.id}` };
   }
   poll(ctx) { return this.finish(ctx, ctx.progress.uploads || []); }

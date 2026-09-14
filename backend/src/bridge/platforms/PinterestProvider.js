@@ -6,9 +6,9 @@ export class PinterestProvider extends PlatformProvider {
   get sandbox() { return this.env.PINTEREST_ENVIRONMENT?.toLowerCase() === "sandbox"; }
   get environment() { return this.sandbox ? "sandbox" : "production"; }
   get apiBase() { return `https://api${this.sandbox ? "-sandbox" : ""}.pinterest.com/v5`; }
-  get oauth() { return { authorize: "https://www.pinterest.com/oauth/", token: `${this.apiBase}/oauth/token`, clientId: this.env.PINTEREST_CLIENT_ID, clientSecret: this.env.PINTEREST_CLIENT_SECRET, basicAuth: true, scopes: ["user_accounts:read", "boards:read", "pins:read", "pins:write"], scopeSeparator: "," }; }
-  normalizeToken(data) {
-    const credentials = super.normalizeToken(data);
+  get oauth() { return { authorize: "https://www.pinterest.com/oauth/", token: `${this.apiBase}/oauth/token`, clientId: this.env.PINTEREST_CLIENT_ID, clientSecret: this.env.PINTEREST_CLIENT_SECRET, basicAuth: true, scopes: ["user_accounts:read", "boards:read", "pins:read", "pins:write"], scopeSeparator: ",", tokenExtra: { continuous_refresh: "true" } }; }
+  normalizeToken(data, previous) {
+    const credentials = super.normalizeToken(data, previous);
     const scopes = new Set((Array.isArray(credentials.scope) ? credentials.scope : String(credentials.scope || "").split(/[\s,]+/)).filter(Boolean));
     const missing = this.oauth.scopes.filter(scope => !scopes.has(scope));
     if (missing.length) throw new ProviderError(`Pinterest did not grant all permissions needed to publish (${missing.join(", ")}). Connect Pinterest again and allow the requested permissions.`, { reconnect: true, code: "reconnect_required" });
@@ -59,7 +59,7 @@ export class PinterestProvider extends PlatformProvider {
     Object.entries(start.upload_parameters || {}).forEach(([key, value]) => form.set(key, String(value)));
     form.set("file", await ctx.media.storage.blob(asset.key, "video/mp4"), "video.mp4");
     await this.http.request(start.upload_url, { method: "POST", body: form, safeToRetry: true, timeoutMs: 15 * 60000 });
-    const progress = { mediaId: start.media_id }; ctx.checkpoint(progress);
+    const progress = { mediaId: start.media_id }; await ctx.checkpoint(progress);
     return { status: "processing", progress, pollAfterMs: 15000 };
   }
   async poll(ctx) {
@@ -78,7 +78,7 @@ export class PinterestProvider extends PlatformProvider {
       source = items.length === 1 ? { source_type: "image_url", url: items[0].url } : { source_type: "multiple_image_urls", items };
     }
     const result = await this.request("pins", ctx.credentials, { method: "POST", json: { board_id: ctx.content.settings.boardId, title: ctx.content.title, description: ctx.content.caption, ...(ctx.content.settings.link ? { link: ctx.content.settings.link } : {}), media_source: source } });
-    invariant(result.id, "Pinterest did not confirm a published Pin.", { code: "unconfirmed_publication" }); ctx.checkpoint({ publicationId: result.id });
+    invariant(result.id, "Pinterest did not confirm a published Pin.", { code: "unconfirmed_publication" }); await ctx.checkpoint({ publicationId: result.id });
     return { status: "published", externalId: result.id, url: `https://www.pinterest.com/pin/${result.id}/` };
   }
   async metrics({ credentials, delivery }) {

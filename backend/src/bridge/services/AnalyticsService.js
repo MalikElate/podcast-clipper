@@ -25,8 +25,7 @@ export class AnalyticsService {
     if (!account || account.status !== "connected") return;
     if (this.accounts.privacy?.blocked(account.ownerUid)) return;
     try {
-      const credentials = await this.accounts.credentials(account);
-      const result = await this.registry.get(account.platform).metrics({ account, credentials, delivery });
+      const result = await this.accounts.withCredentials(account, credentials => this.registry.get(account.platform).metrics({ account, credentials, delivery }));
       const current = this.store.get("delivery", delivery.id);
       const latestAccount = this.store.get("account", account.id);
       if (!current || latestAccount?.status !== "connected" || latestAccount.authorizationId !== account.authorizationId) return;
@@ -38,7 +37,6 @@ export class AnalyticsService {
       const latestAccount = this.store.get("account", account.id);
       if (!current || latestAccount?.status !== "connected" || latestAccount.authorizationId !== account.authorizationId) return;
       if (account.platform !== "pinterest") this.store.put("delivery", { ...current, metricsAttemptedAt: this.clock(), metricsError: error.message });
-      if (error.reconnect) this.accounts.markReconnect(account.id, error.message);
     }
   }
 
@@ -59,7 +57,7 @@ export class AnalyticsService {
     try {
       const deliveries = this.store.list("delivery", { status: "published" }).filter(item => item.platform !== "pinterest" && (!item.metricsAttemptedAt || item.metricsAttemptedAt < this.clock() - 15 * 60000)).sort((a, b) => (a.metricsAttemptedAt || 0) - (b.metricsAttemptedAt || 0));
       for (const delivery of deliveries.slice(0, 10)) await this.syncDelivery(delivery);
-    } finally { this.running = false; }
+    } finally { try { await this.store.flush?.(); } finally { this.running = false; } }
   }
 
   report(uid, projectId, transient = new Map()) {

@@ -8,7 +8,9 @@ import { rateLimit } from "express-rate-limit";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { SqliteStore } from "./storage/SqliteStore.js";
+import { durableResponseBarrier } from "./storage/DurableDatabase.js";
 import { LocalMediaStorage } from "./storage/LocalMediaStorage.js";
+import { DurableMediaStorage } from "./storage/DurableMediaStorage.js";
 import { ProjectService } from "./services/ProjectService.js";
 import { ScheduleService } from "./services/ScheduleService.js";
 import { MediaService } from "./services/MediaService.js";
@@ -43,20 +45,20 @@ export const route = fn => (req, res, next) => Promise.resolve().then(() => fn(r
 
 /** Composition root. Services, repository, adapters and authentication are replaceable. */
 export class BridgeApplication {
-  constructor({ env = process.env, store, registry, storage, authMiddleware, stripe, deleteIdentity, deleteAnalytics, clock = () => Date.now() } = {}) {
+  constructor({ env = process.env, store, durability, registry, storage, authMiddleware, stripe, deleteIdentity, deleteAnalytics, clock = () => Date.now() } = {}) {
     this.env = env; this.clock = clock;
     this.localPreview = env.BRIDGE_LOCAL_PREVIEW === "1" && env.NODE_ENV !== "production";
     this.dataDir = path.resolve(env.BRIDGE_DATA_DIR || path.join(backendDir, ".bridge"));
     this.publicUrl = (env.BRIDGE_PUBLIC_URL || "http://localhost:8787").replace(/\/$/, "");
     this.appUrl = (env.BRIDGE_APP_URL || "http://localhost:5173").replace(/\/$/, "");
     fs.mkdirSync(this.dataDir, { recursive: true, mode: 0o700 });
-    this.store = store || new SqliteStore(path.join(this.dataDir, "bridge.sqlite"));
+    this.store = store || new SqliteStore(path.join(this.dataDir, "bridge.sqlite"), { durability });
     this.apiKeys = new ApiKeyService(this.store, { clock });
     this.vault = new SecretVault(env.BRIDGE_ENCRYPTION_KEY);
     this.projects = new ProjectService(this.store);
     this.schedules = new ScheduleService({ clock });
     this.locks = new LockService(this.store, { clock });
-    this.storage = storage || new LocalMediaStorage(path.join(this.dataDir, "media"));
+    this.storage = storage || (env.BRIDGE_DURABLE_STORAGE_URL ? new DurableMediaStorage(path.join(this.dataDir, "media"), { baseUrl: env.BRIDGE_DURABLE_STORAGE_URL }) : new LocalMediaStorage(path.join(this.dataDir, "media")));
     // Preview needs stable download links without enabling OAuth credentials.
     let signingKey = env.BRIDGE_MEDIA_SIGNING_KEY;
     if (!signingKey && this.localPreview) {
@@ -75,7 +77,7 @@ export class BridgeApplication {
     this.privacy = new PrivacyService({ ...deps, registry: this.registry, storage: this.storage, projects: this.projects, billing: this.billing, clock,
       deleteIdentity: deleteIdentity || (async uid => { if (this.localPreview) return; try { await clerkClient.users.deleteUser(uid); } catch (error) { if (error.status !== 404) throw error; } }),
       deleteAnalytics: deleteAnalytics || (uid => this.localPreview ? Promise.resolve(true) : new AnalyticsErasureService({ store: this.store, env }).deleteForOwner(uid)) });
-    this.projects.privacy = this.privacy; this.accounts.privacy = this.privacy; this.privacy.accounts = this.accounts;
+    this.projects.privacy = this.privacy; this.accounts.privacy = this.privacy; this.privacy.accounts = this.accounts; this.privacy.media = this.media;
     this.worker = new PublishingWorker({ store: this.store, accounts: this.accounts, registry: this.registry, posts: this.posts, rates: this.rates, media: this.media, locks: this.locks, analytics: this.analytics, clock, enabled: !this.localPreview && env.BRIDGE_PUBLISHING_ENABLED !== "false" });
     const incoming = path.join(this.dataDir, "incoming"); fs.mkdirSync(incoming, { recursive: true, mode: 0o700 });
     this.privacy.incomingDirectory = incoming;
@@ -85,6 +87,7 @@ export class BridgeApplication {
       upload.single("file")(req, res, next);
     };
     this.app = express(); this.app.disable("x-powered-by");
+    if (durability) this.app.use(durableResponseBarrier(this.store));
     if (env.BRIDGE_TRUST_PROXY) this.app.set("trust proxy", Number(env.BRIDGE_TRUST_PROXY));
     this.app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } }));
     this.app.post("/api/stripe/webhook", express.raw({ type: "application/json", limit: "1mb" }), route(async (req, res) => res.json(await this.billing.webhook(req.body, req.headers["stripe-signature"]))));
@@ -167,8 +170,10 @@ export class BridgeApplication {
       } catch (error) { target.searchParams.set("connectionError", error instanceof BridgeError ? error.message : "The account could not be connected. Please try again."); }
       res.setHeader("Cache-Control", "no-store"); res.redirect(303, target.toString());
     }));
-    app.get("/media/:id/:variant", route((req, res) => {
+    app.get("/media/:id/:variant", route(async (req, res) => {
       const result = this.media.verify(req.params.id, req.params.variant, req.query.expires, req.query.signature, req.query.download === "1");
+      await this.storage.ensure?.(result.key);
+      this.media.verify(req.params.id, req.params.variant, req.query.expires, req.query.signature, req.query.download === "1");
       res.setHeader("Cache-Control", "private, no-store");
       res.type(result.mime);
       if (req.query.download === "1" || result.record.kind === "document") res.attachment(result.record.filename);
@@ -238,18 +243,22 @@ export class BridgeApplication {
     this.privacyTimer = setInterval(() => this.privacy.tick().catch(error => console.error("Privacy worker:", error.code || error.name)), 15000);
     this.privacyTimer.unref?.();
     if (!this.localPreview) {
+      this.accounts.maintainConnections().catch(error => console.error("Connection maintenance:", error.code || error.name));
+      this.connectionTimer = setInterval(() => this.accounts.maintainConnections().catch(error => console.error("Connection maintenance:", error.code || error.name)), 60000);
+      this.connectionTimer.unref?.();
       this.analyticsTimer = setInterval(() => this.analytics.tick().catch(error => console.error("Analytics worker:", error.code || error.name)), 60000);
       this.analyticsTimer.unref?.();
     }
   }
-  stopWorkers() { this.worker.stop(); clearInterval(this.analyticsTimer); clearInterval(this.privacyTimer); }
+  stopWorkers() { this.worker.stop(); clearInterval(this.analyticsTimer); clearInterval(this.privacyTimer); clearInterval(this.connectionTimer); }
   async shutdown({ timeoutMs = 25000 } = {}) {
     this.stopWorkers();
     const deadline = Date.now() + timeoutMs;
-    while (this.worker.running || this.analytics.running || this.privacy.running) {
+    while (this.worker.running || this.analytics.running || this.privacy.running || this.accounts.running) {
       if (Date.now() >= deadline) return false;
       await new Promise(resolve => setTimeout(resolve, 50));
     }
+    await this.store.flush?.();
     this.close();
     return true;
   }

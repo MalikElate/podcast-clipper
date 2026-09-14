@@ -24,6 +24,7 @@ export class MediaService {
     const filename = String(file.originalname || file.filename || `media.${type.ext}`).replace(/[\x00-\x1f/\\]/g, "_").slice(0, 180);
     const record = { id, projectId, ownerUid: uid, filename, kind, mime: type.mime, bytes: stat.size, storageKey, status: "processing", source, metadata, variants: {}, createdAt: this.clock(), updatedAt: this.clock() };
     this.store.put("media", record);
+    await this.store.flush?.();
     try {
       await this.storage.importFile(file.path, storageKey);
       if (kind === "image" || kind === "video") {
@@ -35,17 +36,28 @@ export class MediaService {
         const thumbnailKey = `${id}-thumb.jpg`;
         await this.runner.run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-i", this.storage.path(storageKey), "-frames:v", "1", "-vf", "scale=480:480:force_original_aspect_ratio=decrease", this.storage.path(thumbnailKey)]);
         record.thumbnailKey = thumbnailKey;
+        await this.storage.persist?.(thumbnailKey);
       }
+      invariant(this.store.get("media", id)?.status === "processing", "The selected media was removed.");
       record.status = "ready";
-      return this.store.put("media", record);
+      const saved = this.store.put("media", record);
+      await this.store.flush?.();
+      return saved;
     } catch (error) {
-      this.store.put("media", { ...record, status: "failed", error: error.message });
-      await this.storage.remove(storageKey);
+      // A failed database acknowledgement must not remove an already-ready file.
+      if (this.store.get("media", id)?.status === "ready") throw error;
+      if (this.store.get("media", id)?.status === "processing") this.store.put("media", { ...record, status: "deleting", error: error.message });
+      try {
+        await this.store.flush?.();
+        await Promise.all([storageKey, record.thumbnailKey].filter(Boolean).map(key => this.storage.remove(key)));
+        if (this.store.get("media", id)?.status === "deleting") this.store.remove("media", id);
+        await this.store.flush?.();
+      } catch { /* Retain the deletion record so maintenance can retry durable cleanup. */ }
       throw error;
     }
   }
 
-  list(uid, projectId) { this.projects.require(uid, projectId); return this.store.list("media", { projectId }).filter(item => item.status !== "failed").map(item => this.toPublic(item)); }
+  list(uid, projectId) { this.projects.require(uid, projectId); return this.store.list("media", { projectId }).filter(item => !["failed", "deleting"].includes(item.status)).map(item => this.toPublic(item)); }
   require(uid, projectId, id) { return this.projects.requireRecord(uid, projectId, "media", id); }
 
   signature(id, variant, expires, download = false) {
@@ -82,17 +94,27 @@ export class MediaService {
   async prepareVariant(record, variant) {
     record = this.store.get("media", record.id);
     invariant(record?.status === "ready", "The selected media is unavailable.");
-    if (variant === "original" || variant === "jpeg" && record.mime === "image/jpeg" || variant === "mp4" && record.mime === "video/mp4" && record.videoCodec === "h264") return { ...record, key: record.storageKey, variant: "original" };
+    if (variant === "original" || variant === "jpeg" && record.mime === "image/jpeg" || variant === "mp4" && record.mime === "video/mp4" && record.videoCodec === "h264") {
+      await this.storage.ensure?.(record.storageKey);
+      return { ...record, key: record.storageKey, variant: "original" };
+    }
     if (!record.variants?.[variant]) {
       const key = `${record.id}-${variant}.${variant === "jpeg" ? "jpg" : "mp4"}`;
       const args = variant === "jpeg" ? ["-frames:v", "1", "-q:v", "3", "-vf", "scale='min(4096,iw)':-2"] : ["-c:v", "libx264", "-preset", "fast", "-crf", "22", "-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-c:a", "aac", "-movflags", "+faststart"];
       invariant(["jpeg", "mp4"].includes(variant), "Unsupported media conversion.");
+      await this.storage.ensure?.(record.storageKey);
       await this.runner.run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-i", this.storage.path(record.storageKey), ...args, this.storage.path(key)], { timeoutMs: 30 * 60000 });
       record = this.store.get("media", record.id);
-      if (!record) { await this.storage.remove(key); throw new BridgeError("The selected media was removed."); }
-      record.variants = { ...record.variants, [variant]: { key, mime: variant === "jpeg" ? "image/jpeg" : "video/mp4", bytes: await this.storage.size(key) } };
+      if (record?.status !== "ready") { await this.storage.remove(key); throw new BridgeError("The selected media was removed."); }
+      await this.storage.persist?.(key);
+      const bytes = await this.storage.size(key);
+      record = this.store.get("media", record.id);
+      if (record?.status !== "ready") { await this.storage.remove(key); throw new BridgeError("The selected media was removed."); }
+      record.variants = { ...record.variants, [variant]: { key, mime: variant === "jpeg" ? "image/jpeg" : "video/mp4", bytes } };
       this.store.put("media", record);
+      await this.store.flush?.();
     }
+    await this.storage.ensure?.(record.variants[variant].key);
     return { ...record, ...record.variants[variant], variant };
   }
 
@@ -100,8 +122,23 @@ export class MediaService {
     const record = this.require(uid, projectId, id);
     const used = this.store.list("post", { projectId }).some(post => post.mediaIds?.includes(id) && this.store.list("delivery", { projectId }).some(delivery => delivery.postId === post.id && !["published", "cancelled"].includes(delivery.status)));
     invariant(!used, "This file is used by an active post. Remove it from that post or cancel the post first.", { status: 409 });
+    this.store.put("media", { ...record, status: "deleting" });
+    await this.store.flush?.();
+    const keys = [record.storageKey, record.thumbnailKey, `${id}-thumb.jpg`, `${id}-jpeg.jpg`, `${id}-mp4.mp4`, ...Object.values(record.variants || {}).map(item => item.key)];
+    await Promise.all([...new Set(keys.filter(Boolean))].map(key => this.storage.remove(key)));
     this.store.remove("media", id);
-    await Promise.all([record.storageKey, record.thumbnailKey, ...Object.values(record.variants || {}).map(item => item.key)].filter(Boolean).map(key => this.storage.remove(key)));
+    await this.store.flush?.();
     return { deleted: true };
+  }
+
+  async retryRemovals() {
+    for (const record of this.store.list("media", { status: "deleting", limit: 25 })) {
+      try { await this.remove(record.ownerUid, record.projectId, record.id); }
+      catch (error) {
+        // Keep the manifest for retry, and do not let a storage outage hold up
+        // the rest of the privacy maintenance pass for every queued deletion.
+        if (error.code === "media_storage_unavailable") break;
+      }
+    }
   }
 }

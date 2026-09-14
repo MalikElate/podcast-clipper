@@ -119,15 +119,16 @@ test("account refresh and queued deliveries retain the actionable Pinterest auth
   assert.equal(h.provider.calls.length, 0);
 });
 
-test("a Pinterest authorization failure during publication keeps its reason on the account and delivery", async t => {
+test("a Pinterest permission failure stops the post while preserving the account connection", async t => {
   const h = setup(t);
   const http = new HttpTransport({ fetcher: async () => new Response(JSON.stringify({ code: 29, message: "Your token does not have sufficient permissions to perform this operation." }), { status: 403 }) });
   h.provider.behavior = () => http.request("https://api.pinterest.com/v5/pins", { method: "POST" });
   const { posts: [post] } = await h.submit([h.post()]);
   await h.app.worker.tick();
   const delivery = h.app.store.get("delivery", post.deliveries[0].id), account = h.app.store.get("account", "one");
-  assert.equal(delivery.status, "needs_account"); assert.equal(delivery.resumeStatus, "queued");
-  assert.match(delivery.error, /Pinterest code 29/); assert.equal(account.lastError, delivery.error);
+  assert.equal(delivery.status, "failed");
+  assert.match(delivery.error, /Pinterest code 29/); assert.equal(account.status, "connected");
+  assert.ok(account.encryptedCredentials); assert.ok(!account.lastError);
 });
 
 test("revoked Google authorization holds queued posts until reconnection and preserves completed deliveries", async t => {

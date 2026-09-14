@@ -42,7 +42,7 @@ export class LinkedInProvider extends PlatformProvider {
         invariant(parts.every(Boolean), "LinkedIn did not confirm all uploaded video parts.");
         await this.request("videos?action=finalizeUpload", ctx.credentials, { method: "POST", safeToRetry: true, json: { finalizeUploadRequest: { video: urn, uploadToken: data.uploadToken, uploadedPartIds: parts } } });
       }
-      uploads.push({ urn, collection, kind: item.kind }); ctx.checkpoint({ uploads });
+      uploads.push({ urn, collection, kind: item.kind }); await ctx.checkpoint({ uploads });
     }
     return this.finish(ctx, uploads);
   }
@@ -56,7 +56,7 @@ export class LinkedInProvider extends PlatformProvider {
     const content = uploads.length > 1 ? { multiImage: { images: uploads.map(upload => ({ id: upload.urn })) } } : uploads.length ? { media: { id: uploads[0].urn, ...(ctx.content.title ? { title: ctx.content.title } : {}) } } : undefined;
     const response = await this.request("posts", ctx.credentials, { method: "POST", raw: true, json: { author: ctx.account.remoteId, commentary: ctx.content.caption, visibility: "PUBLIC", distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] }, ...(content ? { content } : {}), lifecycleState: "PUBLISHED", isReshareDisabledByAuthor: false } });
     const id = response.headers.get("x-restli-id"); await response.body?.cancel();
-    invariant(id, "LinkedIn did not confirm a published post.", { code: "unconfirmed_publication" }); ctx.checkpoint({ publicationId: id });
+    invariant(id, "LinkedIn did not confirm a published post.", { code: "unconfirmed_publication" }); await ctx.checkpoint({ publicationId: id });
     return { status: "published", externalId: id, url: `https://www.linkedin.com/feed/update/${id}/` };
   }
   poll(ctx) { return this.finish(ctx, ctx.progress.uploads || []); }

@@ -43,12 +43,12 @@ export class YouTubeProvider extends GoogleProvider {
         json: { snippet: { title: content.title, description: content.caption, categoryId: "22" }, status: { privacyStatus: content.settings.privacy, selfDeclaredMadeForKids: content.settings.madeForKids, containsSyntheticMedia: Boolean(content.settings.syntheticMedia) } } });
       uploadUrl = response.headers.get("location");
       invariant(uploadUrl && new URL(uploadUrl).hostname === "www.googleapis.com", "YouTube did not return a valid upload session.");
-      checkpoint({ phase: "upload", uploadUrl, key: asset.key, bytes: asset.bytes, mime: asset.mime });
+      await checkpoint({ phase: "upload", uploadUrl, key: asset.key, bytes: asset.bytes, mime: asset.mime });
     }
     try {
       const video = await this.http.request(uploadUrl, { method: "PUT", token: credentials.accessToken, body: ctx.media.storage.stream(asset.key), headers: { "Content-Type": asset.mime, "Content-Length": String(asset.bytes) }, timeoutMs: 30 * 60000 });
       invariant(video.id, "YouTube did not return a video identifier.", { code: "unconfirmed_publication" });
-      checkpoint({ phase: "video_processing", videoId: video.id });
+      await checkpoint({ phase: "video_processing", videoId: video.id });
       return { status: "processing", externalId: video.id, progress: { phase: "video_processing", videoId: video.id } };
     } catch (error) {
       if (error.uncertain) return { status: "processing", progress: { phase: "upload", uploadUrl, key: asset.key, bytes: asset.bytes, mime: asset.mime }, pollAfterMs: 15000 };
@@ -70,7 +70,7 @@ export class YouTubeProvider extends GoogleProvider {
         } catch (error) { if (error.uncertain) return { status: "processing", progress }; throw error; }
       } else videoId = (await response.json()).id;
       invariant(videoId, "YouTube did not confirm this upload.", { code: "unconfirmed_publication" });
-      checkpoint({ phase: "video_processing", videoId });
+      await checkpoint({ phase: "video_processing", videoId });
     }
     const result = await this.http.request(`https://www.googleapis.com/youtube/v3/videos?part=status,processingDetails&id=${encodeURIComponent(videoId)}`, { token: credentials.accessToken });
     const video = result.items?.[0];
@@ -128,7 +128,7 @@ export class GoogleBusinessProvider extends GoogleProvider {
     }
     const result = await this.http.request(`https://mybusiness.googleapis.com/v4/${ctx.account.remoteId}/localPosts`, { method: "POST", token: ctx.credentials.accessToken, json: { languageCode: ctx.content.settings.languageCode || "en", summary: ctx.content.caption, topicType: "STANDARD", ...(media.length ? { media } : {}) } });
     invariant(result.name, "Google Business did not return a post identifier.", { code: "unconfirmed_publication" });
-    ctx.checkpoint({ publicationId: result.name });
+    await ctx.checkpoint({ publicationId: result.name });
     return result.state === "LIVE" ? { status: "published", externalId: result.name, url: result.searchUrl } : { status: "processing", externalId: result.name, progress: { publicationId: result.name } };
   }
   async poll(ctx) {

@@ -195,7 +195,9 @@ test("YouTube data expires after thirty days and a missing video removes its sto
   delivery = h.app.store.get("delivery", delivery.id);
   assert.equal(delivery.externalId, null); assert.equal(delivery.metrics, null); assert.deepEqual(delivery.progress, {});
   h.advance(30 * DAY + 1); await h.app.privacy.tick(); await h.app.privacy.tick();
-  assert.equal(h.app.store.get("account", "yt"), null);
+  const retained = h.app.store.get("account", "yt");
+  assert.equal(retained.status, "connected"); assert.ok(retained.encryptedCredentials);
+  assert.equal(retained.label, "YouTube channel"); assert.equal(retained.avatar, null); assert.equal(retained.options, null);
 });
 
 test("existing publication and analytics work without a workspace-wide policy agreement", async t => {

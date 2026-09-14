@@ -3,14 +3,21 @@ import { BridgeError, invariant, ProviderError } from "../core/errors.js";
 import { inferFormat, platformCatalog } from "./catalog.js";
 import { HttpTransport } from "./HttpTransport.js";
 
+function tokenSeconds(value) {
+  if (!["number", "string"].includes(typeof value) || String(value).trim() === "") return undefined;
+  const seconds = Number(value);
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
+}
+
 /** Adapter contract: authorize, exchange, accounts, options, publish, poll, metrics. */
 export class PlatformProvider {
-  constructor(id, { env = process.env, transport = new HttpTransport(), publicUrl, ...dependencies } = {}) {
+  constructor(id, { env = process.env, transport = new HttpTransport(), publicUrl, clock = Date.now, ...dependencies } = {}) {
     this.id = id;
     this.capabilities = platformCatalog[id];
     this.env = env;
     this.http = transport;
     this.publicUrl = publicUrl;
+    this.clock = clock;
     Object.assign(this, dependencies);
   }
   get oauth() { return {}; }
@@ -29,22 +36,33 @@ export class PlatformProvider {
   }
 
   async exchange({ code, verifier }) {
-    const { token, clientId, clientSecret, basicAuth, clientIdParam = "client_id", pkce } = this.oauth;
-    const form = { grant_type: "authorization_code", code, redirect_uri: this.redirectUri, [clientIdParam]: clientId, ...(basicAuth ? {} : { client_secret: clientSecret }), ...(pkce ? { code_verifier: verifier } : {}) };
+    const { token, clientId, clientSecret, basicAuth, clientIdParam = "client_id", pkce, tokenExtra = {} } = this.oauth;
+    const form = { grant_type: "authorization_code", code, redirect_uri: this.redirectUri, [clientIdParam]: clientId, ...(basicAuth ? {} : { client_secret: clientSecret }), ...(pkce ? { code_verifier: verifier } : {}), ...tokenExtra };
     const data = await this.http.request(token, { method: "POST", form, headers: basicAuth ? { Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}` } : {}, safeToRetry: true });
     return this.normalizeToken(data);
   }
 
-  normalizeToken(data) {
+  normalizeToken(data, previous = {}) {
     invariant(data.access_token, "The platform did not grant an access token.", { status: 502 });
-    return { accessToken: data.access_token, refreshToken: data.refresh_token, expiresAt: data.expires_in ? Date.now() + Number(data.expires_in) * 1000 : null, scope: data.scope, rawAccountId: data.open_id };
+    const now = this.clock(), expiresIn = tokenSeconds(data.expires_in);
+    const credentials = { ...previous, accessToken: data.access_token, expiresAt: expiresIn === undefined ? null : now + expiresIn * 1000 };
+    if (data.refresh_token) credentials.refreshToken = data.refresh_token;
+    if (data.scope != null) credentials.scope = data.scope;
+    if (data.open_id != null) credentials.rawAccountId = data.open_id;
+    // Provider lifetimes are seconds; credentials always store Unix milliseconds.
+    // An omitted refresh lifetime must not extend a fixed authorization deadline.
+    const refreshExpiresAt = tokenSeconds(data.refresh_token_expires_at);
+    const refreshExpiresIn = tokenSeconds(data.refresh_token_expires_in) ?? tokenSeconds(data.refresh_expires_in);
+    if (refreshExpiresAt !== undefined) credentials.refreshExpiresAt = refreshExpiresAt * 1000;
+    else if (refreshExpiresIn !== undefined) credentials.refreshExpiresAt = now + refreshExpiresIn * 1000;
+    return credentials;
   }
 
   async refresh(credentials) {
     if (!credentials.refreshToken) return credentials;
     const { token, clientId, clientSecret, basicAuth, clientIdParam = "client_id" } = this.oauth;
     const data = await this.http.request(token, { method: "POST", form: { grant_type: "refresh_token", refresh_token: credentials.refreshToken, [clientIdParam]: clientId, ...(basicAuth ? {} : { client_secret: clientSecret }) }, headers: basicAuth ? { Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}` } : {}, safeToRetry: true });
-    return { ...credentials, ...this.normalizeToken(data), refreshToken: data.refresh_token || credentials.refreshToken };
+    return this.normalizeToken(data, credentials);
   }
 
   validate(content) {

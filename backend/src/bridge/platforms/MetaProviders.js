@@ -44,7 +44,7 @@ export class InstagramProvider extends GraphProvider {
       for (let i = children.length; i < ctx.content.media.length; i++) {
         const item = ctx.content.media[i], { url } = await this.externalAsset(ctx, item);
         const child = await this.graph(`${ctx.account.remoteId}/media`, ctx.credentials, { method: "POST", safeToRetry: true, body: { is_carousel_item: true, ...(item.kind === "video" ? { media_type: "VIDEO", video_url: url } : { image_url: url }) } });
-        invariant(child.id, "Instagram did not create a carousel item."); children.push(child.id); ctx.checkpoint({ children });
+        invariant(child.id, "Instagram did not create a carousel item."); children.push(child.id); await ctx.checkpoint({ children });
       }
       for (const childId of children) {
         const child = await this.graph(`${childId}?fields=status_code`, ctx.credentials);
@@ -58,7 +58,7 @@ export class InstagramProvider extends GraphProvider {
     }
     const container = await this.graph(`${ctx.account.remoteId}/media`, ctx.credentials, { method: "POST", body, safeToRetry: true });
     invariant(container.id, "Instagram did not create a media container.");
-    ctx.checkpoint({ containerId: container.id, phase: "container" });
+    await ctx.checkpoint({ containerId: container.id, phase: "container" });
     return { status: "processing", progress: { containerId: container.id, phase: "container" } };
   }
   async poll(ctx) {
@@ -68,13 +68,14 @@ export class InstagramProvider extends GraphProvider {
     if (["ERROR", "EXPIRED"].includes(container.status_code)) throw new ProviderError("Instagram could not process this media. Check the media format and dimensions.");
     if (ctx.progress.phase === "finalizing" || container.status_code === "PUBLISHED") throw new ProviderError("Instagram may have published this post. Check the account before retrying.", { uncertain: true });
     if (container.status_code !== "FINISHED") return { status: "processing", progress: ctx.progress };
-    ctx.checkpoint({ phase: "finalizing" });
+    await ctx.checkpoint({ phase: "finalizing" });
+    let result;
     try {
-      const result = await this.graph(`${ctx.account.remoteId}/media_publish`, ctx.credentials, { method: "POST", body: { creation_id: ctx.progress.containerId } });
+      result = await this.graph(`${ctx.account.remoteId}/media_publish`, ctx.credentials, { method: "POST", body: { creation_id: ctx.progress.containerId } });
       invariant(result.id, "Instagram did not confirm a published media ID.", { code: "unconfirmed_publication" });
-      ctx.checkpoint({ publicationId: result.id });
-      return this.published(ctx, result.id);
-    } catch (error) { if (!error.uncertain) ctx.checkpoint({ phase: "container" }); throw error; }
+    } catch (error) { if (!error.uncertain) await ctx.checkpoint({ phase: "container" }); throw error; }
+    await ctx.checkpoint({ publicationId: result.id });
+    return this.published(ctx, result.id);
   }
   async published(ctx, id) {
     let url = null;
@@ -122,7 +123,7 @@ export class ThreadsProvider extends GraphProvider {
       for (let i = children.length; i < ctx.content.media.length; i++) {
         const item = ctx.content.media[i], { url } = await this.externalAsset(ctx, item);
         const child = await this.graph(`${ctx.account.remoteId}/threads`, ctx.credentials, { method: "POST", safeToRetry: true, body: { is_carousel_item: true, media_type: item.kind.toUpperCase(), [item.kind === "video" ? "video_url" : "image_url"]: url } });
-        invariant(child.id, "Threads did not create a carousel item."); children.push(child.id); ctx.checkpoint({ children });
+        invariant(child.id, "Threads did not create a carousel item."); children.push(child.id); await ctx.checkpoint({ children });
       }
       for (const childId of children) {
         const child = await this.graph(`${childId}?fields=status`, ctx.credentials);
@@ -135,7 +136,7 @@ export class ThreadsProvider extends GraphProvider {
       body = { media_type: item.kind.toUpperCase(), [item.kind === "video" ? "video_url" : "image_url"]: url, text: ctx.content.caption };
     }
     const result = await this.graph(`${ctx.account.remoteId}/threads`, ctx.credentials, { method: "POST", body, safeToRetry: true });
-    invariant(result.id, "Threads did not create a post container."); ctx.checkpoint({ containerId: result.id, phase: "container" });
+    invariant(result.id, "Threads did not create a post container."); await ctx.checkpoint({ containerId: result.id, phase: "container" });
     return { status: "processing", progress: { containerId: result.id, phase: "container" } };
   }
   async poll(ctx) {
@@ -145,12 +146,14 @@ export class ThreadsProvider extends GraphProvider {
     if (["ERROR", "EXPIRED"].includes(container.status)) throw new ProviderError("Threads could not process this media.");
     if (ctx.progress.phase === "finalizing" || container.status === "PUBLISHED") throw new ProviderError("Threads may have published this post. Check the account before retrying.", { uncertain: true });
     if (container.status !== "FINISHED") return { status: "processing", progress: ctx.progress };
-    ctx.checkpoint({ phase: "finalizing" });
+    await ctx.checkpoint({ phase: "finalizing" });
+    let result;
     try {
-      const result = await this.graph(`${ctx.account.remoteId}/threads_publish`, ctx.credentials, { method: "POST", body: { creation_id: ctx.progress.containerId } });
-      invariant(result.id, "Threads did not return a published post ID.", { code: "unconfirmed_publication" }); ctx.checkpoint({ publicationId: result.id });
-      return this.published(ctx, result.id);
-    } catch (error) { if (!error.uncertain) ctx.checkpoint({ phase: "container" }); throw error; }
+      result = await this.graph(`${ctx.account.remoteId}/threads_publish`, ctx.credentials, { method: "POST", body: { creation_id: ctx.progress.containerId } });
+      invariant(result.id, "Threads did not return a published post ID.", { code: "unconfirmed_publication" });
+    } catch (error) { if (!error.uncertain) await ctx.checkpoint({ phase: "container" }); throw error; }
+    await ctx.checkpoint({ publicationId: result.id });
+    return this.published(ctx, result.id);
   }
   async published(ctx, id) {
     let url = null; try { url = (await this.graph(`${id}?fields=permalink`, ctx.credentials)).permalink; } catch {}
@@ -191,18 +194,18 @@ export class FacebookProvider extends GraphProvider {
     if (item?.kind === "video") {
       const { url } = await this.externalAsset(ctx, item);
       const result = await this.graph(`${ctx.account.remoteId}/videos`, ctx.credentials, { method: "POST", body: { file_url: url, title: ctx.content.title, description: ctx.content.caption, published: true } });
-      invariant(result.id, "Facebook did not return a video ID.", { code: "unconfirmed_publication" }); ctx.checkpoint({ publicationId: result.id, phase: "video" });
+      invariant(result.id, "Facebook did not return a video ID.", { code: "unconfirmed_publication" }); await ctx.checkpoint({ publicationId: result.id, phase: "video" });
       return { status: "processing", externalId: result.id, progress: { publicationId: result.id, phase: "video" } };
     }
     const photos = [...(ctx.progress.photos || [])];
     for (let i = photos.length; i < ctx.content.media.length; i++) {
       const { url } = await this.externalAsset(ctx, ctx.content.media[i]);
       const result = await this.graph(`${ctx.account.remoteId}/photos`, ctx.credentials, { method: "POST", safeToRetry: true, body: { url, published: false } });
-      invariant(result.id, "Facebook did not return a photo ID."); photos.push(result.id); ctx.checkpoint({ photos });
+      invariant(result.id, "Facebook did not return a photo ID."); photos.push(result.id); await ctx.checkpoint({ photos });
     }
     const result = format === "story" ? await this.graph(`${ctx.account.remoteId}/photo_stories`, ctx.credentials, { method: "POST", body: { photo_id: photos[0] } }) : await this.graph(`${ctx.account.remoteId}/feed`, ctx.credentials, { method: "POST", body: { message: ctx.content.caption, ...(photos.length ? { attached_media: photos.map(id => ({ media_fbid: id })) } : {}) } });
     const id = result.post_id || result.id;
-    invariant(id, "Facebook did not confirm a published post.", { code: "unconfirmed_publication" }); ctx.checkpoint({ publicationId: id });
+    invariant(id, "Facebook did not confirm a published post.", { code: "unconfirmed_publication" }); await ctx.checkpoint({ publicationId: id });
     return { status: "published", externalId: id, url: `https://www.facebook.com/${id}` };
   }
   async publishShort(ctx, format) {
@@ -211,18 +214,18 @@ export class FacebookProvider extends GraphProvider {
     invariant(start.video_id && start.upload_url && new URL(start.upload_url).hostname === "rupload.facebook.com", "Facebook did not return a valid upload endpoint.");
     const { url } = await this.externalAsset(ctx, ctx.content.media[0]);
     await this.http.request(start.upload_url, { method: "POST", safeToRetry: true, headers: { Authorization: `OAuth ${ctx.credentials.accessToken}`, file_url: url } });
-    ctx.checkpoint({ publicationId: start.video_id, phase: "short_uploaded", format });
+    await ctx.checkpoint({ publicationId: start.video_id, phase: "short_uploaded", format });
     return { status: "processing", externalId: start.video_id, progress: { publicationId: start.video_id, phase: "short_uploaded", format } };
   }
   async poll(ctx) {
     const id = ctx.progress.publicationId;
     if (ctx.progress.phase === "short_uploaded") {
       const format = ctx.progress.format;
-      ctx.checkpoint({ phase: "short_finishing" });
+      await ctx.checkpoint({ phase: "short_finishing" });
       try {
         await this.graph(`${ctx.account.remoteId}/${format === "story" ? "video_stories" : "video_reels"}`, ctx.credentials, { method: "POST", body: { upload_phase: "finish", video_id: id, ...(format === "reel" ? { video_state: "PUBLISHED", title: ctx.content.title, description: ctx.content.caption } : {}) } });
-        ctx.checkpoint({ phase: "video", finishAccepted: true });
-      } catch (error) { if (!error.uncertain) ctx.checkpoint({ phase: "short_uploaded" }); throw error; }
+      } catch (error) { if (!error.uncertain) await ctx.checkpoint({ phase: "short_uploaded" }); throw error; }
+      await ctx.checkpoint({ phase: "video", finishAccepted: true });
       return { status: "processing", progress: { phase: "video", finishAccepted: true }, pollAfterMs: 30000 };
     }
     const result = await this.graph(`${id}?fields=status,permalink_url`, ctx.credentials);

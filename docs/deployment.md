@@ -2,7 +2,7 @@
 
 Meadow needs a persistent Node server with FFmpeg and a writable SQLite/media directory. The frontend can be served by Express from the same HTTPS origin or by a Cloudflare Worker that routes backend paths to a Cloudflare Container. The backend cannot run directly in the Worker runtime because it uses child processes and local files.
 
-The Docker and Compose files support self-hosting. Production on `findmeadow.com` is managed by Cloudflare Workers Builds: only pushes to `main` trigger a build and deployment, and preview builds are disabled. Do not run Wrangler production deployment commands from a local machine.
+The Docker and Compose files support self-hosting. Production on `findmeadow.com` is managed by Cloudflare Workers Builds: only pushes to `main` trigger a build and deployment, and preview builds are disabled. Normal releases deploy through `main`. The one-time preservation procedure below requires a Worker-only Wrangler deployment before replacing a legacy container.
 
 ## Prepare configuration
 
@@ -45,11 +45,28 @@ The `/health` route verifies that the process responds. It does not verify platf
 
 ## Updates, backups, and recovery
 
+- Cloudflare uses the existing `BACKEND` Durable Object for verified SQLite snapshots and the private `MEADOW_MEDIA` R2 binding (`meadow-media`) for original media and derivatives. The container filesystem is a working cache. Keep the Durable Object namespace, its `primary` identity, R2 bucket, and credential encryption key across releases.
+- Startup restores and verifies SQLite before accepting traffic. API responses and provider checkpoints wait for durable storage; storage failure returns an error instead of acknowledging an unsaved change. Never roll back to a filesystem-only image after this migration.
+- The current snapshot implementation supports one active container and databases up to 32 MiB. Monitor size and latency; move to a larger shared database implementation before that limit. Exceeding it fails writes rather than silently dropping durability.
+- A daily Cloudflare cron wakes the backend for connection renewal and cleanup even without visits. In-process maintenance runs every minute while awake. Preserve this cron and monitor renewal failures.
 - Pause new publishing with `BRIDGE_PUBLISHING_ENABLED=false` during a controlled migration; retain the persistent volume and encryption key.
 - Stop the application before a filesystem backup of `/data`, or use SQLite's online backup API with a coordinated media snapshot. Copying only `bridge.sqlite` while WAL writes are active can miss transactions.
 - Back up the database and media together. The database contains encrypted tokens, and the separate encryption key is required to restore connections.
 - Allow at least 40 seconds for shutdown. Claims that outlive the process recover after their lease expires. Check `needs_review` deliveries on the social account before approving a retry.
 - Monitor storage and worker error logs. Uploaded media and history have no automatic retention policy in this release.
+
+### Preserve an existing filesystem-only Cloudflare container
+
+Do this before the first durable backend rollout. Do not replace or restart the old container until capture is verified. The temporary operator endpoint returns counts and checksums, never tokens or database contents.
+
+1. Complete tests and the frontend build. Create the private `meadow-media` R2 bucket if absent. Record the existing container instance ID, creation time, and version.
+2. Generate a fresh random `BRIDGE_MIGRATION_SECRET` into a mode-0600 JSON file outside the repository. Deploy this Worker with `wrangler deploy --containers-rollout=none --keep-vars --secrets-file <private-file>`. This preserves deployed container metadata and adds the secret in the same Worker version; do not use a separate container rollout or secret deployment first.
+3. Verify the existing container instance and version are unchanged. Send authenticated requests to `/api/internal/durable-migration` using that secret as a Bearer token. `GET` returns status. `POST {"action":"preflight"}` checks database integrity and inventories referenced media without pausing the backend.
+4. Require `missingActiveMediaFiles: 0` and a database within the size limit. `POST {"action":"capture"}` briefly gates backend traffic, drains active requests and workers, copies referenced files to R2 with checksum verification, and saves a SQLite snapshot including WAL transactions. Require `durable: true`, matching copied/file counts, and `GET` status `initialized: true`, `mode: "migration"` before proceeding.
+5. Push the tested backend to `main` for the normal image build and rollout. The new process restores its snapshot and marks storage ready before reopening traffic. Verify healthy responses, `mode: "ready"`, and preserved record counts. Media downloads repopulate the local cache from R2.
+6. Remove the temporary migration secret and local secret file after successful verification. Keep the admin endpoint disabled by leaving its secret unset.
+
+If capture fails, keep the old image. Correct the problem and capture again, or use `POST {"action":"resume"}` to remove temporary migration media copies and restart the original workers. A paused migration does not expire the old container for inactivity. Do not resume the legacy image after a new durable backend has started. A failed restore stays unavailable rather than creating an empty database.
 
 ## Live acceptance before public launch
 

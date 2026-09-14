@@ -8,7 +8,7 @@ import path from "node:path";
  * storage does not change platform adapters or the HTTP/UI contracts.
  */
 export class SqliteStore {
-  constructor(filename = ":memory:") {
+  constructor(filename = ":memory:", { durability } = {}) {
     if (filename !== ":memory:") fs.mkdirSync(path.dirname(filename), { recursive: true, mode: 0o700 });
     this.db = new Database(filename);
     this.db.pragma("journal_mode = WAL");
@@ -27,6 +27,10 @@ export class SqliteStore {
       ON CONFLICT(kind,id) DO UPDATE SET owner_uid=excluded.owner_uid, project_id=excluded.project_id,
       status=excluded.status, due_at=excluded.due_at, data=excluded.data, revision=entities.revision+1`);
     this.db.pragma("optimize");
+    this.durability = durability;
+    this.persistedChanges = durability ? -1 : 0;
+    this.snapshotSequence = 0;
+    this.flushTask = null;
   }
 
   migrate() {
@@ -119,6 +123,27 @@ export class SqliteStore {
   peekState(key, now = Date.now()) {
     const row = this.db.prepare("SELECT data,expires_at FROM one_time_states WHERE key=?").get(key);
     return row && row.expires_at > now ? JSON.parse(row.data) : null;
+  }
+  /** Each caller waits until every write preceding its barrier is committed. */
+  async flush() {
+    if (!this.durability) return;
+    if (this.db.inTransaction) throw new Error("A durable snapshot cannot be taken inside an open transaction.");
+    const target = this.db.prepare("SELECT total_changes() AS value").get().value;
+    if (target <= this.persistedChanges) return;
+    if (!this.flushTask) {
+      this.flushTask = (async () => {
+        for (;;) {
+          const changes = this.db.prepare("SELECT total_changes() AS value").get().value;
+          if (changes <= this.persistedChanges) return;
+          const bytes = this.db.serialize();
+          const sequence = ++this.snapshotSequence;
+          await this.durability.persist(bytes, sequence);
+          this.persistedChanges = changes;
+        }
+      })().finally(() => { this.flushTask = null; });
+    }
+    await this.flushTask;
+    if (this.persistedChanges < target) await this.flush();
   }
   close() { this.db.close(); }
 }

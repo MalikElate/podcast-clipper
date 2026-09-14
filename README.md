@@ -6,6 +6,7 @@ Meadow is a publishing workspace for creating, scheduling, and analyzing social 
 
 - Clerk sign-in, with ownership enforced on every project API.
 - Direct provider adapters for Instagram, TikTok, YouTube, Facebook Pages, X, LinkedIn, Pinterest, Threads, Bluesky, and Google Business Profile.
+- Saved social connections survive sign-out and container replacement, with proactive token renewal. Provider revocation, expired grants, or changed permissions can still require reconnection.
 - Media upload inside the composer, destination-specific formats and settings, validation, and queue preview.
 - Single-post composition with manual date, time, and timezone scheduling.
 - Durable deliveries for every account, automatic quota overflow queues, queue editing, deletion, reordering, and independent retries.
@@ -22,7 +23,7 @@ The local preview disables real account connections and publishing. It does not 
 
 Production combines a Cloudflare Worker and a named Cloudflare Container. The Worker serves the Vite application and routes backend paths to the Express container. Cloudflare Workers Builds deploys only the `main` branch for `findmeadow.com` and `www.findmeadow.com`; pushing to `main` is the production deployment path.
 
-The container stores SQLite data and uploaded media on its filesystem. Back up that data or move it to durable external storage before relying on the deployment for production records because container replacement can remove local state.
+The Cloudflare backend commits SQLite snapshots to its Durable Object and saves original media, thumbnails, and prepared variants in private R2 storage. The container restores the committed database before serving and downloads media into a local cache as needed. Successful API responses wait for database persistence. The current implementation supports one active backend writer and SQLite snapshots up to 32 MiB; unavailable storage or an oversized snapshot fails closed. Follow [deployment instructions](docs/deployment.md) to preserve existing data before the first durable-storage rollout, and keep encryption and signing keys stable across replacements.
 
 The frontend build requires a Clerk publishable key. Product analytics scripts are disabled:
 
@@ -67,4 +68,4 @@ This runs the frontend and backend tests and creates the production frontend bun
 
 See [privacy operations](docs/privacy-operations.md) for required deletion secrets, webhooks, maintenance, processor follow-up, and backup handling before rollout.
 
-Uploaded media remains until deleted. Removing a connection also erases its local delivery history and metrics; account deletion removes every owned workspace. Otherwise Meadow retains published history locally; deleting content from a social platform is outside this release. Media links are bearer links and expire after 30 minutes for browser access or 24 hours for provider retrieval.
+Uploaded media remains until deleted. Removing a connection also erases its stored delivery history and metrics; account deletion removes every owned workspace. Otherwise Meadow retains published history, subject to platform-specific API-data retention; deleting content from a social platform is outside this release. Media links are bearer links and expire after 30 minutes for browser access or 24 hours for provider retrieval.

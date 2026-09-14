@@ -145,7 +145,7 @@ test("Pinterest Sandbox routes token and API requests to the Sandbox host", asyn
 test("Pinterest distinguishes invalid tokens, missing scopes, and app access restrictions without exposing response data", async () => {
   const cases = [
     { status: 401, data: { code: 2, message: "Authentication failed. private-token" }, reconnect: true, code: "reconnect_required", text: /Pinterest code 2/ },
-    { status: 403, data: { code: 29, message: "Your token does not have sufficient permissions to perform this operation. private-token" }, reconnect: true, code: "reconnect_required", text: /permissions needed/ },
+    { status: 403, data: { code: 29, message: "Your token does not have sufficient permissions to perform this operation. private-token" }, reconnect: false, code: "provider_permissions", text: /permissions needed/ },
     { status: 403, data: { code: 3, message: "Apps with Trial access may not create Pins in production. private-token" }, reconnect: false, code: "pinterest_app_access_required", text: /Standard access/ },
     { status: 401, data: { code: 3, message: "This app requires Standard access. private-token" }, reconnect: false, code: "pinterest_app_access_required", text: /Standard access/ },
     { status: 404, data: { code: 100, message: "Board private-token not found." }, reconnect: false, code: "provider_rejected", text: /Pinterest code 100/ },

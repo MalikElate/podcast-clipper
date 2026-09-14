@@ -49,7 +49,7 @@ export class TikTokProvider extends PlatformProvider {
     const result = await this.request(`post/publish/${photos ? "content" : "video"}/init/`, ctx.credentials, body);
     invariant(result.data?.publish_id, "TikTok did not confirm receipt of the post.", { code: "unconfirmed_publication" });
     const progress = { publishId: result.data.publish_id };
-    ctx.checkpoint(progress);
+    await ctx.checkpoint(progress);
     return { status: "processing", progress, pollAfterMs: 30000 };
   }
   async poll(ctx) {

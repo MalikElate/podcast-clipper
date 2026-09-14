@@ -35,6 +35,8 @@
   "observability": {
     "enabled": true
   },
+  "triggers": { "crons": ["0 3 * * *"] },
+  "r2_buckets": [{ "binding": "MEADOW_MEDIA", "bucket_name": "meadow-media" }],
   "vars": {
     "PORT": "8787",
     "BRIDGE_APP_URL": "https://findmeadow.com",

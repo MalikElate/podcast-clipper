@@ -37,7 +37,7 @@ export class PublishingWorker {
         if (selected.length === 3) break;
       }
       await Promise.all(selected.map(item => this.deliver(item.id).catch(error => { if (error.code !== "account_busy") console.error("Delivery worker:", error.code || error.name); })));
-    } finally { this.running = false; }
+    } finally { try { await this.store.flush?.(); } finally { this.running = false; } }
   }
 
   async deliver(id) {
@@ -53,7 +53,7 @@ export class PublishingWorker {
         this.store.put("delivery", { ...delivery, status: "needs_account", resumeStatus: polling ? "processing" : "queued", error: account?.lastError || "Reconnect this account to continue publishing.", updatedAt: this.clock() });
         return;
       }
-      let claimed = false, timer;
+      let claimed = false, dispatched = false, timer, credentials;
       try {
         if (polling && delivery.startedAt && this.clock() - delivery.startedAt > 24 * 3600000) throw new BridgeError("The platform has not confirmed this post after 24 hours. Check the account before retrying.", { code: "processing_timeout" });
         const provider = this.registry.get(account.platform);
@@ -65,7 +65,7 @@ export class PublishingWorker {
           delivery = this.store.get("delivery", id);
           if (!isPendingDelivery(delivery) || delivery.dueAt > this.clock() + 50) return;
         }
-        const credentials = await this.accounts.credentials(account);
+        credentials = await this.accounts.credentials(account);
         account = this.store.get("account", account.id);
         if (account?.status !== "connected") return;
         account = { ...account, options: freshOptions };
@@ -82,14 +82,27 @@ export class PublishingWorker {
         });
         if (!delivery) return;
         claimed = true;
-        const checkpoint = patch => {
+        const checkpoint = async patch => {
           const current = this.store.get("delivery", id);
           if (!current) return;
           this.store.put("delivery", { ...current, progress: { ...current.progress, ...patch }, leaseUntil: this.clock() + 90000, updatedAt: this.clock() });
+          try { await this.store.flush?.(); }
+          catch (error) { error.durableCheckpoint = true; throw error; }
         };
-        timer = setInterval(() => checkpoint({}), 20000); timer.unref?.();
+        timer = setInterval(() => checkpoint({}).catch(error => console.error("Delivery checkpoint:", error.code || error.name)), 20000); timer.unref?.();
         if (!polling) this.store.recordRateEvent(id, account.rateKey, this.clock());
+        await this.store.flush?.();
+        const dispatchDelivery = this.store.get("delivery", id), dispatchAccount = this.store.get("account", account.id);
+        if (dispatchDelivery?.status !== "publishing" || dispatchDelivery.workerId !== this.id) return;
+        if (!dispatchAccount || ["deleting", "disconnected"].includes(dispatchAccount.status) || this.accounts.privacy?.blocked(delivery.ownerUid)) {
+          this.store.put("delivery", { ...dispatchDelivery, status: "cancelled", error: null, leaseUntil: null, updatedAt: this.clock() });
+          if (!polling) this.store.removeRateEvent(id);
+          return;
+        }
+        if (dispatchAccount.status !== "connected") throw new BridgeError(dispatchAccount.lastError || "Reconnect this account to continue publishing.", { code: "reconnect_required" });
+        if (dispatchAccount.authorizationId !== account.authorizationId) throw new BridgeError("This account connection changed. Try again.", { code: "connection_changed", status: 409 });
         const context = { account, credentials, delivery, post, content, media: this.media, progress: delivery.progress || {}, checkpoint };
+        dispatched = true;
         const result = await (polling ? provider.poll(context) : provider.publish(context));
         const current = this.store.get("delivery", id);
         if (!current) return;
@@ -105,11 +118,33 @@ export class PublishingWorker {
       } catch (error) {
         const current = this.store.get("delivery", id);
         if (!current || current.status === "published" || !claimed && !isPendingDelivery(current) && current.status !== "processing") return;
+        if (dispatched && (error.durableCheckpoint || error.code?.startsWith("durable_"))) {
+          this.store.put("delivery", { ...current, status: "needs_review", error: "Meadow could not save the platform's response. Check the social account before retrying.", leaseUntil: null, updatedAt: this.clock() });
+          return;
+        }
+        const retryConnection = (message, extra = {}) => {
+          if (!polling) this.store.removeRateEvent(id);
+          this.store.put("delivery", { ...current, status: polling ? "processing" : "retrying", dueAt: this.clock() + 1000, leaseUntil: null, error: message, updatedAt: this.clock(), ...extra });
+        };
+        if (!error.uncertain && error.authFailure === "access_token" && (current.authRetries || 0) < 1) {
+          try {
+            if (await this.accounts.recoverAccess(account, credentials, error)) {
+              retryConnection("Account access was renewed. Meadow will continue this delivery.", { authRetries: (current.authRetries || 0) + 1 });
+              return;
+            }
+          } catch (refreshError) { error = refreshError; }
+        }
+        const latestAccount = this.store.get("account", account.id);
+        if (!error.uncertain && (error.code === "connection_changed" || (error.reconnect || error.code === "reconnect_required") && latestAccount?.status === "connected" && latestAccount.authorizationId !== account.authorizationId)) {
+          retryConnection("The connection was updated. Meadow will retry with its current access.");
+          return;
+        }
         if (error.uncertain || ["processing_timeout", "unconfirmed_publication"].includes(error.code)) {
           this.store.put("delivery", { ...current, status: "needs_review", error: error.message, leaseUntil: null, updatedAt: this.clock() });
         } else if (error.reconnect || error.code === "reconnect_required") {
           const message = error instanceof BridgeError ? error.message : "Reconnect this account to renew its permissions.";
-          this.accounts.markReconnect(account.id, message);
+          const marked = this.accounts.markReconnect(account.id, message, { authorizationId: account.authorizationId, credentials });
+          if (!marked && latestAccount?.status === "connected") { retryConnection("Account access changed. Meadow will retry with its current access."); return; }
           this.store.put("delivery", { ...current, status: "needs_account", resumeStatus: polling ? "processing" : "queued", error: message, leaseUntil: null, updatedAt: this.clock() });
           if (!polling) this.store.removeRateEvent(id);
         } else if (error.code === "rate_limited") {
