@@ -129,7 +129,6 @@ export default function Landing({ onGetStarted }) {
               </article>;
             })}
           </div>
-          <div className="pricing-assurance"><span><CheckIcon /> Unlimited scheduled and published posts</span><span><CheckIcon /> Secure checkout powered by Stripe</span><span><CheckIcon /> Manage or cancel from your billing portal</span></div>
         </section>
 
         <section className="landing-section faq-section" id="faq">

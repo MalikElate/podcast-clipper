@@ -54,7 +54,6 @@ export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error =
           })}
         </section>
 
-        <section className="pricing-assurance"><span><CheckIcon /> Unlimited scheduled and published posts</span><span><CheckIcon /> Secure checkout powered by Stripe</span><span><CheckIcon /> Manage or cancel from your billing portal</span></section>
       </main>
 
       <footer className="landing-footer pricing-footer"><div className="footer-bottom"><span>© {new Date().getFullYear()} Meadow</span><span><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="mailto:hello@findmeadow.com">Contact</a></span></div></footer>
