@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "./BridgeApi.js";
+import { Icon } from "./Icons.jsx";
 import { Alert, Check, Modal, PlatformIcon } from "./ui.jsx";
 
 export function ConnectionPrivacyContent({ disclosure }) {
@@ -15,14 +16,18 @@ export function ConnectionPrivacyContent({ disclosure }) {
 
 export function ConnectionPrivacyModal({ disclosure, busy, error, onClose, onContinue, onOpenSettings }) {
   const [accepted, setAccepted] = useState(false);
-  return <Modal title={`Before you connect ${disclosure.name}`} onClose={onClose} busy={busy} wide>
-    <ConnectionPrivacyContent disclosure={disclosure}/>
+  return <Modal title={`Connect ${disclosure.name}`} onClose={onClose} busy={busy}>
+    <div className="bridge-connection-summary">
+      <p>{disclosure.connectionSummary}</p>
+      <h3>Requirement</h3>
+      <div className="bridge-connection-requirement"><Icon name="warning" size={18}/><p>{disclosure.requirement}</p></div>
+      <p className="bridge-connection-revoke">{disclosure.revokeSummary}</p>
+      {onOpenSettings && <button className="bridge-text-button" disabled={busy} onClick={onOpenSettings}>View full privacy details in Settings</button>}
+    </div>
     <div className="bridge-connection-privacy-consent">
-      <p className="bridge-small">Full policies are available in Settings → Privacy &amp; Account.</p>
-      {onOpenSettings && <button className="bridge-text-button" disabled={busy} onClick={onOpenSettings}>Review full policies in Settings</button>}
       <Alert message={error}/>
-      <Check checked={accepted} onChange={event => setAccepted(event.target.checked)}>{disclosure.agreement}</Check>
-      <div className="bridge-modal-actions"><button className="bridge-button secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="bridge-button" disabled={!accepted || busy} onClick={() => onContinue({ accepted: true, platform: disclosure.platform, version: disclosure.version })}>{busy ? "Connecting…" : `Agree and continue to ${disclosure.name}`}</button></div>
+      <Check checked={accepted} onChange={event => setAccepted(event.target.checked)}>{disclosure.shortAgreement}</Check>
+      <div className="bridge-modal-actions"><button className="bridge-button secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="bridge-button" disabled={!accepted || busy} onClick={() => onContinue({ accepted: true, platform: disclosure.platform, version: disclosure.version })}>{busy ? "Connecting…" : "Connect"}</button></div>
     </div>
   </Modal>;
 }

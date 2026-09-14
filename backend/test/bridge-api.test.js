@@ -215,6 +215,11 @@ for (const platform of ["pinterest", "youtube", "google_business", "tiktok"]) te
   const { disclosure } = await noticeResponse.json();
   assert.equal(disclosure.platform, platform);
   assert.equal(disclosure.version, CONNECTION_PRIVACY_VERSION);
+  assert.match(disclosure.connectionSummary, /^Connect /);
+  assert.ok(disclosure.requirement);
+  assert.ok(disclosure.revokeSummary);
+  assert.ok(disclosure.shortAgreement);
+  assert.ok(disclosure.data.length >= 4);
   assert.equal((await (await h.request("/api/bridge/privacy/connections")).json()).disclosures.length, 4);
   assert.equal((await h.request(`/api/bridge/privacy/connections/${platform}`, { user: null })).status, 401);
 
