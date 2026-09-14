@@ -1,6 +1,6 @@
 // Keep these notices aligned with the fields and scopes used by each adapter.
-// The same text is shown before OAuth and in Settings → Privacy & Account.
-export const CONNECTION_PRIVACY_VERSION = "2026-09-12-connections-1";
+// The compact summary is shown before OAuth; the full notice remains in Settings → Privacy & Account.
+export const CONNECTION_PRIVACY_VERSION = "2026-09-14-connections-2";
 
 const authorization = {
   name: "Authorization and consent",
@@ -18,6 +18,10 @@ const googlePolicies = [
 const notices = {
   pinterest: {
     name: "Pinterest",
+    connectionSummary: "Connect a Pinterest account to publish and schedule Pins and view available performance.",
+    requirement: "Your Pinterest account must have a board where Meadow can publish Pins.",
+    revokeSummary: "You can disconnect in Meadow and revoke access from Pinterest’s security settings at any time.",
+    shortAgreement: "I agree to connect Pinterest and allow the access described above.",
     introduction: "Choose whether Meadow may access this Pinterest account to show your boards, publish the Pins you submit, and retrieve available Pin performance.",
     data: [
       { name: "Account and boards", detail: "Your account ID or username, profile image and profile link, plus board IDs and names. We retrieve these to identify your account and let you choose where each Pin goes." },
@@ -32,6 +36,10 @@ const notices = {
   },
   youtube: {
     name: "YouTube",
+    connectionSummary: "Connect a YouTube channel to upload and schedule videos and view available performance.",
+    requirement: "Your Google Account must be associated with a YouTube channel.",
+    revokeSummary: "You can disconnect in Meadow and revoke access from your Google Account settings at any time.",
+    shortAgreement: "I agree to connect YouTube and allow the access described above.",
     introduction: "Meadow uses YouTube API Services. Choose whether Meadow may access your selected channel to upload the videos you submit, check their status, and show available performance.",
     data: [
       { name: "Channel identity", detail: "Your channel ID, channel name, profile image, and channel link, so you can identify and select the right publishing destination." },
@@ -46,6 +54,10 @@ const notices = {
   },
   google_business: {
     name: "Google Business Profile",
+    connectionSummary: "Connect Google Business Profile to publish and schedule updates for selected locations.",
+    requirement: "Your Google Account must manage at least one Business Profile location.",
+    revokeSummary: "You can disconnect in Meadow and revoke access from your Google Account settings at any time.",
+    shortAgreement: "I agree to connect Google Business Profile and allow the access described above.",
     introduction: "Choose whether Meadow may access your Google Business Profile accounts and locations to publish the business updates you submit.",
     data: [
       { name: "Business accounts and locations", detail: "Business account and location resource IDs and location names, so you can select and identify the location receiving each post." },
@@ -60,6 +72,10 @@ const notices = {
   },
   tiktok: {
     name: "TikTok",
+    connectionSummary: "Connect a TikTok account to publish and schedule content and view available performance.",
+    requirement: "Your TikTok account must be eligible for the publishing options you select.",
+    revokeSummary: "You can disconnect in Meadow and revoke access from TikTok’s app-permissions settings at any time.",
+    shortAgreement: "I agree to connect TikTok and allow the access described above.",
     introduction: "Choose whether Meadow may access this TikTok creator account to show its publishing choices, deliver the content you submit, and retrieve available video performance.",
     data: [
       { name: "Creator identity and publishing choices", detail: "Your TikTok open ID, display name, avatar, and creator nickname or username. We also retrieve available visibility options, comment, Duet and Stitch restrictions, and maximum video duration to present valid publishing settings." },

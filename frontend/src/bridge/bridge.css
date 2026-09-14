@@ -138,8 +138,16 @@
 .bridge-connection-privacy-content dl { display: grid; gap: 14px; }
 .bridge-connection-privacy-content dt { font-weight: 650; color: var(--b-text); }
 .bridge-connection-privacy-content dd { margin: 3px 0 0; color: var(--b-muted); }
-.bridge-connection-privacy-consent { border-top: 1px solid var(--b-line); margin-top: 24px; padding-top: 18px; }
-.bridge-connection-privacy-consent > .bridge-text-button { margin: 6px 0 16px; }
+.bridge-connection-summary { display: grid; gap: 14px; padding-top: 2px; }
+.bridge-connection-summary > p { font-size: 14px; line-height: 1.6; }
+.bridge-connection-summary h3 { margin-top: 4px; font-size: 14px; }
+.bridge-connection-requirement { display: flex; align-items: flex-start; gap: 10px; margin-top: -4px; }
+.bridge-connection-requirement svg { flex: 0 0 auto; margin-top: 2px; color: #d0a94e; }
+.bridge-connection-requirement p { font-size: 13px; line-height: 1.5; }
+.bridge-connection-revoke { margin-top: 2px; }
+.bridge-connection-summary > .bridge-text-button { width: max-content; margin-top: -7px; padding-top: 0; }
+.bridge-connection-privacy-consent { border-top: 1px solid var(--b-line); margin-top: 18px; padding-top: 14px; }
+.bridge-connection-privacy-consent .bridge-modal-actions { margin-top: 18px; }
 .bridge-connection-privacy-settings { margin: 24px 0; }
 .bridge-connection-privacy-settings > h3 { font-size: 16px; margin-bottom: 8px; }
 .bridge-connection-privacy-settings details { border: 1px solid var(--b-line); border-radius: 10px; margin-top: 10px; padding: 0 16px; }
