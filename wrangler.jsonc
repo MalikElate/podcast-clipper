@@ -42,6 +42,7 @@
     "BRIDGE_APP_URL": "https://findmeadow.com",
     "BRIDGE_PUBLIC_URL": "https://findmeadow.com",
     "BRIDGE_MAX_UPLOAD_MB": "1024",
+    "BRIDGE_DISABLED_PLATFORMS": "facebook,instagram,threads",
     "BRIDGE_PUBLISHING_ENABLED": "true"
   },
   "routes": [
