@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { timingSafeEqual } from "node:crypto";
 import { DurableState } from "./durableState.js";
 import { migrationScript } from "./migrationScript.js";
+import { appDomainRedirect } from "./domainRouting.js";
 export { ContainerProxy } from "@cloudflare/containers";
 
 const definedEnv = values => Object.fromEntries(
@@ -196,6 +197,8 @@ function migrationAuthorized(request, workerEnv) {
 export default {
   async fetch(request, workerEnv) {
     const url = new URL(request.url);
+    const appRedirect = appDomainRedirect(url);
+    if (appRedirect) return Response.redirect(appRedirect, 308);
     if (url.pathname === "/api/internal/durable-migration") {
       if (!migrationAuthorized(request, workerEnv)) return new Response("Not found", { status: 404 });
       try {

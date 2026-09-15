@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { api } from "./BridgeApi.js";
 import { Alert, Check, Field, Modal } from "./ui.jsx";
+import { marketingHref } from "../siteUrls.js";
 
 export function PolicyLinks() {
-  return <a className="bridge-privacy-page-link" href="/privacy/" target="_blank" rel="noreferrer">View Meadow’s privacy policy</a>;
+  return <a className="bridge-privacy-page-link" href={marketingHref("/privacy/")} target="_blank" rel="noreferrer">View Meadow’s privacy policy</a>;
 }
 
 const receiptKey = "meadow.deletion-receipt";
@@ -28,7 +29,7 @@ export function DeletionReceipt({ deletion, signOut }) {
     refresh();
     return () => { stopped = true; clearInterval(timer); };
   }, [current.status, deletion.reference]);
-  async function leave() { try { sessionStorage.removeItem(receiptKey); await signOut(); } finally { window.location.assign("/"); } }
+  async function leave() { try { sessionStorage.removeItem(receiptKey); await signOut(); } finally { window.location.assign(marketingHref("/")); } }
   return <div className="bridge-privacy-gate"><section className="bridge-panel bridge-privacy-consent"><h1>{current.status === "complete" ? "Account deletion completed" : "Account deletion requested"}</h1><p>Your workspace is closed and scheduled publishing has stopped. A request already sent to a social platform may still finish.</p><p>{current.status === "complete" ? "Your Meadow workspace data has been removed and your account is closed." : "Meadow is removing your workspace data and requesting cleanup from the connected services. Contact us if you need help with the request."}</p><p className="bridge-small">Deletion reference: <strong>{current.reference}</strong></p><p>Posts already on social platforms remain there. Payment records required for accounting may remain with Stripe.</p><p>For help with this request, contact hello@findmeadow.com.</p><button className="bridge-button secondary" onClick={leave}>Return to Meadow</button></section></div>;
 }
 

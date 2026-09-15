@@ -2,7 +2,7 @@
 // belongs only in the backend's TRYBE_ORDERS_API_KEY secret.
 (function (w, d) {
   // Respect explicit browser opt-outs and avoid polluting production from previews.
-  if (!["findmeadow.com", "www.findmeadow.com"].includes(w.location.hostname) ||
+  if (!["findmeadow.com", "www.findmeadow.com", "app.findmeadow.com"].includes(w.location.hostname) ||
       w.navigator.globalPrivacyControl === true || w.navigator.doNotTrack === "1") return;
   const pixelCode = "px_8166af1422cd";
   const storeId = "47f489bd-c863-48da-b6f6-cd04411c280a";

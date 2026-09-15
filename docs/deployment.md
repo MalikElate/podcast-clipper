@@ -2,14 +2,14 @@
 
 Meadow needs a persistent Node server with FFmpeg and a writable SQLite/media directory. The frontend can be served by Express from the same HTTPS origin or by a Cloudflare Worker that routes backend paths to a Cloudflare Container. The backend cannot run directly in the Worker runtime because it uses child processes and local files.
 
-The Docker and Compose files support self-hosting. Production on `findmeadow.com` is managed by Cloudflare Workers Builds: only pushes to `main` trigger a build and deployment, and preview builds are disabled. Normal releases deploy through `main`. The one-time preservation procedure below requires a Worker-only Wrangler deployment before replacing a legacy container.
+The Docker and Compose files support self-hosting. Production uses `findmeadow.com` for the public site and `app.findmeadow.com` for the authenticated product, and is managed by Cloudflare Workers Builds: only pushes to `main` trigger a build and deployment, and preview builds are disabled. Normal releases deploy through `main`. The one-time preservation procedure below requires a Worker-only Wrangler deployment before replacing a legacy container.
 
 ## Prepare configuration
 
 1. Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env`.
-2. Configure Clerk, add the production hostname to its allowed origins, set `VITE_CLERK_PUBLISHABLE_KEY` for the frontend build, and supply `CLERK_SECRET_KEY` and `CLERK_PUBLISHABLE_KEY` to the backend runtime.
+2. Configure Clerk for the `findmeadow.com` root domain, add `app.findmeadow.com` to its allowed subdomains, set `VITE_CLERK_PUBLISHABLE_KEY` for the frontend build, and supply `CLERK_SECRET_KEY` and `CLERK_PUBLISHABLE_KEY` to the backend runtime. Clerk shares sessions across subdomains of its production root domain.
 3. Generate separate random values for `BRIDGE_ENCRYPTION_KEY` and `BRIDGE_MEDIA_SIGNING_KEY`.
-4. Set `BRIDGE_APP_URL` and `BRIDGE_PUBLIC_URL` to the canonical public HTTPS origin without a trailing path. Set `BRIDGE_TRUST_PROXY` to the exact trusted proxy hop count.
+4. Set `BRIDGE_APP_URL` to the authenticated product origin (`https://app.findmeadow.com`) and `BRIDGE_PUBLIC_URL` to the public callback/API origin (`https://findmeadow.com`), without trailing paths. This keeps existing provider callbacks and webhooks stable while sending users back to the app subdomain. Set `BRIDGE_TRUST_PROXY` to the exact trusted proxy hop count.
 5. Supply the platform application credentials and callbacks described in [platforms.md](platforms.md). Leave unfinished platforms disabled through `BRIDGE_DISABLED_PLATFORMS` until their applications are approved and tested.
 6. Create monthly and yearly recurring Stripe Prices for Starter, Creator, Growth, and Pro. Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and the eight `STRIPE_PRICE_*` values listed in `backend/.env.example`. Register `https://findmeadow.com/api/stripe/webhook` for `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, and `invoice.payment_succeeded`, and configure the Stripe Customer Portal.
 

@@ -21,7 +21,7 @@ The local preview disables real account connections and publishing. It does not 
 
 ## Cloudflare deployment
 
-Production combines a Cloudflare Worker and a named Cloudflare Container. The Worker serves the Vite application and routes backend paths to the Express container. Cloudflare Workers Builds deploys only the `main` branch for `findmeadow.com` and `www.findmeadow.com`; pushing to `main` is the production deployment path.
+Production combines a Cloudflare Worker and a named Cloudflare Container. The Worker serves the public site on `findmeadow.com`, the authenticated product on `app.findmeadow.com`, and routes backend paths to the Express container. Existing `/dashboard` links on the marketing domain redirect to the app subdomain. Cloudflare Workers Builds deploys only the `main` branch; pushing to `main` is the production deployment path.
 
 The Cloudflare backend commits SQLite snapshots to its Durable Object and saves original media, thumbnails, and prepared variants in private R2 storage. The container restores the committed database before serving and downloads media into a local cache as needed. Successful API responses wait for database persistence. The current implementation supports one active backend writer and SQLite snapshots up to 32 MiB; unavailable storage or an oversized snapshot fails closed. Follow [deployment instructions](docs/deployment.md) to preserve existing data before the first durable-storage rollout, and keep encryption and signing keys stable across replacements.
 

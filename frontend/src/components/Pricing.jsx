@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { PLANS } from "../pricing.js";
 import BrandLogo from "./BrandLogo.jsx";
+import { marketingHref } from "../siteUrls.js";
 
 function ArrowIcon() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
@@ -12,15 +13,16 @@ function CheckIcon() {
 
 export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error = "", cancelled = false }) {
   const [yearly, setYearly] = useState(true);
+  const homeUrl = marketingHref("/");
 
   useEffect(() => { document.title = "Pricing · Meadow"; }, []);
 
   return (
     <div className="landing pricing-page">
       <header className="landing-header">
-        <a className="landing-logo-link" href="/" aria-label="Meadow home"><BrandLogo /></a>
+        <a className="landing-logo-link" href={homeUrl} aria-label="Meadow home"><BrandLogo /></a>
         <nav className="landing-nav" aria-label="Main navigation">
-          <a href="/pricing" aria-current="page">Pricing</a><a href="/#faq">FAQ</a>
+          <a href={marketingHref("/pricing")} aria-current="page">Pricing</a><a href={marketingHref("/#faq")}>FAQ</a>
         </nav>
         <div className="landing-actions"><button className="btn-ghost" onClick={onSignIn}>Sign in</button><button className="btn-small-primary" onClick={onSignIn}>Start posting <ArrowIcon /></button></div>
       </header>
@@ -56,7 +58,7 @@ export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error =
 
       </main>
 
-      <footer className="landing-footer pricing-footer"><div className="footer-bottom"><span>© {new Date().getFullYear()} Meadow</span><span><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="mailto:hello@findmeadow.com">Contact</a></span></div></footer>
+      <footer className="landing-footer pricing-footer"><div className="footer-bottom"><span>© {new Date().getFullYear()} Meadow</span><span><a href={marketingHref("/terms")}>Terms</a> · <a href={marketingHref("/privacy")}>Privacy</a> · <a href="mailto:hello@findmeadow.com">Contact</a></span></div></footer>
     </div>
   );
 }

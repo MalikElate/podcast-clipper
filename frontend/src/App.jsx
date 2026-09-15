@@ -8,22 +8,31 @@ import NotFound from "./components/NotFound.jsx";
 import { PLANS } from "./pricing.js";
 import { api, localPreview } from "./bridge/BridgeApi.js";
 import { isDashboardPath } from "./bridge/dashboardRoutes.js";
+import { appHref, siteSurface } from "./siteUrls.js";
 const BridgeApp = lazy(() => import("./bridge/BridgeApp.jsx"));
 
 export default function App() {
   const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
+  const surface = siteSurface(window.location);
   const isTermsPage = pathname === "/terms" || pathname === "/terms-of-service";
   const isPrivacyPage = pathname === "/privacy" || pathname === "/privacy-policy";
   if (isTermsPage || isPrivacyPage) {
     return <LegalPage kind={isPrivacyPage ? "privacy" : "terms"} />;
   }
-  if (pathname === "/pricing") return <PricingSurface />;
+  if (pathname === "/pricing") return <PricingSurface marketing={surface === "marketing"} />;
+  if (surface === "marketing" && isDashboardPath(pathname)) return <DomainRedirect href={appHref(`${window.location.pathname}${window.location.search}${window.location.hash}`)} />;
   if (pathname !== "/" && !isDashboardPath(pathname)) return <NotFound />;
+  if (surface === "marketing") return <PublicLanding onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;
 
-  return <AppSurface />;
+  return <AppSurface appOnly={surface === "app"} />;
 }
 
-function PricingSurface() {
+function DomainRedirect({ href }) {
+  useEffect(() => { window.location.replace(href); }, [href]);
+  return <OpeningMeadow />;
+}
+
+function PricingSurface({ marketing = false }) {
   const { user, loading } = useAuth();
   const params = new URLSearchParams(window.location.search);
   const requestedCheckout = params.get("checkout") || "";
@@ -55,10 +64,18 @@ function PricingSurface() {
   }
 
   useEffect(() => {
-    if (!user || !pending || started.current) return;
+    if (marketing || !user || !pending || started.current) return;
     started.current = true;
     beginCheckout(pending.planId, pending.cycle);
-  }, [user, pending]);
+  }, [marketing, user, pending]);
+
+  if (marketing && checkoutPlan) {
+    return <DomainRedirect href={appHref(`/pricing?checkout=${encodeURIComponent(checkoutPlan)}&cycle=${encodeURIComponent(checkoutCycle)}`)} />;
+  }
+
+  if (marketing) {
+    return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><Pricing onSignIn={() => window.location.assign(appHref("/dashboard"))} onChoosePlan={(planId, cycle) => window.location.assign(appHref(`/pricing?checkout=${encodeURIComponent(planId)}&cycle=${encodeURIComponent(cycle)}`))} cancelled={requestedCheckout === "cancelled"} /></div></div>;
+  }
 
   if (loading && showAuth && !localPreview) return <OpeningMeadow />;
 
@@ -70,7 +87,7 @@ function PricingSurface() {
   return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><Pricing onSignIn={() => { if (user || localPreview) window.location.assign("/"); else setShowAuth(true); }} onChoosePlan={beginCheckout} busyPlan={busyPlan} error={error} cancelled={requestedCheckout === "cancelled"} /></div></div>;
 }
 
-function AppSurface() {
+function AppSurface({ appOnly = false }) {
   const { user, loading } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
   const dashboardPath = isDashboardPath(window.location.pathname);
@@ -79,7 +96,7 @@ function AppSurface() {
 
   if (user || localPreview) return <Suspense fallback={<OpeningMeadow />}><BridgeApp /></Suspense>;
 
-  if (showAuth || dashboardPath) {
+  if (showAuth || dashboardPath || appOnly) {
     return (
       <div className="app">
         <div className="app-glow app-glow-a" />

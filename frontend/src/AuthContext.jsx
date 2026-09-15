@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo } from "react";
 import { useAuth as useClerkAuth, useClerk, useUser } from "@clerk/react";
 import { installTokenProvider } from "./authToken.js";
+import { marketingHref } from "./siteUrls.js";
 
 const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
@@ -48,7 +49,7 @@ function ClerkAuthProvider({ children }) {
       value={{
         user,
         loading: user === undefined,
-        signOut: () => clerk.signOut({ redirectUrl: "/" }),
+        signOut: () => clerk.signOut({ redirectUrl: marketingHref("/") }),
         getIdToken: getToken,
       }}
     >
