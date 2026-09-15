@@ -24,6 +24,7 @@ import { PublishingWorker } from "./services/PublishingWorker.js";
 import { BillingService } from "./services/BillingService.js";
 import { AnalyticsErasureService } from "./services/AnalyticsErasureService.js";
 import { PrivacyService } from "./services/PrivacyService.js";
+import { MetaPrivacyService } from "./services/MetaPrivacyService.js";
 import { SecretVault } from "./core/SecretVault.js";
 import { LockService } from "./core/LockService.js";
 import { BridgeError, invariant, publicError } from "./core/errors.js";
@@ -78,6 +79,8 @@ export class BridgeApplication {
       deleteIdentity: deleteIdentity || (async uid => { if (this.localPreview) return; try { await clerkClient.users.deleteUser(uid); } catch (error) { if (error.status !== 404) throw error; } }),
       deleteAnalytics: deleteAnalytics || (uid => this.localPreview ? Promise.resolve(true) : new AnalyticsErasureService({ store: this.store, env }).deleteForOwner(uid)) });
     this.projects.privacy = this.privacy; this.accounts.privacy = this.privacy; this.privacy.accounts = this.accounts; this.privacy.media = this.media;
+    this.metaPrivacy = new MetaPrivacyService({ ...deps, privacy: this.privacy, clock });
+    this.accounts.metaPrivacy = this.metaPrivacy; this.privacy.metaPrivacy = this.metaPrivacy;
     this.worker = new PublishingWorker({ store: this.store, accounts: this.accounts, registry: this.registry, posts: this.posts, rates: this.rates, media: this.media, locks: this.locks, analytics: this.analytics, clock, enabled: !this.localPreview && env.BRIDGE_PUBLISHING_ENABLED !== "false" });
     const incoming = path.join(this.dataDir, "incoming"); fs.mkdirSync(incoming, { recursive: true, mode: 0o700 });
     this.privacy.incomingDirectory = incoming;
@@ -90,6 +93,18 @@ export class BridgeApplication {
     if (durability) this.app.use(durableResponseBarrier(this.store));
     if (env.BRIDGE_TRUST_PROXY) this.app.set("trust proxy", Number(env.BRIDGE_TRUST_PROXY));
     this.app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } }));
+    this.app.post(["/api/meta/:platform/deauthorize", "/api/meta/:platform/data-deletion"], express.urlencoded({ extended: false, limit: "20kb", parameterLimit: 5 }), route(async (req, res) => {
+      const result = this.metaPrivacy.receive(req.params.platform, req.body?.signed_request);
+      await this.store.flush?.();
+      res.setHeader("Cache-Control", "no-store"); res.json(result);
+    }));
+    this.app.get("/api/meta/deletion-status/:code", route((req, res) => {
+      const result = this.metaPrivacy.status(req.params.code);
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("Referrer-Policy", "no-referrer");
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
+      res.type("html").send(`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Data deletion · Meadow</title><main><h1>Meadow data deletion</h1><p>${result.status === "complete" ? "Your connected Meta account data has been deleted from Meadow. If Meadow held no matching data, no deletion was needed." : "Your request has been received. Publication from the affected connections is stopped and deletion is in progress."}</p><p>Confirmation: ${result.confirmationCode}</p><p>This request covers data received through the connected Meta account. To delete your entire Meadow account and uploaded media, use Settings → Privacy &amp; Account.</p><a href="/privacy/">Privacy policy</a></main></html>`);
+    }));
     this.app.post("/api/stripe/webhook", express.raw({ type: "application/json", limit: "1mb" }), route(async (req, res) => res.json(await this.billing.webhook(req.body, req.headers["stripe-signature"]))));
     this.app.post("/api/tiktok/webhook", express.raw({ type: "application/json", limit: "1mb" }), route((req, res) => res.json(this.privacy.tiktokWebhook(req.body, req.headers["tiktok-signature"]))));
     this.app.post("/api/clerk/webhook", express.raw({ type: "application/json", limit: "1mb" }), route(async (req, res) => {

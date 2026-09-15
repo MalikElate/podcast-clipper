@@ -11,7 +11,7 @@ export class AccountService {
     Object.assign(this, { store, projects, registry, vault, locks, clock, localPreview });
   }
   toPublic(account) {
-    const { encryptedCredentials, authorizationId, authorizationGrantedAt, maintenanceDueAt, maintenanceAttempts, ...visible } = account;
+    const { encryptedCredentials, authorizationId, authorizationGrantedAt, authorizationStartedAt, maintenanceDueAt, maintenanceAttempts, ...visible } = account;
     return visible;
   }
   list(uid, projectId) { this.projects.require(uid, projectId); return this.store.list("account", { projectId }).map(account => this.toPublic(account)); }
@@ -83,8 +83,9 @@ export class AccountService {
     this.privacy?.requireConnectionConsent(platform, saved.privacyConsent);
     invariant(!this.privacy?.connectionBarrier(saved.uid, platform) || (saved.createdAt || 0) > this.privacy.connectionBarrier(saved.uid, platform), "This authorization request predates connection removal. Connect again.");
     invariant(Array.isArray(candidates) && candidates.length, "No eligible accounts were returned. Check your account type and permissions.");
+    this.metaPrivacy?.assertAuthorization(platform, candidates, saved.createdAt || 0);
     const id = randomUUID();
-    this.store.put("connection", { id, ownerUid: saved.uid, projectId: saved.projectId, platform, privacyConsent: saved.privacyConsent || null, createdAt: this.clock(), expiresAt: this.clock() + 10 * 60000,
+    this.store.put("connection", { id, ownerUid: saved.uid, projectId: saved.projectId, platform, privacyConsent: saved.privacyConsent || null, authorizationStartedAt: saved.createdAt, createdAt: this.clock(), expiresAt: this.clock() + 10 * 60000,
       encrypted: this.vault.encrypt(candidates.map(candidate => ({ ...(platform === "pinterest" ? { remoteId: candidate.remoteId, label: "Pinterest account" } : candidate), credentials: { ...credentials, ...(candidate.credentials || {}) } })), `connection:${id}`) });
     if (candidates.length === 1) {
       const accounts = this.attach(saved.uid, saved.projectId, id, [candidates[0].remoteId]);
@@ -114,6 +115,7 @@ export class AccountService {
     invariant(Array.isArray(selectedIds) && selectedIds.length && selectedIds.length <= 100, "Select at least one account.");
     const candidates = this.vault.decrypt(connection.encrypted, `connection:${connectionId}`);
     invariant(selectedIds.every(id => candidates.some(candidate => candidate.remoteId === id)), "An invalid account was selected.");
+    this.metaPrivacy?.assertAuthorization(connection.platform, candidates, connection.authorizationStartedAt || connection.createdAt);
     return this.store.transaction(() => {
       const accounts = [];
       for (const candidate of candidates.filter(candidate => selectedIds.includes(candidate.remoteId))) {
@@ -122,7 +124,7 @@ export class AccountService {
         const id = existing?.id || randomUUID();
         const { credentials, ...profile } = candidate;
         const account = this.store.put("account", { ...existing, ...profile, id, ownerUid: uid, projectId, platform: connection.platform, status: "connected", rateKey: `${connection.platform}:${candidate.remoteId}`,
-          encryptedCredentials: this.vault.encrypt(credentials, `account:${id}`), authorizationId: connectionId, authorizationGrantedAt: connection.createdAt, privacyConsent: connection.privacyConsent || null, profileUpdatedAt: this.clock(), createdAt: existing?.createdAt || this.clock(), updatedAt: this.clock(), options: null, optionsUpdatedAt: null, lastError: null, maintenanceDueAt: null, maintenanceAttempts: 0 });
+          encryptedCredentials: this.vault.encrypt(credentials, `account:${id}`), authorizationId: connectionId, authorizationStartedAt: connection.authorizationStartedAt || connection.createdAt, authorizationGrantedAt: connection.createdAt, privacyConsent: connection.privacyConsent || null, profileUpdatedAt: this.clock(), createdAt: existing?.createdAt || this.clock(), updatedAt: this.clock(), options: null, optionsUpdatedAt: null, lastError: null, maintenanceDueAt: null, maintenanceAttempts: 0 });
         accounts.push(this.toPublic(account));
         for (const delivery of this.store.list("delivery", { projectId, status: "needs_account" }).filter(item => item.accountId === id)) {
           this.store.put("delivery", { ...delivery, status: delivery.resumeStatus === "processing" ? "processing" : "queued", resumeStatus: null, dueAt: Math.max(this.clock(), delivery.requestedAt), error: null, updatedAt: this.clock() });

@@ -188,6 +188,7 @@ export class PrivacyService {
     } finally { try { await this.store.flush?.(); } finally { this.running = false; } }
   }
   prune() {
+    this.metaPrivacy?.prune();
     this.store.pruneStates(this.clock());
     for (const kind of ["connection", "blueskyState", "revocation"]) for (const record of this.store.list(kind, { limit: null })) {
       if (record.expiresAt <= this.clock() && (kind !== "revocation" || record.status !== "pending")) this.store.remove(kind, record.id);

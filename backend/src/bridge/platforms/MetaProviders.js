@@ -27,7 +27,7 @@ export class InstagramProvider extends GraphProvider {
   async refresh(credentials) { return { ...credentials, ...this.normalizeToken(await this.http.request(`https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${encodeURIComponent(credentials.accessToken)}`)) }; }
   async accounts(credentials) {
     const profile = await this.graph("me?fields=id,user_id,username,profile_picture_url", credentials);
-    return [{ remoteId: String(profile.user_id || profile.id), label: `@${profile.username}`, avatar: profile.profile_picture_url, profileUrl: `https://www.instagram.com/${profile.username}/` }];
+    return [{ remoteId: String(profile.user_id || profile.id), label: `@${profile.username}`, avatar: profile.profile_picture_url, profileUrl: `https://www.instagram.com/${profile.username}/`, credentials: { metaUserIds: [...new Set([profile.id, profile.user_id].filter(Boolean).map(String))] } }];
   }
   async options(account, credentials) {
     const response = await this.graph(`${account.remoteId}/content_publishing_limit?fields=quota_usage,config`, credentials);
@@ -105,7 +105,7 @@ export class ThreadsProvider extends GraphProvider {
   async refresh(credentials) { return { ...credentials, ...this.normalizeToken(await this.http.request(`https://graph.threads.net/refresh_access_token?grant_type=th_refresh_token&access_token=${encodeURIComponent(credentials.accessToken)}`)) }; }
   async accounts(credentials) {
     const profile = await this.graph("me?fields=id,username,threads_profile_picture_url", credentials);
-    return [{ remoteId: String(profile.id), label: `@${profile.username}`, avatar: profile.threads_profile_picture_url, profileUrl: `https://www.threads.net/@${profile.username}` }];
+    return [{ remoteId: String(profile.id), label: `@${profile.username}`, avatar: profile.threads_profile_picture_url, profileUrl: `https://www.threads.net/@${profile.username}`, credentials: { metaUserIds: [String(profile.id)] } }];
   }
   async options(account, credentials) {
     const result = await this.graph(`${account.remoteId}/threads_publishing_limit?fields=quota_usage,config`, credentials);
@@ -177,11 +177,13 @@ export class FacebookProvider extends GraphProvider {
     return this.normalizeToken(result);
   }
   async accounts(credentials) {
+    const profile = await this.graph("me?fields=id", credentials);
+    invariant(profile.id, "Facebook did not identify the authorizing user.");
     let after = "";
     const candidates = [];
     do {
       const result = await this.graph(`me/accounts?fields=id,name,access_token,picture&limit=100${after ? `&after=${encodeURIComponent(after)}` : ""}`, credentials);
-      for (const page of result.data || []) candidates.push({ remoteId: String(page.id), label: page.name, avatar: page.picture?.data?.url, profileUrl: `https://www.facebook.com/${page.id}`, credentials: { accessToken: page.access_token, expiresAt: null } });
+      for (const page of result.data || []) candidates.push({ remoteId: String(page.id), label: page.name, avatar: page.picture?.data?.url, profileUrl: `https://www.facebook.com/${page.id}`, credentials: { accessToken: page.access_token, expiresAt: null, metaUserIds: [String(profile.id)] } });
       after = result.paging?.next ? result.paging.cursors?.after : "";
     } while (after && candidates.length < 100);
     return candidates.slice(0, 100);
