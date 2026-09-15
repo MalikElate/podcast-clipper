@@ -1,0 +1,126 @@
+/*
+ * Keep Meadow's surfaces visually flat while retaining the boundaries users
+ * need to recognize editable and selectable fields. Transparent border colors
+ * preserve the existing box model, so removing a line does not shift layouts.
+ */
+:where(body *):not(:where(
+  .cl-rootBox,
+  .cl-rootBox *,
+  form,
+  form *,
+  input,
+  textarea,
+  select,
+  fieldset,
+  .field,
+  .field *,
+  .bridge-field,
+  .bridge-field *,
+  .bridge-upload-zone,
+  .bridge-upload-zone *,
+  .bridge-add-media,
+  .bridge-add-media *,
+  .crop-mode-option,
+  .crop-mode-option *,
+  .swatch,
+  .swatch *,
+  .pill-toggle-track,
+  .pill-toggle-track *,
+  .bridge-segmented,
+  .bridge-segmented *,
+  .bridge-destination,
+  .bridge-destination *,
+  .pricing-cycle,
+  .pricing-cycle *,
+  .bridge-platform-icon-fallback
+)) {
+  border-color: transparent !important;
+}
+
+:where(body *):not(:where(
+  .cl-rootBox,
+  .cl-rootBox *,
+  form,
+  form *,
+  input,
+  textarea,
+  select,
+  fieldset,
+  .field,
+  .field *,
+  .bridge-field,
+  .bridge-field *,
+  .bridge-upload-zone,
+  .bridge-upload-zone *,
+  .bridge-add-media,
+  .bridge-add-media *,
+  .crop-mode-option,
+  .crop-mode-option *,
+  .swatch,
+  .swatch *,
+  .pill-toggle-track,
+  .pill-toggle-track *,
+  .bridge-segmented,
+  .bridge-segmented *,
+  .bridge-destination,
+  .bridge-destination *,
+  .pricing-cycle,
+  .pricing-cycle *,
+  .bridge-platform-icon-fallback
+))::before,
+:where(body *):not(:where(
+  .cl-rootBox,
+  .cl-rootBox *,
+  form,
+  form *,
+  input,
+  textarea,
+  select,
+  fieldset,
+  .field,
+  .field *,
+  .bridge-field,
+  .bridge-field *,
+  .bridge-upload-zone,
+  .bridge-upload-zone *,
+  .bridge-add-media,
+  .bridge-add-media *,
+  .crop-mode-option,
+  .crop-mode-option *,
+  .swatch,
+  .swatch *,
+  .pill-toggle-track,
+  .pill-toggle-track *,
+  .bridge-segmented,
+  .bridge-segmented *,
+  .bridge-destination,
+  .bridge-destination *,
+  .pricing-cycle,
+  .pricing-cycle *,
+  .bridge-platform-icon-fallback
+))::after {
+  border-color: transparent !important;
+}
+
+/* The calendar hover treatment was an inset border rather than a CSS border. */
+.bridge-calendar-day.create:hover {
+  box-shadow: none;
+}
+
+/* Calendar cells need visible boundaries to preserve the month grid. */
+.bridge-calendar {
+  border-color: var(--b-line) !important;
+}
+
+.bridge-calendar-weekday {
+  border-bottom-color: var(--b-line) !important;
+}
+
+.bridge-calendar-day {
+  border-right-color: var(--b-line) !important;
+  border-bottom-color: var(--b-line) !important;
+}
+
+.bridge-calendar-day:nth-child(7n) {
+  border-right-color: transparent !important;
+}
