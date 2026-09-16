@@ -4,11 +4,13 @@ import Auth from "./components/Auth.jsx";
 import Landing from "./components/Landing.jsx";
 import LegalPage from "./components/LegalPage.jsx";
 import Pricing from "./components/Pricing.jsx";
+import PlatformUseCasePage from "./components/PlatformUseCasePage.jsx";
 import NotFound from "./components/NotFound.jsx";
 import { PLANS } from "./pricing.js";
 import { api, localPreview } from "./bridge/BridgeApi.js";
 import { isDashboardPath } from "./bridge/dashboardRoutes.js";
 import { appHref, siteSurface } from "./siteUrls.js";
+import { getPlatformUseCaseBySlug } from "./platformUseCases.js";
 const BridgeApp = lazy(() => import("./bridge/BridgeApp.jsx"));
 
 export default function App() {
@@ -20,6 +22,8 @@ export default function App() {
     return <LegalPage kind={isPrivacyPage ? "privacy" : "terms"} />;
   }
   if (pathname === "/pricing") return <PricingSurface marketing={surface === "marketing"} />;
+  const platformPage = surface === "app" ? undefined : getPlatformUseCaseBySlug(pathname.slice(1));
+  if (platformPage) return <PublicPlatformLanding platform={platformPage} onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;
   if (surface === "marketing" && isDashboardPath(pathname)) return <DomainRedirect href={appHref(`${window.location.pathname}${window.location.search}${window.location.hash}`)} />;
   if (pathname !== "/" && !isDashboardPath(pathname)) return <NotFound />;
   if (surface === "marketing") return <PublicLanding onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;
@@ -122,6 +126,18 @@ export function PublicLanding({ onGetStarted }) {
       <div className="app-glow app-glow-b" />
       <div className="centered-shell landing-shell">
         <Landing onGetStarted={onGetStarted} />
+      </div>
+    </div>
+  );
+}
+
+function PublicPlatformLanding({ platform, onGetStarted }) {
+  return (
+    <div className="app">
+      <div className="app-glow app-glow-a" />
+      <div className="app-glow app-glow-b" />
+      <div className="centered-shell landing-shell">
+        <PlatformUseCasePage platform={platform} onGetStarted={onGetStarted} />
       </div>
     </div>
   );

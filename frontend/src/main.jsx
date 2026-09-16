@@ -6,6 +6,7 @@ import { AuthProvider } from "./AuthContext.jsx";
 import "./index.css";
 import "./meadow.css";
 import "./borderless.css";
+import "./platformUseCases.css";
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const posthogKey = import.meta.env.VITE_POSTHOG_KEY;

@@ -3,19 +3,9 @@ import { PlatformIcon } from "../bridge/ui.jsx";
 import BrandLogo from "./BrandLogo.jsx";
 import { sortPlatforms } from "../bridge/platforms.js";
 import { PLANS } from "../pricing.js";
+import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 
-const PLATFORMS = sortPlatforms([
-  { id: "x", name: "X", color: "#171717" },
-  { id: "instagram", name: "Instagram", color: "#d94686" },
-  { id: "linkedin", name: "LinkedIn", color: "#0a66c2" },
-  { id: "facebook", name: "Facebook", color: "#1877f2" },
-  { id: "tiktok", name: "TikTok", color: "#111111" },
-  { id: "youtube", name: "YouTube", color: "#ff0033" },
-  { id: "bluesky", name: "Bluesky", color: "#168aff" },
-  { id: "threads", name: "Threads", color: "#111111" },
-  { id: "pinterest", name: "Pinterest", color: "#e60023" },
-  { id: "google_business", name: "Google Business", color: "#4285f4" },
-]);
+const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
 
 
 function ArrowIcon() {
@@ -94,10 +84,10 @@ export default function Landing({ onGetStarted }) {
           </div>
           <div className="platform-grid">
             {PLATFORMS.map((platform) => (
-              <article className="platform-card" key={platform.id} style={{ "--platform-color": platform.color }}>
+              <a className="platform-card" key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing`} style={{ "--platform-color": platform.color }}>
                 <PlatformMark platform={platform} />
                 <div><h3>{platform.name}</h3></div>
-              </article>
+              </a>
             ))}
           </div>
         </section>
@@ -175,7 +165,6 @@ export default function Landing({ onGetStarted }) {
           <div className="footer-brand">
             <BrandLogo />
             <p>Create, schedule, publish, and track from one workspace.</p>
-            <p>Meadow is operated by MALIK SEITU MUNYENGE, trading as Woodbark Software.</p>
           </div>
           <div className="footer-links">
             <div><h2>Use Cases</h2><a href="#platforms">Platforms</a><a href="#pricing">Pricing</a></div>
