@@ -107,7 +107,7 @@ const PAGE_COPY = {
       ] },
       { heading: "8. Updates and contact", paragraphs: [
         "The effective date identifies this version of the policy. Connection notices have their own version and are shown whenever you connect or reconnect the relevant platform. Agreement is specific to that authorization; it is not a requirement for entering your Meadow workspace.",
-        <>Meadow is operated by MALIK SEITU MUNYENGE, trading as Woodbark Software. Contact <a href="mailto:hello@findmeadow.com">hello@findmeadow.com</a> about privacy or this policy.</>,
+        <>Meadow is operated by WoodBark Software LLC. Contact <a href="mailto:hello@findmeadow.com">hello@findmeadow.com</a> about privacy or this policy.</>,
       ] },
     ],
   },
@@ -138,7 +138,7 @@ export default function LegalPage({ kind }) {
         <div className="legal-intro" id={privacy ? "privacy-overview" : undefined}>
           <h1>{copy.title}</h1>
           <p>{copy.intro}</p>
-          <p>Meadow is operated by MALIK SEITU MUNYENGE, trading as Woodbark Software.</p>
+          <p>Meadow is operated by WoodBark Software LLC.</p>
           <span className="legal-effective">Effective {copy.effectiveDate}</span>
         </div>
         <div className={privacy ? "legal-layout" : undefined}>
