@@ -1794,6 +1794,30 @@ input[type="range"]::-moz-range-thumb {
   line-height: 1.75;
 }
 
+.legal-platform-policy dd p {
+  margin: 0 0 10px;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.legal-platform-policy dd ul {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding-left: 18px;
+}
+
+.legal-platform-policy dd li {
+  color: inherit;
+  font-size: inherit;
+  line-height: 1.6;
+}
+
+.legal-platform-policy dd > :last-child {
+  margin-bottom: 0;
+}
+
 .legal-platform-links {
   display: flex;
   flex-wrap: wrap;

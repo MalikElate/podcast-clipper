@@ -5,7 +5,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { connectionDisclosure } from "../platforms/connectionPrivacy.js";
 
-export const POLICY_VERSION = "2026-09-12";
+export const POLICY_VERSION = "2026-09-16";
 const DAY = 86400000;
 export const deletionMarker = uid => SecretVault.hash(`meadow-deletion:${uid}`);
 
