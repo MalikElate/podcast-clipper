@@ -1416,9 +1416,10 @@ input[type="range"]::-moz-range-thumb {
 .section-heading h2 { margin: 15px 0 12px; color: var(--text); font-size: clamp(32px,4vw,51px); line-height: 1.03; letter-spacing: -.05em; }
 .section-heading p { margin: 0; color: var(--text-muted); font-size: 15px; line-height: 1.6; }
 .platform-section { padding-bottom: 104px; }
+.platform-section-layout { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: clamp(48px,8vw,112px); }
 .platform-heading { max-width: 670px; }
-.platform-grid { display: grid; grid-template-columns: repeat(5,max-content); gap: 18px 52px; margin-top: 48px; }
-.platform-card { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.platform-grid { display: grid; grid-template-columns: repeat(5,42px); gap: 18px 22px; }
+.platform-card { display: flex; align-items: center; justify-content: center; min-width: 0; }
 .platform-card .landing-platform-mark { width: 42px; height: 42px; }
 .platform-card .landing-platform-mark > .social-brand-icon { width: 34px !important; height: 34px !important; }
 .platform-card > div { min-width: 0; }
@@ -1453,7 +1454,7 @@ input[type="range"]::-moz-range-thumb {
 
 @media (max-width: 980px) {
   .landing-nav { display: none; }
-  .platform-grid { grid-template-columns: repeat(3,max-content); }
+  .platform-section-layout { grid-template-columns: 1fr; gap: 36px; }
 }
 
 @media (max-width: 720px) {
@@ -1467,7 +1468,8 @@ input[type="range"]::-moz-range-thumb {
   .landing-hero { min-height: 0; padding: 54px 0 68px; }
   .landing-section { padding: 76px 0; }
   .platform-section { padding-bottom: 72px; }
-  .platform-grid { grid-template-columns: repeat(2,max-content); gap: 16px 36px; margin-top: 34px; }
+  .platform-section-layout { gap: 30px; }
+  .platform-grid { gap: 16px 18px; }
   .faq-section { padding-top: 88px; }
   .faq-grid { grid-template-columns: repeat(2,minmax(0,1fr)); margin-top: 42px; }
   .landing-cta-section { margin-top: 8px; padding: 68px 22px 72px; }
@@ -1485,7 +1487,7 @@ input[type="range"]::-moz-range-thumb {
   .landing .brand-logo-image { width: 36px; height: 36px; }
   .landing .brand-name { font-size: 21px; }
   .landing-actions .btn-small-primary { padding: 9px 11px; }
-  .platform-grid { grid-template-columns: 1fr; }
+  .platform-grid { grid-template-columns: repeat(5,42px); }
   .platform-card p { white-space: normal; }
   .faq-grid { grid-template-columns: 1fr; }
   .faq-card { min-height: 0; }

@@ -77,18 +77,19 @@ export default function Landing({ onGetStarted }) {
 
 
         <section className="landing-section platform-section" id="platforms">
-          <div className="section-heading platform-heading">
-            <span className="section-eyebrow">Supported platforms</span>
-            <h2>Ten platforms. One publishing workflow.</h2>
-            <p>Connect the accounts you already use and manage each one from the same dashboard.</p>
-          </div>
-          <div className="platform-grid">
-            {PLATFORMS.map((platform) => (
-              <a className="platform-card" key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing`} style={{ "--platform-color": platform.color }}>
-                <PlatformMark platform={platform} />
-                <div><h3>{platform.name}</h3></div>
-              </a>
-            ))}
+          <div className="platform-section-layout">
+            <div className="section-heading platform-heading">
+              <span className="section-eyebrow">Supported platforms</span>
+              <h2>Ten platforms. One publishing workflow.</h2>
+              <p>Connect the accounts you already use and manage each one from the same dashboard.</p>
+            </div>
+            <div className="platform-grid" aria-label="Supported publishing platforms">
+              {PLATFORMS.map((platform) => (
+                <a className="platform-card" key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing`} title={platform.name} style={{ "--platform-color": platform.color }}>
+                  <PlatformMark platform={platform} />
+                </a>
+              ))}
+            </div>
           </div>
         </section>
 
