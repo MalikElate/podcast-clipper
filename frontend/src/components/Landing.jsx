@@ -35,6 +35,82 @@ function PlatformMark({ platform, className = "", variant = "default" }) {
   );
 }
 
+// Meadow has no MCP server, so this is a briefing for the REST API an agent can
+// actually call. Every endpoint, limit and field here is taken from
+// BridgeApplication's route table and PostService's validation.
+const AGENT_SETUP = `Meadow publishing API - setup for coding agents
+
+Base URL: https://findmeadow.com/api/bridge
+Auth header: Authorization: Bearer br_live_...
+Create a key in Meadow under Configuration > API Keys. It is shown once.
+Read it from the environment; never hardcode or commit it.
+
+Endpoints
+  GET   /projects                              list workspaces
+  POST  /projects/default                      create or fetch the default workspace
+  GET   /projects/{projectId}/accounts         list connected social accounts
+  POST  /projects/{projectId}/media            register media for a post
+  POST  /projects/{projectId}/posts/preview    validate before publishing
+  POST  /projects/{projectId}/posts            publish or schedule
+  GET   /projects/{projectId}/posts            delivery status
+  GET   /projects/{projectId}/analytics        metrics for published posts
+
+Publish request body
+  {
+    "requestId": "unique-per-submission",
+    "items": [
+      {
+        "accountIds": ["id from /accounts"],
+        "caption": "up to 65000 characters",
+        "title": "up to 500 characters, where the platform uses one",
+        "mediaIds": ["id from /media"]
+      }
+    ]
+  }
+
+Rules
+  - requestId must match [A-Za-z0-9_-]{16,100} and makes the submission
+    idempotent. Reusing one with different content returns 409.
+  - 1 to 100 posts per request, up to 35 media items per post.
+  - Call /posts/preview first: it returns per-destination validation errors.
+  - Publishing only happens for content you submit explicitly.`;
+
+function CopyIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="5.5" y="5.5" width="8" height="8" rx="2" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M10.5 3.2A1.7 1.7 0 0 0 8.8 2H4.2A2.2 2.2 0 0 0 2 4.2v4.6c0 .77.51 1.42 1.2 1.63" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function AgentSetupCopyButton() {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return undefined;
+    const timer = setTimeout(() => setCopied(false), 2200);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(AGENT_SETUP);
+      setCopied(true);
+    } catch {
+      // A denied clipboard leaves the label alone rather than claiming success.
+      setCopied(false);
+    }
+  }
+
+  return (
+    <button type="button" className="hero-agent-copy" onClick={copy} data-copied={copied ? "true" : undefined}>
+      <CopyIcon />
+      {copied ? "Setup copied" : "Copy setup for Claude, Codex & Cursor"}
+    </button>
+  );
+}
+
 // Marks drift around the copy instead of sitting in a strip above it. Order
 // only decides which .hf-* slot each platform lands in; the slots themselves
 // are positioned in CSS so the layout stays declarative.
@@ -145,7 +221,7 @@ export default function Landing({ onGetStarted }) {
             </p>
             <div className="hero-actions" data-rise style={{ "--d": "400ms" }}>
               <button className="btn-primary landing-cta" onClick={onGetStarted}>Post for free <ArrowIcon /></button>
-              <a className="hero-secondary-cta" href="#platforms">See all ten platforms <ArrowIcon /></a>
+              <AgentSetupCopyButton />
             </div>
           </div>
         </section>

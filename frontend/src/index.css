@@ -1391,7 +1391,7 @@ input[type="range"]::-moz-range-thumb {
 .landing-actions .btn-ghost { padding: 9px 12px; }
 .btn-small-primary { display: inline-flex; align-items: center; gap: 7px; padding: 10px 14px; font-size: 12px; color: #fff; background: var(--cta); border: 1px solid rgba(143,162,255,.35); box-shadow: 0 9px 22px -12px var(--cta-glow); }
 .btn-small-primary:hover { background: var(--cta-hover); }
-.landing-hero { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 92px 0 118px; text-align: center; }
+.landing-hero { position: relative; overflow: hidden; min-height: 540px; display: flex; align-items: center; justify-content: center; padding: 92px 0 118px; text-align: center; }
 .hero-copy { position: relative; z-index: 1; display: flex; width: 100%; max-width: 960px; flex-direction: column; align-items: center; }
 .landing-platform-mark { display: grid; place-items: center; width: 30px; height: 30px; flex: 0 0 auto; color: var(--platform-color); }
 .social-brand-icon { display: inline-grid; place-items: center; flex: 0 0 auto; line-height: 0; }
@@ -1886,17 +1886,38 @@ input[type="range"]::-moz-range-thumb {
   to { opacity: 1; transform: none; }
 }
 
-.hero-secondary-cta {
+.hero-agent-copy {
   display: inline-flex;
+  min-height: 42px;
   align-items: center;
-  gap: 7px;
+  gap: 9px;
+  padding: 0 17px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
   color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, color .18s ease;
 }
 
-.hero-secondary-cta:hover { color: var(--accent-hover); }
+.hero-agent-copy:hover {
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.hero-agent-copy > svg { color: var(--text-faint); transition: color .18s ease; }
+.hero-agent-copy:hover > svg { color: var(--accent); }
+
+.hero-agent-copy[data-copied] {
+  border-color: color-mix(in srgb, var(--score) 45%, var(--border));
+  color: var(--score);
+}
+
+.hero-agent-copy[data-copied] > svg { color: var(--score); }
 
 .hero-float {
   position: absolute;
@@ -1947,16 +1968,16 @@ input[type="range"]::-moz-range-thumb {
   50% { transform: translate(var(--dx), var(--dy)) rotate(calc(var(--rot) + var(--wob))); }
 }
 
-.hf-instagram       { --x: max(-470px, -31vw); --y: 132px; --s: 88px; --rot: -8deg; --depth: 1.2; --d: .38s; --dur: 10.5s; --dx: 4px;  --dy: -12px; --wob: -2deg; --fx: -150px; --fy: -40px; }
-.hf-youtube         { --x: min(470px, 31vw);   --y: 132px; --s: 88px; --rot: 7deg;  --depth: 1.2; --d: .46s; --dur: 9.2s;  --dx: -4px; --dy: -10px; --wob: 2deg;  --fx: 150px;  --fy: -40px; }
-.hf-tiktok          { --x: max(-620px, -42vw); --y: 30px;  --s: 62px; --rot: 6deg;  --depth: .6;  --d: .62s; --dur: 8.5s;  --dx: 2px;  --dy: -8px;  --wob: 3deg;  --fx: -60px;  --fy: -80px; }
-.hf-x               { --x: min(620px, 42vw);   --y: 30px;  --s: 62px; --rot: -5deg; --depth: .6;  --d: .58s; --dur: 9.8s;  --dx: -2px; --dy: -9px;  --wob: -3deg; --fx: 60px;   --fy: -80px; }
-.hf-linkedin        { --x: max(-560px, -38vw); --y: 300px; --s: 72px; --rot: 4deg;  --depth: .9;  --d: .54s; --dur: 11.5s; --dx: 3px;  --dy: -9px;  --wob: -3deg; --fx: -120px; --fy: 70px;  }
-.hf-facebook        { --x: min(560px, 38vw);   --y: 300px; --s: 72px; --rot: -5deg; --depth: .9;  --d: .70s; --dur: 7.8s;  --dx: -3px; --dy: -11px; --wob: 3deg;  --fx: 120px;  --fy: 70px;  }
-.hf-pinterest       { --x: max(-390px, -26vw); --y: 392px; --s: 56px; --rot: -6deg; --depth: .7;  --d: .78s; --dur: 10.8s; --dx: 3px;  --dy: -7px;  --wob: 2deg;  --fx: -70px;  --fy: 90px;  }
-.hf-threads         { --x: min(390px, 26vw);   --y: 392px; --s: 56px; --rot: 5deg;  --depth: .7;  --d: .84s; --dur: 9.4s;  --dx: -3px; --dy: -8px;  --wob: -2deg; --fx: 70px;   --fy: 90px;  }
-.hf-bluesky         { --x: max(-700px, -47vw); --y: 214px; --s: 54px; --rot: -4deg; --depth: .5;  --d: .90s; --dur: 12.2s; --dx: 2px;  --dy: -6px;  --wob: 3deg;  --fx: -80px;  --fy: 0px;   }
-.hf-google_business { --x: min(700px, 47vw);   --y: 214px; --s: 54px; --rot: 4deg;  --depth: .5;  --d: .96s; --dur: 11s;   --dx: -2px; --dy: -7px;  --wob: -3deg; --fx: 80px;   --fy: 0px;   }
+.hf-instagram       { --x: max(-470px, calc(-50vw + 112px)); --y: 132px; --s: 88px; --rot: -8deg; --depth: 1.2; --d: .38s; --dur: 10.5s; --dx: 4px;  --dy: -12px; --wob: -2deg; --fx: -150px; --fy: -40px; }
+.hf-youtube         { --x: min(470px, calc(50vw - 112px));   --y: 132px; --s: 88px; --rot: 7deg;  --depth: 1.2; --d: .46s; --dur: 9.2s;  --dx: -4px; --dy: -10px; --wob: 2deg;  --fx: 150px;  --fy: -40px; }
+.hf-tiktok          { --x: max(-600px, calc(-50vw + 72px)); --y: 34px;  --s: 62px; --rot: 6deg;  --depth: .6;  --d: .62s; --dur: 8.5s;  --dx: 2px;  --dy: -8px;  --wob: 3deg;  --fx: -40px;  --fy: -80px; }
+.hf-x               { --x: min(600px, calc(50vw - 72px));   --y: 34px;  --s: 62px; --rot: -5deg; --depth: .6;  --d: .58s; --dur: 9.8s;  --dx: -2px; --dy: -9px;  --wob: -3deg; --fx: 40px;   --fy: -80px; }
+.hf-linkedin        { --x: max(-540px, calc(-50vw + 96px)); --y: 296px; --s: 72px; --rot: 4deg;  --depth: .9;  --d: .54s; --dur: 11.5s; --dx: 3px;  --dy: -9px;  --wob: -3deg; --fx: -120px; --fy: 70px;  }
+.hf-facebook        { --x: min(540px, calc(50vw - 96px));   --y: 296px; --s: 72px; --rot: -5deg; --depth: .9;  --d: .70s; --dur: 7.8s;  --dx: -3px; --dy: -11px; --wob: 3deg;  --fx: 120px;  --fy: 70px;  }
+.hf-pinterest       { --x: max(-380px, calc(-50vw + 150px)); --y: 372px; --s: 56px; --rot: -6deg; --depth: .7;  --d: .78s; --dur: 10.8s; --dx: 3px;  --dy: -7px;  --wob: 2deg;  --fx: -70px;  --fy: 90px;  }
+.hf-threads         { --x: min(380px, calc(50vw - 150px));   --y: 372px; --s: 56px; --rot: 5deg;  --depth: .7;  --d: .84s; --dur: 9.4s;  --dx: -3px; --dy: -8px;  --wob: -2deg; --fx: 70px;   --fy: 90px;  }
+.hf-bluesky         { --x: max(-660px, calc(-50vw + 62px)); --y: 206px; --s: 54px; --rot: -4deg; --depth: .5;  --d: .90s; --dur: 12.2s; --dx: 2px;  --dy: -6px;  --wob: 3deg;  --fx: -36px;  --fy: 0px;   }
+.hf-google_business { --x: min(660px, calc(50vw - 62px));   --y: 206px; --s: 54px; --rot: 4deg;  --depth: .5;  --d: .96s; --dur: 11s;   --dx: -2px; --dy: -7px;  --wob: -3deg; --fx: 36px;   --fy: 0px;   }
 
 @media (prefers-reduced-motion: reduce) {
   [data-rise] { animation: none; }
