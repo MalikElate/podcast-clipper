@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PlatformIcon } from "../bridge/ui.jsx";
 import BrandLogo from "./BrandLogo.jsx";
 import { sortPlatforms } from "../bridge/platforms.js";
@@ -35,17 +35,86 @@ function PlatformMark({ platform, className = "", variant = "default" }) {
   );
 }
 
-function PlatformStrip() {
+// Marks drift around the copy instead of sitting in a strip above it. Order
+// only decides which .hf-* slot each platform lands in; the slots themselves
+// are positioned in CSS so the layout stays declarative.
+function HeroFloat({ fieldRef }) {
   return (
-    <div className="hero-platforms" aria-label="Supported social platforms">
-      {PLATFORMS.map((platform) => <PlatformMark platform={platform} variant="hero" key={platform.id} />)}
+    <div className="hero-float" aria-hidden="true" ref={fieldRef}>
+      {PLATFORMS.map((platform) => (
+        <span className={`hero-float-mark hf-${platform.id}`} key={platform.id}>
+          <span className="hero-float-card" style={{ "--platform-color": platform.color }}>
+            <PlatformIcon platform={platform.id} size={32} variant="hero" />
+          </span>
+        </span>
+      ))}
     </div>
   );
+}
+
+// Pointer parallax, skipped for coarse pointers and reduced-motion users. The
+// pointer position is stored and applied on an animation frame so a burst of
+// move events still writes the custom properties at most once per frame.
+function useHeroParallax(heroRef, fieldRef) {
+  useEffect(() => {
+    const hero = heroRef.current;
+    const field = fieldRef.current;
+    if (!hero || !field || typeof window.matchMedia !== "function") return undefined;
+
+    const finePointer = window.matchMedia("(pointer: fine)");
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const enabled = () => finePointer.matches && !reducedMotion.matches;
+    let frame;
+    let point = null;
+
+    const reset = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = undefined;
+      point = null;
+      field.style.setProperty("--px", "0px");
+      field.style.setProperty("--py", "0px");
+    };
+
+    const move = (event) => {
+      if (!enabled()) return;
+      point = { x: event.clientX, y: event.clientY };
+      frame ??= requestAnimationFrame(() => {
+        frame = undefined;
+        if (!point || !enabled()) return;
+        const rect = hero.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        field.style.setProperty("--px", `${(((point.x - rect.left) / rect.width - 0.5) * 36).toFixed(1)}px`);
+        field.style.setProperty("--py", `${(((point.y - rect.top) / rect.height - 0.5) * 28).toFixed(1)}px`);
+      });
+    };
+
+    const sync = () => {
+      field.style.setProperty("--parallax-duration", enabled() ? "0.7s" : "0s");
+      if (!enabled()) reset();
+    };
+
+    hero.addEventListener("pointermove", move);
+    hero.addEventListener("pointerleave", reset);
+    finePointer.addEventListener("change", sync);
+    reducedMotion.addEventListener("change", sync);
+    sync();
+
+    return () => {
+      hero.removeEventListener("pointermove", move);
+      hero.removeEventListener("pointerleave", reset);
+      finePointer.removeEventListener("change", sync);
+      reducedMotion.removeEventListener("change", sync);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [heroRef, fieldRef]);
 }
 
 
 export default function Landing({ onGetStarted }) {
   const [yearlyPricing, setYearlyPricing] = useState(true);
+  const heroRef = useRef(null);
+  const heroFieldRef = useRef(null);
+  useHeroParallax(heroRef, heroFieldRef);
 
   return (
     <div className="landing">
@@ -63,15 +132,20 @@ export default function Landing({ onGetStarted }) {
       </header>
 
       <main>
-        <section className="landing-hero" id="top">
+        <section className="landing-hero" id="top" ref={heroRef}>
+          <HeroFloat fieldRef={heroFieldRef} />
           <div className="hero-copy">
-            <PlatformStrip />
-            <h1 className="landing-title">Publish across every social media from one place.</h1>
-            <p className="landing-subtitle">
+            <h1 className="landing-title">
+              <span data-rise>Publish across</span>
+              <span data-rise style={{ "--d": "90ms" }}>every social media</span>
+              <span data-rise style={{ "--d": "180ms" }}>from one place.</span>
+            </h1>
+            <p className="landing-subtitle" data-rise style={{ "--d": "300ms" }}>
               Create text, image, video, and carousel posts. Publish now or schedule them across your connected accounts, then track every delivery in Meadow.
             </p>
-            <div className="hero-actions">
+            <div className="hero-actions" data-rise style={{ "--d": "400ms" }}>
               <button className="btn-primary landing-cta" onClick={onGetStarted}>Post for free <ArrowIcon /></button>
+              <a className="hero-secondary-cta" href="#platforms">See all ten platforms <ArrowIcon /></a>
             </div>
           </div>
         </section>
