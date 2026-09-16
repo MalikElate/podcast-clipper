@@ -9,13 +9,14 @@ import NotFound from "./components/NotFound.jsx";
 import { PLANS } from "./pricing.js";
 import { api, localPreview } from "./bridge/BridgeApi.js";
 import { isDashboardPath } from "./bridge/dashboardRoutes.js";
-import { appHref, siteSurface } from "./siteUrls.js";
+import { appHref, isLocalMarketingPreview, siteSurface } from "./siteUrls.js";
 import { getPlatformUseCaseBySlug } from "./platformUseCases.js";
 const BridgeApp = lazy(() => import("./bridge/BridgeApp.jsx"));
 
 export default function App() {
   const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
   const surface = siteSurface(window.location);
+  const localMarketingPreview = isLocalMarketingPreview(window.location, import.meta.env.DEV);
   const isTermsPage = pathname === "/terms" || pathname === "/terms-of-service";
   const isPrivacyPage = pathname === "/privacy" || pathname === "/privacy-policy";
   if (isTermsPage || isPrivacyPage) {
@@ -26,7 +27,7 @@ export default function App() {
   if (platformPage) return <PublicPlatformLanding platform={platformPage} onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;
   if (surface === "marketing" && isDashboardPath(pathname)) return <DomainRedirect href={appHref(`${window.location.pathname}${window.location.search}${window.location.hash}`)} />;
   if (pathname !== "/" && !isDashboardPath(pathname)) return <NotFound />;
-  if (surface === "marketing") return <PublicLanding onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;
+  if (surface === "marketing" || localMarketingPreview) return <PublicLanding onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;
 
   return <AppSurface appOnly={surface === "app"} />;
 }
