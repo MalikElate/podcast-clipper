@@ -90,7 +90,7 @@ export class PublishingWorker {
           catch (error) { error.durableCheckpoint = true; throw error; }
         };
         timer = setInterval(() => checkpoint({}).catch(error => console.error("Delivery checkpoint:", error.code || error.name)), 20000); timer.unref?.();
-        if (!polling) this.store.recordRateEvent(id, account.rateKey, this.clock());
+        if (!polling) this.store.recordRateEvent(id, account.rateKey, this.clock(), account.ownerUid, account.id);
         await this.store.flush?.();
         const dispatchDelivery = this.store.get("delivery", id), dispatchAccount = this.store.get("account", account.id);
         if (dispatchDelivery?.status !== "publishing" || dispatchDelivery.workerId !== this.id) return;
@@ -143,7 +143,7 @@ export class PublishingWorker {
           this.store.put("delivery", { ...current, status: "needs_review", error: error.message, leaseUntil: null, updatedAt: this.clock() });
         } else if (error.reconnect || error.code === "reconnect_required") {
           const message = error instanceof BridgeError ? error.message : "Reconnect this account to renew its permissions.";
-          const marked = this.accounts.markReconnect(account.id, message, { authorizationId: account.authorizationId, credentials });
+          const marked = this.accounts.markReconnect(account.id, message, { authorizationId: account.authorizationId, credentials, lossScope: ["grant", "access_token"].includes(error.authFailure) ? "authorization" : null });
           if (!marked && latestAccount?.status === "connected") { retryConnection("Account access changed. Meadow will retry with its current access."); return; }
           this.store.put("delivery", { ...current, status: "needs_account", resumeStatus: polling ? "processing" : "queued", error: message, leaseUntil: null, updatedAt: this.clock() });
           if (!polling) this.store.removeRateEvent(id);

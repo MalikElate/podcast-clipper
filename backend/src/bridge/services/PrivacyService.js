@@ -5,8 +5,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { connectionDisclosure } from "../platforms/connectionPrivacy.js";
 
-export const POLICY_VERSION = "2026-09-12";
+export const POLICY_VERSION = "2026-09-16";
 const DAY = 86400000;
+const CONNECTION_BARRIER_TTL = 15 * 60000;
+// Production may wake only once daily, so reserve a full wake interval before
+// the public seven-day deadline when ordinary lock-protected cleanup is stuck.
+const HARD_LOCAL_PURGE_AFTER = 6 * DAY;
+const HARD_PURGE_PLATFORMS = new Set(["youtube", "google_business", "tiktok"]);
 export const deletionMarker = uid => SecretVault.hash(`meadow-deletion:${uid}`);
 
 /** Durable erasure jobs. Failed external operations never restore access or data. */
@@ -16,7 +21,14 @@ export class PrivacyService {
     this.activeRequests = new Map();
   }
   blocked(uid) { return Boolean(this.store.get("privacyBlock", deletionMarker(uid))); }
-  connectionBarrier(uid, platform) { return this.store.get("connectionBarrier", SecretVault.hash(`${uid}:${["youtube", "google_business"].includes(platform) ? "google" : platform}`))?.createdAt || 0; }
+  connectionBarrier(uid, platform) {
+    const keys = new Set([platform, ...(["youtube", "google_business"].includes(platform) ? ["google"] : [])]);
+    return Math.max(0, ...[...keys].map(key => this.store.get("connectionBarrier", SecretVault.hash(`${uid}:${key}`))).filter(record => record && (!record.expiresAt || record.expiresAt > this.clock())).map(record => record.createdAt || 0));
+  }
+  setConnectionBarrier(uid, key) {
+    const now = this.clock();
+    this.store.put("connectionBarrier", { id: SecretVault.hash(`${uid}:${key}`), createdAt: now, expiresAt: now + CONNECTION_BARRIER_TTL });
+  }
   assertActive(uid) { invariant(!this.blocked(uid), "Account deletion has been requested. This workspace is closed.", { status: 410, code: "account_deleting" }); }
   status(uid) {
     const block = this.store.get("privacyBlock", deletionMarker(uid));
@@ -59,31 +71,120 @@ export class PrivacyService {
       this.store.put("delivery", { ...delivery, status: "cancelled", error: null, updatedAt: this.clock() });
     }
   }
-  requestConnection(uid, projectId, accountId, { alreadyRevoked = false } = {}) {
+  requestLostAccess(account, { authorizationLost = false } = {}) {
+    const selected = this.store.get("account", account.id);
+    if (!selected || selected.platform !== "youtube" || selected.authorizationId !== account.authorizationId || selected.status === "disconnected" || !authorizationLost && selected.status === "deleting") return false;
+    if (authorizationLost) {
+      this.requestConnection(selected.ownerUid, selected.projectId, selected.id, { alreadyRevoked: true, matchAuthorizationOnly: true, scheduleUncovered: true });
+      return true;
+    }
+    const existingJob = this.store.list("erasure", { ownerUid: selected.ownerUid, limit: null }).find(item => item.type === "connection" && item.accountIds.includes(selected.id));
+    if (existingJob) return true;
+    const id = randomUUID(), now = this.clock();
+    this.store.transaction(() => {
+      this.setConnectionBarrier(selected.ownerUid, "youtube");
+      this.store.removeStates(selected.ownerUid, ["youtube"]);
+      for (const connection of this.store.list("connection", { ownerUid: selected.ownerUid, limit: null }).filter(item => item.platform === "youtube")) this.store.remove("connection", connection.id);
+      this.markDeleting(selected);
+      // A missing channel can share an otherwise valid Google authorization
+      // with a Business Profile. Remove only the unavailable YouTube account.
+      this.store.put("erasure", { id, ownerUid: selected.ownerUid, type: "connection", accountIds: [selected.id], alreadyRevoked: true, reason: "lost_access", status: "pending", dueAt: now, createdAt: now });
+    });
+    return true;
+  }
+  requestConnection(uid, projectId, accountId, { alreadyRevoked = false, matchAuthorizationOnly = false, scheduleUncovered = false } = {}) {
     const selected = this.projects.requireRecord(uid, projectId, "account", accountId);
     const existingJob = this.store.list("erasure", { ownerUid: uid, limit: null }).find(item => item.type === "connection" && item.accountIds.includes(accountId));
-    if (existingJob) return { disconnected: true, deletionPending: true, reference: existingJob.id };
+    if (existingJob && !scheduleUncovered) return { disconnected: true, deletionPending: true, reference: existingJob.id };
     // The same authorization can be attached to several workspaces owned by this user.
     const tokens = account => { try { return account.encryptedCredentials ? this.vault.decrypt(account.encryptedCredentials, `account:${account.id}`) : {}; } catch { return {}; } };
     const selectedTokens = tokens(selected);
-    const accounts = this.store.list("account", { ownerUid: uid, limit: null }).filter(account => {
-      if (account.platform === selected.platform && account.remoteId === selected.remoteId) return true;
+    let accounts = this.store.list("account", { ownerUid: uid, limit: null }).filter(account => {
+      if (account.id === selected.id) return true;
+      if (!matchAuthorizationOnly && account.platform === selected.platform && account.remoteId === selected.remoteId) return true;
       if (account.authorizationId && account.authorizationId === selected.authorizationId) return true;
       if (!account.encryptedCredentials || !selected.encryptedCredentials) return false;
       const candidate = tokens(account);
       const sameFamily = account.platform === selected.platform || [account.platform, selected.platform].every(value => ["youtube", "google_business"].includes(value));
       return sameFamily && Boolean(selectedTokens.refreshToken && candidate.refreshToken === selectedTokens.refreshToken || selectedTokens.accessToken && candidate.accessToken === selectedTokens.accessToken);
     });
+    if (scheduleUncovered) {
+      const scheduled = new Set(this.store.list("erasure", { ownerUid: uid, limit: null }).filter(item => item.type === "connection").flatMap(item => item.accountIds));
+      accounts = accounts.filter(account => !scheduled.has(account.id));
+      if (!accounts.length) return { disconnected: true, deletionPending: true, reference: existingJob?.id };
+    }
     const id = randomUUID();
     this.store.transaction(() => {
       const platforms = ["youtube", "google_business"].includes(selected.platform) ? ["youtube", "google_business"] : [selected.platform];
-      this.store.put("connectionBarrier", { id: SecretVault.hash(`${uid}:${platforms.length > 1 ? "google" : selected.platform}`), ownerUid: uid, createdAt: this.clock() });
+      this.setConnectionBarrier(uid, platforms.length > 1 ? "google" : selected.platform);
       this.store.removeStates(uid, platforms);
       for (const connection of this.store.list("connection", { ownerUid: uid, limit: null }).filter(item => platforms.includes(item.platform))) this.store.remove("connection", connection.id);
       for (const account of accounts) this.markDeleting(account);
       this.store.put("erasure", { id, ownerUid: uid, type: "connection", accountIds: accounts.map(item => item.id), alreadyRevoked, status: "pending", dueAt: this.clock(), createdAt: this.clock() });
     });
     return { disconnected: true, deletionPending: true, reference: id, affectedConnections: accounts.length, remoteRevocation: ["youtube", "google_business", "tiktok"].includes(selected.platform) ? "pending" : "manual" };
+  }
+  removeConnectionData(account) {
+    for (const delivery of this.store.list("delivery", { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountId === account.id)) { this.store.removeRateEvent(delivery.id); this.store.remove("delivery", delivery.id); }
+    this.store.removeRateEventsForAccount(account.ownerUid, account.id);
+    for (const post of this.store.list("post", { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountIds.includes(account.id))) {
+      const overrides = { ...post.overrides }; delete overrides[account.id];
+      const accountIds = post.accountIds.filter(id => id !== account.id);
+      this.store.put("post", { ...post, accountIds, overrides, ...(!accountIds.length ? { status: "draft" } : {}), updatedAt: this.clock() });
+    }
+    this.store.remove("account", account.id);
+  }
+  manualRevocationReceipt({ id = randomUUID(), subject, platform, createdAt }) {
+    return { id, subject, platform, status: "manual_revocation_required", createdAt, expiresAt: this.clock() + 30 * DAY };
+  }
+  discardRevocationCredentials(job) {
+    const receipt = this.manualRevocationReceipt(job);
+    this.store.put("revocation", receipt);
+    console.error("Privacy revocation needs manual follow-up:", receipt.id, receipt.platform);
+    return receipt;
+  }
+  expireRevocationCredentials() {
+    const expired = this.store.list("revocation", { status: "pending", limit: null }).filter(job => job.expiresAt <= this.clock());
+    for (const job of expired) this.discardRevocationCredentials(job);
+    if (expired.length) this.store.checkpointDeletedData();
+  }
+  hardPurgeExpiredConnections() {
+    const expired = this.store.list("account", { status: "deleting", limit: null }).filter(account => HARD_PURGE_PLATFORMS.has(account.platform) && account.deletionRequestedAt <= this.clock() - HARD_LOCAL_PURGE_AFTER);
+    if (!expired.length) return;
+    const erasures = this.store.list("erasure", { limit: null });
+    const manual = [], blueskyIds = [], accountLockIds = [], publishingRateKeys = [], credentialGrantKeys = [];
+    this.store.transaction(() => {
+      for (const original of expired) {
+        const account = this.store.get("account", original.id);
+        if (!account || account.status !== "deleting" || account.deletionRequestedAt > this.clock() - HARD_LOCAL_PURGE_AFTER) continue;
+        const related = erasures.filter(job => job.ownerUid === account.ownerUid && (job.type === "owner" || job.accountIds?.includes(account.id)));
+        const alreadyRevoked = related.length > 0 && related.every(job => job.alreadyRevoked === true);
+        if (!alreadyRevoked && account.encryptedCredentials && ["youtube", "google_business", "tiktok"].includes(account.platform)) {
+          const receipt = this.manualRevocationReceipt({ subject: deletionMarker(account.ownerUid), platform: account.platform, createdAt: account.deletionRequestedAt });
+          this.store.put("revocation", receipt); manual.push(receipt);
+        }
+        if (account.platform === "bluesky") blueskyIds.push(account.remoteId);
+        accountLockIds.push(account.id);
+        if (account.rateKey) publishingRateKeys.push(account.rateKey);
+        if (this.accounts) credentialGrantKeys.push(this.accounts.credentialLockKey(account));
+        this.removeConnectionData(account);
+      }
+      for (const job of erasures.filter(item => item.type === "connection")) {
+        const accountIds = job.accountIds.filter(id => this.store.get("account", id));
+        if (!accountIds.length) this.store.remove("erasure", job.id);
+        else if (accountIds.length !== job.accountIds.length) this.store.put("erasure", { ...job, accountIds });
+      }
+    });
+    for (const id of accountLockIds) this.locks.cancel(`credentials:${id}`);
+    for (const rateKey of new Set(publishingRateKeys)) {
+      if (!this.store.list("account", { rateKey, limit: 1 }).length) this.locks.cancel(`publishing:${rateKey}`);
+    }
+    for (const key of new Set(credentialGrantKeys)) {
+      if (!this.store.list("account", { limit: null }).some(account => this.accounts.credentialLockKey(account) === key)) this.locks.cancel(key);
+    }
+    for (const remoteId of blueskyIds) this.pruneBlueskySession(remoteId);
+    for (const receipt of manual) console.error("Privacy revocation needs manual follow-up:", receipt.id, receipt.platform);
+    this.store.checkpointDeletedData();
   }
   async eraseConnection(accountId, alreadyRevoked) {
     const initial = this.store.get("account", accountId);
@@ -96,15 +197,9 @@ export class PrivacyService {
         if (!alreadyRevoked && account.encryptedCredentials && ["youtube", "google_business", "tiktok"].includes(account.platform)) {
           // Retain only the encrypted token needed to revoke, for at most seven days.
           const id = randomUUID();
-          this.store.put("revocation", { id, ownerUid: account.ownerUid, subject: deletionMarker(account.ownerUid), platform: account.platform, encrypted: account.encryptedCredentials, aad: `account:${accountId}`, status: "pending", dueAt: this.clock(), expiresAt: (account.deletionRequestedAt || this.clock()) + 7 * DAY, createdAt: this.clock() });
+          this.store.put("revocation", { id, ownerUid: account.ownerUid, subject: deletionMarker(account.ownerUid), platform: account.platform, encrypted: account.encryptedCredentials, aad: `account:${accountId}`, status: "pending", dueAt: this.clock(), expiresAt: (account.deletionRequestedAt || this.clock()) + HARD_LOCAL_PURGE_AFTER, createdAt: this.clock() });
         }
-        for (const delivery of this.store.list("delivery", { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountId === accountId)) { this.store.removeRateEvent(delivery.id); this.store.remove("delivery", delivery.id); }
-        for (const post of this.store.list("post", { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountIds.includes(accountId))) {
-          const overrides = { ...post.overrides }; delete overrides[accountId];
-          const accountIds = post.accountIds.filter(id => id !== accountId);
-          this.store.put("post", { ...post, accountIds, overrides, ...(!accountIds.length ? { status: "draft" } : {}), updatedAt: this.clock() });
-        }
-        this.store.remove("account", accountId);
+        this.removeConnectionData(account);
       });
       if (account.platform === "bluesky") this.pruneBlueskySessions();
       await this.store.flush?.();
@@ -152,8 +247,7 @@ export class PrivacyService {
   async revoke(job) {
     if (job.expiresAt <= this.clock()) {
       // Never keep a failed revocation token indefinitely. The receipt is visible to operators.
-      this.store.put("revocation", { id: job.id, subject: job.subject, platform: job.platform, status: "manual_revocation_required", createdAt: job.createdAt, expiresAt: this.clock() + 30 * DAY });
-      console.error("Privacy revocation needs manual follow-up:", job.id, job.platform);
+      this.discardRevocationCredentials(job);
       this.store.checkpointDeletedData();
       return;
     }
@@ -188,10 +282,13 @@ export class PrivacyService {
     } finally { try { await this.store.flush?.(); } finally { this.running = false; } }
   }
   prune() {
+    this.store.pruneLeases(this.clock());
+    this.hardPurgeExpiredConnections();
+    this.expireRevocationCredentials();
     this.metaPrivacy?.prune();
     this.store.pruneStates(this.clock());
-    for (const kind of ["connection", "blueskyState", "revocation"]) for (const record of this.store.list(kind, { limit: null })) {
-      if (record.expiresAt <= this.clock() && (kind !== "revocation" || record.status !== "pending")) this.store.remove(kind, record.id);
+    for (const kind of ["connection", "blueskyState", "revocation", "connectionBarrier"]) for (const record of this.store.list(kind, { limit: null })) {
+      if ((kind === "connectionBarrier" ? !record.expiresAt || record.expiresAt <= this.clock() : record.expiresAt <= this.clock()) && (kind !== "revocation" || record.status !== "pending")) this.store.remove(kind, record.id);
     }
     for (const account of this.store.list("account", { limit: null })) {
       if (account.status === "disconnected" && !this.blocked(account.ownerUid)) {
@@ -223,6 +320,14 @@ export class PrivacyService {
         if (stat?.isFile() && stat.mtimeMs < this.clock() - DAY) await fs.unlink(filename).catch(error => { if (error.code !== "ENOENT") throw error; });
       }
     }
+  }
+  pruneBlueskySession(remoteId) {
+    if (this.store.list("account", { limit: null }).some(item => item.platform === "bluesky" && item.remoteId === remoteId)) return;
+    for (const connection of this.store.list("connection", { limit: null }).filter(item => item.platform === "bluesky")) {
+      try { if (this.vault.decrypt(connection.encrypted, `connection:${connection.id}`).some(candidate => candidate.remoteId === remoteId)) return; }
+      catch { return; }
+    }
+    this.store.remove("blueskySession", SecretVault.hash(remoteId));
   }
   pruneBlueskySessions() {
     if (this.accounts?.pendingCallbacks) return;

@@ -26,16 +26,20 @@ export const PLATFORM_PRIVACY = [
   {
     id: "youtube",
     name: "YouTube",
-    intro: "Meadow uses YouTube API Services to connect a channel, upload requested videos and retrieve authorized performance data.",
+    intro: "Meadow uses YouTube API Services to connect the channel you choose, upload videos you ask us to publish, and show available results.",
     details: [
-      { label: "Data Meadow accesses", text: "Channel ID, name, profile image and link; the video file, title, description, visibility, audience and synthetic-content settings you submit; upload-session and video IDs, processing and visibility status and published link; and available views, likes, comments and authorized analytics." },
-      { label: "How Meadow uses it", text: "To identify the selected channel, upload and schedule the videos you request, verify processing and delivery, and show available performance. Meadow does not request Gmail, Drive or Calendar access for YouTube publishing." },
-      { label: "Retention and removal", text: "Stored YouTube API data is refreshed or removed within thirty days. Disconnecting starts local deletion immediately, with a target of seven days. Credentials retained only to retry Google revocation are destroyed within seven days. Original uploads and captions remain until you delete them or your Meadow account." },
+      { label: "What data Meadow receives", text: "When you connect YouTube, Meadow receives basic information about the channel you select, such as its name, image, link and channel ID. For videos uploaded through Meadow, we receive upload and video IDs, processing and visibility status, the published link, views, likes, comment counts and, when YouTube makes it available, the number of times the video was shared. Meadow also handles the video, title, description, visibility, audience choice, whether it contains realistic altered or synthetic content, and the schedule you provide. Meadow never receives your Google or YouTube password." },
+      { label: "How Meadow uses the data", text: "Meadow uses this information only to connect the channel you select, upload and schedule videos you ask us to publish, confirm whether an upload succeeded, and display the performance of your published videos. Meadow does not request access to Gmail, Google Drive or Google Calendar." },
+      { label: "How Meadow protects the data", text: "Meadow uses secure connections when information moves between Meadow and Google. Your Google authorization is stored in encrypted form. Access to your YouTube information is limited to your Meadow account and the systems needed to provide the features you request. Meadow personnel may access specific information only when you ask for support, when necessary to protect the service, or when required by law." },
+      { label: "Who receives the data", text: "When you publish, Meadow sends the video and the publishing choices you provide to YouTube. Meadow uses your schedule to decide when to send it. Cloudflare hosts Meadow and processes information on our behalf. We do not sell Google or YouTube data, share it with advertisers or data brokers, use it for advertising or credit decisions, or use it to train general-purpose AI models. Meadow’s use of information received from Google APIs follows the Google API Services User Data Policy, including its Limited Use requirements." },
+      { label: "How long Meadow keeps the data", text: "Meadow checks stored YouTube information at least once every 30 days. If Meadow loses access to your channel or a video is removed from YouTube, Meadow deletes the related information within 30 days of that change. Disconnecting YouTube starts deletion immediately. Meadow deletes its stored YouTube information as soon as possible and no later than seven calendar days. Original videos and captions stored in your Meadow workspace remain until you delete them or your Meadow account." },
+      { label: "Removing access", text: "You can disconnect YouTube from Meadow at any time or revoke Meadow through Google’s security settings using the link below. Videos already published on YouTube remain there until you delete them through YouTube." },
     ],
     links: [
       { label: "Google Privacy Policy", url: "https://policies.google.com/privacy" },
       { label: "YouTube Terms of Service", url: "https://www.youtube.com/t/terms" },
-      { label: "Manage Google access", url: "https://myaccount.google.com/connections" },
+      { label: "Google API Services User Data Policy", url: "https://developers.google.com/terms/api-services-user-data-policy" },
+      { label: "Manage Google access", url: "https://security.google.com/settings/security/permissions" },
     ],
   },
   {
@@ -119,7 +123,7 @@ export const PLATFORM_PRIVACY = [
     links: [
       { label: "Google Privacy Policy", url: "https://policies.google.com/privacy" },
       { label: "Google API Services User Data Policy", url: "https://developers.google.com/terms/api-services-user-data-policy" },
-      { label: "Manage Google access", url: "https://myaccount.google.com/connections" },
+      { label: "Manage Google access", url: "https://security.google.com/settings/security/permissions" },
     ],
   },
 ];

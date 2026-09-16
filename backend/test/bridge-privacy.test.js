@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { randomBytes, createHmac } from "node:crypto";
+import Database from "better-sqlite3";
 import { BridgeApplication } from "../src/bridge/BridgeApplication.js";
 import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 import { PlatformProvider } from "../src/bridge/platforms/PlatformProvider.js";
@@ -14,6 +15,9 @@ import { BlueskyProvider } from "../src/bridge/platforms/BlueskyProvider.js";
 import { HttpTransport } from "../src/bridge/platforms/HttpTransport.js";
 import { ProviderRegistry } from "../src/bridge/platforms/ProviderRegistry.js";
 import { SecretVault } from "../src/bridge/core/SecretVault.js";
+import { CONNECTION_PRIVACY_VERSION } from "../src/bridge/platforms/connectionPrivacy.js";
+import { ProviderError } from "../src/bridge/core/errors.js";
+import { LockService } from "../src/bridge/core/LockService.js";
 import { AnalyticsErasureService } from "../src/bridge/services/AnalyticsErasureService.js";
 
 const DAY = 86400000;
@@ -42,6 +46,59 @@ function fixture(t, { persistent = false } = {}) {
   return { get app() { return app; }, project, account, post, providers, now: () => now, advance: ms => { now += ms; }, restart: () => { app.close(); app = new BridgeApplication(options); }, dir };
 }
 
+test("durable locks use opaque names, stop renewing when cancelled, and prune expired rows", async () => {
+  const store = new SqliteStore(), locks = new LockService(store);
+  const name = "publishing:youtube:sensitive-channel-id";
+  let entered, release;
+  const started = new Promise(resolve => { entered = resolve; });
+  const held = new Promise(resolve => { release = resolve; });
+  const running = locks.withLock(name, async () => { entered(); await held; }, { leaseMs: 30 });
+  await started;
+  try {
+    const [lease] = store.db.prepare("SELECT name FROM leases").all();
+    assert.match(lease.name, /^lease:[a-f0-9]{64}$/);
+    assert.ok(!lease.name.includes("sensitive-channel-id"));
+    locks.cancel(name);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    assert.deepEqual(store.db.prepare("SELECT name FROM leases").all(), []);
+  } finally {
+    release();
+    await running;
+  }
+  store.acquireLease("publishing:youtube:expired-channel", "abandoned", 0, 10);
+  assert.equal(store.pruneLeases(11), 1);
+  assert.deepEqual(store.db.prepare("SELECT name FROM leases").all(), []);
+  store.close();
+});
+
+test("legacy lock identifiers and orphaned rate keys are removed from the SQLite file", t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "meadow-legacy-privacy-")), filename = path.join(dir, "bridge.sqlite");
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  new SqliteStore(filename).close();
+  const legacy = new Database(filename);
+  legacy.pragma("journal_mode = WAL");
+  legacy.prepare("DELETE FROM schema_migrations WHERE version=2").run();
+  legacy.exec("DROP TABLE rate_events; CREATE TABLE rate_events (id TEXT PRIMARY KEY, rate_key TEXT NOT NULL, occurred_at INTEGER NOT NULL); CREATE INDEX idx_rate_events_key_time ON rate_events(rate_key,occurred_at)");
+  legacy.prepare("INSERT INTO rate_events VALUES (?,?,?)").run("missing-delivery", "youtube:orphaned-channel-id", 1);
+  legacy.prepare("INSERT INTO leases VALUES (?,?,?)").run("publishing:youtube:legacy-channel-id", "legacy-holder", Date.now() + DAY);
+  legacy.pragma("wal_checkpoint(TRUNCATE)");
+  legacy.close();
+  assert.ok(fs.readFileSync(filename).includes(Buffer.from("legacy-channel-id")));
+  assert.ok(fs.readFileSync(filename).includes(Buffer.from("orphaned-channel-id")));
+
+  const migrated = new SqliteStore(filename);
+  assert.deepEqual(migrated.db.prepare("SELECT * FROM rate_events").all(), []);
+  const [lease] = migrated.db.prepare("SELECT name FROM leases").all();
+  assert.match(lease.name, /^lease:[a-f0-9]{64}$/);
+  migrated.checkpointDeletedData();
+  migrated.close();
+  const persisted = [filename, `${filename}-wal`].filter(file => fs.existsSync(file)).map(file => fs.readFileSync(file));
+  for (const bytes of persisted) {
+    assert.ok(!bytes.includes(Buffer.from("legacy-channel-id")));
+    assert.ok(!bytes.includes(Buffer.from("orphaned-channel-id")));
+  }
+});
+
 test("connection erasure removes shared owner connections and all API history without touching another owner or original content", async t => {
   const h = fixture(t), app = h.app, one = h.account(), other = h.account("other");
   const secondProject = app.projects.create("alice", { name: "Second" });
@@ -65,7 +122,7 @@ test("connection erasure removes shared owner connections and all API history wi
   assert.equal(app.posts.get("alice", h.project.id, "only").status, "draft");
 });
 
-test("failed revocation cannot retain profiles and credentials expire after seven days even if the provider stays down", async t => {
+test("failed revocation drops credentials at the six-day fallback before the seven-day deadline", async t => {
   const h = fixture(t), account = h.account("youtube", "youtube");
   h.post("posted", [account]);
   h.providers.youtube.revoke = async () => { throw new Error("provider unavailable"); };
@@ -75,10 +132,111 @@ test("failed revocation cannot retain profiles and credentials expire after seve
   const [job] = h.app.store.list("revocation");
   assert.ok(job.encrypted); assert.equal(job.status, "pending");
   assert.ok(!JSON.stringify(job).includes("token-youtube"));
-  h.advance(7 * DAY + 1); await h.app.privacy.tick();
+  h.advance(6 * DAY - 1); await h.app.privacy.tick();
+  assert.ok(h.app.store.get("revocation", job.id).encrypted);
+  h.advance(1); await h.app.privacy.tick();
   const receipt = h.app.store.get("revocation", job.id);
   assert.equal(receipt.status, "manual_revocation_required");
   assert.equal(receipt.encrypted, undefined); assert.equal(receipt.ownerUid, undefined); assert.equal(receipt.aad, undefined);
+});
+
+test("the six-day fallback purges a connection before the seven-day deadline when its normal erasure lock stays busy", async t => {
+  const h = fixture(t), account = h.account("youtube", "youtube");
+  h.post("posted", [account]);
+  const delivery = h.app.store.get("delivery", "posted:youtube");
+  h.app.store.put("delivery", { ...delivery, status: "published", externalId: "youtube-video", metrics: { views: 12 }, progress: { videoId: "youtube-video", uploadUrl: "secret-upload-session" } });
+  h.app.store.recordRateEvent(delivery.id, account.rateKey, h.now());
+  let startPublishing, finishPublishing;
+  const publishingStarted = new Promise(resolve => { startPublishing = resolve; });
+  const publishingFinished = new Promise(resolve => { finishPublishing = resolve; });
+  h.providers.youtube.validate = () => [];
+  h.providers.youtube.publish = async () => { startPublishing(); await publishingFinished; return { status: "published", externalId: "late-video" }; };
+  h.app.store.put("delivery", { ...h.app.store.get("delivery", delivery.id), status: "queued" });
+  const publishing = h.app.worker.deliver(delivery.id);
+  await publishingStarted;
+
+  h.app.privacy.requestConnection("alice", h.project.id, account.id);
+  await h.app.privacy.tick();
+  assert.equal(h.app.store.get("account", account.id).status, "deleting");
+  assert.equal(h.app.store.list("revocation").length, 0);
+
+  h.advance(6 * DAY - 1);
+  h.app.store.acquireLease(`publishing:${account.rateKey}`, "stuck-worker", h.now(), 2 * DAY);
+  await h.app.privacy.tick();
+  assert.equal(h.app.store.get("account", account.id).status, "deleting");
+  assert.equal(h.app.store.list("revocation").length, 0);
+
+  h.advance(1);
+  await h.app.privacy.tick();
+  assert.equal(h.app.store.get("account", account.id), null);
+  assert.equal(h.app.store.get("delivery", delivery.id), null);
+  assert.deepEqual(h.app.store.db.prepare("SELECT name FROM leases").all(), []);
+  assert.deepEqual(h.app.store.rateEvents(account.rateKey, 0), []);
+  assert.deepEqual(h.app.store.get("post", "posted").accountIds, []);
+  const [receipt] = h.app.store.list("revocation");
+  assert.equal(receipt.status, "manual_revocation_required");
+  assert.equal(receipt.platform, "youtube");
+  assert.equal(receipt.encrypted, undefined);
+  assert.equal(receipt.ownerUid, undefined);
+  assert.equal(receipt.aad, undefined);
+  assert.ok(!JSON.stringify(receipt).includes("token-youtube"));
+  assert.deepEqual(h.providers.youtube.revoked, []);
+  finishPublishing(); await publishing;
+  assert.equal(h.app.store.get("account", account.id), null);
+  assert.equal(h.app.store.get("delivery", delivery.id), null);
+});
+
+test("the hard fallback does not create a manual receipt for an authorization already revoked", async t => {
+  const h = fixture(t), account = h.account("youtube", "youtube");
+  h.app.store.acquireLease(`publishing:${account.rateKey}`, "stuck-worker", h.now(), 8 * DAY);
+  h.app.privacy.requestConnection("alice", h.project.id, account.id, { alreadyRevoked: true });
+
+  h.advance(6 * DAY);
+  await h.app.privacy.tick();
+  assert.equal(h.app.store.get("account", account.id), null);
+  assert.deepEqual(h.app.store.list("revocation"), []);
+});
+
+test("a revoked Google grant deletes every connection that shares it", async t => {
+  const h = fixture(t), app = h.app;
+  const credentials = { accessToken: "shared-google-access", refreshToken: "shared-google-refresh", expiresAt: h.now() - 1 };
+  const youtube = h.account("youtube", "youtube", {
+    authorizationId: "youtube-authorization",
+    encryptedCredentials: app.vault.encrypt(credentials, "account:youtube"),
+  });
+  const business = h.account("business", "google_business", {
+    authorizationId: "business-authorization",
+    encryptedCredentials: app.vault.encrypt(credentials, "account:business"),
+  });
+  const secondProject = app.projects.create("alice", { name: "Valid duplicate" });
+  const validDuplicate = h.account("valid-duplicate", "youtube", {
+    projectId: secondProject.id,
+    remoteId: youtube.remoteId,
+    authorizationId: "replacement-authorization",
+    encryptedCredentials: app.vault.encrypt({ accessToken: "valid-access", refreshToken: "valid-refresh", expiresAt: h.now() + DAY }, "account:valid-duplicate"),
+  });
+  h.post("shared-google-post", [youtube, business]);
+  const delivery = app.store.get("delivery", "shared-google-post:youtube");
+  app.store.put("delivery", { ...delivery, status: "published", externalId: "youtube-video", metrics: { views: 12 }, progress: { videoId: "youtube-video" } });
+  const revoked = Object.assign(new ProviderError("Google rejected this account's authorization.", { reconnect: true, code: "reconnect_required" }), { authFailure: "grant" });
+  h.providers.youtube.refresh = async () => { throw revoked; };
+
+  await assert.rejects(app.accounts.credentials(youtube), /rejected this account's authorization/i);
+  const [job] = app.store.list("erasure", { ownerUid: "alice", limit: null });
+  assert.deepEqual([...job.accountIds].sort(), [business.id, youtube.id]);
+  assert.equal(job.alreadyRevoked, true);
+  assert.equal(app.store.get("account", youtube.id).status, "deleting");
+  assert.equal(app.store.get("account", business.id).status, "deleting");
+  assert.equal(app.store.get("account", validDuplicate.id).status, "connected");
+
+  await app.privacy.tick();
+  assert.equal(app.store.get("account", youtube.id), null);
+  assert.equal(app.store.get("account", business.id), null);
+  assert.equal(app.store.get("account", validDuplicate.id).status, "connected");
+  assert.equal(app.store.get("delivery", delivery.id), null);
+  assert.deepEqual(app.store.get("post", "shared-google-post").accountIds, []);
+  assert.deepEqual(h.providers.youtube.revoked, []);
+  assert.deepEqual(app.store.list("revocation"), []);
 });
 
 test("full erasure deletes originals and partial variants, revokes keys and states, and resumes failed external cleanup after restart", async t => {
@@ -247,6 +405,26 @@ test("an OAuth response started before disconnect cannot save a new connection a
   h.app.privacy.requestConnection("alice", h.project.id, account.id); await h.app.privacy.tick();
   release(); await assert.rejects(callback, /predates connection removal/i);
   await h.app.privacy.tick();
+  assert.deepEqual(h.app.store.list("connection"), []);
+  assert.deepEqual(h.app.store.list("account"), []);
+});
+
+test("a callback stalled past lost-channel cleanup cannot recreate the purged YouTube account", async t => {
+  const h = fixture(t), account = h.account("channel", "youtube");
+  let release, entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  h.providers.youtube.exchange = async () => { entered(); await new Promise(resolve => { release = resolve; }); return { accessToken: "late-token" }; };
+  h.providers.youtube.accounts = async () => [{ remoteId: account.remoteId, label: "Late channel" }];
+  h.app.store.saveState(SecretVault.hash("youtube-state"), { uid: "alice", projectId: h.project.id, platform: "youtube", verifier: "verifier", privacyConsent: { accepted: true, platform: "youtube", version: CONNECTION_PRIVACY_VERSION }, createdAt: h.now() }, h.now() + 10 * 60000);
+  const callback = h.app.accounts.callback("youtube", new URLSearchParams({ state: "youtube-state", code: "code" }));
+  await started;
+  h.app.privacy.requestLostAccess(account);
+  h.advance(6 * DAY);
+  await h.app.privacy.tick();
+  assert.equal(h.app.store.get("account", account.id), null);
+
+  release();
+  await assert.rejects(callback, /expired/i);
   assert.deepEqual(h.app.store.list("connection"), []);
   assert.deepEqual(h.app.store.list("account"), []);
 });

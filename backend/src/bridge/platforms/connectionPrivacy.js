@@ -1,6 +1,6 @@
 // Keep these notices aligned with the fields and scopes used by each adapter.
 // A compact summary and a link to the platform's public privacy section are shown before OAuth.
-export const CONNECTION_PRIVACY_VERSION = "2026-09-14-connections-2";
+export const CONNECTION_PRIVACY_VERSION = "2026-09-16-connections-3";
 
 const authorization = {
   name: "Authorization and consent",
@@ -8,11 +8,11 @@ const authorization = {
 };
 const sharing = "Meadow uses this data to operate your connection and the publishing or analytics you request. Cloudflare hosts the service. Your selected platform receives the media and publishing settings you submit; displaying a profile image can also contact that platform. We do not sell platform data or use it for advertising or general-purpose AI training. Product usage tracking is disabled.";
 const removal = "Remove the account in Connections to stop new publishing and delete its stored connection data, delivery history, and metrics. Your original Meadow content stays until you delete it. Published posts stay on the platform, and a request already sent may still finish. Full account deletion is available in Settings → Privacy & Account. Contact hello@findmeadow.com for a privacy request.";
-const googleUse = "Meadow’s use and transfer of Google API data follows the Google API Services User Data Policy, including Limited Use. Data is used for the connection and features you request. Remove access in your Google Account connections settings as well; revoking a Google grant can affect other channels or Google connections that share it.";
+const googleUse = "Meadow’s use and transfer of Google API data follows the Google API Services User Data Policy, including Limited Use. Data is used for the connection and features you request. You can also remove access through Google’s security settings; revoking a Google grant can affect other channels or Google connections that share it.";
 const googlePolicies = [
   { label: "Google Privacy Policy", url: "https://policies.google.com/privacy" },
   { label: "Google API Services User Data Policy", url: "https://developers.google.com/terms/api-services-user-data-policy" },
-  { label: "Manage Google access", url: "https://myaccount.google.com/connections" },
+  { label: "Manage Google access", url: "https://security.google.com/settings/security/permissions" },
 ];
 
 const notices = {
@@ -39,7 +39,7 @@ const notices = {
     connectionSummary: "Connect a YouTube channel to upload and schedule videos and view available performance.",
     requirement: "Your Google Account must be associated with a YouTube channel.",
     revokeSummary: "You can disconnect in Meadow and revoke access from your Google Account settings at any time.",
-    shortAgreement: "I agree to connect YouTube and allow the access described above.",
+    shortAgreement: "I agree to Meadow’s Privacy Policy and the YouTube Terms of Service and allow the access described above.",
     introduction: "Meadow uses YouTube API Services. Choose whether Meadow may access your selected channel to upload the videos you submit, check their status, and show available performance.",
     data: [
       { name: "Channel identity", detail: "Your channel ID, channel name, profile image, and channel link, so you can identify and select the right publishing destination." },
@@ -47,7 +47,7 @@ const notices = {
       { name: "Video performance", detail: "Available views, likes, comment counts, and authorized share counts for videos published through Meadow. These are shown as individual video statistics." },
       authorization,
     ],
-    retention: "Stored YouTube API data is refreshed or removed within thirty days. We remove affected API data when authorization cannot be verified or a video is no longer available. Connection removal starts deletion immediately, with a target of seven days for local cleanup. Credentials retained only to retry Google revocation are destroyed within seven days. Your original uploads and captions remain until you delete them or your Meadow account.",
+    retention: "Meadow checks stored YouTube information at least once every 30 days. If Meadow loses access to your channel or a video is removed from YouTube, Meadow deletes the related information within 30 days of that change. Connection removal starts deletion immediately. Meadow deletes its stored YouTube information as soon as possible and no later than seven calendar days. Credentials retained only to retry Google revocation are destroyed within seven days. Your original uploads and captions remain until you delete them or your Meadow account.",
     platformNote: googleUse,
     agreement: "I agree to this YouTube connection privacy notice, Meadow’s Privacy Policy and Terms of Service, and the YouTube Terms of Service, and allow the data access described above.",
     policies: [{ label: "YouTube Terms of Service", url: "https://www.youtube.com/t/terms" }, ...googlePolicies],

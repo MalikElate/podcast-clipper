@@ -200,6 +200,31 @@ test("YouTube refreshes a 31-day-old profile without deleting the connection", a
   assert.equal(h.app.store.list("erasure").length, 0);
 });
 
+test("reconnect-required YouTube accounts cannot starve connected profile checks", async t => {
+  const h = fixture(t);
+  for (let index = 0; index < 10; index++) {
+    h.account(`stale-${index}`, { platform: "youtube", status: "reconnect_required", profileUpdatedAt: h.now() - 31 * DAY, profileAttemptedAt: h.now() - 40 * DAY - index, metadata: { stale: true } });
+  }
+  h.account("healthy", { platform: "youtube", profileAttemptedAt: h.now() - 2 * DAY });
+  let calls = 0;
+  h.providers.youtube.accounts = async () => {
+    calls++;
+    return [{ remoteId: "healthy", label: "Checked healthy channel", avatar: null, profileUrl: "https://youtube.example/healthy" }];
+  };
+
+  await h.app.accounts.maintainApiData();
+
+  assert.equal(calls, 1);
+  assert.equal(h.saved("healthy").label, "Checked healthy channel");
+  assert.equal(h.saved("healthy").profileAttemptedAt, h.now());
+  for (let index = 0; index < 10; index++) {
+    assert.equal(h.saved(`stale-${index}`).label, "YouTube channel");
+    assert.equal(h.saved(`stale-${index}`).avatar, null);
+    assert.equal(h.saved(`stale-${index}`).metadata, null);
+  }
+  assert.equal(h.app.store.list("erasure").length, 0);
+});
+
 test("failed YouTube profile refresh clears stale API data and keeps the authorization for retry", async t => {
   const h = fixture(t);
   const original = h.account("channel", { platform: "youtube", profileUpdatedAt: h.now() - 31 * DAY, profileAttemptedAt: h.now() - 2 * DAY, metadata: { old: true }, options: { old: true } });
@@ -211,6 +236,45 @@ test("failed YouTube profile refresh clears stale API data and keeps the authori
   assert.equal(current.label, "YouTube channel");
   for (const key of ["avatar", "profileUrl", "metadata", "options"]) assert.equal(current[key], null);
   assert.equal(h.app.store.list("erasure").length, 0);
+});
+
+test("a missing YouTube channel schedules deletion instead of retaining inaccessible API data", async t => {
+  const h = fixture(t);
+  const credentials = { accessToken: "shared-google-access", refreshToken: "shared-google-refresh", expiresAt: h.now() + DAY };
+  h.account("channel", { platform: "youtube", credentials, authorizationId: "shared-google-authorization", profileAttemptedAt: h.now() - 2 * DAY });
+  h.account("business", { platform: "google_business", credentials, authorizationId: "shared-google-authorization" });
+  h.providers.youtube.accounts = async () => [];
+
+  await h.app.accounts.maintainApiData();
+  const [job] = h.app.store.list("erasure", { ownerUid: "alice", limit: null });
+  assert.equal(h.saved("channel").status, "deleting");
+  assert.equal(h.saved("business").status, "connected");
+  assert.deepEqual(job.accountIds, ["channel"]);
+  assert.equal(job.reason, "lost_access");
+
+  await h.app.privacy.tick();
+  assert.equal(h.saved("channel"), null);
+  assert.equal(h.saved("business").status, "connected");
+  assert.deepEqual(h.tokens("business"), credentials);
+  assert.deepEqual(h.app.store.list("erasure", { ownerUid: "alice", limit: null }), []);
+});
+
+test("an authorization failure expands an already-scheduled channel deletion to its shared grant", async t => {
+  const h = fixture(t);
+  const credentials = { accessToken: "shared-google-access", refreshToken: "shared-google-refresh", expiresAt: h.now() + DAY };
+  const channel = h.account("channel", { platform: "youtube", credentials, authorizationId: "youtube-authorization", profileAttemptedAt: h.now() - 2 * DAY });
+  h.account("business", { platform: "google_business", credentials, authorizationId: "business-authorization" });
+  h.providers.youtube.accounts = async () => [];
+
+  await h.app.accounts.maintainApiData();
+  assert.deepEqual(h.app.store.list("erasure", { ownerUid: "alice", limit: null }).map(job => job.accountIds), [["channel"]]);
+  assert.equal(h.app.accounts.markReconnect(channel.id, "Google rejected this authorization.", { authorizationId: channel.authorizationId, credentials, lossScope: "authorization" }), true);
+  assert.deepEqual(h.app.store.list("erasure", { ownerUid: "alice", limit: null }).flatMap(job => job.accountIds).sort(), ["business", "channel"]);
+  assert.equal(h.saved("business").status, "deleting");
+
+  await h.app.privacy.tick();
+  assert.equal(h.saved("channel"), null);
+  assert.equal(h.saved("business"), null);
 });
 
 for (const failure of [false, true]) {
@@ -469,6 +533,41 @@ async function queuedTextDelivery(h) {
   });
   return post.deliveries[0];
 }
+
+test("a repeated YouTube access-token failure during publishing schedules lost-access erasure", async t => {
+  const h = fixture(t);
+  const credentials = { accessToken: "shared-google-access", refreshToken: "shared-google-refresh", expiresAt: h.now() + 30 * DAY };
+  h.account("channel", { platform: "youtube", credentials, authorizationId: "youtube-authorization" });
+  h.account("business", { platform: "google_business", credentials, authorizationId: "business-authorization" });
+  Object.defineProperty(h.providers.youtube, "configured", { value: true });
+  h.providers.youtube.validate = () => [];
+  h.providers.youtube.refresh = async value => ({ ...value, accessToken: "renewed-google-access", expiresAt: h.now() + 30 * DAY });
+  h.providers.youtube.publish = async () => {
+    throw rejectedAccessToken();
+  };
+  const { posts: [post] } = await h.app.posts.submit("alice", h.project.id, {
+    requestId: randomUUID(),
+    items: [{ caption: "A scheduled video", title: "Video", mediaIds: [], accountIds: ["channel"], format: "auto", schedule: { mode: "now", timeZone: "UTC" } }],
+  });
+
+  await h.app.worker.deliver(post.deliveries[0].id);
+  assert.equal(h.saved("channel").status, "connected");
+  assert.equal(h.saved("business").status, "connected");
+  assert.equal(h.tokens("channel").accessToken, "renewed-google-access");
+  assert.equal(h.tokens("business").accessToken, "renewed-google-access");
+  assert.equal(h.app.store.get("delivery", post.deliveries[0].id).status, "retrying");
+
+  h.advance(1001);
+  await h.app.worker.deliver(post.deliveries[0].id);
+  assert.equal(h.saved("channel").status, "deleting");
+  assert.equal(h.saved("business").status, "deleting");
+  assert.equal(h.app.store.get("delivery", post.deliveries[0].id).status, "needs_account");
+  assert.deepEqual(h.app.store.list("erasure", { ownerUid: "alice", limit: null }).map(job => [...job.accountIds].sort()), [["business", "channel"]]);
+
+  await h.app.privacy.tick();
+  assert.equal(h.saved("channel"), null);
+  assert.equal(h.saved("business"), null);
+});
 
 function blockClaimFlush(h, deliveryId) {
   const entered = deferred(), release = deferred(), originalFlush = h.app.store.flush.bind(h.app.store);

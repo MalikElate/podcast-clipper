@@ -79,6 +79,7 @@ export class AccountService {
       candidates = await provider.accounts(credentials);
     }
     invariant(saved && saved.platform === platform, "This connection request has expired. Start again.");
+    invariant((saved.createdAt || 0) + 10 * 60000 > this.clock(), "This connection request has expired. Start again.");
     this.projects.require(saved.uid, saved.projectId);
     this.privacy?.requireConnectionConsent(platform, saved.privacyConsent);
     invariant(!this.privacy?.connectionBarrier(saved.uid, platform) || (saved.createdAt || 0) > this.privacy.connectionBarrier(saved.uid, platform), "This authorization request predates connection removal. Connect again.");
@@ -189,7 +190,7 @@ export class AccountService {
             }
           });
         } catch (error) {
-          if (error.reconnect) this.markReconnect(current.id, error.message, { authorizationId: current.authorizationId, credentials: before });
+          if (error.reconnect) this.markReconnect(current.id, error.message, { authorizationId: current.authorizationId, credentials: before, lossScope: error.authFailure === "grant" ? "authorization" : null });
           throw error;
         }
       }
@@ -205,10 +206,12 @@ export class AccountService {
 
   markReconnect(id, message = "Reconnect this account to renew its permissions.", expected = {}) {
     const account = this.store.get("account", id);
-    if (!account || ["disconnected", "deleting"].includes(account.status) || this.privacy?.blocked(account.ownerUid)) return false;
+    if (!account || account.status === "disconnected" || this.privacy?.blocked(account.ownerUid)) return false;
     if (Object.hasOwn(expected, "authorizationId") && account.authorizationId !== expected.authorizationId) return false;
     if (expected.credentials && account.encryptedCredentials && !sameTokens(this.vault.decrypt(account.encryptedCredentials, `account:${id}`), expected.credentials)) return false;
-    this.store.put("account", { ...account, status: "reconnect_required", lastError: message, updatedAt: this.clock() });
+    if (account.status === "deleting") return expected.lossScope === "authorization" && account.platform === "youtube" ? Boolean(this.privacy?.requestLostAccess(account, { authorizationLost: true })) : false;
+    const updated = this.store.put("account", { ...account, status: "reconnect_required", lastError: message, updatedAt: this.clock() });
+    if (expected.lossScope && updated.platform === "youtube") this.privacy?.requestLostAccess(updated, { authorizationLost: expected.lossScope === "authorization" });
     return true;
   }
 
@@ -232,7 +235,7 @@ export class AccountService {
         return await operation(credentials);
       }
     } catch (error) {
-      if (error.reconnect) this.markReconnect(account.id, error.message, { authorizationId: account.authorizationId, credentials });
+      if (error.reconnect) this.markReconnect(account.id, error.message, { authorizationId: account.authorizationId, credentials, lossScope: ["grant", "access_token"].includes(error.authFailure) ? "authorization" : null });
       throw error;
     }
   }
@@ -262,7 +265,7 @@ export class AccountService {
     for (const account of accounts) {
       if ((account.profileUpdatedAt || account.createdAt) < now - 30 * DAY) this.store.put("account", { ...account, label: "YouTube channel", avatar: null, profileUrl: null, metadata: null, options: null, optionsUpdatedAt: null });
     }
-    for (const selected of accounts.filter(item => (item.profileAttemptedAt || 0) <= now - DAY).sort((a, b) => (a.profileAttemptedAt || 0) - (b.profileAttemptedAt || 0)).slice(0, 10)) {
+    for (const selected of accounts.filter(item => item.status === "connected" && (item.profileAttemptedAt || 0) <= now - DAY).sort((a, b) => (a.profileAttemptedAt || 0) - (b.profileAttemptedAt || 0)).slice(0, 10)) {
       const account = this.store.get("account", selected.id);
       if (account?.status !== "connected" || account.authorizationId !== selected.authorizationId) continue;
       this.store.put("account", { ...account, profileAttemptedAt: now });
@@ -271,7 +274,7 @@ export class AccountService {
         const current = this.store.get("account", account.id);
         if (current?.status !== "connected" || current.authorizationId !== account.authorizationId) continue;
         const profile = profiles.find(item => item.remoteId === account.remoteId);
-        if (!profile) { this.markReconnect(account.id, "This YouTube channel is no longer available to Meadow. Reconnect it to restore access.", { authorizationId: account.authorizationId }); continue; }
+        if (!profile) { this.markReconnect(account.id, "This YouTube channel is no longer available to Meadow.", { authorizationId: account.authorizationId, lossScope: "account" }); continue; }
         this.store.put("account", { ...current, ...profile, profileUpdatedAt: now });
       } catch { /* Keep the connection and retry; expired profile data was cleared above. */ }
     }
