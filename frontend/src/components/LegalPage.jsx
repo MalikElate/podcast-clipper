@@ -68,7 +68,7 @@ const PAGE_COPY = {
     label: "Privacy policy",
     title: "Privacy Policy",
     effectiveDate: "September 16, 2026",
-    intro: "This policy explains the information Meadow receives, how we use it, how long we keep it, and how you can withdraw access or delete it.",
+    intro: <>This policy explains the information Meadow receives, how we use it, how long we keep it, and how you can withdraw access or delete it. Google and YouTube data are covered in plain language in the <a href="#privacy-youtube">YouTube section</a>.</>,
     sections: [
       { heading: "1. Account and workspace information", paragraphs: [
         "Clerk handles sign-in and provides your user identifier and account details, such as your email address. We store the media, captions, settings, schedules, API-key records, and workspace information you give us to operate your account and carry out your publishing requests.",
@@ -107,7 +107,7 @@ const PAGE_COPY = {
       ] },
       { heading: "8. Updates and contact", paragraphs: [
         "The effective date identifies this version of the policy. Connection notices have their own version and are shown whenever you connect or reconnect the relevant platform. Agreement is specific to that authorization; it is not a requirement for entering your Meadow workspace.",
-        <>Meadow is operated by MALIK SEITU MUNYENGE, trading as Woodbark Software. Contact <a href="mailto:hello@findmeadow.com">hello@findmeadow.com</a> about privacy or this policy.</>,
+        <>Meadow is operated by WoodBark Software LLC. Contact <a href="mailto:hello@findmeadow.com">hello@findmeadow.com</a> about privacy or this policy.</>,
       ] },
     ],
   },
@@ -138,7 +138,7 @@ export default function LegalPage({ kind }) {
         <div className="legal-intro" id={privacy ? "privacy-overview" : undefined}>
           <h1>{copy.title}</h1>
           <p>{copy.intro}</p>
-          <p>Meadow is operated by MALIK SEITU MUNYENGE, trading as Woodbark Software.</p>
+          <p>Meadow is operated by WoodBark Software LLC.</p>
           <span className="legal-effective">Effective {copy.effectiveDate}</span>
         </div>
         <div className={privacy ? "legal-layout" : undefined}>
@@ -161,7 +161,11 @@ export default function LegalPage({ kind }) {
                 <span className="legal-platform-label">Connected platform</span>
                 <h2 id={`privacy-${platform.id}-title`}>{platform.name}</h2>
                 <p>{platform.intro}</p>
-                <dl>{platform.details.map(detail => <div key={detail.label}><dt>{detail.label}</dt><dd>{detail.text}</dd></div>)}</dl>
+                <dl>{platform.details.map(detail => <div key={detail.label}><dt>{detail.label}</dt><dd>
+                  <p>{detail.text}</p>
+                  {detail.items && <ul>{detail.items.map(item => <li key={item}>{item}</li>)}</ul>}
+                  {detail.footer && <p>{detail.footer}</p>}
+                </dd></div>)}</dl>
                 <nav className="legal-platform-links" aria-label={`${platform.name} privacy links`}>{platform.links.map(link => <a key={link.url} href={link.url} target="_blank" rel="noreferrer">{link.label}</a>)}</nav>
               </section>)}
             </>}

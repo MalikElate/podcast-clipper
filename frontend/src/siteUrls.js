@@ -14,6 +14,13 @@ export function siteSurface(locationLike) {
   return "integrated";
 }
 
+export function isLocalMarketingPreview(locationLike, isDevelopment) {
+  const location = runtimeLocation(locationLike);
+  return Boolean(isDevelopment)
+    && siteSurface(location) === "integrated"
+    && new URLSearchParams(location?.search || "").get("surface") === "marketing";
+}
+
 function localOrigin(locationLike) {
   const location = runtimeLocation(locationLike);
   return location?.origin && location.origin !== "null" ? location.origin : null;

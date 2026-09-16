@@ -3,19 +3,9 @@ import { PlatformIcon } from "../bridge/ui.jsx";
 import BrandLogo from "./BrandLogo.jsx";
 import { sortPlatforms } from "../bridge/platforms.js";
 import { PLANS } from "../pricing.js";
+import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 
-const PLATFORMS = sortPlatforms([
-  { id: "x", name: "X", color: "#171717", formats: "Text, images, video" },
-  { id: "instagram", name: "Instagram", color: "#d94686", formats: "Images, video, carousels, stories" },
-  { id: "linkedin", name: "LinkedIn", color: "#0a66c2", formats: "Text, images, video, documents" },
-  { id: "facebook", name: "Facebook", color: "#1877f2", formats: "Text, images, video, carousels" },
-  { id: "tiktok", name: "TikTok", color: "#111111", formats: "Video, images, carousels" },
-  { id: "youtube", name: "YouTube", color: "#ff0033", formats: "Video" },
-  { id: "bluesky", name: "Bluesky", color: "#168aff", formats: "Text, images, video" },
-  { id: "threads", name: "Threads", color: "#111111", formats: "Text, images, video, carousels" },
-  { id: "pinterest", name: "Pinterest", color: "#e60023", formats: "Images, video, carousels" },
-  { id: "google_business", name: "Google Business", color: "#4285f4", formats: "Updates, images, carousels" },
-]);
+const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
 
 
 function ArrowIcon() {
@@ -64,8 +54,6 @@ export default function Landing({ onGetStarted }) {
         </a>
         <nav className="landing-nav" aria-label="Main navigation">
           <a href="#platforms">Platforms</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#faq">FAQ</a>
         </nav>
         <div className="landing-actions">
           <button className="btn-ghost" onClick={onGetStarted}>Sign in</button>
@@ -89,18 +77,19 @@ export default function Landing({ onGetStarted }) {
 
 
         <section className="landing-section platform-section" id="platforms">
-          <div className="section-heading platform-heading">
-            <span className="section-eyebrow">Supported platforms</span>
-            <h2>Ten platforms. One publishing workflow.</h2>
-            <p>Connect the accounts you already use and manage each one from the same dashboard.</p>
-          </div>
-          <div className="platform-grid">
-            {PLATFORMS.map((platform) => (
-              <article className="platform-card" key={platform.id} style={{ "--platform-color": platform.color }}>
-                <PlatformMark platform={platform} />
-                <div><h3>{platform.name}</h3><p>{platform.formats}</p></div>
-              </article>
-            ))}
+          <div className="platform-section-layout">
+            <div className="section-heading platform-heading">
+              <span className="section-eyebrow">Supported platforms</span>
+              <h2>Ten platforms. One publishing workflow.</h2>
+              <p>Connect the accounts you already use and manage each one from the same dashboard.</p>
+            </div>
+            <div className="platform-grid" aria-label="Supported publishing platforms">
+              {PLATFORMS.map((platform) => (
+                <a className="platform-card" key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing`} title={platform.name} style={{ "--platform-color": platform.color }}>
+                  <PlatformMark platform={platform} />
+                </a>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -177,7 +166,6 @@ export default function Landing({ onGetStarted }) {
           <div className="footer-brand">
             <BrandLogo />
             <p>Create, schedule, publish, and track from one workspace.</p>
-            <p>Meadow is operated by MALIK SEITU MUNYENGE, trading as Woodbark Software.</p>
           </div>
           <div className="footer-links">
             <div><h2>Use Cases</h2><a href="#platforms">Platforms</a><a href="#pricing">Pricing</a></div>

@@ -1387,7 +1387,7 @@ input[type="range"]::-moz-range-thumb {
 .landing-nav a, .footer-links a, .footer-links button { color: var(--text-muted); text-decoration: none; transition: color .15s ease; }
 .landing-nav a { font-size: 13px; font-weight: 700; }
 .landing-nav a:hover, .footer-links a:hover, .footer-links button:hover { color: var(--text); }
-.landing-actions { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+.landing-actions { display: flex; align-items: center; gap: 24px; flex-shrink: 0; }
 .landing-actions .btn-ghost { padding: 9px 12px; }
 .btn-small-primary { display: inline-flex; align-items: center; gap: 7px; padding: 10px 14px; font-size: 12px; color: #fff; background: var(--cta); border: 1px solid rgba(143,162,255,.35); box-shadow: 0 9px 22px -12px var(--cta-glow); }
 .btn-small-primary:hover { background: var(--cta-hover); }
@@ -1416,21 +1416,21 @@ input[type="range"]::-moz-range-thumb {
 .section-heading h2 { margin: 15px 0 12px; color: var(--text); font-size: clamp(32px,4vw,51px); line-height: 1.03; letter-spacing: -.05em; }
 .section-heading p { margin: 0; color: var(--text-muted); font-size: 15px; line-height: 1.6; }
 .platform-section { padding-bottom: 104px; }
+.platform-section-layout { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: clamp(48px,8vw,112px); }
 .platform-heading { max-width: 670px; }
-.platform-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 28px 34px; margin-top: 48px; }
-.platform-card { display: flex; align-items: center; gap: 13px; min-width: 0; }
-.platform-card .landing-platform-mark { width: 36px; height: 36px; }
-.platform-card .landing-platform-mark > .social-brand-icon { width: 28px !important; height: 28px !important; }
+.platform-grid { display: grid; grid-template-columns: repeat(5,42px); gap: 18px 22px; }
+.platform-card { display: flex; align-items: center; justify-content: center; min-width: 0; }
+.platform-card .landing-platform-mark { width: 42px; height: 42px; }
+.platform-card .landing-platform-mark > .social-brand-icon { width: 34px !important; height: 34px !important; }
 .platform-card > div { min-width: 0; }
 .platform-card h3 { overflow: hidden; margin: 0; color: var(--text); font-size: 13px; letter-spacing: -.025em; text-overflow: ellipsis; white-space: nowrap; }
 .platform-card p { display: -webkit-box; overflow: hidden; margin: 4px 0 0; color: var(--text-faint); font-size: 9px; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .faq-section { position: relative; display: block; overflow: hidden; padding-top: 128px; }
-.faq-section::before { position: absolute; inset: 0 0 auto; height: 180px; pointer-events: none; background: repeating-linear-gradient(135deg, transparent 0 17px, rgba(165,182,151,.1) 17px 18px); content: ""; mask-image: linear-gradient(to bottom, #000, transparent); }
 .faq-heading { position: relative; max-width: 620px; margin: 0 auto; text-align: center; }
 .faq-heading h2 { margin: 0; color: var(--text); font-size: clamp(44px,6vw,68px); line-height: .98; letter-spacing: -.06em; }
 .faq-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin-top: 42px; }
-.faq-card { min-width: 0; min-height: 188px; padding: 25px 24px 27px; border: 1px solid var(--border); border-radius: var(--radius-md); background: rgba(252,253,248,.74); box-shadow: 0 16px 30px -30px #233247; }
-.faq-card h3 { margin: 0 0 13px; color: var(--text); font-size: 16px; line-height: 1.28; letter-spacing: -.035em; }
+.faq-card { min-width: 0; min-height: 188px; padding: 25px 24px 27px; border: 1px solid #dbe3ed; border-radius: var(--radius-md); background: rgba(252,253,248,.74); box-shadow: 0 1px 3px rgba(35,50,71,.08); }
+.faq-card h3 { margin: 0 0 13px; padding-bottom: 13px; border-bottom: 1px solid #dbe3ed; color: var(--text); font-size: 16px; line-height: 1.28; letter-spacing: -.035em; }
 .faq-card p { margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.65; }
 .landing-cta-section { margin: 20px calc(50% - 50vw) 0; padding: 88px 24px 92px; background: var(--cta); color: #fff; text-align: center; }
 .landing-cta-content { max-width: 700px; margin: 0 auto; }
@@ -1454,7 +1454,7 @@ input[type="range"]::-moz-range-thumb {
 
 @media (max-width: 980px) {
   .landing-nav { display: none; }
-  .platform-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .platform-section-layout { grid-template-columns: 1fr; gap: 36px; }
 }
 
 @media (max-width: 720px) {
@@ -1468,7 +1468,8 @@ input[type="range"]::-moz-range-thumb {
   .landing-hero { min-height: 0; padding: 54px 0 68px; }
   .landing-section { padding: 76px 0; }
   .platform-section { padding-bottom: 72px; }
-  .platform-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 22px 18px; margin-top: 34px; }
+  .platform-section-layout { gap: 30px; }
+  .platform-grid { gap: 16px 18px; }
   .faq-section { padding-top: 88px; }
   .faq-grid { grid-template-columns: repeat(2,minmax(0,1fr)); margin-top: 42px; }
   .landing-cta-section { margin-top: 8px; padding: 68px 22px 72px; }
@@ -1486,7 +1487,7 @@ input[type="range"]::-moz-range-thumb {
   .landing .brand-logo-image { width: 36px; height: 36px; }
   .landing .brand-name { font-size: 21px; }
   .landing-actions .btn-small-primary { padding: 9px 11px; }
-  .platform-grid { grid-template-columns: 1fr; }
+  .platform-grid { grid-template-columns: repeat(5,42px); }
   .platform-card p { white-space: normal; }
   .faq-grid { grid-template-columns: 1fr; }
   .faq-card { min-height: 0; }
@@ -1791,6 +1792,30 @@ input[type="range"]::-moz-range-thumb {
   color: var(--text-muted);
   font-size: 14px;
   line-height: 1.75;
+}
+
+.legal-platform-policy dd p {
+  margin: 0 0 10px;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.legal-platform-policy dd ul {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding-left: 18px;
+}
+
+.legal-platform-policy dd li {
+  color: inherit;
+  font-size: inherit;
+  line-height: 1.6;
+}
+
+.legal-platform-policy dd > :last-child {
+  margin-bottom: 0;
 }
 
 .legal-platform-links {

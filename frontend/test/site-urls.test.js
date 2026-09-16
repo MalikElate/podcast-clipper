@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { APP_ORIGIN, MARKETING_ORIGIN, appHref, marketingHref, siteSurface } from "../src/siteUrls.js";
+import { APP_ORIGIN, MARKETING_ORIGIN, appHref, isLocalMarketingPreview, marketingHref, siteSurface } from "../src/siteUrls.js";
 
 const location = (hostname, origin = `https://${hostname}`) => ({ hostname, origin });
 
@@ -17,4 +17,8 @@ test("development keeps the combined local surface", () => {
   assert.equal(siteSurface(local), "integrated");
   assert.equal(appHref("/dashboard", local), "http://localhost:5173/dashboard");
   assert.equal(marketingHref("/pricing", local), "http://localhost:5173/pricing");
+  const marketingPreview = { ...local, search: "?surface=marketing" };
+  assert.equal(isLocalMarketingPreview(marketingPreview, true), true);
+  assert.equal(isLocalMarketingPreview(marketingPreview, false), false);
+  assert.equal(isLocalMarketingPreview({ ...location("findmeadow.com"), search: "?surface=marketing" }, true), false);
 });
