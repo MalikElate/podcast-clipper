@@ -5,16 +5,16 @@ import { sortPlatforms } from "../bridge/platforms.js";
 import { PLANS } from "../pricing.js";
 
 const PLATFORMS = sortPlatforms([
-  { id: "x", name: "X", color: "#171717", formats: "Text, images, video" },
-  { id: "instagram", name: "Instagram", color: "#d94686", formats: "Images, video, carousels, stories" },
-  { id: "linkedin", name: "LinkedIn", color: "#0a66c2", formats: "Text, images, video, documents" },
-  { id: "facebook", name: "Facebook", color: "#1877f2", formats: "Text, images, video, carousels" },
-  { id: "tiktok", name: "TikTok", color: "#111111", formats: "Video, images, carousels" },
-  { id: "youtube", name: "YouTube", color: "#ff0033", formats: "Video" },
-  { id: "bluesky", name: "Bluesky", color: "#168aff", formats: "Text, images, video" },
-  { id: "threads", name: "Threads", color: "#111111", formats: "Text, images, video, carousels" },
-  { id: "pinterest", name: "Pinterest", color: "#e60023", formats: "Images, video, carousels" },
-  { id: "google_business", name: "Google Business", color: "#4285f4", formats: "Updates, images, carousels" },
+  { id: "x", name: "X", color: "#171717" },
+  { id: "instagram", name: "Instagram", color: "#d94686" },
+  { id: "linkedin", name: "LinkedIn", color: "#0a66c2" },
+  { id: "facebook", name: "Facebook", color: "#1877f2" },
+  { id: "tiktok", name: "TikTok", color: "#111111" },
+  { id: "youtube", name: "YouTube", color: "#ff0033" },
+  { id: "bluesky", name: "Bluesky", color: "#168aff" },
+  { id: "threads", name: "Threads", color: "#111111" },
+  { id: "pinterest", name: "Pinterest", color: "#e60023" },
+  { id: "google_business", name: "Google Business", color: "#4285f4" },
 ]);
 
 
@@ -96,7 +96,7 @@ export default function Landing({ onGetStarted }) {
             {PLATFORMS.map((platform) => (
               <article className="platform-card" key={platform.id} style={{ "--platform-color": platform.color }}>
                 <PlatformMark platform={platform} />
-                <div><h3>{platform.name}</h3><p>{platform.formats}</p></div>
+                <div><h3>{platform.name}</h3></div>
               </article>
             ))}
           </div>

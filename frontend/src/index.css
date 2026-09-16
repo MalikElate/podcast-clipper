@@ -1387,7 +1387,7 @@ input[type="range"]::-moz-range-thumb {
 .landing-nav a, .footer-links a, .footer-links button { color: var(--text-muted); text-decoration: none; transition: color .15s ease; }
 .landing-nav a { font-size: 13px; font-weight: 700; }
 .landing-nav a:hover, .footer-links a:hover, .footer-links button:hover { color: var(--text); }
-.landing-actions { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+.landing-actions { display: flex; align-items: center; gap: 24px; flex-shrink: 0; }
 .landing-actions .btn-ghost { padding: 9px 12px; }
 .btn-small-primary { display: inline-flex; align-items: center; gap: 7px; padding: 10px 14px; font-size: 12px; color: #fff; background: var(--cta); border: 1px solid rgba(143,162,255,.35); box-shadow: 0 9px 22px -12px var(--cta-glow); }
 .btn-small-primary:hover { background: var(--cta-hover); }
