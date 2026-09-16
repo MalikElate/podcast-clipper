@@ -4,10 +4,18 @@ import Landing from "./components/Landing.jsx";
 import LegalPage from "./components/LegalPage.jsx";
 import Pricing from "./components/Pricing.jsx";
 import PlatformUseCasePage from "./components/PlatformUseCasePage.jsx";
+import MarketingPage from "./components/MarketingPage.jsx";
 import NotFound from "./components/NotFound.jsx";
+import { findMarketingPage } from "./marketing/generalPages.js";
 import { getPlatformUseCaseById } from "./platformUseCases.js";
 
 export function render(kind, platformId) {
+  if (kind === "marketing") {
+    const page = findMarketingPage(platformId);
+    if (!page) throw new Error(`Unknown marketing page: ${platformId}`);
+    return renderToString(<div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><MarketingPage page={page} /></div></div>);
+  }
+
   if (kind === "platform") {
     const platform = getPlatformUseCaseById(platformId);
     if (!platform) throw new Error(`Unknown platform use case: ${platformId}`);

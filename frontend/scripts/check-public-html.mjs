@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { DASHBOARD_PATHS } from "../src/bridge/dashboardRoutes.js";
 import { PLATFORM_USE_CASES } from "../src/platformUseCases.js";
+import { GENERAL_PAGES } from "../src/marketing/generalPages.js";
 
 for (const [path, heading] of [["index.html", "Publish across every social media"], ["404.html", ">404<"], ["pricing/index.html", "Choose the space your publishing needs"], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
   const html = await readFile(`dist/${path}`, "utf8");
@@ -21,5 +22,14 @@ for (const platform of PLATFORM_USE_CASES) {
   assert.ok(html.includes(`content="${platform.description}"`), `${platform.slug} must have a platform-specific description`);
   assert.ok(html.includes(platform.headline), `${platform.slug} must render its own heading without JavaScript`);
   assert.ok(landingHtml.includes(`href="/${platform.slug}"`), `${platform.slug} must be linked from the homepage`);
+}
+for (const page of GENERAL_PAGES) {
+  const html = await readFile(`dist${page.path}/index.html`, "utf8");
+  assert.ok(html.includes(`<title>${page.title}</title>`), `${page.path} must have its own title`);
+  assert.ok(html.includes(`content="${page.description}"`), `${page.path} must have its own description`);
+  assert.ok(html.includes(page.headline), `${page.path} must render its own heading without JavaScript`);
+  assert.ok(html.includes("application/ld+json"), `${page.path} must include FAQ structured data`);
+  assert.ok(!html.includes("BridgeApp-"), "Public HTML must not preload the authenticated workspace");
+  assert.ok(landingHtml.includes(`href="${page.path}"`), `${page.path} must be linked from the homepage`);
 }
 console.log("All public pages and dashboard routes have deployable HTML entry points.");

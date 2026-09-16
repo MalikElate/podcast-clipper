@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { createServer } from "vite";
 import { DASHBOARD_PATHS } from "../src/bridge/dashboardRoutes.js";
 import { PLATFORM_USE_CASES } from "../src/platformUseCases.js";
+import { GENERAL_PAGES } from "../src/marketing/generalPages.js";
 
 // Build public HTML once; no auth, API calls, or container startup at request time.
 const server = await createServer({ server: { middlewareMode: true }, appType: "custom" });
@@ -20,6 +21,13 @@ const pages = [
     title: platform.title,
     description: platform.description,
   })),
+  ...GENERAL_PAGES.map((page) => ({
+    path: page.path.slice(1),
+    kind: "marketing",
+    platformId: page.path,
+    title: page.title,
+    description: page.description,
+  })),
 ];
 
 function escapeAttribute(value) {
@@ -32,8 +40,8 @@ try {
   for (const page of pages) {
     const description = escapeAttribute(page.description);
     const html = template.replace('<div id="root"></div>', () => `<div id="root">${render(page.kind, page.platformId)}</div>`)
-      .replace(/<title>.*?<\/title>/, `<title>${page.title}</title>`)
-      .replace(/<meta name="description" content="[^"]*"\s*\/>/, `<meta name="description" content="${description}" />`);
+      .replace(/<title>.*?<\/title>/, () => `<title>${page.title}</title>`)
+      .replace(/<meta name="description" content="[^"]*"\s*\/>/, () => `<meta name="description" content="${description}" />`);
     const directory = page.path && page.path !== "404" ? `dist/${page.path}` : "dist";
     await mkdir(directory, { recursive: true });
     await writeFile(page.path === "404" ? "dist/404.html" : `${directory}/index.html`, html);
