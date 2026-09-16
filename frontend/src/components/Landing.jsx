@@ -64,8 +64,6 @@ export default function Landing({ onGetStarted }) {
         </a>
         <nav className="landing-nav" aria-label="Main navigation">
           <a href="#platforms">Platforms</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#faq">FAQ</a>
         </nav>
         <div className="landing-actions">
           <button className="btn-ghost" onClick={onGetStarted}>Sign in</button>
