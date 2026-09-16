@@ -1,6 +1,6 @@
 // Keep these notices aligned with the fields and scopes used by each adapter.
 // A compact summary and a link to the platform's public privacy section are shown before OAuth.
-export const CONNECTION_PRIVACY_VERSION = "2026-09-16-connections-3";
+export const CONNECTION_PRIVACY_VERSION = "2026-09-16-connections-4";
 
 const authorization = {
   name: "Authorization and consent",
@@ -38,17 +38,17 @@ const notices = {
     name: "YouTube",
     connectionSummary: "Connect a YouTube channel to upload and schedule videos and view available performance.",
     requirement: "Your Google Account must be associated with a YouTube channel.",
-    revokeSummary: "You can disconnect in Meadow and revoke access from your Google Account settings at any time.",
+    revokeSummary: "You can disconnect YouTube from Meadow at any time in Connections. You can also remove Meadow through Google’s security settings.",
     shortAgreement: "I agree to Meadow’s Privacy Policy and the YouTube Terms of Service and allow the access described above.",
-    introduction: "Meadow uses YouTube API Services. Choose whether Meadow may access your selected channel to upload the videos you submit, check their status, and show available performance.",
+    introduction: "Meadow uses YouTube API Services. We use this information only to connect the YouTube channel you select, upload and schedule videos you ask us to publish, confirm whether an upload succeeded, and display the performance of your published videos.",
     data: [
-      { name: "Channel identity", detail: "Your channel ID, channel name, profile image, and channel link, so you can identify and select the right publishing destination." },
-      { name: "Videos you submit", detail: "Your video file, title, description, visibility, audience and synthetic-content settings, and schedule. We receive upload-session and video IDs, processing and visibility status, and the published video link to complete and verify your uploads." },
-      { name: "Video performance", detail: "Available views, likes, comment counts, and authorized share counts for videos published through Meadow. These are shown as individual video statistics." },
+      { name: "Channel information", detail: "When you connect YouTube, Meadow receives basic information about your channel, such as its name, image and channel ID." },
+      { name: "Videos uploaded through Meadow", detail: "We receive information about videos uploaded through Meadow, including their upload status and YouTube link." },
+      { name: "Video performance", detail: "For videos uploaded through Meadow, we receive views, likes, comments and available analytics." },
       authorization,
     ],
-    retention: "Meadow checks stored YouTube information at least once every 30 days. If Meadow loses access to your channel or a video is removed from YouTube, Meadow deletes the related information within 30 days of that change. Connection removal starts deletion immediately. Meadow deletes its stored YouTube information as soon as possible and no later than seven calendar days. Credentials retained only to retry Google revocation are destroyed within seven days. Your original uploads and captions remain until you delete them or your Meadow account.",
-    platformNote: googleUse,
+    retention: "YouTube information stored by Meadow is checked regularly and refreshed or removed within 30 days. When you disconnect YouTube, Meadow stops accessing the channel and begins deleting the stored authorization, channel information, publishing records and analytics. We aim to complete this deletion within seven days. Videos already published on YouTube remain there until you delete them through YouTube. Original videos and captions stored in your Meadow workspace remain until you delete them or your Meadow account.",
+    platformNote: "Meadow’s use of information received from Google APIs follows the Google API Services User Data Policy, including its Limited Use requirements. Meadow does not request access to Gmail, Google Drive or Google Calendar. We do not sell Google or YouTube data. We do not share it with advertisers or data brokers, use it for advertising or credit decisions, or use it to train general-purpose AI models. Revoking a Google grant can affect other channels or Google connections that share it.",
     agreement: "I agree to this YouTube connection privacy notice, Meadow’s Privacy Policy and Terms of Service, and the YouTube Terms of Service, and allow the data access described above.",
     policies: [{ label: "YouTube Terms of Service", url: "https://www.youtube.com/t/terms" }, ...googlePolicies],
   },
