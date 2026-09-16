@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { PLANS } from "../pricing.js";
 import BrandLogo from "./BrandLogo.jsx";
+import SiteFooter from "./SiteFooter.jsx";
 import { marketingHref } from "../siteUrls.js";
 
 function ArrowIcon() {
@@ -58,7 +59,7 @@ export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error =
 
       </main>
 
-      <footer className="landing-footer pricing-footer"><div className="footer-bottom"><span>© {new Date().getFullYear()} Meadow</span><span><a href={marketingHref("/terms")}>Terms</a> · <a href={marketingHref("/privacy")}>Privacy</a> · <a href="mailto:hello@findmeadow.com">Contact</a></span></div></footer>
+      <SiteFooter />
     </div>
   );
 }

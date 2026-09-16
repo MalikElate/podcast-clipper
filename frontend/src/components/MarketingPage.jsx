@@ -4,7 +4,7 @@ import { sortPlatforms } from "../bridge/platforms.js";
 import BrandLogo from "./BrandLogo.jsx";
 import { PLANS } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
-import { GENERAL_PAGES } from "../marketing/generalPages.js";
+import SiteFooter from "./SiteFooter.jsx";
 
 const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
 
@@ -61,11 +61,6 @@ function PlanGrid() {
       </div>
     </>
   );
-}
-
-/** Footer links to the cross-platform pages and every platform page. */
-export function PlatformFooterLinks() {
-  return <>{GENERAL_PAGES.map(page => <a href={page.path} key={page.path}>{page.footerLabel}</a>)}{PLATFORMS.map(platform => <a href={`/${platform.slug}`} key={platform.id}>{platform.name} publishing</a>)}</>;
 }
 
 export default function MarketingPage({ page, onGetStarted }) {
@@ -194,19 +189,7 @@ export default function MarketingPage({ page, onGetStarted }) {
         </section>
       </main>
 
-      <footer className="landing-footer platform-use-case-footer">
-        <div className="footer-main">
-          <div className="footer-brand">
-            <a className="landing-logo-link" href="/" aria-label="Meadow home"><BrandLogo /></a>
-            <p>Create, schedule, publish, and track from one workspace.</p>
-          </div>
-          <div className="footer-links">
-            <div><h2>Platforms</h2><PlatformFooterLinks /></div>
-            <div><h2>Meadow</h2><a href="/">Home</a><a href="/pricing">Pricing</a><a href="/terms">Terms of service</a><a href="/privacy">Privacy policy</a><a href="mailto:hello@findmeadow.com">Contact support</a></div>
-          </div>
-        </div>
-        <div className="footer-bottom"><span>© {new Date().getFullYear()} Meadow</span></div>
-      </footer>
+      <SiteFooter onGetStarted={onGetStarted} />
     </div>
   );
 }

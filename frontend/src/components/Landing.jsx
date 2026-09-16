@@ -4,7 +4,7 @@ import BrandLogo from "./BrandLogo.jsx";
 import { sortPlatforms } from "../bridge/platforms.js";
 import { PLANS } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
-import { PlatformFooterLinks } from "./MarketingPage.jsx";
+import SiteFooter from "./SiteFooter.jsx";
 
 const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
 
@@ -162,23 +162,7 @@ export default function Landing({ onGetStarted }) {
 
       </main>
 
-      <footer className="landing-footer">
-        <div className="footer-main">
-          <div className="footer-brand">
-            <BrandLogo />
-            <p>Create, schedule, publish, and track from one workspace.</p>
-          </div>
-          <div className="footer-links">
-            <div><h2>Platforms</h2><PlatformFooterLinks /></div>
-            <div><h2>Use Cases</h2><a href="#platforms">Platforms</a><a href="#pricing">Pricing</a></div>
-            <div><h2>About</h2><a href="#faq">FAQ</a><a href="/terms">Terms of service</a><a href="/privacy">Privacy policy</a></div>
-            <div><h2>Community</h2><button onClick={onGetStarted}>Create your first post</button><a href="mailto:hello@findmeadow.com">Contact support</a></div>
-          </div>
-        </div>
-        <div className="footer-bottom">
-          <span>© {new Date().getFullYear()} Meadow</span>
-        </div>
-      </footer>
+      <SiteFooter onGetStarted={onGetStarted} />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import BrandLogo from "./BrandLogo.jsx";
+import SiteFooter from "./SiteFooter.jsx";
 
 export default function NotFound() {
   useEffect(() => { document.title = "Page not found · Meadow"; }, []);
@@ -19,7 +20,7 @@ export default function NotFound() {
           <a className="not-found-secondary" href="mailto:hello@findmeadow.com">Contact Support</a>
         </div>
       </main>
-      <footer className="not-found-footer"><span>© {new Date().getFullYear()} Meadow</span></footer>
+      <SiteFooter />
     </div>
   );
 }

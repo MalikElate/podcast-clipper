@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import BrandLogo from "./BrandLogo.jsx";
+import SiteFooter from "./SiteFooter.jsx";
 import { PLATFORM_PRIVACY } from "./platformPrivacy.js";
 
 const PAGE_COPY = {
@@ -173,10 +174,7 @@ export default function LegalPage({ kind }) {
         </div>
       </main>
 
-      <footer className="legal-footer">
-        <span>© {new Date().getFullYear()} Meadow</span>
-        <span>Questions? <a href="mailto:hello@findmeadow.com">hello@findmeadow.com</a></span>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

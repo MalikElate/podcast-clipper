@@ -1,8 +1,7 @@
 import { useEffect } from "react";
 import { PlatformIcon } from "../bridge/ui.jsx";
 import BrandLogo from "./BrandLogo.jsx";
-import { PLATFORM_USE_CASES } from "../platformUseCases.js";
-import { GENERAL_PAGES } from "../marketing/generalPages.js";
+import SiteFooter from "./SiteFooter.jsx";
 
 function ArrowIcon() {
   return (
@@ -90,19 +89,7 @@ export default function PlatformUseCasePage({ platform, onGetStarted }) {
         </section>
       </main>
 
-      <footer className="landing-footer platform-use-case-footer">
-        <div className="footer-main">
-          <div className="footer-brand">
-            <a className="landing-logo-link" href="/" aria-label="Meadow home"><BrandLogo /></a>
-            <p>Create, schedule, publish, and track from one workspace.</p>
-          </div>
-          <div className="footer-links">
-            <div><h2>Platform guides</h2>{GENERAL_PAGES.map((page) => <a href={page.path} key={page.path}>{page.footerLabel}</a>)}{PLATFORM_USE_CASES.map((item) => <a href={`/${item.slug}`} key={item.id}>{item.name} publishing</a>)}</div>
-            <div><h2>Meadow</h2><a href="/">Home</a><a href="/pricing">Pricing</a><a href="/terms">Terms of service</a><a href="/privacy">Privacy policy</a></div>
-          </div>
-        </div>
-        <div className="footer-bottom"><span>© {new Date().getFullYear()} Meadow</span></div>
-      </footer>
+      <SiteFooter onGetStarted={onGetStarted} />
     </div>
   );
 }
