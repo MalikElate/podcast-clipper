@@ -1,6 +1,6 @@
 // Keep these notices aligned with the fields and scopes used by each adapter.
 // A compact summary and a link to the platform's public privacy section are shown before OAuth.
-export const CONNECTION_PRIVACY_VERSION = "2026-09-16-connections-4";
+export const CONNECTION_PRIVACY_VERSION = "2026-09-16-connections-5";
 
 const authorization = {
   name: "Authorization and consent",
@@ -47,7 +47,7 @@ const notices = {
       { name: "Video performance", detail: "For videos uploaded through Meadow, we receive views, likes, comments and available analytics." },
       authorization,
     ],
-    retention: "YouTube information stored by Meadow is checked regularly and refreshed or removed within 30 days. When you disconnect YouTube, Meadow stops accessing the channel and begins deleting the stored authorization, channel information, publishing records and analytics. We aim to complete this deletion within seven days. Videos already published on YouTube remain there until you delete them through YouTube. Original videos and captions stored in your Meadow workspace remain until you delete them or your Meadow account.",
+    retention: "YouTube information stored by Meadow is checked regularly, and Meadow deletes any information it cannot refresh within 30 days. When you disconnect YouTube, Meadow stops accessing the channel and begins deleting the stored authorization, channel information, publishing records and analytics. We aim to complete this deletion within seven days. Videos already published on YouTube remain there until you delete them through YouTube. Original videos and captions stored in your Meadow workspace remain until you delete them or your Meadow account.",
     platformNote: "Meadow’s use of information received from Google APIs follows the Google API Services User Data Policy, including its Limited Use requirements. Meadow does not request access to Gmail, Google Drive or Google Calendar. We do not sell Google or YouTube data. We do not share it with advertisers or data brokers, use it for advertising or credit decisions, or use it to train general-purpose AI models. Revoking a Google grant can affect other channels or Google connections that share it.",
     agreement: "I agree to this YouTube connection privacy notice, Meadow’s Privacy Policy and Terms of Service, and the YouTube Terms of Service, and allow the data access described above.",
     policies: [{ label: "YouTube Terms of Service", url: "https://www.youtube.com/t/terms" }, ...googlePolicies],
