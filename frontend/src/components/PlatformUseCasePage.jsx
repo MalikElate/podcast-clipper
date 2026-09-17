@@ -33,9 +33,6 @@ export default function PlatformUseCasePage({ platform, onGetStarted }) {
 
       <main>
         <section className="platform-use-case-hero">
-          <nav className="platform-breadcrumb" aria-label="Breadcrumb">
-            <a href="/">Home</a><span aria-hidden="true">/</span><a href="/#platforms">Platforms</a><span aria-hidden="true">/</span><span>{platform.name}</span>
-          </nav>
           <div className="platform-use-case-hero-grid">
             <div className="platform-use-case-copy">
               <div className="platform-use-case-identity" style={{ "--platform-color": platform.color }}>

@@ -3,9 +3,6 @@
 .platform-card:focus-visible { outline: 2px solid var(--cta); outline-offset: 5px; }
 
 .platform-use-case-hero { padding: 36px 0 82px; }
-.platform-breadcrumb { display: flex; align-items: center; gap: 9px; color: var(--text-faint); font-size: 11px; }
-.platform-breadcrumb a { color: var(--text-muted); text-decoration: none; }
-.platform-breadcrumb a:hover { color: var(--text); }
 .platform-use-case-hero-grid { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(280px,.85fr); align-items: center; gap: clamp(32px,7vw,88px); margin-top: 50px; }
 .platform-use-case-copy { min-width: 0; }
 .platform-use-case-identity { display: inline-flex; align-items: center; gap: 9px; padding: 5px 14px 5px 6px; border: 1px solid color-mix(in srgb,var(--platform-color) 24%,var(--border)); border-radius: 999px; background: color-mix(in srgb,var(--platform-color) 7%,var(--surface)); color: var(--text); font-size: 12px; font-weight: 650; }
