@@ -1495,10 +1495,10 @@ input[type="range"]::-moz-range-thumb {
 .pricing-intro { max-width: 760px; margin: 0 auto 50px; text-align: center; }
 .pricing-intro h1 { margin: 0; font-size: clamp(44px,6vw,72px); line-height: 1; letter-spacing: -.055em; }
 .pricing-intro > p { max-width: 610px; margin: 20px auto 0; color: var(--text-muted); font-size: 15px; line-height: 1.65; }
-.pricing-cycle { display: inline-flex; margin-top: 32px; padding: 4px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-2); }
-.pricing-cycle button { min-width: 145px; padding: 11px 16px; border: 0; border-radius: 8px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 650; }
+.pricing-cycle { display: inline-flex; margin-top: 34px; padding: 6px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); }
+.pricing-cycle button { min-width: 190px; padding: 15px 24px; border: 0; border-radius: 10px; background: transparent; color: var(--text-muted); font-size: 16px; font-weight: 650; }
 .pricing-cycle button.active { background: var(--surface); color: var(--text); box-shadow: 0 7px 18px -14px #233247; }
-.pricing-cycle button span { display: inline-block; margin-left: 6px; padding: 3px 5px; border-radius: 4px; background: #36745b; color: #fff; font-family: var(--font-mono); font-size: 8px; letter-spacing: .02em; text-transform: uppercase; }
+.pricing-cycle button span { display: inline-block; margin-left: 8px; padding: 4px 7px; border-radius: 5px; background: #36745b; color: #fff; font-family: var(--font-mono); font-size: 10px; letter-spacing: .02em; text-transform: uppercase; }
 .pricing-notice, .pricing-error { width: max-content; max-width: 100%; padding: 10px 13px; border-radius: 8px; font-size: 12px !important; }
 .pricing-notice { background: #dce8cf; color: var(--text) !important; }
 .pricing-error { background: #f7ddd8; color: #7d2d20 !important; }

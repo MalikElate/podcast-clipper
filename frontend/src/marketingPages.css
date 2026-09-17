@@ -1,6 +1,8 @@
 /* Cross-platform marketing pages (social media scheduler, cross posting). */
 .mkt-page a.btn-primary, .mkt-page a.btn-ghost, .mkt-page a.btn-small-primary, .mkt-page a.pricing-button { text-decoration: none; }
-.mkt-hero-actions { flex-wrap: wrap; align-items: center; gap: 12px; }
+.mkt-page .hero-platforms { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 12px; margin-bottom: 32px; }
+.mkt-page .hero-platforms .landing-platform-mark { width: 32px; height: 32px; }
+.mkt-page .mkt-hero-actions { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px; }
 .landing .mkt-hero-actions .landing-cta { width: auto; }
 .mkt-secondary-cta { display: inline-flex; align-items: center; min-height: 52px; padding: 0 24px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 650; }
 .mkt-card-grid { display: grid; gap: 16px; margin: 42px 0 0; padding: 0; list-style: none; }
@@ -45,7 +47,9 @@
   .mkt-card-grid-2 { grid-template-columns: minmax(0,1fr); }
   .mkt-preview-card { padding: 16px; }
   .mkt-preview-row { gap: 10px; padding: 10px; }
-  .mkt-hero-actions { flex-direction: column; width: 100%; }
+  .mkt-page .hero-platforms { gap: clamp(6px, 2vw, 12px); margin-bottom: 28px; }
+  .mkt-page .hero-platforms .landing-platform-mark { width: clamp(23px, 5.6vw, 32px); height: clamp(23px, 5.6vw, 32px); }
+  .mkt-page .mkt-hero-actions { flex-direction: column; width: 100%; }
   .landing .mkt-hero-actions .landing-cta, .mkt-secondary-cta { width: min(100%, 280px); justify-content: center; }
 }
 .mkt-platform-links { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 12px; margin-top: 42px; }
