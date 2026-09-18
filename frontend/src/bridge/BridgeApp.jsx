@@ -62,7 +62,10 @@ function Workspace({ user, signOut }) {
   const [postsOpen, setPostsOpen] = useState(postViewIds.has(initial.current.view));
   const [configurationOpen, setConfigurationOpen] = useState(configurationViewIds.has(initial.current.view));
   const [signingOut, setSigningOut] = useState(false);
-  const project = projects.find(item => item.id === projectId);
+  // Schedules, calendars, and timestamps follow the device's current time zone, not the one saved at sign-up.
+  const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const savedProject = projects.find(item => item.id === projectId);
+  const project = savedProject && { ...savedProject, timeZone: deviceTimeZone };
   const activeModule = allModules.find(item => item.id === view);
   const isPostView = postViewIds.has(view);
   const isConfigurationView = configurationViewIds.has(view);
