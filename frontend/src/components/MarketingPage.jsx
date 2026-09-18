@@ -78,6 +78,7 @@ export default function MarketingPage({ page, onGetStarted }) {
         <a className="landing-logo-link" href="/" aria-label="Meadow home"><BrandLogo /></a>
         <nav className="landing-nav" aria-label="Main navigation">
           <a href="#platforms">Platforms</a>
+          <a href="/pricing">Pricing</a>
         </nav>
         <div className="landing-actions">
           <button className="btn-ghost" onClick={onGetStarted}>Sign in</button>
