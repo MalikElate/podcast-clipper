@@ -20,3 +20,39 @@ export function normalizePlatformCollections(value) {
       ? sortPlatforms(normalized) : normalized];
   }));
 }
+
+// Mirrors the backend's inferFormat: the uploaded media decides the post type.
+export const FORMAT_LABELS = { text: "Text only", image: "Picture", video: "Video", carousel: "Carousel", document: "Document", reel: "Reel", story: "Story" };
+export function detectFormat(media) {
+  if (!media.length) return "text";
+  return media.length > 1 ? "carousel" : media[0].kind;
+}
+
+// Formats that can carry this media; the first one is what "Automatic" publishes.
+export function formatsForMedia(media) {
+  const format = detectFormat(media);
+  if (format === "image") return ["image", "story"];
+  if (format === "video") return ["video", "reel", "story"];
+  return [format];
+}
+
+// Why a platform cannot take this media, or null when it can. Size, length and
+// caption limits are still checked when the post is reviewed. Wording says
+// "through Meadow" because formats reflect each platform's API, not its app.
+export function unsupportedReason(capability, media) {
+  if (!capability || !media.length) return null;
+  const { name, formats = [] } = capability, format = detectFormat(media);
+  const mediaFormats = formats.filter(item => item !== "text");
+  if (mediaFormats.length === 1 && mediaFormats[0] === "video" && format !== "video") return `${name} only accepts videos through Meadow`;
+  if (media.some(item => item.kind === "document")) {
+    if (!formats.includes("document")) return `${name} can't publish documents through Meadow`;
+    if (media.length > 1) return "Documents must be posted on their own";
+  }
+  if (format === "carousel") {
+    if (!formats.includes("carousel")) return `${name} can't publish carousels through Meadow`;
+    if (!capability.mixedCarousel && media.some(item => item.kind !== "image")) return `${name} carousels can only contain pictures`;
+    if (capability.maxImages && media.length > capability.maxImages) return `${name} allows up to ${capability.maxImages} items per post`;
+    return null;
+  }
+  return formats.includes(format) ? null : `${name} can't publish ${FORMAT_LABELS[format]?.toLowerCase() || format} posts through Meadow`;
+}

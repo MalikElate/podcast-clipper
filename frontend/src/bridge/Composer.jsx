@@ -4,6 +4,7 @@ import { Icon } from "./Icons.jsx";
 import { Alert, Badge, Check, dateTime, Field, MediaThumb, Modal, PlatformBadge, TimezoneField } from "./ui.jsx";
 import { DestinationSettings } from "./DestinationSettings.jsx";
 import UploadProgress from "./UploadProgress.jsx";
+import { detectFormat, FORMAT_LABELS, formatsForMedia, unsupportedReason } from "./platforms.js";
 
 
 export const makePost = (project, mediaIds = [], accountIds = [], scheduledDate = "") => ({ key: crypto.randomUUID(), caption: "", title: "", mediaIds, accountIds, format: "auto", overrides: {}, schedule: { mode: scheduledDate ? "scheduled" : "now", timeZone: project.timeZone, localDateTime: scheduledDate ? `${scheduledDate}T09:00` : "", disambiguation: "reject" } });
@@ -65,12 +66,32 @@ export function PostEditor({ post, onChange, accounts, media, catalog, onPickMed
   const setOverride = (id, patch) => update({ overrides: { ...post.overrides, [id]: { ...post.overrides[id], ...patch } } });
   const toggleAccount = id => {
     const selected = post.accountIds.includes(id);
+    autoRemoved.current.delete(id);
     const overrides = { ...post.overrides }; if (selected) delete overrides[id];
     update({ accountIds: selected ? post.accountIds.filter(value => value !== id) : [...post.accountIds, id], overrides });
   };
   const scheduled = post.schedule?.mode === "scheduled";
   const frozenFor = id => post.deliveries?.find(delivery => delivery.accountId === id && ["published", "cancelled"].includes(delivery.status));
-  const selectable = accounts.filter(account => account.status === "connected" && !frozenFor(account.id));
+  const detected = detectFormat(chosen), mediaFormats = formatsForMedia(chosen);
+  const capabilityFor = account => catalog.find(item => item.id === account.platform);
+  const blockedReason = account => unsupportedReason(capabilityFor(account), chosen);
+  const selectable = accounts.filter(account => account.status === "connected" && !frozenFor(account.id) && !blockedReason(account));
+  // When the media changes, drop accounts that cannot publish it and formats that no longer fit.
+  // Accounts dropped this way come back once the media suits them again.
+  const autoRemoved = useRef(new Set());
+  const restorable = [...autoRemoved.current].filter(id => { const account = accounts.find(item => item.id === id); return account && account.status === "connected" && !post.accountIds.includes(id) && !blockedReason(account); });
+  const conflicts = post.accountIds.filter(id => { const account = accounts.find(item => item.id === id); if (!account || frozenFor(id)) return false; const format = post.overrides[id]?.format; return Boolean(blockedReason(account)) || Boolean(format && format !== "auto" && !mediaFormats.includes(format)); });
+  useEffect(() => {
+    if (!conflicts.length && !restorable.length) return;
+    restorable.forEach(id => autoRemoved.current.delete(id));
+    const overrides = { ...post.overrides }, removed = [];
+    for (const id of conflicts) {
+      const account = accounts.find(item => item.id === id);
+      if (blockedReason(account)) { removed.push(id); autoRemoved.current.add(id); delete overrides[id]; }
+      else overrides[id] = { ...overrides[id], format: "auto" };
+    }
+    update({ accountIds: [...post.accountIds.filter(id => !removed.includes(id)), ...restorable], overrides });
+  }, [conflicts.join(","), restorable.join(",")]);
   const allSelected = selectable.length > 0 && selectable.every(account => post.accountIds.includes(account.id));
   const someSelected = selectable.some(account => post.accountIds.includes(account.id));
   const selectAll = useRef(null);
@@ -103,7 +124,7 @@ export function PostEditor({ post, onChange, accounts, media, catalog, onPickMed
   };
   return <div className={`bridge-post-editor ${compact ? "compact" : ""}`}>
     <div className="bridge-composer-main">
-      <div className="bridge-section-label"><strong>Content</strong><span>{chosen.length} media {chosen.length === 1 ? "item" : "items"}{chosen.length > 1 ? " · Drag to reorder" : ""}</span></div>
+      <div className="bridge-section-label"><strong>Content {chosen.length > 0 && <span className={`bridge-detected-format ${detected}`}>{FORMAT_LABELS[detected] || detected}{detected === "carousel" ? ` · ${chosen.length} items` : ""}</span>}</strong><span>{chosen.length} media {chosen.length === 1 ? "item" : "items"}{chosen.length > 1 ? " · Drag to reorder" : ""}</span></div>
       {chosen.length ? <div className="bridge-media-strip">{chosen.map((item, index) => <div key={item.id} className={`bridge-picked-media ${draggedId === item.id ? "dragging" : ""} ${dropTarget?.id === item.id ? `drop-${dropTarget.position}` : ""}`} onDragOver={event => { const sourceId = draggedMedia.current; if (!sourceId || sourceId === item.id) return; event.preventDefault(); event.dataTransfer.dropEffect = "move"; const rect = event.currentTarget.getBoundingClientRect(); setDropTarget({ id: item.id, position: event.clientX < rect.left + rect.width / 2 ? "before" : "after" }); }} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget)) setDropTarget(current => current?.id === item.id ? null : current); }} onDrop={event => { event.preventDefault(); moveMedia(draggedMedia.current || event.dataTransfer.getData("text/plain"), item.id, dropTarget?.id === item.id ? dropTarget.position : "before"); }}><MediaThumb media={item}/>{chosen.length > 1 && <button type="button" className="bridge-drag-handle" draggable aria-label={`Drag ${item.filename} to reorder`} title="Drag to reorder" onDragStart={event => { draggedMedia.current = item.id; event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", item.id); setDraggedId(item.id); }} onDragEnd={clearDrag} onKeyDown={event => { if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); moveMediaBy(item.id, event.key === "ArrowLeft" ? -1 : 1); } }}><Icon name="drag" size={18}/></button>}<span className="bridge-media-order">{index + 1}</span><button className="bridge-remove-media" aria-label={`Remove ${item.filename}`} onClick={() => update({ mediaIds: post.mediaIds.filter(id => id !== item.id) })}><Icon name="close" size={14}/></button></div>)}<button className="bridge-add-media" disabled={uploading || chosen.length >= 35} onClick={onPickMedia}><Icon name="plus"/><span>{uploading ? uploadLabel : "Add media"}</span></button></div> : <button className="bridge-upload-zone" disabled={uploading} onClick={onPickMedia}><Icon name="media" size={30}/><h3>{uploading ? uploadLabel : "Add media"}</h3><p>Select images, videos, or documents from your device</p></button>}
       {uploading && <UploadProgress progress={uploadProgress}/>}
       <Field label="Title" hint="Used by platforms that support a post title."><input maxLength={500} value={post.title} onChange={event => update({ title: event.target.value })} placeholder="Give this post a title"/></Field>
@@ -112,13 +133,13 @@ export function PostEditor({ post, onChange, accounts, media, catalog, onPickMed
     <div className="bridge-composer-destinations"><div className="bridge-section-label"><strong>Destinations</strong><span>{post.accountIds.length} selected</span></div>
       {!accounts.length && <p className="bridge-small">Connect a social account in this project to choose a destination.</p>}
       {selectable.length > 1 && <label className="bridge-select-all"><input ref={selectAll} type="checkbox" checked={allSelected} onChange={toggleAll}/><span>Select all connected accounts</span><small>{selectable.length} accounts</small></label>}
-      {accounts.map(account => { const selected = post.accountIds.includes(account.id), override = post.overrides[account.id] || {}, capability = catalog.find(item => item.id === account.platform), frozen = frozenFor(account.id); return <div className={`bridge-destination ${selected ? "selected" : ""}`} key={account.id}>
-        <label className="bridge-account-choice"><input type="checkbox" checked={selected} disabled={Boolean(frozen) || account.status !== "connected" && !selected} onChange={() => toggleAccount(account.id)}/><PlatformBadge platform={account.platform} catalog={catalog}/><span><strong>{account.label}</strong><small>{capability?.name || account.platform}{frozen ? ` · ${frozen.status}` : account.status !== "connected" ? ` · ${account.status.replaceAll("_", " ")}` : ""}</small></span></label>
+      {accounts.map(account => { const selected = post.accountIds.includes(account.id), override = post.overrides[account.id] || {}, capability = capabilityFor(account), frozen = frozenFor(account.id), blocked = !frozen && blockedReason(account); return <div className={`bridge-destination ${selected ? "selected" : ""} ${blocked ? "unsupported" : ""}`} key={account.id}>
+        <label className="bridge-account-choice" title={blocked || undefined}><input type="checkbox" checked={selected} disabled={Boolean(frozen) || Boolean(blocked) || account.status !== "connected" && !selected} onChange={() => toggleAccount(account.id)}/><PlatformBadge platform={account.platform} catalog={catalog}/><span><strong>{account.label}</strong><small>{capability?.name || account.platform}{frozen ? ` · ${frozen.status}` : account.status !== "connected" ? ` · ${account.status.replaceAll("_", " ")}` : ""}</small>{blocked && <small className="bridge-unsupported-reason">{blocked}</small>}</span></label>
         {selected && !frozen && <div className="bridge-account-customize">
           {scheduled && <div className="bridge-account-time"><ScheduleDateTime value={timeFor(account.id)} onChange={localDateTime => setOverride(account.id, { localDateTime })}/>{post.accountIds.length > 1 && <button type="button" className="bridge-text-button" onClick={() => applyTimeToAll(timeFor(account.id))}>Use this time for all accounts</button>}</div>}
           <div className="bridge-allowance">{account.options?.remaining !== null && account.options?.remaining !== undefined ? `${account.options.remaining} of ${account.options.limit} posts available` : "Posting allowance checked before delivery"}</div>
           {account.optionsError && <Alert message={account.optionsError}/>}
-          <Field label="Format"><select value={override.format || "auto"} onChange={event => setOverride(account.id, { format: event.target.value })}><option value="auto">Automatic from media</option>{(capability?.formats || []).map(format => <option key={format} value={format}>{format[0].toUpperCase() + format.slice(1)}</option>)}</select></Field>
+          <Field label="Format"><select value={override.format || "auto"} onChange={event => setOverride(account.id, { format: event.target.value })}><option value="auto">{chosen.length ? `${FORMAT_LABELS[detected]} (detected)` : "Automatic from media"}</option>{(capability?.formats || []).filter(format => format !== detected && (!chosen.length ? format === "text" : mediaFormats.includes(format))).map(format => <option key={format} value={format}>{FORMAT_LABELS[format] || format}</option>)}</select></Field>
           <details><summary>Customize title & caption</summary><Field label="Title for this account"><input value={override.title ?? post.title} maxLength={500} onChange={event => setOverride(account.id, { title: event.target.value })}/></Field><Field label={`Caption · ${capability?.captionLimit?.toLocaleString() || "—"} character limit`}><textarea rows={3} value={override.caption ?? post.caption} onChange={event => setOverride(account.id, { caption: event.target.value })}/></Field><button className="bridge-text-button" onClick={() => { const next = { ...override }; delete next.title; delete next.caption; update({ overrides: { ...post.overrides, [account.id]: next } }); }}>Use shared title & caption</button></details>
           <DestinationSettings account={account} settings={override.settings} onChange={settings => setOverride(account.id, { settings })} hasVideo={chosen.some(item => item.kind === "video")} hasImages={chosen.some(item => item.kind === "image")}/>
         </div>}
