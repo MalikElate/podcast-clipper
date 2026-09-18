@@ -206,6 +206,20 @@ test("schedules respect timezones, reject nonexistent DST times, and disambiguat
   assert.throws(() => service.forPost({ mode: "scheduled", localDateTime: "2025-01-01T12:00", timeZone: "UTC" }), /future/i);
 });
 
+test("scheduled posts give each account its own time and publish-now ignores those times", async t => {
+  const h = setup(t); h.account("two");
+  const schedule = { mode: "scheduled", timeZone: "Africa/Douala", localDateTime: "2026-09-10T09:00", disambiguation: "reject" };
+  const { posts: [post] } = await h.submit([h.post("Staggered", ["one", "two"], { schedule, overrides: { two: { localDateTime: "2026-09-10T18:30" } } })]);
+  const due = Object.fromEntries(post.deliveries.map(d => [d.accountId, d.dueAt]));
+  assert.equal(due.one, Date.parse("2026-09-10T08:00:00Z")); assert.equal(due.two, Date.parse("2026-09-10T17:30:00Z"));
+  assert.equal(post.accountSchedules, undefined);
+  const edited = await h.app.posts.update("alice", h.project.id, post.id, { ...post, overrides: { one: { localDateTime: "2026-09-11T07:15" }, two: { localDateTime: "2026-09-10T18:30" } } });
+  assert.equal(edited.deliveries.find(d => d.accountId === "one").dueAt, Date.parse("2026-09-11T06:15:00Z"));
+  await assert.rejects(h.submit([h.post("Past", ["one"], { schedule, overrides: { one: { localDateTime: "2026-09-01T09:00" } } })]), /future/i);
+  const { posts: [now] } = await h.submit([h.post("Now", ["one", "two"], { overrides: { two: { localDateTime: "2026-09-10T18:30" } } })]);
+  assert.ok(now.deliveries.every(d => d.dueAt === h.now())); assert.equal(now.overrides.two.localDateTime, undefined);
+});
+
 test("encrypted credentials are bound to the correct account context", () => {
   const vault = new SecretVault(randomBytes(32).toString("base64")), encrypted = vault.encrypt({ accessToken: "private" }, "account:one");
   assert.ok(!encrypted.includes("private")); assert.equal(vault.decrypt(encrypted, "account:one").accessToken, "private"); assert.throws(() => vault.decrypt(encrypted, "account:two"));

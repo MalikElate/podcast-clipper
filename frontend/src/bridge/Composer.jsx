@@ -68,6 +68,24 @@ export function PostEditor({ post, onChange, accounts, media, catalog, onPickMed
     const overrides = { ...post.overrides }; if (selected) delete overrides[id];
     update({ accountIds: selected ? post.accountIds.filter(value => value !== id) : [...post.accountIds, id], overrides });
   };
+  const scheduled = post.schedule?.mode === "scheduled";
+  const frozenFor = id => post.deliveries?.find(delivery => delivery.accountId === id && ["published", "cancelled"].includes(delivery.status));
+  const selectable = accounts.filter(account => account.status === "connected" && !frozenFor(account.id));
+  const allSelected = selectable.length > 0 && selectable.every(account => post.accountIds.includes(account.id));
+  const someSelected = selectable.some(account => post.accountIds.includes(account.id));
+  const selectAll = useRef(null);
+  useEffect(() => { if (selectAll.current) selectAll.current.indeterminate = someSelected && !allSelected; }, [someSelected, allSelected]);
+  const toggleAll = () => {
+    const ids = new Set(selectable.map(account => account.id));
+    if (!allSelected) return update({ accountIds: [...post.accountIds, ...selectable.map(account => account.id).filter(id => !post.accountIds.includes(id))] });
+    const overrides = { ...post.overrides }; ids.forEach(id => delete overrides[id]);
+    update({ accountIds: post.accountIds.filter(id => !ids.has(id)), overrides });
+  };
+  const timeFor = id => post.overrides[id]?.localDateTime || post.schedule.localDateTime;
+  const applyTimeToAll = localDateTime => {
+    const overrides = Object.fromEntries(Object.entries(post.overrides).map(([id, override]) => { const next = { ...override }; delete next.localDateTime; return [id, next]; }));
+    update({ schedule: { ...post.schedule, localDateTime }, overrides });
+  };
   const clearDrag = () => { draggedMedia.current = ""; setDraggedId(""); setDropTarget(null); };
   const moveMedia = (sourceId, targetId, position = "before") => {
     if (!sourceId || sourceId === targetId) return clearDrag();
@@ -93,9 +111,11 @@ export function PostEditor({ post, onChange, accounts, media, catalog, onPickMed
     </div>
     <div className="bridge-composer-destinations"><div className="bridge-section-label"><strong>Destinations</strong><span>{post.accountIds.length} selected</span></div>
       {!accounts.length && <p className="bridge-small">Connect a social account in this project to choose a destination.</p>}
-      {accounts.map(account => { const selected = post.accountIds.includes(account.id), override = post.overrides[account.id] || {}, capability = catalog.find(item => item.id === account.platform), frozen = post.deliveries?.find(delivery => delivery.accountId === account.id && ["published", "cancelled"].includes(delivery.status)); return <div className={`bridge-destination ${selected ? "selected" : ""}`} key={account.id}>
+      {selectable.length > 1 && <label className="bridge-select-all"><input ref={selectAll} type="checkbox" checked={allSelected} onChange={toggleAll}/><span>Select all connected accounts</span><small>{selectable.length} accounts</small></label>}
+      {accounts.map(account => { const selected = post.accountIds.includes(account.id), override = post.overrides[account.id] || {}, capability = catalog.find(item => item.id === account.platform), frozen = frozenFor(account.id); return <div className={`bridge-destination ${selected ? "selected" : ""}`} key={account.id}>
         <label className="bridge-account-choice"><input type="checkbox" checked={selected} disabled={Boolean(frozen) || account.status !== "connected" && !selected} onChange={() => toggleAccount(account.id)}/><PlatformBadge platform={account.platform} catalog={catalog}/><span><strong>{account.label}</strong><small>{capability?.name || account.platform}{frozen ? ` · ${frozen.status}` : account.status !== "connected" ? ` · ${account.status.replaceAll("_", " ")}` : ""}</small></span></label>
         {selected && !frozen && <div className="bridge-account-customize">
+          {scheduled && <div className="bridge-account-time"><ScheduleDateTime value={timeFor(account.id)} onChange={localDateTime => setOverride(account.id, { localDateTime })}/>{post.accountIds.length > 1 && <button type="button" className="bridge-text-button" onClick={() => applyTimeToAll(timeFor(account.id))}>Use this time for all accounts</button>}</div>}
           <div className="bridge-allowance">{account.options?.remaining !== null && account.options?.remaining !== undefined ? `${account.options.remaining} of ${account.options.limit} posts available` : "Posting allowance checked before delivery"}</div>
           {account.optionsError && <Alert message={account.optionsError}/>}
           <Field label="Format"><select value={override.format || "auto"} onChange={event => setOverride(account.id, { format: event.target.value })}><option value="auto">Automatic from media</option>{(capability?.formats || []).map(format => <option key={format} value={format}>{format[0].toUpperCase() + format.slice(1)}</option>)}</select></Field>
@@ -109,7 +129,7 @@ export function PostEditor({ post, onChange, accounts, media, catalog, onPickMed
 
 export default function Composer({ project, accounts: initialAccounts, media, catalog, config, onAccounts, onSubmitted, scheduledDate = "", onDraftStarted, onUpload }) {
   const [items, setItems] = useState(() => [makePost(project, [], [], scheduledDate)]);
-  const [accounts, setAccounts] = useState(initialAccounts), [active, setActive] = useState(0), [scheduling, setScheduling] = useState(false), [scheduleDraft, setScheduleDraft] = useState(null), [preview, setPreview] = useState(null), [previewIntent, setPreviewIntent] = useState("publish"), [error, setError] = useState(""), [busy, setBusy] = useState(false), [uploading, setUploading] = useState(false);
+  const [accounts, setAccounts] = useState(initialAccounts), [active, setActive] = useState(0), [preview, setPreview] = useState(null), [previewIntent, setPreviewIntent] = useState("publish"), [error, setError] = useState(""), [busy, setBusy] = useState(false), [uploading, setUploading] = useState(false);
   const requestId = useRef(crypto.randomUUID()), fileInput = useRef(null), alive = useRef(true);
   const [uploadProgress, setUploadProgress] = useState(null);
   const selectedAccountIds = [...new Set(items.flatMap(item => item.accountIds))].sort().join(",");
@@ -126,7 +146,7 @@ export default function Composer({ project, accounts: initialAccounts, media, ca
   }, [project.id, selectedAccountIds]);
   function changeItems(next) { setItems(next); setPreview(null); setError(""); requestId.current = crypto.randomUUID(); }
   async function review(nextItems, intent) {
-    setBusy(true); setError(""); setPreviewIntent(intent); setItems(nextItems); setScheduling(false); requestId.current = crypto.randomUUID();
+    setBusy(true); setError(""); setPreviewIntent(intent); setItems(nextItems); requestId.current = crypto.randomUUID();
     try { const result = await api.project(project.id, "/posts/preview", { method: "POST", body: { items: nextItems } }); if (alive.current) setPreview(result); }
     catch (error) { if (alive.current) setError(error.message); } finally { if (alive.current) setBusy(false); }
   }
@@ -145,11 +165,9 @@ export default function Composer({ project, accounts: initialAccounts, media, ca
     }
     catch (error) { if (alive.current) setError(error.message); } finally { if (alive.current) setUploading(false); }
   }
-  function openSchedule() {
-    const current = items[active].schedule;
-    setScheduleDraft({ ...current, mode: "scheduled", timeZone: current.timeZone || project.timeZone, localDateTime: current.localDateTime || nextMorning(project.timeZone) });
-    setScheduling(true); setError("");
-  }
+  const schedule = items[active].schedule, scheduled = schedule.mode === "scheduled";
+  const setSchedule = patch => changeItems(items.map(item => ({ ...item, schedule: { ...item.schedule, ...patch } })));
+  const toggleScheduled = on => setSchedule(on ? { mode: "scheduled", timeZone: schedule.timeZone || project.timeZone, localDateTime: schedule.localDateTime || nextMorning(project.timeZone) } : { mode: "now" });
   const hasYouTubePreview = Boolean(preview?.rows.some(row => row.destinations.some(destination => destination.platform === "youtube")));
   const userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent;
   const mobileUpload = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobile/i.test(userAgent) || /Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1;
@@ -159,9 +177,9 @@ export default function Composer({ project, accounts: initialAccounts, media, ca
     <div className="bridge-intro-row"><p>Create once, tailor for every account. Each destination keeps its own place in the queue.</p><button className="bridge-button secondary" onClick={onAccounts}><Icon name="accounts" size={16}/> Accounts</button></div>
     <Alert message={error}/>
     <input type="file" ref={fileInput} hidden multiple accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx" onChange={event => { uploadMedia(event.target.files); event.target.value = ""; }}/>
+    <div className={`bridge-panel bridge-schedule-bar ${scheduled ? "on" : ""}`}><label className="bridge-switch"><input type="checkbox" role="switch" checked={scheduled} disabled={busy} onChange={event => toggleScheduled(event.target.checked)}/><span className="bridge-switch-track" aria-hidden="true"/><span><strong>Schedule for later</strong><small>{scheduled ? "Set a date and time on each selected account." : "Off: posts publish as soon as you confirm."}</small></span></label>{scheduled && <div className="bridge-schedule-bar-fields"><TimezoneField value={schedule.timeZone} onChange={timeZone => setSchedule({ timeZone })}/><Field label="When clocks repeat an hour"><select value={schedule.disambiguation || "reject"} onChange={event => setSchedule({ disambiguation: event.target.value })}><option value="reject">Ask me to choose if ambiguous</option><option value="earlier">Use the earlier occurrence</option><option value="later">Use the later occurrence</option></select></Field></div>}</div>
     <div className="bridge-panel"><PostEditor post={items[active]} onChange={post => changeItems(items.map((item, i) => i === active ? post : item))} accounts={accounts} media={media} catalog={catalog} uploading={uploading} uploadProgress={uploadProgress} onPickMedia={() => fileInput.current?.click()}/></div>
-    <div className="bridge-composer-footer"><div><strong>1 post in this draft</strong><span>Each destination can use its own format and settings</span></div><div className="bridge-inline-actions"><button className="bridge-button" disabled={busy || uploading} onClick={() => review(items.map(item => ({ ...item, schedule: { ...item.schedule, mode: "now", localDateTime: "" } })), "publish")}>{busy && previewIntent === "publish" ? "Checking…" : "Review & publish"}<Icon name="arrow" size={17}/></button><button className="bridge-button secondary" disabled={busy || uploading} onClick={openSchedule}><Icon name="clock" size={17}/> Schedule</button></div></div>
-    {scheduling && scheduleDraft && <Modal title="Schedule post" busy={busy} onClose={() => setScheduling(false)}><p>Choose when this post should publish.</p><ScheduleDateTime value={scheduleDraft.localDateTime} onChange={localDateTime => setScheduleDraft(current => ({ ...current, localDateTime }))}/><TimezoneField value={scheduleDraft.timeZone} onChange={timeZone => setScheduleDraft(current => ({ ...current, timeZone }))}/><Field label="When clocks repeat an hour"><select value={scheduleDraft.disambiguation || "reject"} onChange={event => setScheduleDraft(current => ({ ...current, disambiguation: event.target.value }))}><option value="reject">Ask me to choose if ambiguous</option><option value="earlier">Use the earlier occurrence</option><option value="later">Use the later occurrence</option></select></Field><div className="bridge-modal-actions"><button className="bridge-button secondary" disabled={busy} onClick={() => setScheduling(false)}>Cancel</button><button className="bridge-button" disabled={busy || !scheduleDraft.localDateTime} onClick={() => review(items.map(item => ({ ...item, schedule: { ...scheduleDraft, mode: "scheduled" } })), "schedule")}>{busy ? "Checking…" : "Review schedule"}<Icon name="arrow" size={17}/></button></div></Modal>}
+    <div className="bridge-composer-footer"><div><strong>1 post in this draft</strong><span>{scheduled ? "Each destination publishes at its own time" : "Each destination can use its own format and settings"}</span></div><div className="bridge-inline-actions">{scheduled ? <button className="bridge-button" disabled={busy || uploading || !schedule.localDateTime} onClick={() => review(items, "schedule")}><Icon name="clock" size={17}/>{busy ? "Checking…" : "Review schedule"}<Icon name="arrow" size={17}/></button> : <button className="bridge-button" disabled={busy || uploading} onClick={() => review(items.map(item => ({ ...item, schedule: { ...item.schedule, mode: "now", localDateTime: "" } })), "publish")}>{busy ? "Checking…" : "Review & publish"}<Icon name="arrow" size={17}/></button>}</div></div>
     {preview && <Modal title={previewIntent === "publish" ? "Review and publish" : "Review schedule"} wide busy={busy} onClose={() => setPreview(null)}><p className="bridge-small">Times are shown in {project.timeZone}. Allowances are checked again before every delivery.</p><Alert message={error}/>{preview.delayed > 0 && <div className="bridge-notice">{preview.delayed} deliveries will wait for their account’s next available allowance.</div>}<div className="bridge-preview-list">{preview.rows.map(row => <div className="bridge-preview-post" key={row.index}><h3>Post {row.index + 1} <span>{row.title || row.caption.slice(0, 80) || "Media post"}</span></h3>{row.destinations.map(destination => <div key={destination.id} className="bridge-preview-destination"><PlatformBadge platform={destination.platform} catalog={catalog}/><div><strong>{destination.accountName}</strong><span>{dateTime(destination.dueAt, project.timeZone)}{destination.estimated ? " · estimate" : ""}</span>{destination.reason && <small>{destination.reason}</small>}{destination.errors.map((message, index) => <p className="bridge-validation-error" key={index}>{message}</p>)}</div><Badge status={destination.errors.length ? "failed" : destination.delayed ? "scheduled" : "queued"}>{destination.errors.length ? "Needs changes" : destination.delayed ? "Auto queued" : "Ready"}</Badge></div>)}</div>)}</div>{hasYouTubePreview && <p className="bridge-small">By clicking 'upload,' you certify that the content you are uploading complies with the YouTube Terms of Service (including the YouTube Community Guidelines) at <a href={youtubeTermsUrl} target="_blank" rel="noreferrer">{youtubeTermsUrl}</a>. Please be sure not to violate others' copyright or privacy rights.</p>}<div className="bridge-modal-actions"><button className="bridge-button secondary" disabled={busy} onClick={() => setPreview(null)}>Keep editing</button><button className="bridge-button" disabled={!preview.valid || busy || !config.features?.publishing} onClick={submit}>{busy ? previewIntent === "publish" ? "Publishing…" : "Scheduling…" : finalActionLabel}</button></div></Modal>}
   </>;
 }

@@ -30,8 +30,8 @@ export class PostService {
     mediaIds.forEach(id => this.media.require(uid, projectId, id));
     const accounts = input.accountIds.map(id => this.accounts.require(uid, projectId, id));
     const schedule = this.schedules.forPost(input.schedule);
-    const overrides = input.overrides || {};
-    invariant(overrides && typeof overrides === "object" && !Array.isArray(overrides), "Invalid destination settings.");
+    const overrides = { ...(input.overrides || {}) };
+    invariant(input.overrides === undefined || input.overrides && typeof overrides === "object" && !Array.isArray(overrides), "Invalid destination settings.");
     for (const [id, override] of Object.entries(overrides)) {
       invariant(accounts.some(account => account.id === id), "Destination settings must belong to a selected account.");
       invariant(override && typeof override === "object" && !Array.isArray(override), "Invalid destination settings.");
@@ -39,8 +39,16 @@ export class PostService {
       invariant(override.title === undefined || typeof override.title === "string" && override.title.length <= 500, "Invalid destination title.");
       invariant(JSON.stringify(override.settings || {}).length <= 10000, "Destination settings are too large.");
       invariant(override.settings === undefined || override.settings && typeof override.settings === "object" && !Array.isArray(override.settings), "Invalid destination settings.");
+      invariant(override.localDateTime === undefined || typeof override.localDateTime === "string" && override.localDateTime.length <= 40, "Invalid destination time.");
     }
-    return { caption: input.caption || "", title: input.title || "", mediaIds, accountIds: input.accountIds, overrides, format: input.format || "auto", schedule };
+    // Scheduled posts may give each account its own local time; the timezone and repeated-hour choice stay shared.
+    const accountSchedules = {};
+    for (const account of accounts) {
+      const localDateTime = overrides[account.id]?.localDateTime;
+      if (schedule.mode !== "scheduled") { if (overrides[account.id]) { const { localDateTime: ignored, ...rest } = overrides[account.id]; overrides[account.id] = rest; } accountSchedules[account.id] = schedule; continue; }
+      accountSchedules[account.id] = localDateTime ? this.schedules.forPost({ ...input.schedule, localDateTime }) : schedule;
+    }
+    return { caption: input.caption || "", title: input.title || "", mediaIds, accountIds: input.accountIds, overrides, format: input.format || "auto", schedule, accountSchedules };
   }
 
   async prepare(uid, projectId, items, { excludeIds = [], refreshOptions = true } = {}) {
@@ -64,8 +72,9 @@ export class PostService {
       if (!provider.configured) errors.push("This platform is not configured on the server.");
       if (optionErrors.has(accountId)) errors.push(optionErrors.get(accountId));
       const id = `preview:${index}:${accountId}`;
-      proposed.push({ id, rateKey: account.rateKey, requestedAt: post.schedule.requestedAt, order: this.clock() * 100 + index, status: "queued" });
-      return { id, accountId, accountName: account.label, platform: account.platform, errors, requestedAt: post.schedule.requestedAt };
+      const requestedAt = post.accountSchedules[accountId].requestedAt;
+      proposed.push({ id, rateKey: account.rateKey, requestedAt, order: this.clock() * 100 + index, status: "queued" });
+      return { id, accountId, accountName: account.label, platform: account.platform, errors, requestedAt };
     }) }));
     for (const rateKey of new Set(proposed.map(item => item.rateKey))) {
       const allocations = this.rates.plan(rateKey, proposed.filter(item => item.rateKey === rateKey), { excludeIds });
@@ -103,12 +112,13 @@ export class PostService {
         // Recheck ownership and existence after asynchronous provider lookups.
         input.mediaIds.forEach(mediaId => this.media.require(uid, projectId, mediaId));
         const id = randomUUID(), now = this.clock(), order = this.store.nextSequence("delivery_order", now * 100);
-        this.store.put("post", { ...input, id, projectId, ownerUid: uid, createdAt: now, updatedAt: now });
+        const { accountSchedules, ...record } = input;
+        this.store.put("post", { ...record, id, projectId, ownerUid: uid, createdAt: now, updatedAt: now });
         ids.push(id);
         input.accountIds.forEach(accountId => {
           const account = this.accounts.require(uid, projectId, accountId);
           this.store.put("delivery", { id: randomUUID(), projectId, ownerUid: uid, postId: id, accountId, platform: account.platform, rateKey: account.rateKey,
-            requestedAt: input.schedule.requestedAt, dueAt: input.schedule.requestedAt, order, status: "queued", attempts: 0, progress: {}, createdAt: now, updatedAt: now });
+            requestedAt: accountSchedules[accountId].requestedAt, dueAt: accountSchedules[accountId].requestedAt, order, status: "queued", attempts: 0, progress: {}, createdAt: now, updatedAt: now });
           rateKeys.add(account.rateKey);
         });
       });
@@ -146,7 +156,7 @@ export class PostService {
       const current = this.store.get("post", id);
       const currentDeliveries = this.store.list("delivery", { projectId }).filter(item => item.postId === id);
       invariant(current.revision === original.revision && currentDeliveries.every(item => deliveries.some(before => before.id === item.id && before.status === item.status)), "This post changed while you were editing. Refresh it and try again.", { status: 409 });
-      const next = prepared.normalized[0];
+      const { accountSchedules, ...next } = prepared.normalized[0];
       next.mediaIds.forEach(mediaId => this.media.require(uid, projectId, mediaId));
       const overrides = { ...next.overrides };
       frozen.forEach(delivery => {
@@ -159,7 +169,7 @@ export class PostService {
         const account = this.accounts.require(uid, projectId, accountId);
         const previous = deliveries.find(item => item.accountId === accountId);
         this.store.put("delivery", { id: previous?.id || randomUUID(), projectId, ownerUid: uid, postId: id, accountId, platform: account.platform, rateKey: account.rateKey,
-          status: "queued", requestedAt: next.schedule.requestedAt, dueAt: next.schedule.requestedAt, order: previous?.order || this.store.nextSequence("delivery_order", this.clock() * 100), attempts: 0, progress: {}, createdAt: previous?.createdAt || this.clock(), updatedAt: this.clock() });
+          status: "queued", requestedAt: accountSchedules[accountId].requestedAt, dueAt: accountSchedules[accountId].requestedAt, order: previous?.order || this.store.nextSequence("delivery_order", this.clock() * 100), attempts: 0, progress: {}, createdAt: previous?.createdAt || this.clock(), updatedAt: this.clock() });
       });
       new Set([...deliveries.map(item => item.rateKey), ...next.accountIds.map(accountId => this.store.get("account", accountId).rateKey)]).forEach(key => this.rates.replan(key));
       return this.get(uid, projectId, id);
