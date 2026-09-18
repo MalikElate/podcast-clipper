@@ -197,18 +197,17 @@ test("analytics preserve unavailable metrics and expose coverage when aggregatin
   const normalized = h.app.analytics.normalize({ likes: "3", views: null, shares: -1, impressions: undefined }); assert.equal(normalized.likes, 3); assert.equal(normalized.views, null); assert.equal(normalized.shares, null);
 });
 
-test("schedules respect timezones, reject nonexistent DST times, and disambiguate repeated hours", () => {
+test("schedules respect timezones, reject nonexistent DST times, and use the first of repeated hours", () => {
   const service = new ScheduleService({ clock: () => Date.parse("2026-01-01") }), local = { localDateTime: "2026-11-01T01:30", timeZone: "America/New_York" };
-  assert.throws(() => service.resolve(local), /occurs twice/i);
-  const earlier = service.resolve({ ...local, disambiguation: "earlier" }), later = service.resolve({ ...local, disambiguation: "later" }); assert.equal(later.requestedAt - earlier.requestedAt, 3600000);
-  assert.throws(() => service.resolve({ localDateTime: "2026-03-08T02:30", timeZone: "America/New_York", disambiguation: "later" }), /does not exist/i);
+  assert.equal(service.resolve(local).requestedAt, Date.parse("2026-11-01T05:30:00Z"));
+  assert.throws(() => service.resolve({ localDateTime: "2026-03-08T02:30", timeZone: "America/New_York" }), /does not exist/i);
   assert.equal(service.resolve({ localDateTime: "2026-09-09T18:00", timeZone: "Africa/Douala" }).requestedAt, Date.parse("2026-09-09T17:00:00Z"));
   assert.throws(() => service.forPost({ mode: "scheduled", localDateTime: "2025-01-01T12:00", timeZone: "UTC" }), /future/i);
 });
 
 test("scheduled posts give each account its own time and publish-now ignores those times", async t => {
   const h = setup(t); h.account("two");
-  const schedule = { mode: "scheduled", timeZone: "Africa/Douala", localDateTime: "2026-09-10T09:00", disambiguation: "reject" };
+  const schedule = { mode: "scheduled", timeZone: "Africa/Douala", localDateTime: "2026-09-10T09:00" };
   const { posts: [post] } = await h.submit([h.post("Staggered", ["one", "two"], { schedule, overrides: { two: { localDateTime: "2026-09-10T18:30" } } })]);
   const due = Object.fromEntries(post.deliveries.map(d => [d.accountId, d.dueAt]));
   assert.equal(due.one, Date.parse("2026-09-10T08:00:00Z")); assert.equal(due.two, Date.parse("2026-09-10T17:30:00Z"));
