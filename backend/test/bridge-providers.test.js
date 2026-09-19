@@ -56,6 +56,19 @@ test("every direct OAuth adapter sends account connections to its native authori
   }
 });
 
+test("Google Business can reuse the existing YouTube OAuth client", async () => {
+  const provider = new GoogleBusinessProvider({
+    publicUrl: "https://bridge.example",
+    env: { YOUTUBE_CLIENT_ID: "existing-google-client", YOUTUBE_CLIENT_SECRET: "existing-google-secret" },
+  });
+  assert.equal(provider.oauth.clientId, "existing-google-client");
+  assert.equal(provider.oauth.clientSecret, "existing-google-secret");
+  const url = new URL(await provider.authorizationUrl({ state: "state", verifier: "verifier" }));
+  assert.equal(url.searchParams.get("client_id"), "existing-google-client");
+  assert.equal(url.searchParams.get("scope"), "https://www.googleapis.com/auth/business.manage");
+  assert.equal(url.searchParams.get("redirect_uri"), "https://bridge.example/oauth/google_business/callback");
+});
+
 test("transport respects reset headers and holds unsafe or interrupted requests for review", async () => {
   const now = 100000;
   let http = new HttpTransport({ clock: () => now, fetcher: async () => new Response("", { status: 429, headers: { "Retry-After": "60" } }) });

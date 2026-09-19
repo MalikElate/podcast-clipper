@@ -15,7 +15,9 @@ class GoogleProvider extends PlatformProvider {
   }
   get oauth() {
     const prefix = this.id === "google_business" ? "GOOGLE_BUSINESS" : "YOUTUBE";
-    return { authorize: "https://accounts.google.com/o/oauth2/v2/auth", token: "https://oauth2.googleapis.com/token", clientId: this.env[`${prefix}_CLIENT_ID`] || this.env.GOOGLE_CLIENT_ID, clientSecret: this.env[`${prefix}_CLIENT_SECRET`] || this.env.GOOGLE_CLIENT_SECRET,
+    const existingClientId = this.id === "google_business" ? this.env.YOUTUBE_CLIENT_ID : undefined;
+    const existingClientSecret = this.id === "google_business" ? this.env.YOUTUBE_CLIENT_SECRET : undefined;
+    return { authorize: "https://accounts.google.com/o/oauth2/v2/auth", token: "https://oauth2.googleapis.com/token", clientId: this.env[`${prefix}_CLIENT_ID`] || this.env.GOOGLE_CLIENT_ID || existingClientId, clientSecret: this.env[`${prefix}_CLIENT_SECRET`] || this.env.GOOGLE_CLIENT_SECRET || existingClientSecret,
       pkce: true, scopes: this.id === "youtube" ? ["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube.readonly", "https://www.googleapis.com/auth/yt-analytics.readonly"] : ["https://www.googleapis.com/auth/business.manage"], extra: { access_type: "offline", prompt: "consent select_account", include_granted_scopes: "true" } };
   }
 }

@@ -49,7 +49,7 @@ Upload the recording to YouTube with a visibility that lets Google's reviewer ac
 
 ## Google Business Profile follow-up
 
-Enable and obtain access to the Business Profile APIs used by the adapter. Configure `GOOGLE_BUSINESS_CLIENT_ID` and `GOOGLE_BUSINESS_CLIENT_SECRET` (or the shared `GOOGLE_*` pair), register `https://findmeadow.com/oauth/google_business/callback`, and configure the `business.manage` permission for that OAuth client. A separate client/project may be used. Do not describe Business Profile as verified or available merely because YouTube's OAuth flow works.
+Enable and obtain access to the Business Profile APIs used by the adapter. Configure `GOOGLE_BUSINESS_CLIENT_ID` and `GOOGLE_BUSINESS_CLIENT_SECRET`, the shared `GOOGLE_*` pair, or reuse the existing `YOUTUBE_*` Google OAuth client. Register `https://findmeadow.com/oauth/google_business/callback` and configure the `business.manage` permission on that client. A separate client/project may be used. Do not describe Business Profile as verified or available merely because YouTube's OAuth flow works.
 
 Individual local-post analytics are unavailable: Google discontinued `accounts.locations.localPosts.reportInsights` with no replacement. Location-level performance metrics are a different feature and are not reported as individual post results.
 

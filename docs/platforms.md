@@ -49,7 +49,7 @@ https://your-meadow-domain.example/oauth/google_business/callback
 | LinkedIn | `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` | Defaults: `openid profile w_member_social`; restricted read/organization scopes require separate access |
 | Pinterest | `PINTEREST_CLIENT_ID`, `PINTEREST_CLIENT_SECRET` | `user_accounts:read`, `boards:read`, `pins:read`, `pins:write` |
 | Bluesky | `BLUESKY_PRIVATE_KEY` and HTTPS origin | Official OAuth client, DPoP, ES256 private-key authentication, `atproto transition:generic` |
-| Google Business | `GOOGLE_BUSINESS_CLIENT_ID` / `GOOGLE_BUSINESS_CLIENT_SECRET`, or shared `GOOGLE_*` | `https://www.googleapis.com/auth/business.manage`; relevant Business Profile APIs enabled and approved |
+| Google Business | `GOOGLE_BUSINESS_CLIENT_ID` / `GOOGLE_BUSINESS_CLIENT_SECRET`, shared `GOOGLE_*`, or the existing `YOUTUBE_*` Google OAuth client | `https://www.googleapis.com/auth/business.manage`; relevant Business Profile APIs enabled and approved |
 
 `BRIDGE_ENCRYPTION_KEY` is required for connections. Tokens and OAuth sessions are encrypted at rest. OAuth state expires, is consumed once, and remains bound to the authenticated initiating user and project. After authorization, the user selects which returned accounts to attach to that project.
 
