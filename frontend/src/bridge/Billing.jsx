@@ -5,8 +5,8 @@ import { api } from "./BridgeApi.js";
 import { PLANS } from "../pricing.js";
 import { SUBSCRIPTION_STATUSES, checkoutNotice, billingWarning } from "./billingState.js";
 
-export default function Billing({ localPreview }) {
-  const [returnParams] = useState(() => new URLSearchParams(window.location.search));
+export default function Billing({ localPreview, returnSearch = "" }) {
+  const [returnParams] = useState(() => new URLSearchParams(returnSearch));
   const [yearly, setYearly] = useState(true);
   const [billing, setBilling] = useState(null);
   const [busy, setBusy] = useState("");

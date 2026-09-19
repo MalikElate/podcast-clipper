@@ -15,7 +15,7 @@ import ConfigurationSettings from "./ConfigurationSettings.jsx";
 import ApiKeys from "./ApiKeys.jsx";
 import Billing from "./Billing.jsx";
 import { DeletionReceipt, readDeletionReceipt } from "./PrivacyAccount.jsx";
-import { dashboardPath, dashboardView } from "./dashboardRoutes.js";
+import { dashboardPath, dashboardView, dashboardSearch } from "./dashboardRoutes.js";
 import "./bridge.css";
 
 export const modules = [
@@ -58,6 +58,7 @@ export default function BridgeApp() {
 function Workspace({ user, signOut }) {
   const initial = useRef({ params: new URLSearchParams(window.location.search), view: dashboardView(window.location.pathname, window.location.search) });
   const [view, setView] = useState(initial.current.view);
+  const [billingSearch, setBillingSearch] = useState(() => dashboardSearch(initial.current.view, initial.current.params));
   const [projects, setProjects] = useState([]), [projectId, setProjectId] = useState(""), [config, setConfig] = useState(null), [error, setError] = useState(initial.current.params.get("connectionError") || ""), [notice, setNotice] = useState(""), [menuOpen, setMenuOpen] = useState(false), [connectionId, setConnectionId] = useState(initial.current.params.get("connection") || ""), [scheduledDate, setScheduledDate] = useState(""), [draftVersion, setDraftVersion] = useState(0);
   const [postsOpen, setPostsOpen] = useState(postViewIds.has(initial.current.view));
   const [configurationOpen, setConfigurationOpen] = useState(configurationViewIds.has(initial.current.view));
@@ -81,26 +82,28 @@ function Workspace({ user, signOut }) {
       if (controller.signal.aborted) return;
       setProjects(availableProjects); setConfig(configuration); setProjectId(availableProjects.find(item => item.id === initial.current.params.get("project"))?.id || availableProjects[0]?.id || "");
     }).catch(error => { if (error.name !== "AbortError") setError(error.message); });
-    window.history.replaceState({}, "", dashboardPath(initial.current.view));
+    window.history.replaceState({}, "", dashboardPath(initial.current.view) + dashboardSearch(initial.current.view, initial.current.params));
     return () => controller.abort();
   }, []);
   useEffect(() => {
     const onPopState = () => {
       const next = dashboardView(window.location.pathname, window.location.search);
       setView(next);
+      const search = dashboardSearch(next, window.location.search);
+      setBillingSearch(search);
       setPostsOpen(postViewIds.has(next));
       setConfigurationOpen(configurationViewIds.has(next));
       setMenuOpen(false);
       setError("");
       setNotice("");
-      if (window.location.pathname !== dashboardPath(next) || window.location.search) window.history.replaceState({}, "", dashboardPath(next));
+      if (window.location.pathname !== dashboardPath(next) || window.location.search !== search) window.history.replaceState({}, "", dashboardPath(next) + search);
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
   useEffect(() => { document.title = `${activeModule?.title || activeModule?.name || "Dashboard"} · Meadow`; }, [activeModule]);
   function selectView(next) { setView(next); if (postViewIds.has(next)) { setPostsOpen(true); setConfigurationOpen(false); } else if (configurationViewIds.has(next)) { setConfigurationOpen(true); setPostsOpen(false); } else { setPostsOpen(false); setConfigurationOpen(false); } setMenuOpen(false); setError(""); setNotice(""); }
-  function navigate(next) { selectView(next); const path = dashboardPath(next); if (window.location.pathname !== path || window.location.search) window.history.pushState({}, "", path); }
+  function navigate(next) { setBillingSearch(""); selectView(next); const path = dashboardPath(next); if (window.location.pathname !== path || window.location.search) window.history.pushState({}, "", path); }
   function follow(event, next) { if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); navigate(next); }
   function compose(date = "") { setScheduledDate(date); setDraftVersion(value => value + 1); navigate("compose"); }
   async function handleSignOut() {
@@ -132,16 +135,16 @@ function Workspace({ user, signOut }) {
     </aside>
     <main className="bridge-main"><header className="bridge-topbar"><button className="bridge-icon-button bridge-menu-toggle" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Icon name="menu"/></button></header>
       <div className="bridge-content"><Alert message={error}/><Alert message={notice} success/><div className="bridge-page-heading"><h1>{activeModule?.title || activeModule?.name}</h1></div>
-        {!config ? <div className="bridge-panel bridge-empty"><p>{error ? "Meadow could not load. Check your connection and refresh this page." : ""}</p></div> : isConfigurationView ? <ConfigurationWorkspace user={user} project={project} config={config} view={view} onSignOut={handleSignOut} signingOut={signingOut} onProjectUpdated={updated => setProjects(current => current.map(item => item.id === updated.id ? updated : item))}/> : !project ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Meadow is getting ready</h2><p>Your publishing account is not available yet.</p></div> : <ProjectWorkspace key={project.id} project={project} config={config} view={view} navigate={navigate} compose={compose} scheduledDate={scheduledDate} clearScheduledDate={() => setScheduledDate("")} draftVersion={draftVersion} connectionId={connectionId} clearConnection={() => setConnectionId("")} notify={setNotice}/>}
+        {!config ? <div className="bridge-panel bridge-empty"><p>{error ? "Meadow could not load. Check your connection and refresh this page." : ""}</p></div> : isConfigurationView ? <ConfigurationWorkspace billingSearch={billingSearch} user={user} project={project} config={config} view={view} onSignOut={handleSignOut} signingOut={signingOut} onProjectUpdated={updated => setProjects(current => current.map(item => item.id === updated.id ? updated : item))}/> : !project ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Meadow is getting ready</h2><p>Your publishing account is not available yet.</p></div> : <ProjectWorkspace key={project.id} project={project} config={config} view={view} navigate={navigate} compose={compose} scheduledDate={scheduledDate} clearScheduledDate={() => setScheduledDate("")} draftVersion={draftVersion} connectionId={connectionId} clearConnection={() => setConnectionId("")} notify={setNotice}/>}
       </div>
     </main>
   </div>;
 }
-function ConfigurationWorkspace({ user, project, config, view, onProjectUpdated, onSignOut, signingOut }) {
+function ConfigurationWorkspace({ billingSearch, user, project, config, view, onProjectUpdated, onSignOut, signingOut }) {
   return <>
     {view === "settings" && <ConfigurationSettings user={user} project={project} config={config} onProjectUpdated={onProjectUpdated} onSignOut={onSignOut} signingOut={signingOut}/>}
     {view === "api-keys" && <ApiKeys timeZone={project?.timeZone}/>}
-    {view === "billing" && <Billing localPreview={config.localPreview}/>}
+    {view === "billing" && <Billing key={billingSearch} returnSearch={billingSearch} localPreview={config.localPreview}/>}
   </>;
 }
 function ProjectWorkspace({ project, config, view, navigate, compose, scheduledDate, clearScheduledDate, draftVersion, connectionId, clearConnection, notify }) {

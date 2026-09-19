@@ -35,3 +35,14 @@ export function isDashboardPath(pathname) {
   const path = cleanPath(pathname);
   return path === "/dashboard" || path.startsWith("/dashboard/");
 }
+
+
+// Preserve Stripe return data while canonicalizing legacy dashboard links.
+// Connection callback parameters continue to be consumed and removed.
+export function dashboardSearch(view, search = "") {
+  if (view !== "billing") return "";
+  const source = new URLSearchParams(search), billing = new URLSearchParams();
+  for (const key of ["checkout", "session_id", "portal_return"]) if (source.has(key)) billing.set(key, source.get(key));
+  const query = billing.toString();
+  return query ? `?${query}` : "";
+}

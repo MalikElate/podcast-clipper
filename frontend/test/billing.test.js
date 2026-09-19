@@ -20,3 +20,14 @@ test("zero-charge trials, expired checkouts, and failed payments are distinguish
   assert.equal(SUBSCRIPTION_STATUSES.has("paused"), true);
   assert.equal(SUBSCRIPTION_STATUSES.has("canceled"), false);
 });
+
+
+test("dashboard normalization preserves checkout and portal returns until billing can load", async () => {
+  const { dashboardSearch, dashboardView, dashboardPath } = await import("../src/bridge/dashboardRoutes.js");
+  const query = "?view=billing&checkout=success&session_id=cs_live_123&connection=private";
+  const view = dashboardView("/dashboard/", query);
+  assert.equal(dashboardPath(view) + dashboardSearch(view, query), "/dashboard/billing?checkout=success&session_id=cs_live_123");
+  assert.equal(dashboardSearch("billing", "?portal_return=1"), "?portal_return=1");
+  assert.equal(dashboardSearch("accounts", "?connection=private&session_id=cs_live_123"), "");
+  assert.equal(dashboardSearch("billing"), "");
+});
