@@ -3,6 +3,11 @@ import { MEADOW_LOGO_URL } from "../components/BrandLogo.jsx";
 export function Icon({ name, size = 20, ...props }) {
   const paths = {
     compose: <><path d="M12 20H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><path d="m16 3 5 5-9 9-5 1 1-5Z"/></>,
+    text: <><path d="M4 6h16M4 12h16M4 18h10"/></>,
+    image: <><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></>,
+    video: <><rect x="3" y="5" width="13" height="14" rx="3"/><path d="m16 10 5-3v10l-5-3Z"/></>,
+    carousel: <><rect x="7" y="4" width="10" height="16" rx="2"/><path d="M4 7v10M20 7v10"/></>,
+    emoji: <><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/></>,
     queue: <><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 11h18M8 15h3M8 18h7"/></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18"/></>,
     all: <><path d="M10 6h11M10 12h11M10 18h11"/><rect x="3" y="4" width="3" height="3" rx=".5"/><rect x="3" y="10" width="3" height="3" rx=".5"/><rect x="3" y="16" width="3" height="3" rx=".5"/></>,

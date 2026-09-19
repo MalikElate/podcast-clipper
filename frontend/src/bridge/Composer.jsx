@@ -4,7 +4,8 @@ import { Icon } from "./Icons.jsx";
 import { Alert, Badge, Check, dateTime, Field, MediaThumb, Modal, PlatformBadge } from "./ui.jsx";
 import { DestinationSettings } from "./DestinationSettings.jsx";
 import UploadProgress from "./UploadProgress.jsx";
-import { detectFormat, FORMAT_LABELS, formatsForMedia, unsupportedReason } from "./platforms.js";
+import { ACCEPT_BY_TYPE, detectFormat, FORMAT_LABELS, formatVariants, MAX_MEDIA_BY_TYPE, POST_TYPES, supportsPostType } from "./platforms.js";
+import EmojiPicker from "./EmojiPicker.jsx";
 
 
 export const makePost = (project, mediaIds = [], accountIds = [], scheduledDate = "") => ({ key: crypto.randomUUID(), caption: "", title: "", mediaIds, accountIds, format: "auto", overrides: {}, schedule: { mode: scheduledDate ? "scheduled" : "now", timeZone: project.timeZone, localDateTime: scheduledDate ? `${scheduledDate}T09:00` : "" } });
@@ -63,6 +64,13 @@ function nextMorning(timeZone) {
   return `${parts.year}-${parts.month}-${parts.day}T09:00`;
 }
 
+// The type a post was created as; older posts saved as "auto" fall back to their media.
+export function postTypeOf(post, media = []) {
+  if (POST_TYPES.some(type => type.id === post.format)) return post.format;
+  const detected = detectFormat(post.mediaIds.map(id => media.find(item => item.id === id)).filter(Boolean));
+  return POST_TYPES.some(type => type.id === detected) ? detected : "carousel";
+}
+
 export function PostEditor({ post, onChange, accounts, media, catalog, onPickMedia, uploading = false, uploadProgress, compact = false }) {
   const chosen = post.mediaIds.map(id => media.find(item => item.id === id)).filter(Boolean);
   const uploadLabel = uploadProgress?.stage === "processing" ? "Preparing…" : "Uploading…";
@@ -73,32 +81,28 @@ export function PostEditor({ post, onChange, accounts, media, catalog, onPickMed
   const setOverride = (id, patch) => update({ overrides: { ...post.overrides, [id]: { ...post.overrides[id], ...patch } } });
   const toggleAccount = id => {
     const selected = post.accountIds.includes(id);
-    autoRemoved.current.delete(id);
     const overrides = { ...post.overrides }; if (selected) delete overrides[id];
     update({ accountIds: selected ? post.accountIds.filter(value => value !== id) : [...post.accountIds, id], overrides });
   };
   const scheduled = post.schedule?.mode === "scheduled";
   const frozenFor = id => post.deliveries?.find(delivery => delivery.accountId === id && ["published", "cancelled"].includes(delivery.status));
-  const detected = detectFormat(chosen), mediaFormats = formatsForMedia(chosen);
+  const type = postTypeOf(post, media), maxMedia = MAX_MEDIA_BY_TYPE[type];
   const capabilityFor = account => catalog.find(item => item.id === account.platform);
-  const blockedReason = account => unsupportedReason(capabilityFor(account), chosen);
-  const selectable = accounts.filter(account => account.status === "connected" && !frozenFor(account.id) && !blockedReason(account));
-  // When the media changes, drop accounts that cannot publish it and formats that no longer fit.
-  // Accounts dropped this way come back once the media suits them again.
-  const autoRemoved = useRef(new Set());
-  const restorable = [...autoRemoved.current].filter(id => { const account = accounts.find(item => item.id === id); return account && account.status === "connected" && !post.accountIds.includes(id) && !blockedReason(account); });
-  const conflicts = post.accountIds.filter(id => { const account = accounts.find(item => item.id === id); if (!account || frozenFor(id)) return false; const format = post.overrides[id]?.format; return Boolean(blockedReason(account)) || Boolean(format && format !== "auto" && !mediaFormats.includes(format)); });
+  // Only accounts whose platform can publish this type are listed.
+  const visible = accounts.filter(account => frozenFor(account.id) || supportsPostType(capabilityFor(account), type, chosen));
+  const selectable = visible.filter(account => account.status === "connected" && !frozenFor(account.id));
+  const hidden = post.accountIds.filter(id => !visible.some(account => account.id === id) && accounts.some(account => account.id === id));
   useEffect(() => {
-    if (!conflicts.length && !restorable.length) return;
-    restorable.forEach(id => autoRemoved.current.delete(id));
-    const overrides = { ...post.overrides }, removed = [];
-    for (const id of conflicts) {
-      const account = accounts.find(item => item.id === id);
-      if (blockedReason(account)) { removed.push(id); autoRemoved.current.add(id); delete overrides[id]; }
-      else overrides[id] = { ...overrides[id], format: "auto" };
-    }
-    update({ accountIds: [...post.accountIds.filter(id => !removed.includes(id)), ...restorable], overrides });
-  }, [conflicts.join(","), restorable.join(",")]);
+    if (!hidden.length) return;
+    const overrides = { ...post.overrides }; hidden.forEach(id => delete overrides[id]);
+    update({ accountIds: post.accountIds.filter(id => !hidden.includes(id)), overrides });
+  }, [hidden.join(",")]);
+  const textBox = useRef(null);
+  const insertEmoji = emoji => {
+    const box = textBox.current, start = box?.selectionStart ?? post.caption.length, end = box?.selectionEnd ?? start;
+    update({ caption: post.caption.slice(0, start) + emoji + post.caption.slice(end) });
+    requestAnimationFrame(() => { if (!box) return; box.focus(); box.setSelectionRange(start + emoji.length, start + emoji.length); });
+  };
   const allSelected = selectable.length > 0 && selectable.every(account => post.accountIds.includes(account.id));
   const someSelected = selectable.some(account => post.accountIds.includes(account.id));
   const selectAll = useRef(null);
@@ -131,23 +135,24 @@ export function PostEditor({ post, onChange, accounts, media, catalog, onPickMed
   };
   return <div className={`bridge-post-editor ${compact ? "compact" : ""}`}>
     <div className="bridge-composer-main">
-      <div className="bridge-section-label"><strong>Content {chosen.length > 0 && <span className={`bridge-detected-format ${detected}`}>{FORMAT_LABELS[detected] || detected}{detected === "carousel" ? ` · ${chosen.length} items` : ""}</span>}</strong><span>{chosen.length} media {chosen.length === 1 ? "item" : "items"}{chosen.length > 1 ? " · Drag to reorder" : ""}</span></div>
-      {chosen.length ? <div className="bridge-media-strip">{chosen.map((item, index) => <div key={item.id} className={`bridge-picked-media ${draggedId === item.id ? "dragging" : ""} ${dropTarget?.id === item.id ? `drop-${dropTarget.position}` : ""}`} onDragOver={event => { const sourceId = draggedMedia.current; if (!sourceId || sourceId === item.id) return; event.preventDefault(); event.dataTransfer.dropEffect = "move"; const rect = event.currentTarget.getBoundingClientRect(); setDropTarget({ id: item.id, position: event.clientX < rect.left + rect.width / 2 ? "before" : "after" }); }} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget)) setDropTarget(current => current?.id === item.id ? null : current); }} onDrop={event => { event.preventDefault(); moveMedia(draggedMedia.current || event.dataTransfer.getData("text/plain"), item.id, dropTarget?.id === item.id ? dropTarget.position : "before"); }}><MediaThumb media={item}/>{chosen.length > 1 && <button type="button" className="bridge-drag-handle" draggable aria-label={`Drag ${item.filename} to reorder`} title="Drag to reorder" onDragStart={event => { draggedMedia.current = item.id; event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", item.id); setDraggedId(item.id); }} onDragEnd={clearDrag} onKeyDown={event => { if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); moveMediaBy(item.id, event.key === "ArrowLeft" ? -1 : 1); } }}><Icon name="drag" size={18}/></button>}<span className="bridge-media-order">{index + 1}</span><button className="bridge-remove-media" aria-label={`Remove ${item.filename}`} onClick={() => update({ mediaIds: post.mediaIds.filter(id => id !== item.id) })}><Icon name="close" size={14}/></button></div>)}<button className="bridge-add-media" disabled={uploading || chosen.length >= 35} onClick={onPickMedia}><Icon name="plus"/><span>{uploading ? uploadLabel : "Add media"}</span></button></div> : <button className="bridge-upload-zone" disabled={uploading} onClick={onPickMedia}><Icon name="media" size={30}/><h3>{uploading ? uploadLabel : "Add media"}</h3><p>Select images, videos, or documents from your device</p></button>}
+      <div className="bridge-section-label"><strong>Content <span className="bridge-detected-format">{POST_TYPES.find(item => item.id === type)?.label}</span></strong>{type === "carousel" && <span>{chosen.length} {chosen.length === 1 ? "item" : "items"}{chosen.length < 2 ? " · add at least 2" : " · Drag to reorder"}</span>}</div>
+      {maxMedia > 0 && (chosen.length ? <div className="bridge-media-strip">{chosen.map((item, index) => <div key={item.id} className={`bridge-picked-media ${draggedId === item.id ? "dragging" : ""} ${dropTarget?.id === item.id ? `drop-${dropTarget.position}` : ""}`} onDragOver={event => { const sourceId = draggedMedia.current; if (!sourceId || sourceId === item.id) return; event.preventDefault(); event.dataTransfer.dropEffect = "move"; const rect = event.currentTarget.getBoundingClientRect(); setDropTarget({ id: item.id, position: event.clientX < rect.left + rect.width / 2 ? "before" : "after" }); }} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget)) setDropTarget(current => current?.id === item.id ? null : current); }} onDrop={event => { event.preventDefault(); moveMedia(draggedMedia.current || event.dataTransfer.getData("text/plain"), item.id, dropTarget?.id === item.id ? dropTarget.position : "before"); }}><MediaThumb media={item}/>{chosen.length > 1 && <button type="button" className="bridge-drag-handle" draggable aria-label={`Drag ${item.filename} to reorder`} title="Drag to reorder" onDragStart={event => { draggedMedia.current = item.id; event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", item.id); setDraggedId(item.id); }} onDragEnd={clearDrag} onKeyDown={event => { if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); moveMediaBy(item.id, event.key === "ArrowLeft" ? -1 : 1); } }}><Icon name="drag" size={18}/></button>}<span className="bridge-media-order">{index + 1}</span><button className="bridge-remove-media" aria-label={`Remove ${item.filename}`} onClick={() => update({ mediaIds: post.mediaIds.filter(id => id !== item.id) })}><Icon name="close" size={14}/></button></div>)}{chosen.length < maxMedia && <button className="bridge-add-media" disabled={uploading} onClick={onPickMedia}><Icon name="plus"/><span>{uploading ? uploadLabel : "Add more"}</span></button>}</div> : <button className="bridge-upload-zone" disabled={uploading} onClick={onPickMedia}><Icon name={type === "carousel" ? "carousel" : type} size={30}/><h3>{uploading ? uploadLabel : type === "image" ? "Add an image" : type === "video" ? "Add a video" : "Add pictures or videos"}</h3><p>{type === "carousel" ? "Select 2 or more files from your device" : "Select a file from your device"}</p></button>)}
       {uploading && <UploadProgress progress={uploadProgress}/>}
-      <Field label="Title" hint="Used by platforms that support a post title."><input maxLength={500} value={post.title} onChange={event => update({ title: event.target.value })} placeholder="Give this post a title"/></Field>
-      <Field label="Caption"><textarea value={post.caption} maxLength={65000} rows={5} onChange={event => update({ caption: event.target.value })} placeholder="Write something worth sharing…"/><span className="bridge-character-count">{post.caption.length.toLocaleString()} characters</span></Field>
+      <div className="bridge-field bridge-text-field"><span>Text</span><div className="bridge-text-box"><textarea ref={textBox} aria-label="Text" value={post.caption} maxLength={65000} rows={type === "text" ? 8 : 5} onChange={event => update({ caption: event.target.value })} placeholder="Write something worth sharing…"/><EmojiPicker onPick={insertEmoji}/></div><span className="bridge-character-count">{post.caption.length.toLocaleString()} characters</span></div>
     </div>
     <div className="bridge-composer-destinations"><div className="bridge-section-label"><strong>Destinations</strong><span>{post.accountIds.length} selected</span></div>
-      {!accounts.length && <p className="bridge-small">Connect a social account in this project to choose a destination.</p>}
+      {!accounts.length ? <p className="bridge-small">Connect a social account in this project to choose a destination.</p> : !visible.length && <p className="bridge-small">None of your connected accounts can publish {type === "image" ? "an image" : type === "video" ? "a video" : type === "text" ? "text-only" : "this carousel"} posts.</p>}
+      {type === "carousel" && chosen.some(item => item.kind === "video") && <p className="bridge-small">Only platforms that accept videos in a carousel are shown.</p>}
       {selectable.length > 1 && <label className="bridge-select-all"><input ref={selectAll} type="checkbox" checked={allSelected} onChange={toggleAll}/><span>Select all connected accounts</span><small>{selectable.length} accounts</small></label>}
-      {accounts.map(account => { const selected = post.accountIds.includes(account.id), override = post.overrides[account.id] || {}, capability = capabilityFor(account), frozen = frozenFor(account.id), blocked = !frozen && blockedReason(account); return <div className={`bridge-destination ${selected ? "selected" : ""} ${blocked ? "unsupported" : ""}`} key={account.id}>
-        <label className="bridge-account-choice" title={blocked || undefined}><input type="checkbox" checked={selected} disabled={Boolean(frozen) || Boolean(blocked) || account.status !== "connected" && !selected} onChange={() => toggleAccount(account.id)}/><PlatformBadge platform={account.platform} catalog={catalog}/><span><strong>{account.label}</strong><small>{capability?.name || account.platform}{frozen ? ` · ${frozen.status}` : account.status !== "connected" ? ` · ${account.status.replaceAll("_", " ")}` : ""}</small>{blocked && <small className="bridge-unsupported-reason">{blocked}</small>}</span></label>
+      {visible.map(account => { const selected = post.accountIds.includes(account.id), override = post.overrides[account.id] || {}, capability = capabilityFor(account), frozen = frozenFor(account.id), variants = formatVariants(capability, type); return <div className={`bridge-destination ${selected ? "selected" : ""}`} key={account.id}>
+        <label className="bridge-account-choice"><input type="checkbox" checked={selected} disabled={Boolean(frozen) || account.status !== "connected" && !selected} onChange={() => toggleAccount(account.id)}/><PlatformBadge platform={account.platform} catalog={catalog}/><span><strong>{account.label}</strong><small>{capability?.name || account.platform}{frozen ? ` · ${frozen.status}` : account.status !== "connected" ? ` · ${account.status.replaceAll("_", " ")}` : ""}</small></span></label>
         {selected && !frozen && <div className="bridge-account-customize">
           {scheduled && <div className="bridge-account-time"><label className="bridge-check"><input type="checkbox" checked={Boolean(override.localDateTime)} onChange={event => setCustomTime(account.id, event.target.checked)}/><span>Custom time</span></label>{override.localDateTime ? <ScheduleDateTime value={override.localDateTime} onChange={localDateTime => localDateTime && setOverride(account.id, { localDateTime })}/> : <small>Posts at the general time{post.schedule.localDateTime ? ` · ${generalTimeLabel(post.schedule.localDateTime)}` : ""}</small>}</div>}
           <div className="bridge-allowance">{account.options?.remaining !== null && account.options?.remaining !== undefined ? `${account.options.remaining} of ${account.options.limit} posts available` : "Posting allowance checked before delivery"}</div>
           {account.optionsError && <Alert message={account.optionsError}/>}
-          <Field label="Format"><select value={override.format || "auto"} onChange={event => setOverride(account.id, { format: event.target.value })}><option value="auto">{chosen.length ? `${FORMAT_LABELS[detected]} (detected)` : "Automatic from media"}</option>{(capability?.formats || []).filter(format => format !== detected && (!chosen.length ? format === "text" : mediaFormats.includes(format))).map(format => <option key={format} value={format}>{FORMAT_LABELS[format] || format}</option>)}</select></Field>
-          <details><summary>Customize title & caption</summary><Field label="Title for this account"><input value={override.title ?? post.title} maxLength={500} onChange={event => setOverride(account.id, { title: event.target.value })}/></Field><Field label={`Caption · ${capability?.captionLimit?.toLocaleString() || "—"} character limit`}><textarea rows={3} value={override.caption ?? post.caption} onChange={event => setOverride(account.id, { caption: event.target.value })}/></Field><button className="bridge-text-button" onClick={() => { const next = { ...override }; delete next.title; delete next.caption; update({ overrides: { ...post.overrides, [account.id]: next } }); }}>Use shared title & caption</button></details>
+          {variants.length > 1 && <Field label="Post as"><select value={override.format && override.format !== "auto" ? override.format : type} onChange={event => setOverride(account.id, { format: event.target.value === type ? "auto" : event.target.value })}>{variants.map(format => <option key={format} value={format}>{FORMAT_LABELS[format] || format}</option>)}</select></Field>}
+          {capability?.titleLimit && <Field label={capability.titleRequired ? `${capability.name} title (required)` : `${capability.name} title (optional)`}><input value={override.title ?? ""} maxLength={capability.titleLimit} placeholder={`Up to ${capability.titleLimit} characters`} onChange={event => setOverride(account.id, { title: event.target.value })}/></Field>}
+          <details><summary>Customize text for this account</summary><Field label={`Text · ${capability?.captionLimit?.toLocaleString() || "—"} character limit`}><textarea rows={3} value={override.caption ?? post.caption} onChange={event => setOverride(account.id, { caption: event.target.value })}/></Field><button className="bridge-text-button" onClick={() => { const next = { ...override }; delete next.caption; update({ overrides: { ...post.overrides, [account.id]: next } }); }}>Use shared text</button></details>
           <DestinationSettings account={account} settings={override.settings} onChange={settings => setOverride(account.id, { settings })} hasVideo={chosen.some(item => item.kind === "video")} hasImages={chosen.some(item => item.kind === "image")}/>
         </div>}
       </div>; })}
@@ -187,11 +192,20 @@ export default function Composer({ project, accounts: initialAccounts, media, ca
     if (!files.length) return;
     setUploading(true); setUploadProgress(null); setError("");
     try {
-      const available = Math.max(0, 35 - items[active].mediaIds.length);
+      const available = Math.max(0, MAX_MEDIA_BY_TYPE[postType] - items[active].mediaIds.length);
       const uploaded = await onUpload([...files].slice(0, available), progress => { if (alive.current) setUploadProgress(progress); });
       if (alive.current && uploaded.length) changeItems(current => current.map((item, index) => index === active ? { ...item, mediaIds: [...new Set([...item.mediaIds, ...uploaded.map(upload => upload.id)])].slice(0, 35) } : item));
     }
     catch (error) { if (alive.current) setError(error.message); } finally { if (alive.current) setUploading(false); }
+  }
+  const typeChosen = POST_TYPES.some(type => type.id === items[active].format), postType = typeChosen ? items[active].format : "carousel";
+  // Switching type keeps the text and only the media the new type can carry.
+  function chooseType(type) {
+    changeItems(items.map(item => {
+      const kept = item.mediaIds.map(id => media.find(entry => entry.id === id)).filter(entry => entry && (type === "carousel" ? ["image", "video"].includes(entry.kind) : entry.kind === type));
+      const overrides = Object.fromEntries(Object.entries(item.overrides).map(([id, override]) => { const next = { ...override }; delete next.format; return [id, next]; }));
+      return { ...item, format: type, overrides, mediaIds: kept.slice(0, MAX_MEDIA_BY_TYPE[type]).map(entry => entry.id) };
+    }));
   }
   const schedule = items[active].schedule, scheduled = schedule.mode === "scheduled";
   const setSchedule = patch => changeItems(items.map(item => ({ ...item, schedule: { ...item.schedule, ...patch } })));
@@ -201,10 +215,15 @@ export default function Composer({ project, accounts: initialAccounts, media, ca
   const mobileUpload = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobile/i.test(userAgent) || /Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1;
   const youtubeTermsUrl = mobileUpload ? "http://m.youtube.com/terms" : "https://www.youtube.com/t/terms";
   const finalActionLabel = previewIntent === "publish" ? hasYouTubePreview ? "Upload & publish now" : "Publish now" : hasYouTubePreview ? "Schedule upload" : `Schedule ${items.length === 1 ? "post" : `${items.length} posts`}`;
-  return <>
-    <div className="bridge-intro-row"><p>Create once, tailor for every account. Each destination keeps its own place in the queue.</p><button className="bridge-button secondary" onClick={onAccounts}><Icon name="accounts" size={16}/> Accounts</button></div>
+  if (!typeChosen) return <>
+    <div className="bridge-intro-row"><p>What would you like to post? You'll only see the accounts that support it.</p><button className="bridge-button secondary" onClick={onAccounts}><Icon name="accounts" size={16}/> Accounts</button></div>
     <Alert message={error}/>
-    <input type="file" ref={fileInput} hidden multiple accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx" onChange={event => { uploadMedia(event.target.files); event.target.value = ""; }}/>
+    <div className="bridge-type-grid">{POST_TYPES.map(type => { const count = accounts.filter(account => account.status === "connected" && supportsPostType(catalog.find(item => item.id === account.platform), type.id)).length; return <button type="button" key={type.id} className="bridge-panel bridge-type-card" onClick={() => chooseType(type.id)}><span className="bridge-type-icon"><Icon name={type.id} size={28}/></span><strong>{type.label}</strong><small>{type.description}</small><span className="bridge-type-count">{accounts.length ? `${count} ${count === 1 ? "account" : "accounts"}` : ""}</span></button>; })}</div>
+  </>;
+  return <>
+    <div className="bridge-intro-row"><p>Create once, tailor for every account. Each destination keeps its own place in the queue.</p><div className="bridge-inline-actions"><button className="bridge-button secondary" disabled={busy || uploading} onClick={() => changeItems(items.map(item => ({ ...item, format: "auto" })))}><Icon name={postType} size={16}/> Change type</button><button className="bridge-button secondary" onClick={onAccounts}><Icon name="accounts" size={16}/> Accounts</button></div></div>
+    <Alert message={error}/>
+    <input type="file" ref={fileInput} hidden multiple={postType === "carousel"} accept={ACCEPT_BY_TYPE[postType]} onChange={event => { uploadMedia(event.target.files); event.target.value = ""; }}/>
     <div className={`bridge-panel bridge-schedule-bar ${scheduled ? "on" : ""}`}><label className="bridge-switch"><input type="checkbox" role="switch" checked={scheduled} disabled={busy} onChange={event => toggleScheduled(event.target.checked)}/><span className="bridge-switch-track" aria-hidden="true"/><span><strong>Schedule for later</strong><small>{scheduled ? "Choose a general time below, or a custom time on any account." : "Off: posts publish as soon as you confirm."}</small></span></label>{scheduled && <div className="bridge-schedule-bar-fields"><div className="bridge-general-time"><strong>General time</strong><small>Every selected account posts at this time unless you give it a custom time. Times use your current time zone ({project.timeZone}).</small><ScheduleDateTime value={schedule.localDateTime} onChange={localDateTime => localDateTime && setSchedule({ localDateTime })}/></div></div>}</div>
     <div className="bridge-panel"><PostEditor post={items[active]} onChange={post => changeItems(items.map((item, i) => i === active ? post : item))} accounts={accounts} media={media} catalog={catalog} uploading={uploading} uploadProgress={uploadProgress} onPickMedia={() => fileInput.current?.click()}/></div>
     <div className="bridge-composer-footer"><div><strong>1 post in this draft</strong><span>{scheduled ? "Each destination publishes at its own time" : "Each destination can use its own format and settings"}</span></div><div className="bridge-inline-actions">{scheduled ? <button className="bridge-button" disabled={busy || uploading || !schedule.localDateTime} onClick={() => review(items, "schedule")}><Icon name="clock" size={17}/>{busy ? "Checking…" : "Review schedule"}<Icon name="arrow" size={17}/></button> : <button className="bridge-button" disabled={busy || uploading} onClick={() => review(items.map(item => ({ ...item, schedule: { ...item.schedule, mode: "now", localDateTime: "" } })), "publish")}>{busy ? "Checking…" : "Review & publish"}<Icon name="arrow" size={17}/></button>}</div></div>

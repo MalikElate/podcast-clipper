@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { detectFormat, formatsForMedia, unsupportedReason } from "../src/bridge/platforms.js";
+import { detectFormat, formatsForMedia, formatVariants, supportsPostType, unsupportedReason } from "../src/bridge/platforms.js";
 
 const image = { kind: "image" }, video = { kind: "video" }, doc = { kind: "document" };
 const youtube = { name: "YouTube", formats: ["video"] };
@@ -27,4 +27,17 @@ test("platforms that cannot publish the uploaded media are explained", () => {
   assert.match(unsupportedReason(x, [image, image, image, image, image]), /up to 4 items/);
   assert.match(unsupportedReason(instagram, [doc]), /can't publish documents through Meadow/);
   assert.equal(unsupportedReason(linkedin, [doc]), null);
+});
+
+test("each post type lists only platforms that can publish it", () => {
+  const facebook = { name: "Facebook", formats: ["text", "image", "video", "carousel", "reel", "story"], mixedCarousel: false };
+  assert.equal(supportsPostType(youtube, "video"), true);
+  assert.equal(supportsPostType(youtube, "image"), false);
+  assert.equal(supportsPostType(instagram, "text"), false);
+  assert.equal(supportsPostType(x, "text"), true);
+  assert.equal(supportsPostType(x, "carousel", [image, image]), true);
+  assert.equal(supportsPostType(x, "carousel", [image, video]), false);
+  assert.equal(supportsPostType(instagram, "carousel", [image, video]), true);
+  assert.deepEqual(formatVariants(facebook, "video"), ["video", "reel", "story"]);
+  assert.deepEqual(formatVariants(x, "image"), ["image"]);
 });

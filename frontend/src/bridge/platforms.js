@@ -56,3 +56,25 @@ export function unsupportedReason(capability, media) {
   }
   return formats.includes(format) ? null : `${name} can't publish ${FORMAT_LABELS[format]?.toLowerCase() || format} posts through Meadow`;
 }
+
+// The post types a user picks before writing. Each one only lists accounts whose platform can publish it.
+export const POST_TYPES = [
+  { id: "text", label: "Text", description: "Words only, no media" },
+  { id: "image", label: "Image", description: "One picture" },
+  { id: "video", label: "Video", description: "One video" },
+  { id: "carousel", label: "Carousel", description: "2 or more pictures or videos" },
+];
+export const ACCEPT_BY_TYPE = { text: "", image: "image/*", video: "video/*", carousel: "image/*,video/*" };
+export const MAX_MEDIA_BY_TYPE = { text: 0, image: 1, video: 1, carousel: 35 };
+
+// Only videos can be mixed into some platforms' carousels, so a carousel that contains one narrows the list.
+export function supportsPostType(capability, type, media = []) {
+  if (!capability?.formats?.includes(type)) return false;
+  return type !== "carousel" || capability.mixedCarousel || !media.some(item => item.kind !== "image");
+}
+
+// Other ways a platform can publish the same media, such as a Story or Reel.
+export function formatVariants(capability, type) {
+  const variants = { image: ["image", "story"], video: ["video", "reel", "story"] }[type] || [type];
+  return variants.filter(format => capability?.formats?.includes(format));
+}
