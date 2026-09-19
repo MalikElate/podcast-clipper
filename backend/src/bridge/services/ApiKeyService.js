@@ -36,7 +36,8 @@ export class ApiKeyService {
     const id = key.slice(prefix.length).split("_", 1)[0], record = this.store.get("api_key", id);
     const actual = Buffer.from(this.digest(key), "hex"), expected = Buffer.from(record?.digest || "0".repeat(64), "hex");
     invariant(record && timingSafeEqual(actual, expected), "This API key is invalid or has been revoked.", { status: 401, code: "invalid_api_key" });
-    this.store.put("api_key", { ...record, lastUsedAt: this.clock() });
+    const now = this.clock();
+    if (!record.lastUsedAt || record.lastUsedAt <= now - 3600000) this.store.put("api_key", { ...record, lastUsedAt: now });
     return record.ownerUid;
   }
 

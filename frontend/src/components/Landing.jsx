@@ -35,15 +35,19 @@ function PlatformMark({ platform, className = "", variant = "default" }) {
   );
 }
 
-// Meadow has no MCP server, so this is a briefing for the REST API an agent can
-// actually call. Every endpoint, limit and field here is taken from
-// BridgeApplication's route table and PostService's validation.
+// Keep this agent briefing aligned with Meadow's API-key authenticated MCP and
+// REST contracts. Limits and fields come from the route and service validation.
 const AGENT_SETUP = `Meadow publishing API - setup for coding agents
 
+MCP URL: https://findmeadow.com/mcp
 Base URL: https://findmeadow.com/api/bridge
 Auth header: Authorization: Bearer br_live_...
 Create a key in Meadow under Configuration > API Keys. It is shown once.
 Read it from the environment; never hardcode or commit it.
+
+MCP tools
+  get_profile, list_projects, list_accounts, list_posts, get_post,
+  create_draft, get_analytics
 
 Endpoints
   GET   /projects                              list workspaces

@@ -4,7 +4,7 @@ Meadow separates domain behavior, provider integrations, storage, transport, wor
 
 ## Composition and boundaries
 
-`BridgeApplication` creates the repository, media storage, credential vault, locks, providers, and domain services. Its routes authenticate a Clerk user or a `br_live_` API key, parse requests, call the relevant service, and serialize results. API keys retain the creating user's workspace permissions, are returned in full only once, and are persisted as SHA-256 digests. Worker startup is separate from HTTP composition, so tests can exercise routes without publishing anything.
+`BridgeApplication` creates the repository, media storage, credential vault, locks, providers, and domain services. Its REST routes authenticate a Clerk user or a `br_live_` API key, parse requests, call the relevant service, and serialize results. The stateless `/mcp` transport accepts API keys and maps its focused tools directly to the same services. API keys retain the creating user's workspace permissions, are returned in full only once, and are persisted as SHA-256 digests. Worker startup is separate from HTTP composition, so tests can exercise routes without publishing anything.
 
 | Component | Responsibility |
 | --- | --- |

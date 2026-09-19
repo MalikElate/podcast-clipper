@@ -40,6 +40,7 @@ import { BlueskyProvider } from "./platforms/BlueskyProvider.js";
 import { clerkMiddleware, clerkClient } from "@clerk/express";
 import { verifyWebhook } from "@clerk/express/webhooks";
 import { requireAuth } from "../lib/clerkAuth.js";
+import { registerMeadowMcpRoutes } from "./mcp/MeadowMcpServer.js";
 
 const backendDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 export const route = fn => (req, res, next) => Promise.resolve().then(() => fn(req, res)).catch(next).finally(() => req.privacyRelease?.());
@@ -115,10 +116,11 @@ export class BridgeApplication {
     }));
     const origins = new Set([new URL(this.appUrl).origin, new URL(this.publicUrl).origin]);
     if (this.localPreview) { origins.add("http://127.0.0.1:5173"); origins.add("http://localhost:5173"); }
-    this.app.use(cors({ origin: (origin, done) => done(null, !origin || origins.has(origin)), methods: ["GET", "POST", "PATCH", "DELETE"], allowedHeaders: ["Content-Type", "Authorization", "X-Bridge-Preview"] }));
+    this.app.use(cors({ origin: (origin, done) => done(null, !origin || origins.has(origin)), methods: ["GET", "POST", "PATCH", "DELETE"], allowedHeaders: ["Content-Type", "Authorization", "X-Bridge-Preview", "MCP-Protocol-Version", "MCP-Session-Id", "Last-Event-ID"] }));
     this.app.use(express.json({ limit: "2mb" }));
     this.app.get("/health", (req, res) => res.json({ status: "ok", app: "Meadow" }));
     this.registerPublicRoutes();
+    registerMeadowMcpRoutes(this);
     let clerkAuth;
     const userAuth = authMiddleware || ((req, res, next) => {
       const loopback = ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress);
@@ -165,6 +167,14 @@ export class BridgeApplication {
     this.app.use((error, req, res, next) => {
       req.privacyRelease?.();
       if (res.headersSent) return next(error);
+      if (req.path === "/mcp") {
+        const parseError = error.type === "entity.parse.failed";
+        return res.status(parseError ? 400 : error instanceof BridgeError ? error.status : 500).json({
+          jsonrpc: "2.0",
+          error: { code: parseError ? -32700 : error instanceof BridgeError ? -32000 : -32603, message: parseError ? "Invalid JSON request." : publicError(error).error },
+          id: null,
+        });
+      }
       if (error instanceof multer.MulterError) error = new BridgeError(error.code === "LIMIT_FILE_SIZE" ? (req.uploadGrant ? "The file exceeds the authorized upload size. Select the file again." : `Files can be up to ${this.media.maxBytes / 1024 ** 2} MB.`) : "Upload one file at a time.", { status: 413, code: "upload_limit" });
       if (error.type === "entity.parse.failed") error = new BridgeError("Invalid JSON request.");
       if (!(error instanceof BridgeError)) console.error("Meadow request failed:", error.code || error.name);

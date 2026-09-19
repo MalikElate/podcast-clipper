@@ -206,7 +206,7 @@ export default {
         return Response.json(await workerEnv.BACKEND.getByName("primary").migration(action), { headers: { "Cache-Control": "no-store" } });
       } catch (error) { return Response.json({ error: error.message }, { status: 503, headers: { "Cache-Control": "no-store" } }); }
     }
-    const backendPath = ["/api/", "/media/", "/oauth/"].some(prefix => url.pathname.startsWith(prefix));
+    const backendPath = url.pathname === "/mcp" || ["/api/", "/media/", "/oauth/"].some(prefix => url.pathname.startsWith(prefix));
     if (backendPath || url.pathname === "/health") {
       const backend = workerEnv.BACKEND.getByName("primary");
       return backend.fetch(request);

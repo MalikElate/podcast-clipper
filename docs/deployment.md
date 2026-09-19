@@ -31,7 +31,7 @@ Run `node --test test/trybe.test.js` in `backend` for signed webhook, currency, 
 
 Never copy runtime secrets into `VITE_*` variables. The Clerk publishable key and analytics project tokens are public frontend build inputs. Do not change the encryption key without migrating or re-encrypting stored credentials. Keep copies of signing and encryption keys separate from data backups.
 
-Workspace API keys are created from Configuration → API Keys. The full key is displayed once; store it in the client's secret manager and send it as `Authorization: Bearer br_live_…`. Revocation immediately stops new authenticated requests.
+Workspace API keys are created from Configuration → API Keys. The full key is displayed once; store it in the client's secret manager and send it as `Authorization: Bearer br_live_…`. Revocation immediately stops new authenticated REST and MCP requests. The private MCP endpoint is `https://findmeadow.com/mcp`; see [MCP API](mcp-api.md). Public ChatGPT distribution still requires OAuth rather than a manually supplied API key.
 
 ## Build and run
 
