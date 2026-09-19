@@ -8,6 +8,20 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { BridgeApplication } from "../src/bridge/BridgeApplication.js";
 import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 
+function schemaPortabilityProblems(value, path = "$", problems = []) {
+  if (!value || typeof value !== "object") return problems;
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => schemaPortabilityProblems(item, `${path}[${index}]`, problems));
+    return problems;
+  }
+  if (Array.isArray(value.type)) problems.push(`${path}.type uses an array`);
+  if (value.additionalProperties && typeof value.additionalProperties === "object" && !Array.isArray(value.additionalProperties) && Object.keys(value.additionalProperties).length === 0) {
+    problems.push(`${path}.additionalProperties is unconstrained`);
+  }
+  Object.entries(value).forEach(([key, child]) => schemaPortabilityProblems(child, `${path}.${key}`, problems));
+  return problems;
+}
+
 async function setup(t) {
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "meadow-mcp-test-"));
   const application = new BridgeApplication({
@@ -70,6 +84,10 @@ test("MCP requires an API key and exposes Meadow's initial tool contract", async
   ]);
   assert.equal(listed.tools.find(tool => tool.name === "create_draft").annotations.idempotentHint, true);
   assert.equal(listed.tools.find(tool => tool.name === "get_analytics").annotations.readOnlyHint, true);
+  assert.deepEqual(listed.tools.flatMap(tool => [
+    ...schemaPortabilityProblems(tool.inputSchema, `${tool.name}.inputSchema`),
+    ...schemaPortabilityProblems(tool.outputSchema, `${tool.name}.outputSchema`),
+  ]), []);
 });
 
 test("MCP lists the authenticated owner's project and creates one idempotent non-empty draft", async t => {

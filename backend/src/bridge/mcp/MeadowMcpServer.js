@@ -3,9 +3,39 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
 import { publicError } from "../core/errors.js";
+import { metrics } from "../services/AnalyticsService.js";
 
 const readOnly = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 const additive = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+
+const metricValueShape = Object.fromEntries([...metrics, "engagement"].map(metric => [metric, z.number().min(0).optional()]));
+const metricCoverageShape = Object.fromEntries(metrics.map(metric => [metric, z.object({ available: z.number().int().min(0), total: z.number().int().min(0) })]));
+const analyticsTotalsSchema = z.object({ values: z.object(metricValueShape), coverage: z.object(metricCoverageShape) });
+const deliverySchema = z.object({
+  id: z.string(), accountId: z.string(), accountName: z.string(), platform: z.string(), status: z.string(),
+  requestedAt: z.number(), dueAt: z.number(), url: z.string().optional(), error: z.string().optional(),
+});
+const postSchema = z.object({
+  id: z.string(),
+  caption: z.string(),
+  title: z.string(),
+  format: z.string(),
+  status: z.enum(["draft", "scheduled", "publishing", "published", "cancelled", "needs_attention", "partially_published"]),
+  schedule: z.object({
+    mode: z.enum(["now", "scheduled"]),
+    timeZone: z.string(),
+    localDateTime: z.string().optional(),
+    requestedAt: z.number().optional(),
+    offset: z.string().optional(),
+  }),
+  accountIds: z.array(z.string()),
+  media: z.array(z.object({ id: z.string(), kind: z.string(), filename: z.string(), status: z.string() })),
+  deliveries: z.array(deliverySchema),
+  revision: z.number().int().min(1),
+  editable: z.boolean(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
 
 const jsonResult = data => ({
   content: [{ type: "text", text: JSON.stringify(data) }],
@@ -43,9 +73,9 @@ const accountView = account => ({
   platform: account.platform,
   label: account.label,
   status: account.status,
-  avatar: account.avatar || null,
-  profileUrl: account.profileUrl || null,
-  updatedAt: account.updatedAt || null,
+  ...(account.avatar ? { avatar: account.avatar } : {}),
+  ...(account.profileUrl ? { profileUrl: account.profileUrl } : {}),
+  ...(Number.isFinite(account.updatedAt) ? { updatedAt: account.updatedAt } : {}),
 });
 
 const deliveryView = delivery => ({
@@ -56,8 +86,16 @@ const deliveryView = delivery => ({
   status: delivery.status,
   requestedAt: delivery.requestedAt,
   dueAt: delivery.dueAt,
-  url: delivery.url || null,
-  error: delivery.error || null,
+  ...(delivery.url ? { url: delivery.url } : {}),
+  ...(delivery.error ? { error: delivery.error } : {}),
+});
+
+const scheduleView = schedule => ({
+  mode: schedule.mode,
+  timeZone: schedule.timeZone,
+  ...(schedule.localDateTime ? { localDateTime: schedule.localDateTime } : {}),
+  ...(Number.isFinite(schedule.requestedAt) ? { requestedAt: schedule.requestedAt } : {}),
+  ...(schedule.offset ? { offset: schedule.offset } : {}),
 });
 
 const postView = post => ({
@@ -66,7 +104,7 @@ const postView = post => ({
   title: post.title,
   format: post.format,
   status: post.status,
-  schedule: post.schedule,
+  schedule: scheduleView(post.schedule),
   accountIds: post.accountIds,
   media: post.media.map(item => ({ id: item.id, kind: item.kind, filename: item.filename, status: item.status })),
   deliveries: post.deliveries.map(deliveryView),
@@ -74,6 +112,11 @@ const postView = post => ({
   editable: post.editable,
   createdAt: post.createdAt,
   updatedAt: post.updatedAt,
+});
+
+const analyticsTotalsView = totals => ({
+  values: Object.fromEntries(Object.entries(totals.values).filter(([, value]) => Number.isFinite(value))),
+  coverage: Object.fromEntries(metrics.map(metric => [metric, totals.coverage[metric]])),
 });
 
 export function createMeadowMcpServer(application, uid) {
@@ -111,7 +154,7 @@ export function createMeadowMcpServer(application, uid) {
     description: "List the social accounts connected to one Meadow project without refreshing remote provider data.",
     inputSchema: { projectId: z.string().min(1).describe("A project ID returned by list_projects") },
     outputSchema: { accounts: z.array(z.object({
-      id: z.string(), platform: z.string(), label: z.string(), status: z.string(), avatar: z.string().nullable(), profileUrl: z.string().nullable(), updatedAt: z.number().nullable(),
+      id: z.string(), platform: z.string(), label: z.string(), status: z.string(), avatar: z.string().optional(), profileUrl: z.string().optional(), updatedAt: z.number().optional(),
     })) },
     annotations: readOnly,
   }, run(application, ({ projectId }) => ({ accounts: application.accounts.list(uid, projectId).map(accountView) })));
@@ -126,9 +169,9 @@ export function createMeadowMcpServer(application, uid) {
       limit: z.number().int().min(1).max(100).default(20),
     },
     outputSchema: {
-      posts: z.array(z.record(z.string(), z.unknown())),
+      posts: z.array(postSchema),
       total: z.number().int().min(0),
-      nextOffset: z.number().int().min(0).nullable(),
+      nextOffset: z.number().int().min(0).optional(),
     },
     annotations: readOnly,
   }, run(application, ({ projectId, status, offset, limit }) => {
@@ -136,7 +179,8 @@ export function createMeadowMcpServer(application, uid) {
       .filter(post => !status || post.status === status)
       .sort((left, right) => right.updatedAt - left.updatedAt || right.createdAt - left.createdAt);
     const posts = matches.slice(offset, offset + limit).map(postView);
-    return { posts, total: matches.length, nextOffset: offset + posts.length < matches.length ? offset + posts.length : null };
+    const nextOffset = offset + posts.length < matches.length ? offset + posts.length : undefined;
+    return { posts, total: matches.length, ...(nextOffset === undefined ? {} : { nextOffset }) };
   }));
 
   server.registerTool("get_post", {
@@ -146,7 +190,7 @@ export function createMeadowMcpServer(application, uid) {
       projectId: z.string().min(1).describe("A project ID returned by list_projects"),
       postId: z.string().min(1).describe("A post ID returned by list_posts or create_draft"),
     },
-    outputSchema: { post: z.record(z.string(), z.unknown()) },
+    outputSchema: { post: postSchema },
     annotations: readOnly,
   }, run(application, ({ projectId, postId }) => ({ post: postView(application.posts.get(uid, projectId, postId)) })));
 
@@ -167,7 +211,7 @@ export function createMeadowMcpServer(application, uid) {
         localDateTime: z.string().max(40).optional(),
       }).optional(),
     },
-    outputSchema: { post: z.record(z.string(), z.unknown()), duplicate: z.boolean() },
+    outputSchema: { post: postSchema, duplicate: z.boolean() },
     annotations: additive,
   }, run(application, ({ projectId, requestId, caption, title, mediaIds, accountIds, format, schedule }) => {
     const result = application.posts.createDrafts(uid, projectId, {
@@ -182,20 +226,22 @@ export function createMeadowMcpServer(application, uid) {
     description: "Return cached analytics totals for one Meadow project. This does not contact social platforms or refresh their metrics.",
     inputSchema: { projectId: z.string().min(1).describe("A project ID returned by list_projects") },
     outputSchema: {
-      totals: z.record(z.string(), z.unknown()),
+      totals: analyticsTotalsSchema,
       publishedCount: z.number().int().min(0),
       postCount: z.number().int().min(0),
-      accounts: z.array(z.record(z.string(), z.unknown())),
+      accounts: z.array(z.object({
+        id: z.string(), platform: z.string(), label: z.string(), status: z.string(), totals: analyticsTotalsSchema, postCount: z.number().int().min(0),
+      })),
       engagementDefinition: z.string(),
     },
     annotations: readOnly,
   }, run(application, ({ projectId }) => {
     const report = application.analytics.report(uid, projectId);
     return {
-      totals: report.totals,
+      totals: analyticsTotalsView(report.totals),
       publishedCount: report.publishedCount,
       postCount: report.postCount,
-      accounts: report.accounts.map(account => ({ id: account.id, platform: account.platform, label: account.label, status: account.status, totals: account.totals, postCount: account.posts.length })),
+      accounts: report.accounts.map(account => ({ id: account.id, platform: account.platform, label: account.label, status: account.status, totals: analyticsTotalsView(account.totals), postCount: account.posts.length })),
       engagementDefinition: report.engagementDefinition,
     };
   }));
