@@ -74,7 +74,7 @@ export class BridgeApplication {
     this.accounts = new AccountService({ ...deps, registry: this.registry, projects: this.projects, clock, localPreview: this.localPreview });
     this.posts = new PostService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, media: this.media, schedules: this.schedules, rates: this.rates, clock, localPreview: this.localPreview });
     this.analytics = new AnalyticsService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, posts: this.posts, clock });
-    this.billing = new BillingService({ store: this.store, env, appUrl: this.appUrl, stripe });
+    this.billing = new BillingService({ store: this.store, env, appUrl: this.appUrl, stripe, locks: this.locks, clock });
     this.privacy = new PrivacyService({ ...deps, registry: this.registry, storage: this.storage, projects: this.projects, billing: this.billing, clock,
       deleteIdentity: deleteIdentity || (async uid => { if (this.localPreview) return; try { await clerkClient.users.deleteUser(uid); } catch (error) { if (error.status !== 404) throw error; } }),
       deleteAnalytics: deleteAnalytics || (uid => this.localPreview ? Promise.resolve(true) : new AnalyticsErasureService({ store: this.store, env }).deleteForOwner(uid)) });
@@ -208,8 +208,9 @@ export class BridgeApplication {
     }));
     app.delete("/api/bridge/privacy/account", route((req, res) => { requireSession(req); res.status(202).json(this.privacy.requestAccount(req.uid, req.body)); }));
     app.get("/api/bridge/config", route((req, res) => res.json({ name: "Meadow", localPreview: this.localPreview, platforms: this.registry.catalog().map(platform => ({ ...platform, privacyDisclosure: Boolean(connectionDisclosure(platform.id)) })), maxBatchSize: 100, maxUploadBytes: this.media.maxBytes, features: { analytics: true, publishing: this.worker.enabled }, connectionsReady: this.vault.configured, mediaReady: Boolean(this.media.signingKey) })));
-    app.get("/api/bridge/billing", route((req, res) => res.json(this.billing.publicRecord(req.uid))));
+    app.get("/api/bridge/billing", route(async (req, res) => res.json(await this.billing.record(req.uid, req.query.refresh === "1"))));
     app.post("/api/bridge/billing/checkout", route(async (req, res) => res.json(await this.billing.checkout(req.uid, req.userEmail, req.body, req.headers["sec-gpc"] === "1" || req.headers.dnt === "1" ? undefined : req.headers.cookie))));
+    app.post("/api/bridge/billing/checkout/confirm", route(async (req, res) => res.json(await this.billing.confirmCheckout(req.uid, req.body?.sessionId))));
     app.post("/api/bridge/billing/portal", route(async (req, res) => res.json(await this.billing.portal(req.uid))));
     app.get("/api/bridge/api-keys", route((req, res) => res.json({ apiKeys: this.apiKeys.list(req.uid) })));
     app.post("/api/bridge/api-keys", route((req, res) => res.status(201).json(this.apiKeys.create(req.uid, req.body))));

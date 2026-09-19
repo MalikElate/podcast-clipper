@@ -67,6 +67,10 @@ function PricingSurface({ marketing = false }) {
       const { url } = await api.createCheckout(planId, cycle);
       window.location.assign(url);
     } catch (checkoutError) {
+      if (checkoutError.code === "subscription_exists") {
+        try { const { url } = await api.createBillingPortal(); window.location.assign(url); return; }
+        catch (portalError) { checkoutError = portalError; }
+      }
       started.current = false;
       setBusyPlan(""); setError(checkoutError.message);
     }

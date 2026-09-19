@@ -125,7 +125,10 @@ test("Stripe checkout, webhooks, subscription state, and billing portal stay lin
     items: { data: [{ price: { id: "price_creator_yearly" }, current_period_end: 1800000000 }] },
   };
   const stripe = {
-    checkout: { sessions: { create: async input => { calls.checkout.push(input); return { url: "https://checkout.stripe.test/session" }; } } },
+    checkout: { sessions: {
+      create: async input => { calls.checkout.push(input); return { id: "cs_test_alice", url: "https://checkout.stripe.test/session" }; },
+      retrieve: async id => ({ id, mode: "subscription", status: "complete", payment_status: "paid", client_reference_id: "alice", metadata: { meadowUserId: "alice" }, subscription: subscription.id }),
+    } },
     billingPortal: { sessions: { create: async input => { calls.portal.push(input); return { url: "https://billing.stripe.test/portal" }; } } },
     subscriptions: { retrieve: async id => { calls.retrieved.push(id); return subscription; } },
     webhooks: { constructEvent: (body, signature) => {
@@ -152,6 +155,7 @@ test("Stripe checkout, webhooks, subscription state, and billing portal stay lin
   assert.equal(calls.checkout[0].subscription_data.metadata.meadowPlanId, "creator");
   assert.equal(calls.checkout[0].subscription_data.metadata.trybeVisitorId, "visitor-123");
   assert.equal(calls.checkout[0].metadata.trybeVisitorId, "visitor-123");
+  assert.equal(calls.checkout[0].success_url, "http://localhost:5173/dashboard/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}");
 
   const unsigned = await fetch(`${h.base}/api/stripe/webhook`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
   assert.equal(unsigned.status, 400);
@@ -164,6 +168,12 @@ test("Stripe checkout, webhooks, subscription state, and billing portal stay lin
   assert.equal(duplicate.status, 409);
   const portal = await h.request("/api/bridge/billing/portal", { method: "POST", body: {} });
   assert.equal(portal.status, 200); assert.equal((await portal.json()).url, "https://billing.stripe.test/portal"); assert.equal(calls.portal[0].customer, "cus_alice");
+  assert.equal(calls.portal[0].return_url, "http://localhost:5173/dashboard/billing?portal_return=1");
+  const confirmation = await h.request("/api/bridge/billing/checkout/confirm", { method: "POST", body: { sessionId: "cs_test_alice" } });
+  assert.equal(confirmation.status, 200);
+  assert.equal((await confirmation.json()).billing.status, "active");
+  assert.equal((await h.request("/api/bridge/billing/checkout/confirm", { user: "bob", method: "POST", body: { sessionId: "cs_test_alice" } })).status, 404);
+  assert.equal((await h.request("/api/bridge/billing/checkout/confirm", { user: null, method: "POST", body: { sessionId: "cs_test_alice" } })).status, 401);
 });
 
 test("workspace access needs no policy agreement while account deletion still requires the owner's session", async t => {
