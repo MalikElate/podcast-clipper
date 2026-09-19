@@ -60,6 +60,8 @@ export class PostService {
   normalizeDraft(uid, projectId, input) {
     const project = this.projects.require(uid, projectId);
     const { record } = this.normalizeFields(uid, projectId, input, { allowEmptyAccounts: true });
+    const overrideHasText = Object.values(record.overrides).some(override => override.caption?.trim() || override.title?.trim());
+    invariant(record.caption.trim().length > 0 || record.title.trim().length > 0 || record.mediaIds.length > 0 || overrideHasText, "Add text, a title, or media before saving a draft.");
     const requested = input.schedule ?? {};
     invariant(requested && typeof requested === "object" && !Array.isArray(requested), "Invalid draft schedule.");
     const mode = requested.mode ?? "now";

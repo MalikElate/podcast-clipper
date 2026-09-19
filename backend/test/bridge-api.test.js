@@ -66,6 +66,15 @@ test("draft routes save, reopen, revise, and discard incomplete posts", async t 
   assert.equal((await h.request(`${h.root}/posts/${draft.id}`)).status, 404);
 });
 
+test("draft routes reject posts without text or media", async t => {
+  const h = await setup(t);
+  const empty = { caption: " \n ", title: "\t", mediaIds: [], accountIds: [], format: "auto", overrides: {}, schedule: { mode: "now", timeZone: "UTC" } };
+  const response = await h.request(`${h.root}/posts/drafts`, { method: "POST", body: { items: [empty], requestId: "api-empty-draft-12345" } });
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /add text, a title, or media before saving a draft/i);
+  assert.equal(h.application.store.list("post", { projectId: h.project.id }).length, 0);
+});
+
 test("API keys are shown once, authenticate requests, and can be revoked", async t => {
   const h = await setup(t);
   const created = await h.request("/api/bridge/api-keys", { method: "POST", body: { name: "Automation" } });

@@ -105,6 +105,28 @@ test("incomplete drafts save and update without publish validation", async t => 
   assert.equal(h.app.store.get("post", draft.id), null);
 });
 
+test("drafts require text or media when saved or updated", async t => {
+  const h = setup(t);
+  const titleOnly = { ...h.post("", []), title: "A title is content" };
+  const { posts: [draft] } = h.app.posts.createDrafts("alice", h.project.id, { items: [titleOnly], requestId: "title-only-draft-12345" });
+  assert.equal(draft.title, "A title is content");
+  const overrideOnly = { ...h.post(""), overrides: { one: { caption: "Destination-specific text" } } };
+  const { posts: [customized] } = h.app.posts.createDrafts("alice", h.project.id, { items: [overrideOnly], requestId: "override-only-draft-123" });
+  assert.equal(customized.overrides.one.caption, "Destination-specific text");
+
+  const empty = { ...titleOnly, caption: " \n ", title: "\t", mediaIds: [] };
+  assert.throws(
+    () => h.app.posts.createDrafts("alice", h.project.id, { items: [empty], requestId: "empty-draft-create-123" }),
+    /add text, a title, or media before saving a draft/i,
+  );
+  await assert.rejects(
+    h.app.posts.update("alice", h.project.id, draft.id, { ...empty, revision: draft.revision }),
+    /add text, a title, or media before saving a draft/i,
+  );
+  assert.equal(h.app.store.list("post", { projectId: h.project.id }).length, 2);
+  assert.equal(h.app.posts.getDraft("alice", h.project.id, draft.id).title, "A title is content");
+});
+
 test("submitting a saved draft converts it in place exactly once", async t => {
   const h = setup(t), item = h.post("Ready to publish");
   const { posts: [draft] } = h.app.posts.createDrafts("alice", h.project.id, { items: [item], requestId: "submit-draft-create-123" });
