@@ -59,10 +59,14 @@ function Workspace({ user, signOut }) {
   const initial = useRef({ params: new URLSearchParams(window.location.search), view: dashboardView(window.location.pathname, window.location.search) });
   const [view, setView] = useState(initial.current.view);
   const [billingSearch, setBillingSearch] = useState(() => dashboardSearch(initial.current.view, initial.current.params));
+  const [draftId, setDraftId] = useState(() => initial.current.view === "compose" ? initial.current.params.get("draft") || "" : "");
   const [projects, setProjects] = useState([]), [projectId, setProjectId] = useState(""), [config, setConfig] = useState(null), [error, setError] = useState(initial.current.params.get("connectionError") || ""), [notice, setNotice] = useState(""), [menuOpen, setMenuOpen] = useState(false), [connectionId, setConnectionId] = useState(initial.current.params.get("connection") || ""), [scheduledDate, setScheduledDate] = useState(""), [draftVersion, setDraftVersion] = useState(0);
   const [postsOpen, setPostsOpen] = useState(postViewIds.has(initial.current.view));
   const [configurationOpen, setConfigurationOpen] = useState(configurationViewIds.has(initial.current.view));
   const [signingOut, setSigningOut] = useState(false);
+  const composeDirtyRef = useRef(false);
+  const composeBusyRef = useRef(false);
+  const composeUrlRef = useRef(dashboardPath("compose") + dashboardSearch("compose", initial.current.params));
   // Schedules, calendars, and timestamps follow the device's current time zone, not the one saved at sign-up.
   const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   const savedProject = projects.find(item => item.id === projectId);
@@ -87,27 +91,58 @@ function Workspace({ user, signOut }) {
   }, []);
   useEffect(() => {
     const onPopState = () => {
+      if (composeBusyRef.current) {
+        window.history.pushState({}, "", composeUrlRef.current);
+        setError("Please wait for the current post action to finish.");
+        return;
+      }
+      if (composeDirtyRef.current && !window.confirm("Discard your unsaved post changes?")) {
+        window.history.pushState({}, "", composeUrlRef.current);
+        return;
+      }
+      composeDirtyRef.current = false;
       const next = dashboardView(window.location.pathname, window.location.search);
       setView(next);
       const search = dashboardSearch(next, window.location.search);
+      const canonicalUrl = dashboardPath(next) + search;
+      if (next === "compose") composeUrlRef.current = canonicalUrl;
       setBillingSearch(search);
+      setDraftId(next === "compose" ? new URLSearchParams(search).get("draft") || "" : "");
       setPostsOpen(postViewIds.has(next));
       setConfigurationOpen(configurationViewIds.has(next));
       setMenuOpen(false);
       setError("");
       setNotice("");
-      if (window.location.pathname !== dashboardPath(next) || window.location.search !== search) window.history.replaceState({}, "", dashboardPath(next) + search);
+      if (window.location.pathname !== dashboardPath(next) || window.location.search !== search) window.history.replaceState({}, "", canonicalUrl);
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
   useEffect(() => { document.title = `${activeModule?.title || activeModule?.name || "Dashboard"} · Meadow`; }, [activeModule]);
+  function setComposerDirty(value) { composeDirtyRef.current = value; }
+  function setComposerBusy(value) { composeBusyRef.current = value; }
   function selectView(next) { setView(next); if (postViewIds.has(next)) { setPostsOpen(true); setConfigurationOpen(false); } else if (configurationViewIds.has(next)) { setConfigurationOpen(true); setPostsOpen(false); } else { setPostsOpen(false); setConfigurationOpen(false); } setMenuOpen(false); setError(""); setNotice(""); }
-  function navigate(next) { setBillingSearch(""); selectView(next); const path = dashboardPath(next); if (window.location.pathname !== path || window.location.search) window.history.pushState({}, "", path); }
-  function follow(event, next) { if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); navigate(next); }
-  function compose(date = "") { setScheduledDate(date); setDraftVersion(value => value + 1); navigate("compose"); }
+  function canLeaveComposer() {
+    if (view !== "compose") return true;
+    if (composeBusyRef.current) { setError("Please wait for the current post action to finish."); return false; }
+    return !composeDirtyRef.current || window.confirm("Discard your unsaved post changes?");
+  }
+  function navigate(next, { force = false } = {}) {
+    if (!force && !canLeaveComposer()) return false;
+    setComposerDirty(false); setDraftId(""); setBillingSearch(""); selectView(next);
+    const path = dashboardPath(next); if (window.location.pathname !== path || window.location.search) window.history.pushState({}, "", path);
+    return true;
+  }
+  function compose(date = "", nextDraftId = "") {
+    if (!canLeaveComposer()) return false;
+    setComposerDirty(false); setScheduledDate(date); setDraftId(nextDraftId); setDraftVersion(value => value + 1); setBillingSearch(""); selectView("compose");
+    const search = dashboardSearch("compose", nextDraftId ? `?draft=${encodeURIComponent(nextDraftId)}` : "");
+    const path = dashboardPath("compose"); composeUrlRef.current = path + search; if (window.location.pathname !== path || window.location.search !== search) window.history.pushState({}, "", composeUrlRef.current);
+    return true;
+  }
+  function follow(event, next) { if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); next === "compose" ? compose() : navigate(next); }
   async function handleSignOut() {
-    if (signingOut) return;
+    if (signingOut || !canLeaveComposer()) return;
     setSigningOut(true); setError(""); setNotice("");
     try { await signOut(); }
     catch (error) { setError(error.message || "Could not sign out. Please try again."); setSigningOut(false); setMenuOpen(false); }
@@ -135,7 +170,7 @@ function Workspace({ user, signOut }) {
     </aside>
     <main className="bridge-main"><header className="bridge-topbar"><button className="bridge-icon-button bridge-menu-toggle" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Icon name="menu"/></button></header>
       <div className="bridge-content"><Alert message={error}/><Alert message={notice} success/><div className="bridge-page-heading"><h1>{activeModule?.title || activeModule?.name}</h1></div>
-        {!config ? <div className="bridge-panel bridge-empty"><p>{error ? "Meadow could not load. Check your connection and refresh this page." : ""}</p></div> : isConfigurationView ? <ConfigurationWorkspace billingSearch={billingSearch} user={user} project={project} config={config} view={view} onSignOut={handleSignOut} signingOut={signingOut} onProjectUpdated={updated => setProjects(current => current.map(item => item.id === updated.id ? updated : item))}/> : !project ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Meadow is getting ready</h2><p>Your publishing account is not available yet.</p></div> : <ProjectWorkspace key={project.id} project={project} config={config} view={view} navigate={navigate} compose={compose} scheduledDate={scheduledDate} clearScheduledDate={() => setScheduledDate("")} draftVersion={draftVersion} connectionId={connectionId} clearConnection={() => setConnectionId("")} notify={setNotice}/>}
+        {!config ? <div className="bridge-panel bridge-empty"><p>{error ? "Meadow could not load. Check your connection and refresh this page." : ""}</p></div> : isConfigurationView ? <ConfigurationWorkspace billingSearch={billingSearch} user={user} project={project} config={config} view={view} onSignOut={handleSignOut} signingOut={signingOut} onProjectUpdated={updated => setProjects(current => current.map(item => item.id === updated.id ? updated : item))}/> : !project ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Meadow is getting ready</h2><p>Your publishing account is not available yet.</p></div> : <ProjectWorkspace key={project.id} project={project} config={config} view={view} navigate={navigate} compose={compose} draftId={draftId} onComposeDirty={setComposerDirty} onComposeBusy={setComposerBusy} scheduledDate={scheduledDate} clearScheduledDate={() => setScheduledDate("")} draftVersion={draftVersion} connectionId={connectionId} clearConnection={() => setConnectionId("")} notify={setNotice}/>}
       </div>
     </main>
   </div>;
@@ -147,12 +182,22 @@ function ConfigurationWorkspace({ billingSearch, user, project, config, view, on
     {view === "billing" && <Billing key={billingSearch} returnSearch={billingSearch} localPreview={config.localPreview}/>}
   </>;
 }
-function ProjectWorkspace({ project, config, view, navigate, compose, scheduledDate, clearScheduledDate, draftVersion, connectionId, clearConnection, notify }) {
+function ProjectWorkspace({ project, config, view, navigate, compose, draftId, onComposeDirty, onComposeBusy, scheduledDate, clearScheduledDate, draftVersion, connectionId, clearConnection, notify }) {
   const accountResource = useProjectResource(project.id, "/accounts", { accounts: [] });
   const mediaResource = useProjectResource(project.id, "/media", { media: [] });
   const catalog = config.platforms || [];
   const media = mediaResource.data.media;
   const [uploadError, setUploadError] = useState("");
+  const [draftState, setDraftState] = useState({ id: "", post: null, loading: false, error: "" });
+  useEffect(() => {
+    if (view !== "compose" || !draftId) { setDraftState({ id: "", post: null, loading: false, error: "" }); return; }
+    const controller = new AbortController();
+    setDraftState({ id: draftId, post: null, loading: true, error: "" });
+    api.project(project.id, `/posts/${encodeURIComponent(draftId)}`, { signal: controller.signal }).then(({ post }) => {
+      if (!controller.signal.aborted) setDraftState({ id: draftId, post, loading: false, error: "" });
+    }).catch(error => { if (error.name !== "AbortError" && !controller.signal.aborted) setDraftState({ id: draftId, post: null, loading: false, error: error.message }); });
+    return () => controller.abort();
+  }, [view, draftId, project.id]);
   async function upload(files, onProgress = () => {}) {
     const uploaded = [], failures = []; setUploadError("");
     for (const [index, file] of files.slice(0, 100).entries()) {
@@ -166,12 +211,13 @@ function ProjectWorkspace({ project, config, view, navigate, compose, scheduledD
     return uploaded;
   }
   const common = { project, config, catalog, media, accounts: accountResource.data.accounts };
+  const draftLoading = Boolean(draftId && (draftState.id !== draftId || draftState.loading));
   return <><Alert message={accountResource.error || mediaResource.error || uploadError}/>
-    {view === "compose" && <Composer key={draftVersion} {...common} scheduledDate={scheduledDate} onDraftStarted={clearScheduledDate} onAccounts={() => navigate("accounts")} onUpload={upload} onSubmitted={result => { navigate("posts"); notify(`${result.posts.length} ${result.posts.length === 1 ? "post" : "posts"} added to your publishing queue.`); }}/>}
+    {view === "compose" && (draftLoading ? <div className="bridge-panel bridge-empty"><p>Loading your draft…</p></div> : draftState.error ? <div className="bridge-panel bridge-empty"><Alert message={draftState.error}/><button className="bridge-button secondary" onClick={() => navigate("drafts", { force: true })}>Back to drafts</button></div> : <Composer key={`${draftVersion}:${draftId}:${draftState.post?.revision || 0}`} {...common} draft={draftState.post} scheduledDate={scheduledDate} onDraftStarted={clearScheduledDate} onDirtyChange={onComposeDirty} onBusyChange={onComposeBusy} onAccounts={() => navigate("accounts")} onUpload={upload} onDiscard={() => navigate(draftId ? "drafts" : "posts", { force: true })} onDraftSaved={() => { navigate("drafts", { force: true }); notify("Draft saved."); }} onSubmitted={result => { navigate("posts", { force: true }); notify(`${result.posts.length} ${result.posts.length === 1 ? "post" : "posts"} added to your publishing queue.`); }}/>) }
     {view === "accounts" && <Accounts {...common} connectionId={connectionId} clearConnection={clearConnection} onChanged={accountResource.reload}/>}
     {view === "clips" && <ClippingStudioComingSoon/>}
     {view === "calendar" && <PostsCalendar {...common} onCreate={compose}/>}
-    {["posts", "scheduled", "posted", "drafts", "failed"].includes(view) && <PostsQueue {...common} section={view} onCreate={() => navigate("compose")} onUpload={upload}/>}
+    {["posts", "scheduled", "posted", "drafts", "failed"].includes(view) && <PostsQueue {...common} section={view} onCreate={() => compose()} onEditDraft={post => compose("", post.id)} onUpload={upload}/>}
     {view === "analytics" && <Analytics {...common}/>}
   </>;
 }

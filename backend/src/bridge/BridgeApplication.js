@@ -243,11 +243,13 @@ export class BridgeApplication {
     }));
     app.delete(`${root}/media/:id`, route(async (req, res) => res.json(await this.media.remove(req.uid, req.params.projectId, req.params.id))));
     app.get(`${root}/posts`, route((req, res) => res.json({ posts: this.posts.list(req.uid, req.params.projectId) })));
+    app.get(`${root}/posts/:id`, route((req, res) => res.json({ post: this.posts.getDraft(req.uid, req.params.projectId, req.params.id) })));
     app.post(`${root}/posts/preview`, route(async (req, res) => res.json(await this.posts.preview(req.uid, req.params.projectId, req.body))));
+    app.post(`${root}/posts/drafts`, route((req, res) => res.status(201).json(this.posts.createDrafts(req.uid, req.params.projectId, req.body))));
     app.post(`${root}/posts`, route(async (req, res) => res.status(201).json(await this.posts.submit(req.uid, req.params.projectId, req.body))));
     app.patch(`${root}/posts/:id`, route(async (req, res) => res.json({ post: await this.posts.update(req.uid, req.params.projectId, req.params.id, req.body) })));
     app.post(`${root}/posts/:id/cancel`, route((req, res) => res.json({ post: this.posts.cancel(req.uid, req.params.projectId, req.params.id) })));
-    app.delete(`${root}/posts/:id`, route((req, res) => res.json(this.posts.remove(req.uid, req.params.projectId, req.params.id))));
+    app.delete(`${root}/posts/:id`, route((req, res) => res.json(this.posts.remove(req.uid, req.params.projectId, req.params.id, req.body))));
     app.post(`${root}/queue/reorder`, route((req, res) => res.json({ posts: this.posts.reorder(req.uid, req.params.projectId, req.body.accountId, req.body.deliveryIds) })));
     app.post(`${root}/deliveries/:id/retry`, route((req, res) => res.json({ post: this.posts.retry(req.uid, req.params.projectId, req.params.id, req.body) })));
     app.get(`${root}/analytics`, route((req, res) => res.json(this.analytics.report(req.uid, req.params.projectId))));

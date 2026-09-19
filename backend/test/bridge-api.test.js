@@ -46,6 +46,26 @@ test("a first-time user gets one reusable default workspace", async t => {
   assert.deepEqual(projects.projects.map(project => project.id), [firstProject.id]);
 });
 
+test("draft routes save, reopen, revise, and discard incomplete posts", async t => {
+  const h = await setup(t), item = { caption: "Unfinished", title: "", mediaIds: [], accountIds: [], format: "auto", overrides: {}, schedule: { mode: "now", timeZone: "UTC" } };
+  const created = await h.request(`${h.root}/posts/drafts`, { method: "POST", body: { items: [item], requestId: "api-draft-create-12345" } });
+  assert.equal(created.status, 201);
+  const { posts: [draft] } = await created.json();
+  assert.equal(draft.status, "draft"); assert.equal(draft.editable, true); assert.equal(draft.deliveries.length, 0);
+
+  const reopened = await h.request(`${h.root}/posts/${draft.id}`);
+  assert.equal(reopened.status, 200); assert.equal((await reopened.json()).post.caption, "Unfinished");
+  assert.equal((await h.request(`${h.root}/posts/${draft.id}`, { user: "bob" })).status, 404);
+
+  const saved = await h.request(`${h.root}/posts/${draft.id}`, { method: "PATCH", body: { ...draft, caption: "Saved revision" } });
+  assert.equal(saved.status, 200); const revised = (await saved.json()).post; assert.equal(revised.caption, "Saved revision");
+  const stale = await h.request(`${h.root}/posts/${draft.id}`, { method: "PATCH", body: { ...draft, caption: "Stale revision" } });
+  assert.equal(stale.status, 409); assert.equal((await stale.json()).code, "revision_conflict");
+
+  assert.equal((await h.request(`${h.root}/posts/${draft.id}`, { method: "DELETE", body: { draftOnly: true, revision: revised.revision } })).status, 200);
+  assert.equal((await h.request(`${h.root}/posts/${draft.id}`)).status, 404);
+});
+
 test("API keys are shown once, authenticate requests, and can be revoked", async t => {
   const h = await setup(t);
   const created = await h.request("/api/bridge/api-keys", { method: "POST", body: { name: "Automation" } });
@@ -71,6 +91,10 @@ test("media upload validates bytes and creates signed downloads", async t => {
   assert.equal(media.kind, "document"); assert.equal(media.status, "ready"); assert.ok(!("storageKey" in media));
   const signed = await h.request(media.downloadUrl, { user: null }); assert.equal(signed.status, 200); assert.match(signed.headers.get("content-disposition"), /^attachment/); assert.deepEqual(Buffer.from(await signed.arrayBuffer()), pdf);
   assert.equal((await h.request(media.url.replace(/signature=[^&]+/, "signature=tampered"), { user: null })).status, 403);
+  const draftResponse = await h.request(`${h.root}/posts/drafts`, { method: "POST", body: { items: [{ caption: "", title: "", mediaIds: [media.id], accountIds: [], format: "document", overrides: {}, schedule: { mode: "now", timeZone: "UTC" } }], requestId: "api-media-draft-12345" } });
+  assert.equal(draftResponse.status, 201); const { posts: [draft] } = await draftResponse.json();
+  assert.equal((await h.request(`${h.root}/media/${media.id}`, { method: "DELETE" })).status, 409);
+  assert.equal((await h.request(`${h.root}/posts/${draft.id}`, { method: "DELETE", body: { draftOnly: true, revision: draft.revision } })).status, 200);
   assert.equal((await h.request(`${h.root}/media/${media.id}`, { method: "DELETE" })).status, 200);
   assert.equal((await h.request(media.url, { user: null })).status, 404);
   assert.equal(fs.readdirSync(path.join(h.dir, "incoming")).length, 0);
@@ -88,6 +112,8 @@ test("local preview requires an explicit header and rejects unrecognized origins
   const h = await setup(t, { localPreview: true, auth: false });
   const headers = { "X-Bridge-Preview": "1" };
   assert.equal((await h.request("/api/bridge/config", { user: null, headers })).status, 200);
+  const draft = await h.request(`${h.root}/posts/drafts`, { method: "POST", user: null, headers, body: { items: [{ caption: "Local idea", title: "", mediaIds: [], accountIds: [], format: "auto", overrides: {}, schedule: { mode: "now", timeZone: "UTC" } }], requestId: "local-preview-draft-123" } });
+  assert.equal(draft.status, 201); assert.equal((await draft.json()).posts[0].status, "draft");
   assert.equal((await h.request("/api/bridge/config", { user: null, headers: { ...headers, Origin: "https://untrusted.example" } })).status, 403);
   assert.notEqual((await h.request("/api/bridge/config", { user: null })).status, 200);
   const post = await h.request(`${h.root}/posts`, { method: "POST", headers, body: { items: [], requestId: "preview-must-not-publish" } }); assert.equal(post.status, 409);

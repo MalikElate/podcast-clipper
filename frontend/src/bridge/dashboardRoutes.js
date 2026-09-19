@@ -37,12 +37,18 @@ export function isDashboardPath(pathname) {
 }
 
 
-// Preserve Stripe return data while canonicalizing legacy dashboard links.
-// Connection callback parameters continue to be consumed and removed.
+// Preserve the small amount of state needed to restore an in-progress screen
+// while canonicalizing legacy dashboard links. Connection callback parameters
+// continue to be consumed and removed.
 export function dashboardSearch(view, search = "") {
-  if (view !== "billing") return "";
-  const source = new URLSearchParams(search), billing = new URLSearchParams();
-  for (const key of ["checkout", "session_id", "portal_return"]) if (source.has(key)) billing.set(key, source.get(key));
-  const query = billing.toString();
+  const source = new URLSearchParams(search), kept = new URLSearchParams();
+  if (view === "compose") {
+    const draft = source.get("draft")?.trim();
+    if (draft) kept.set("draft", draft);
+  }
+  if (view === "billing") {
+    for (const key of ["checkout", "session_id", "portal_return"]) if (source.has(key)) kept.set(key, source.get(key));
+  }
+  const query = kept.toString();
   return query ? `?${query}` : "";
 }

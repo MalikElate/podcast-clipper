@@ -81,6 +81,56 @@ test("submission idempotency rejects changed content and publishes each destinat
   assert.equal(h.provider.calls.length, 2); assert.equal(h.app.posts.get("alice", h.project.id, first.posts[0].id).status, "published");
 });
 
+test("incomplete drafts save and update without publish validation", async t => {
+  const h = setup(t);
+  h.provider.options = async () => assert.fail("saving a draft must not fetch provider options");
+  const draftBody = { requestId: "incomplete-draft-save-123", items: [{
+    caption: "An unfinished idea", title: "", mediaIds: [], accountIds: [], format: "auto", overrides: {},
+    schedule: { mode: "scheduled", timeZone: "Africa/Douala", localDateTime: "2026-01-01T09:00" },
+  }] };
+  const { posts: [draft] } = h.app.posts.createDrafts("alice", h.project.id, draftBody);
+  const duplicate = h.app.posts.createDrafts("alice", h.project.id, draftBody);
+  assert.equal(duplicate.duplicate, true); assert.equal(duplicate.posts[0].id, draft.id);
+  assert.equal(h.app.store.list("post", { projectId: h.project.id }).length, 1);
+  assert.equal(draft.status, "draft"); assert.equal(draft.editable, true); assert.equal(draft.deletable, true);
+  assert.equal(draft.deliveries.length, 0); assert.equal(draft.schedule.localDateTime, "2026-01-01T09:00");
+  assert.equal(h.app.store.list("delivery", { projectId: h.project.id }).length, 0);
+
+  const updated = await h.app.posts.update("alice", h.project.id, draft.id, { ...draft, caption: "A saved idea", accountIds: ["one"] });
+  assert.equal(updated.status, "draft"); assert.equal(updated.caption, "A saved idea"); assert.deepEqual(updated.accountIds, ["one"]);
+  await assert.rejects(h.app.posts.update("alice", h.project.id, draft.id, { ...draft, caption: "Stale edit" }), error => error.code === "revision_conflict");
+  await h.app.worker.tick(); assert.equal(h.provider.calls.length, 0);
+  assert.throws(() => h.app.posts.remove("alice", h.project.id, draft.id, { draftOnly: true, revision: draft.revision }), error => error.code === "revision_conflict");
+  assert.deepEqual(h.app.posts.remove("alice", h.project.id, draft.id, { draftOnly: true, revision: updated.revision }), { deleted: true });
+  assert.equal(h.app.store.get("post", draft.id), null);
+});
+
+test("submitting a saved draft converts it in place exactly once", async t => {
+  const h = setup(t), item = h.post("Ready to publish");
+  const { posts: [draft] } = h.app.posts.createDrafts("alice", h.project.id, { items: [item], requestId: "submit-draft-create-123" });
+  const requestId = "saved-draft-submit-12345";
+  const first = await h.app.posts.submit("alice", h.project.id, { items: [item], requestId, draftId: draft.id, revision: draft.revision });
+  assert.equal(first.posts[0].id, draft.id); assert.equal(first.posts[0].status, "scheduled"); assert.equal(first.posts[0].deliveries.length, 1);
+  assert.equal(h.app.store.list("post", { projectId: h.project.id }).length, 1);
+
+  const duplicate = await h.app.posts.submit("alice", h.project.id, { items: [item], requestId, draftId: draft.id, revision: draft.revision });
+  assert.equal(duplicate.duplicate, true); assert.equal(duplicate.posts[0].id, draft.id);
+  assert.equal(h.app.store.list("delivery", { projectId: h.project.id }).length, 1);
+  await assert.rejects(h.app.posts.submit("alice", h.project.id, { items: [item], requestId: "different-draft-submit", draftId: draft.id, revision: draft.revision }), error => error.code === "draft_already_submitted");
+  assert.throws(() => h.app.posts.getDraft("alice", h.project.id, draft.id), error => error.status === 404);
+  assert.throws(() => h.app.posts.remove("alice", h.project.id, draft.id, { draftOnly: true, revision: draft.revision }), error => error.code === "draft_already_submitted");
+  assert.equal(h.app.posts.get("alice", h.project.id, draft.id).deliveries.length, 1);
+});
+
+test("draft submission rejects a stale revision before creating deliveries", async t => {
+  const h = setup(t), item = h.post("First version");
+  const { posts: [draft] } = h.app.posts.createDrafts("alice", h.project.id, { items: [item], requestId: "stale-draft-create-123" });
+  const updated = await h.app.posts.update("alice", h.project.id, draft.id, { ...draft, caption: "Second version" });
+  await assert.rejects(h.app.posts.submit("alice", h.project.id, { items: [{ ...item, caption: updated.caption }], requestId: "stale-draft-submit-123", draftId: draft.id, revision: draft.revision }), error => error.code === "revision_conflict");
+  assert.equal(h.app.store.list("delivery", { projectId: h.project.id }).length, 0);
+  assert.equal(h.app.posts.get("alice", h.project.id, draft.id).status, "draft");
+});
+
 test("failure retry is independent and never resends a successful destination", async t => {
   const h = setup(t); h.account("two"); let failed = false;
   h.provider.behavior = ctx => { if (ctx.account.id === "two" && !failed) { failed = true; throw new ProviderError("Temporary", { retryable: true }); } return { status: "published", externalId: ctx.account.id }; };
