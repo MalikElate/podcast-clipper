@@ -65,7 +65,7 @@ This runs the frontend and backend tests and creates the production frontend bun
 
 ## Architecture
 
-[Architecture and extension points](docs/architecture.md) describes service boundaries, storage, queue state transitions, and the provider contract. [MCP API](docs/mcp-api.md) documents the initial private integration, and the [MCP testing roadmap](docs/mcp-testing-roadmap.md) defines the gates to OAuth and public release. [Deployment instructions](docs/deployment.md) covers secrets, reverse proxies, backups, and remaining live acceptance checks.
+[Architecture and extension points](docs/architecture.md) describes service boundaries, storage, queue state transitions, and the provider contract. [MCP API](docs/mcp-api.md) documents the initial private integration, the [MCP connection guide](docs/mcp-connection-guide.md) gives the exact testing steps, and the [MCP testing roadmap](docs/mcp-testing-roadmap.md) defines the gates to OAuth and public release. [Deployment instructions](docs/deployment.md) covers secrets, reverse proxies, backups, and remaining live acceptance checks.
 
 See [privacy operations](docs/privacy-operations.md) for required deletion secrets, webhooks, maintenance, processor follow-up, and backup handling before rollout.
 
