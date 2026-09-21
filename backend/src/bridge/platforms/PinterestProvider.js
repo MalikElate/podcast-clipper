@@ -1,7 +1,9 @@
 import { PlatformProvider } from "./PlatformProvider.js";
+import { pinterestAccountAnalytics } from "./accountAnalytics.js";
 import { invariant, ProviderError } from "../core/errors.js";
 
 export class PinterestProvider extends PlatformProvider {
+  availableAccountViews({ credentials }) { return pinterestAccountAnalytics(this, credentials); }
   constructor(deps) { super("pinterest", deps); }
   get sandbox() { return this.env.PINTEREST_ENVIRONMENT?.toLowerCase() === "sandbox"; }
   get environment() { return this.sandbox ? "sandbox" : "production"; }

@@ -43,6 +43,7 @@ export class HttpTransport {
     const graphHost = ["graph.facebook.com", "graph.instagram.com", "graph.threads.net"].includes(parsed.hostname);
     const invalidAccessToken = invalidAccessTokenCodes.has(oauthCode) || graphHost && Number(data?.error?.code) === 190;
     if (!response.ok || tokenEndpoint && oauthCode && oauthCode !== "ok") {
+      if (parsed.hostname === "api.x.com" && response.status === 402) throw new ProviderError("X requires API credits before it will return analytics.", { code: "x_credits_required" });
       if (googleTokenEndpoint) {
         // Token revocation is an account issue; invalid app credentials are not.
         // Use fixed messages so Google's response cannot expose request data.
