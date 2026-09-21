@@ -37,7 +37,7 @@ function PlanGrid() {
     <>
       <div className="home-pricing-heading">
         <h2 id="mkt-pricing-title">Get more reach, with less effort.</h2>
-        <p>Start for free, then choose the paid plan that fits your publishing workflow.</p>
+        <p>Pricing</p>
         <div className="pricing-cycle" role="group" aria-label="Billing frequency">
           <button className={!yearly ? "active" : ""} onClick={() => setYearly(false)}>Monthly</button>
           <button className={yearly ? "active" : ""} onClick={() => setYearly(true)}>Yearly <span>Save up to 17%</span></button>

@@ -260,7 +260,7 @@ export default function Landing({ onGetStarted }) {
         </section>
 
         <section className="landing-section home-pricing-section" id="pricing" aria-labelledby="home-pricing-title">
-          <div className="home-pricing-heading"><h2 id="home-pricing-title">Choose the space your publishing needs.</h2><p>Start for free, then choose the paid plan that fits your publishing workflow.</p><div className="pricing-cycle" role="group" aria-label="Billing frequency"><button className={!yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(false)}>Monthly</button><button className={yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(true)}>Yearly <span>Save up to 17%</span></button></div></div>
+          <div className="home-pricing-heading"><h2 id="home-pricing-title">Choose the space your publishing needs.</h2><p>Pricing</p><div className="pricing-cycle" role="group" aria-label="Billing frequency"><button className={!yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(false)}>Monthly</button><button className={yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(true)}>Yearly <span>Save up to 17%</span></button></div></div>
           <div className="pricing-grid" aria-label="Meadow plans">
             {PLANS.map((plan) => {
               const price = yearlyPricing ? plan.yearly : plan.monthly;
