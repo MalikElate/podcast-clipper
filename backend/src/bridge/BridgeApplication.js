@@ -39,6 +39,7 @@ import { LinkedInProvider } from "./platforms/LinkedInProvider.js";
 import { PinterestProvider } from "./platforms/PinterestProvider.js";
 import { BlueskyProvider } from "./platforms/BlueskyProvider.js";
 import { SnapchatProvider } from "./platforms/UpcomingProviders.js";
+import { TwitchProvider, KickProvider } from "./platforms/ChatProviders.js";
 import { TelegramProvider } from "./platforms/TelegramProvider.js";
 import { clerkMiddleware, clerkClient } from "@clerk/express";
 import { verifyWebhook } from "@clerk/express/webhooks";
@@ -71,7 +72,7 @@ export class BridgeApplication {
       try { signingKey = fs.readFileSync(keyPath, "utf8"); } catch (error) { if (error.code !== "ENOENT") throw error; signingKey = randomBytes(32).toString("base64"); fs.writeFileSync(keyPath, signingKey, { mode: 0o600 }); }
     }
     const deps = { env, publicUrl: this.publicUrl, store: this.store, vault: this.vault, locks: this.locks };
-    this.registry = registry || new ProviderRegistry([InstagramProvider, TikTokProvider, SnapchatProvider, YouTubeProvider, FacebookProvider, XProvider, LinkedInProvider, PinterestProvider, ThreadsProvider, BlueskyProvider, TelegramProvider, GoogleBusinessProvider].map(Provider => new Provider(deps)), { disabled: (env.BRIDGE_DISABLED_PLATFORMS || "").split(",").filter(Boolean) });
+    this.registry = registry || new ProviderRegistry([InstagramProvider, TikTokProvider, SnapchatProvider, YouTubeProvider, FacebookProvider, XProvider, LinkedInProvider, PinterestProvider, ThreadsProvider, BlueskyProvider, TelegramProvider, TwitchProvider, KickProvider, GoogleBusinessProvider].map(Provider => new Provider(deps)), { disabled: (env.BRIDGE_DISABLED_PLATFORMS || "").split(",").filter(Boolean) });
     this.media = new MediaService({ store: this.store, projects: this.projects, storage: this.storage, publicUrl: this.publicUrl, signingKey, clock, maxBytes: Number(env.BRIDGE_MAX_UPLOAD_MB || 1024) * 1024 ** 2 });
     this.uploadTokens = new UploadTokenService({ store: this.store, projects: this.projects, maxBytes: this.media.maxBytes, clock });
     this.rates = new RateLimitService({ store: this.store, clock });
@@ -283,6 +284,8 @@ export class BridgeApplication {
     this.privacyTimer = setInterval(() => this.privacy.tick().catch(error => console.error("Privacy worker:", error.code || error.name)), 15000);
     this.privacyTimer.unref?.();
     if (!this.localPreview) {
+      // Twitch requires validation on every process start and at least hourly.
+      for (const account of this.store.list("account", { status: "connected", limit: null }).filter(item => item.platform === "twitch")) this.store.put("account", { ...account, maintenanceDueAt: 0 });
       this.accounts.maintainConnections().catch(error => console.error("Connection maintenance:", error.code || error.name));
       this.connectionTimer = setInterval(() => this.accounts.maintainConnections().catch(error => console.error("Connection maintenance:", error.code || error.name)), 60000);
       this.connectionTimer.unref?.();

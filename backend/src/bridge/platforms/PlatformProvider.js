@@ -71,7 +71,7 @@ export class PlatformProvider {
     const messages = [];
     if (!caps.formats.includes(format)) messages.push(`${caps.name} does not support this ${format} format through Meadow.`);
     const caption = content.caption || "";
-    const length = this.id === "bluesky" ? [...new Intl.Segmenter("en", { granularity: "grapheme" }).segment(caption)].length : [...caption].length;
+    const length = ["bluesky", "kick"].includes(this.id) ? [...new Intl.Segmenter("en", { granularity: "grapheme" }).segment(caption)].length : [...caption].length;
     if (length > caps.captionLimit) messages.push(`${caps.name} captions can contain up to ${caps.captionLimit.toLocaleString()} characters.`);
     if (!content.media.length && !caption.trim()) messages.push("Add a caption or media.");
     if (format === "text" && content.media.length) messages.push("Text posts cannot contain media. Choose an appropriate media format.");

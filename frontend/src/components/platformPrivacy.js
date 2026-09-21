@@ -143,4 +143,24 @@ export const PLATFORM_PRIVACY = [
       { label: "Manage Google access", url: "https://security.google.com/settings/security/permissions" },
     ],
   },
+  {
+    id: "twitch", name: "Twitch",
+    intro: "Meadow connects to your own channel through Twitch’s authorization screen.",
+    details: [
+      { label: "Data Meadow accesses", text: "Your channel ID, name, profile image and link, encrypted authorization, message text, reply IDs, publishing choices and delivery confirmations. Twitch supports colored announcements; chat messages during Shared Chat may appear in every participating channel." },
+      { label: "How Meadow uses it", text: "To schedule and send your chat messages and replies, confirm delivery and avoid duplicate messages. Chat engagement metrics are unavailable." },
+      { label: "Retention and removal", text: activeConnectionRetention + " Meadow requests token revocation when you disconnect. You can also remove Meadow in the platform’s connected-app settings. Sent messages remain on the platform." },
+    ],
+    links: [{ label: "Twitch Privacy Policy", url: "https://www.twitch.tv/p/en/legal/privacy-notice/" }],
+  },
+  {
+    id: "kick", name: "Kick",
+    intro: "Meadow connects to your own channel through Kick’s authorization screen.",
+    details: [
+      { label: "Data Meadow accesses", text: "Your channel ID, name, profile image and link, encrypted authorization, message text, reply IDs, publishing choices and delivery confirmations. Kick returns an email in its user response, but Meadow does not save it." },
+      { label: "How Meadow uses it", text: "To schedule and send your chat messages and replies, confirm delivery and avoid duplicate messages. Chat engagement metrics are unavailable." },
+      { label: "Retention and removal", text: activeConnectionRetention + " Meadow requests token revocation when you disconnect. You can also remove Meadow in the platform’s connected-app settings. Sent messages remain on the platform." },
+    ],
+    links: [{ label: "Kick Privacy Policy", url: "https://kick.com/privacy-policy" }],
+  },
 ];

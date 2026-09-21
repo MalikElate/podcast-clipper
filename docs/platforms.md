@@ -15,6 +15,8 @@ The following is the implemented Meadow capability set. Defaults live in `backen
 | `pinterest` | Account with selected board | Image Pin, video Pin, multi-image Pin where API/account permits |
 | `threads` | Authorized Threads profile | Text, image, video, mixed carousel |
 | `bluesky` | Authorized AT Protocol identity | Text, images, video, multi-image post |
+| `twitch` | Authorized channel owner | Text chat messages, reply threads, colored announcements; 500 characters per message |
+| `kick` | Authorized channel owner | Text chat messages and reply threads; 500 characters and 2,048 UTF-8 bytes per message |
 | `telegram` | Channel or group where Meadow Publisher is a member | Text, image, video, photo/video album, document |
 | `google_business` | Managed business location | Standard local post with text and optional photos |
 
@@ -37,6 +39,8 @@ https://your-meadow-domain.example/oauth/pinterest/callback
 https://your-meadow-domain.example/oauth/threads/callback
 https://your-meadow-domain.example/oauth/bluesky/callback
 https://your-meadow-domain.example/oauth/google_business/callback
+https://your-meadow-domain.example/oauth/twitch/callback
+https://your-meadow-domain.example/oauth/kick/callback
 ```
 
 Telegram uses a bot deep link instead of OAuth. Register its webhook at:
@@ -56,6 +60,8 @@ https://your-meadow-domain.example/api/telegram/webhook
 | LinkedIn | `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` | Defaults: `openid profile w_member_social`; restricted read/organization scopes require separate access |
 | Pinterest | `PINTEREST_CLIENT_ID`, `PINTEREST_CLIENT_SECRET` | `user_accounts:read`, `boards:read`, `pins:read`, `pins:write` |
 | Bluesky | `BLUESKY_PRIVATE_KEY` and HTTPS origin | Official OAuth client, DPoP, ES256 private-key authentication, `atproto transition:generic` |
+| Twitch | `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` | `user:write:chat`, `moderator:manage:announcements` |
+| Kick | `KICK_CLIENT_ID`, `KICK_CLIENT_SECRET` | `user:read`, `channel:read`, `chat:write`; OAuth PKCE |
 | Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET` | Bot added to a group, or channel administrator with permission to post messages; webhook secret header verification |
 | Google Business | `GOOGLE_BUSINESS_CLIENT_ID` / `GOOGLE_BUSINESS_CLIENT_SECRET`, shared `GOOGLE_*`, or the existing `YOUTUBE_*` Google OAuth client | `https://www.googleapis.com/auth/business.manage`; relevant Business Profile APIs enabled and approved |
 
@@ -75,6 +81,8 @@ For Bluesky, supply a PKCS#8 ES256 private PEM as a backend secret. The official
 
 For Telegram, create the bot through BotFather and keep its token in the backend secret store. The public username is ordinary configuration; the webhook secret must be a separate random value of at least 16 characters. Meadow registers `allowed_updates` for messages and bot membership changes. A user starts the bot privately, then adds it to a group or to a channel as an administrator with post permission. Removing the bot causes Meadow to queue deletion of that destination connection. Telegram does not expose channel or group post-performance metrics through the Bot API. [Telegram Bot API](https://core.telegram.org/bots/api), [Telegram bot deep links](https://core.telegram.org/api/links)
 
+See [Kick and Twitch setup](kick-twitch-setup.md) for app registration, Postiz parity, and live acceptance checks. Neither integration uploads video or broadcasts streams.
+
 ## Publication constraints and quotas
 
 TikTok requires the latest creator information, explicit privacy selection, permitted interaction choices, and posting consent. Meadow renders those controls without a default privacy value. Its URL-pull flow requires verification of the serving domain or URL prefix. Unaudited clients are restricted to private viewing; approval is necessary for public publishing. [TikTok Direct Post setup](https://developers.tiktok.com/docs/en/content-posting-api-get-started)
@@ -91,6 +99,7 @@ X media follows initialize, append, finalize and status checks before post creat
 
 | Platform | Implemented metric retrieval |
 | --- | --- |
+| Twitch / Kick | Delivery confirmations only; no chat engagement analytics |
 | Instagram | Media insights where supported; likes/comments and available views/shares/saves |
 | TikTok | Public video views, likes, comments, shares; private posts may have no queryable public ID |
 | YouTube | Views, likes, comments; shares from YouTube Analytics when available |

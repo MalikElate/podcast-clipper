@@ -11,7 +11,7 @@ const CONNECTION_BARRIER_TTL = 15 * 60000;
 // Production may wake only once daily, so reserve a full wake interval before
 // the public seven-day deadline when ordinary lock-protected cleanup is stuck.
 const HARD_LOCAL_PURGE_AFTER = 6 * DAY;
-const HARD_PURGE_PLATFORMS = new Set(["youtube", "google_business", "tiktok"]);
+const HARD_PURGE_PLATFORMS = new Set(["youtube", "google_business", "tiktok", "twitch", "kick"]);
 export const deletionMarker = uid => SecretVault.hash(`meadow-deletion:${uid}`);
 
 /** Durable erasure jobs. Failed external operations never restore access or data. */
@@ -122,7 +122,7 @@ export class PrivacyService {
       for (const account of accounts) this.markDeleting(account);
       this.store.put("erasure", { id, ownerUid: uid, type: "connection", accountIds: accounts.map(item => item.id), alreadyRevoked, status: "pending", dueAt: this.clock(), createdAt: this.clock() });
     });
-    return { disconnected: true, deletionPending: true, reference: id, affectedConnections: accounts.length, remoteRevocation: ["youtube", "google_business", "tiktok"].includes(selected.platform) ? "pending" : "manual" };
+    return { disconnected: true, deletionPending: true, reference: id, affectedConnections: accounts.length, remoteRevocation: ["youtube", "google_business", "tiktok", "twitch", "kick"].includes(selected.platform) ? "pending" : "manual" };
   }
   removeConnectionData(account) {
     for (const delivery of this.store.list("delivery", { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountId === account.id)) { this.store.removeRateEvent(delivery.id); this.store.remove("delivery", delivery.id); }
@@ -159,7 +159,7 @@ export class PrivacyService {
         if (!account || account.status !== "deleting" || account.deletionRequestedAt > this.clock() - HARD_LOCAL_PURGE_AFTER) continue;
         const related = erasures.filter(job => job.ownerUid === account.ownerUid && (job.type === "owner" || job.accountIds?.includes(account.id)));
         const alreadyRevoked = related.length > 0 && related.every(job => job.alreadyRevoked === true);
-        if (!alreadyRevoked && account.encryptedCredentials && ["youtube", "google_business", "tiktok"].includes(account.platform)) {
+        if (!alreadyRevoked && account.encryptedCredentials && ["youtube", "google_business", "tiktok", "twitch", "kick"].includes(account.platform)) {
           const receipt = this.manualRevocationReceipt({ subject: deletionMarker(account.ownerUid), platform: account.platform, createdAt: account.deletionRequestedAt });
           this.store.put("revocation", receipt); manual.push(receipt);
         }
@@ -194,7 +194,7 @@ export class PrivacyService {
       const account = this.store.get("account", accountId);
       if (!account) return;
       this.store.transaction(() => {
-        if (!alreadyRevoked && account.encryptedCredentials && ["youtube", "google_business", "tiktok"].includes(account.platform)) {
+        if (!alreadyRevoked && account.encryptedCredentials && ["youtube", "google_business", "tiktok", "twitch", "kick"].includes(account.platform)) {
           // Retain only the encrypted token needed to revoke, for at most seven days.
           const id = randomUUID();
           this.store.put("revocation", { id, ownerUid: account.ownerUid, subject: deletionMarker(account.ownerUid), platform: account.platform, encrypted: account.encryptedCredentials, aad: `account:${accountId}`, status: "pending", dueAt: this.clock(), expiresAt: (account.deletionRequestedAt || this.clock()) + HARD_LOCAL_PURGE_AFTER, createdAt: this.clock() });

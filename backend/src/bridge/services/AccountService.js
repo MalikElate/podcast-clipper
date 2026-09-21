@@ -260,7 +260,7 @@ export class AccountService {
               const target = this.store.get("account", saved.id);
               if (!target || !["connected", "deleting"].includes(target.status) || target.authorizationId !== saved.authorizationId || target.encryptedCredentials !== saved.encryptedCredentials) continue;
               const old = this.vault.decrypt(target.encryptedCredentials, `account:${target.id}`);
-              this.store.put("account", { ...target, encryptedCredentials: this.vault.encrypt({ ...old, ...credentials }, `account:${target.id}`), updatedAt: this.clock(), maintenanceDueAt: this.clock() + DAY, maintenanceAttempts: 0, lastError: null });
+              this.store.put("account", { ...target, encryptedCredentials: this.vault.encrypt({ ...old, ...credentials }, `account:${target.id}`), updatedAt: this.clock(), maintenanceDueAt: this.clock() + (provider.maintenanceIntervalMs || DAY), maintenanceAttempts: 0, lastError: null });
             }
           });
         } catch (error) {
@@ -364,17 +364,19 @@ export class AccountService {
         if (account?.status !== "connected" || account.authorizationId !== selected.authorizationId || (account.maintenanceDueAt || 0) > this.clock() || this.privacy?.blocked(account.ownerUid)) continue;
         this.store.put("account", { ...account, maintenanceDueAt: this.clock() + 60000 });
         try {
-          const credentials = this.vault.decrypt(account.encryptedCredentials, `account:${account.id}`);
-          const expiring = credentials.expiresAt && credentials.expiresAt <= this.clock() + 7 * DAY || credentials.refreshExpiresAt && credentials.refreshExpiresAt <= this.clock() + 7 * DAY;
+          const provider = this.registry.get(account.platform);
+          if (provider.validateConnection) await this.withCredentials(account, credentials => provider.validateConnection(account, credentials));
+          const credentials = this.vault.decrypt(this.store.get("account", account.id).encryptedCredentials, `account:${account.id}`);
+          const expiring = credentials.expiresAt && credentials.expiresAt <= this.clock() + (provider.maintenanceIntervalMs || 7 * DAY) || credentials.refreshExpiresAt && credentials.refreshExpiresAt <= this.clock() + (provider.maintenanceIntervalMs || 7 * DAY);
           const withoutLifetime = !credentials.expiresAt && credentials.refreshToken;
           if (expiring || withoutLifetime || account.platform === "bluesky") await this.credentials(account, { force: true });
           const current = this.store.get("account", account.id);
-          if (current?.status === "connected" && current.authorizationId === account.authorizationId) this.store.put("account", { ...current, maintenanceDueAt: this.clock() + (withoutLifetime ? 30 * DAY : DAY), maintenanceAttempts: 0 });
+          if (current?.status === "connected" && current.authorizationId === account.authorizationId) this.store.put("account", { ...current, maintenanceDueAt: this.clock() + (provider.maintenanceIntervalMs || (withoutLifetime ? 30 * DAY : DAY)), maintenanceAttempts: 0 });
         } catch {
           const current = this.store.get("account", account.id);
           if (current?.status === "connected" && current.authorizationId === account.authorizationId) {
             const attempts = (current.maintenanceAttempts || 0) + 1;
-            this.store.put("account", { ...current, maintenanceAttempts: attempts, maintenanceDueAt: this.clock() + Math.min(6 * 3600000, 5 * 60000 * 2 ** Math.min(attempts - 1, 7)) });
+            this.store.put("account", { ...current, maintenanceAttempts: attempts, maintenanceDueAt: this.clock() + Math.min(account.platform === "twitch" ? 5 * 60000 : 6 * 3600000, 5 * 60000 * 2 ** Math.min(attempts - 1, 7)) });
           }
         }
       }

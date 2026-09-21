@@ -32,7 +32,7 @@ test("all project routes require authentication and reject another owner's proje
   assert.equal((await h.request(`${h.root}/media`, { user: null })).status, 401);
   for (const endpoint of ["/media", "/accounts", "/posts", "/analytics", "/analytics/account-views"]) assert.equal((await h.request(h.root + endpoint, { user: "bob" })).status, 404);
   const projects = await (await h.request("/api/bridge/projects", { user: "bob" })).json(); assert.deepEqual(projects.projects, []);
-  const config = await (await h.request("/api/bridge/config")).json(); assert.equal(config.platforms.length, 12); assert.equal(config.connectionsReady, false);
+  const config = await (await h.request("/api/bridge/config")).json(); assert.equal(config.platforms.length, 14); assert.equal(config.connectionsReady, false);
   assert.equal(config.platforms.find(platform => platform.id === "telegram")?.configured, false);
   assert.equal(config.platforms.find(platform => platform.id === "snapchat")?.configured, false);
 });
@@ -253,12 +253,13 @@ test("workspace access needs no policy agreement while account deletion still re
   assert.equal((await (await h.request("/api/bridge/privacy/account", { method: "DELETE", body: { confirmation: "DELETE" } })).json()).deletion.reference, reference);
 });
 
-for (const platform of ["pinterest", "youtube", "google_business", "tiktok"]) test(`${platform} requires fresh, specific session consent and binds it to the OAuth account`, async t => {
+for (const platform of ["pinterest", "youtube", "google_business", "tiktok", "twitch", "kick"]) test(`${platform} requires fresh, specific session consent and binds it to the OAuth account`, async t => {
   const h = await setup(t, { envOverrides: {
     BRIDGE_ENCRYPTION_KEY: randomBytes(32).toString("base64"),
     PINTEREST_CLIENT_ID: "test", PINTEREST_CLIENT_SECRET: "test",
     GOOGLE_CLIENT_ID: "test", GOOGLE_CLIENT_SECRET: "test",
     TIKTOK_CLIENT_KEY: "test", TIKTOK_CLIENT_SECRET: "test",
+    TWITCH_CLIENT_ID: "test", TWITCH_CLIENT_SECRET: "test", KICK_CLIENT_ID: "test", KICK_CLIENT_SECRET: "test",
   } });
   const { application: app } = h, provider = app.registry.get(platform);
   let authorizations = 0, exchanges = 0;
@@ -278,8 +279,8 @@ for (const platform of ["pinterest", "youtube", "google_business", "tiktok"]) te
   assert.ok(disclosure.requirement);
   assert.ok(disclosure.revokeSummary);
   assert.ok(disclosure.shortAgreement);
-  assert.ok(disclosure.data.length >= 4);
-  assert.equal((await (await h.request("/api/bridge/privacy/connections")).json()).disclosures.length, 5);
+  assert.ok(disclosure.data.length >= (["twitch", "kick"].includes(platform) ? 3 : 4));
+  assert.equal((await (await h.request("/api/bridge/privacy/connections")).json()).disclosures.length, 7);
   assert.equal((await h.request(`/api/bridge/privacy/connections/${platform}`, { user: null })).status, 401);
 
   const endpoint = `${h.root}/accounts/connect/${platform}`;
@@ -296,7 +297,7 @@ for (const platform of ["pinterest", "youtube", "google_business", "tiktok"]) te
   const response = await h.request(endpoint, { method: "POST", body: { consent: { ...consent, acceptedAt: 1 }, uid: "bob" } });
   assert.equal(response.status, 200); assert.equal(authorizations, 1);
   const authorization = new URL((await response.json()).url);
-  assert.equal(authorization.hostname, { pinterest: "www.pinterest.com", youtube: "accounts.google.com", google_business: "accounts.google.com", tiktok: "www.tiktok.com" }[platform]);
+  assert.equal(authorization.hostname, { pinterest: "www.pinterest.com", youtube: "accounts.google.com", google_business: "accounts.google.com", tiktok: "www.tiktok.com", twitch: "id.twitch.tv", kick: "id.kick.com" }[platform]);
   if (platform === "tiktok") assert.equal(authorization.searchParams.get("disable_auto_auth"), "1");
   if (["youtube", "google_business"].includes(platform)) assert.equal(authorization.searchParams.get("prompt"), "consent select_account");
   const state = authorization.searchParams.get("state");
