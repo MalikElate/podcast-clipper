@@ -33,7 +33,17 @@ export class YouTubeProvider extends GoogleProvider {
     if (!["public", "unlisted", "private"].includes(content.settings?.privacy)) errors.push("Choose a YouTube visibility setting.");
     if (typeof content.settings?.madeForKids !== "boolean") errors.push("Choose whether this YouTube video is made for kids.");
     if (/<|>/.test(content.title)) errors.push("YouTube titles cannot contain < or >.");
+    if (content.thumbnail && content.thumbnail.kind !== "image") errors.push("Choose an image for the YouTube thumbnail.");
     return errors;
+  }
+  async setThumbnail(ctx, videoId) {
+    if (!ctx.content.thumbnail || ctx.progress.thumbnailSet) return;
+    const asset = await ctx.media.prepare(ctx.content.thumbnail, "jpeg");
+    await this.http.request(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${encodeURIComponent(videoId)}&uploadType=media`, {
+      method: "POST", token: ctx.credentials.accessToken, body: ctx.media.storage.stream(asset.key),
+      headers: { "Content-Type": asset.mime, "Content-Length": String(asset.bytes) }, timeoutMs: 5 * 60000,
+    });
+    await ctx.checkpoint({ thumbnailSet: true });
   }
   async publish(ctx) {
     const { content, credentials, progress, checkpoint } = ctx;
@@ -51,6 +61,7 @@ export class YouTubeProvider extends GoogleProvider {
       const video = await this.http.request(uploadUrl, { method: "PUT", token: credentials.accessToken, body: ctx.media.storage.stream(asset.key), headers: { "Content-Type": asset.mime, "Content-Length": String(asset.bytes) }, timeoutMs: 30 * 60000 });
       invariant(video.id, "YouTube did not return a video identifier.", { code: "unconfirmed_publication" });
       await checkpoint({ phase: "video_processing", videoId: video.id });
+      await this.setThumbnail(ctx, video.id);
       return { status: "processing", externalId: video.id, progress: { phase: "video_processing", videoId: video.id } };
     } catch (error) {
       if (error.uncertain) return { status: "processing", progress: { phase: "upload", uploadUrl, key: asset.key, bytes: asset.bytes, mime: asset.mime }, pollAfterMs: 15000 };
@@ -74,6 +85,7 @@ export class YouTubeProvider extends GoogleProvider {
       invariant(videoId, "YouTube did not confirm this upload.", { code: "unconfirmed_publication" });
       await checkpoint({ phase: "video_processing", videoId });
     }
+    await this.setThumbnail(ctx, videoId);
     const result = await this.http.request(`https://www.googleapis.com/youtube/v3/videos?part=status,processingDetails&id=${encodeURIComponent(videoId)}`, { token: credentials.accessToken });
     const video = result.items?.[0];
     if (!video) throw new ProviderError("YouTube has not returned this video. Check the channel before retrying.", { uncertain: true });

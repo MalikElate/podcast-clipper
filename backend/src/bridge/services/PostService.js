@@ -13,8 +13,10 @@ export class PostService {
 
   content(post, account) {
     const override = post.overrides?.[account.id] || {};
+    const settings = override.settings || {};
     return { caption: override.caption ?? post.caption ?? "", title: override.title ?? post.title ?? "", format: override.format || post.format || "auto",
-      settings: override.settings || {}, accountOptions: account.options || {}, media: post.mediaIds.map(id => this.store.get("media", id)).filter(Boolean) };
+      settings, accountOptions: account.options || {}, media: post.mediaIds.map(id => this.store.get("media", id)).filter(Boolean),
+      thumbnail: settings.thumbnailMediaId ? this.store.get("media", settings.thumbnailMediaId) : null };
   }
 
   normalizeFields(uid, projectId, input, { allowEmptyAccounts = false } = {}) {
@@ -39,6 +41,11 @@ export class PostService {
       invariant(override.title === undefined || typeof override.title === "string" && override.title.length <= 500, "Invalid destination title.");
       invariant(JSON.stringify(override.settings || {}).length <= 10000, "Destination settings are too large.");
       invariant(override.settings === undefined || override.settings && typeof override.settings === "object" && !Array.isArray(override.settings), "Invalid destination settings.");
+      if (override.settings?.thumbnailMediaId !== undefined) {
+        invariant(typeof override.settings.thumbnailMediaId === "string" && override.settings.thumbnailMediaId.length <= 200, "Invalid thumbnail media item.");
+        const thumbnail = this.media.require(uid, projectId, override.settings.thumbnailMediaId);
+        invariant(thumbnail.kind === "image", "Choose an image for the video thumbnail.");
+      }
       invariant(override.localDateTime === undefined || typeof override.localDateTime === "string" && override.localDateTime.length <= 40, "Invalid destination time.");
     }
     return { record: { caption: input.caption || "", title: input.title || "", mediaIds, accountIds, overrides, format: input.format || "auto" }, accounts };

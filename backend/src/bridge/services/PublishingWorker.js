@@ -71,14 +71,14 @@ export class PublishingWorker {
         account = { ...account, options: freshOptions };
         const post = this.store.get("post", delivery.postId);
         if (!post) throw new BridgeError("The post is no longer available.");
-        const content = polling && delivery.contentSnapshot ? { ...delivery.contentSnapshot, accountOptions: account.options || {}, media: delivery.contentSnapshot.mediaIds.map(id => this.store.get("media", id)).filter(Boolean) } : this.posts.content(post, account);
+        const content = polling && delivery.contentSnapshot ? { ...delivery.contentSnapshot, accountOptions: account.options || {}, media: delivery.contentSnapshot.mediaIds.map(id => this.store.get("media", id)).filter(Boolean), thumbnail: delivery.contentSnapshot.thumbnailMediaId ? this.store.get("media", delivery.contentSnapshot.thumbnailMediaId) : null } : this.posts.content(post, account);
         if (content.media.length !== post.mediaIds.length) throw new BridgeError("A media item is no longer available.");
         provider.assertValid(content);
         delivery = this.store.transaction(() => {
           const current = this.store.get("delivery", id);
           if (!(isPendingDelivery(current) || current.status === "processing")) return null;
-          const { media, accountOptions, ...snapshot } = content;
-          return this.store.put("delivery", { ...current, contentSnapshot: current.contentSnapshot || { ...snapshot, mediaIds: media.map(item => item.id) }, status: "publishing", workerId: this.id, leaseUntil: this.clock() + 90000, attempts: polling ? current.attempts : current.attempts + 1, startedAt: current.startedAt || this.clock(), updatedAt: this.clock() });
+          const { media, thumbnail, accountOptions, ...snapshot } = content;
+          return this.store.put("delivery", { ...current, contentSnapshot: current.contentSnapshot || { ...snapshot, mediaIds: media.map(item => item.id), ...(thumbnail ? { thumbnailMediaId: thumbnail.id } : {}) }, status: "publishing", workerId: this.id, leaseUntil: this.clock() + 90000, attempts: polling ? current.attempts : current.attempts + 1, startedAt: current.startedAt || this.clock(), updatedAt: this.clock() });
         });
         if (!delivery) return;
         claimed = true;

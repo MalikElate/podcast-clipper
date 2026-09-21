@@ -257,6 +257,25 @@ test("YouTube upload session survives an uncertain response and polls status bef
   result = await provider.poll(ctx); assert.equal(result.status, "published"); assert.equal(result.externalId, "video1");
 });
 
+test("YouTube uploads a selected thumbnail once and checkpoints it before status polling", async () => {
+  const http = transport((url, options) => {
+    if (url.includes("thumbnails/set")) return { items: [{ videoId: "video1" }] };
+    return { items: [{ status: { uploadStatus: "processed", privacyStatus: "public" } }] };
+  });
+  const provider = new YouTubeProvider({ transport: http });
+  const ctx = context([video], { privacy: "public", madeForKids: false, thumbnailMediaId: image.id });
+  ctx.content.thumbnail = image;
+  ctx.progress = { phase: "video_processing", videoId: "video1" };
+
+  const published = await provider.poll(ctx);
+  assert.equal(published.status, "published");
+  assert.equal(ctx.progress.thumbnailSet, true);
+  assert.equal(http.calls.filter(call => call.url.includes("thumbnails/set")).length, 1);
+
+  await provider.poll(ctx);
+  assert.equal(http.calls.filter(call => call.url.includes("thumbnails/set")).length, 1);
+});
+
 test("YouTube confirms publication only when the processed video's visibility matches the selection", async () => {
   for (const privacy of ["public", "unlisted", "private"]) {
     for (const actual of ["public", "unlisted", "private", undefined]) {
