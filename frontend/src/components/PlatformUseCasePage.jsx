@@ -28,7 +28,7 @@ export default function PlatformUseCasePage({ platform, onGetStarted }) {
         </nav>
         <div className="landing-actions">
           <button className="btn-ghost" onClick={onGetStarted}>Sign in</button>
-          <button className="btn-small-primary" onClick={onGetStarted}>{platform.comingSoon ? "Explore Meadow" : "Start posting"} <ArrowIcon /></button>
+          <button className="btn-small-primary" onClick={onGetStarted}>{platform.chatOnly ? "Explore Meadow" : "Start posting"} <ArrowIcon /></button>
         </div>
       </header>
 
@@ -38,17 +38,17 @@ export default function PlatformUseCasePage({ platform, onGetStarted }) {
             <div className="platform-use-case-copy">
               <div className="platform-use-case-identity" style={{ "--platform-color": platform.color }}>
                 <span className="platform-use-case-icon" aria-hidden="true"><PlatformIcon platform={platform.id} size={30} /></span>
-                <span>{platform.name} publishing{platform.comingSoon ? " — Coming soon" : ""}</span>
+                <span>{platform.name} publishing</span>
               </div>
               <h1>{platform.headline}</h1>
               <p>{platform.intro}</p>
               <div className="platform-use-case-actions">
-                <button className="btn-primary landing-cta" onClick={onGetStarted}>{platform.comingSoon ? "Explore Meadow" : "Start posting"} <ArrowIcon /></button>
+                <button className="btn-primary landing-cta" onClick={onGetStarted}>{platform.chatOnly ? "Explore Meadow" : "Start posting"} <ArrowIcon /></button>
                 <a className="platform-use-case-secondary" href="/#platforms">Explore all platforms</a>
               </div>
             </div>
             <aside className="platform-use-case-panel" aria-label={`Publishing workflow for ${platform.name}`}>
-              <p className="platform-use-case-panel-label">{platform.comingSoon ? "Planned publishing workflow" : "One publishing workflow"}</p>
+              <p className="platform-use-case-panel-label">One publishing workflow</p>
               <ul>
                 <li><span aria-hidden="true">01</span><div><strong>Plan ahead</strong><small>Keep upcoming {platform.name} posts in view.</small></div></li>
                 <li><span aria-hidden="true">02</span><div><strong>Schedule publishing</strong><small>Coordinate timing with your other channels.</small></div></li>
@@ -69,7 +69,7 @@ export default function PlatformUseCasePage({ platform, onGetStarted }) {
               <article className="platform-use-case-card" key={useCase}>
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <h3>{useCase}</h3>
-                <p>{platform.comingSoon ? "Once available, plan" : "Plan"} this {platform.name} activity in Meadow, then keep its publishing timing connected to your wider social calendar.</p>
+                <p>Plan this {platform.name} activity in Meadow, then keep its publishing timing connected to your wider social calendar.</p>
               </article>
             ))}
           </div>
@@ -77,10 +77,10 @@ export default function PlatformUseCasePage({ platform, onGetStarted }) {
 
         <section className="landing-cta-section platform-use-case-cta">
           <div className="landing-cta-content">
-            <h2>{platform.comingSoon ? `${platform.name} chat publishing is on the way.` : `Ready to plan your ${platform.name} publishing?`}</h2>
-            <p>{platform.comingSoon ? "Explore Meadow’s available platforms while we finish activating this integration." : `Bring your ${platform.name} schedule into Meadow and manage publishing alongside your other social channels.`}</p>
+            <h2>{platform.chatOnly ? `${platform.name} chat, part of your publishing workflow.` : `Ready to plan your ${platform.name} publishing?`}</h2>
+            <p>{platform.chatOnly ? "Explore Meadow’s chat workflows and check connection availability in your workspace." : `Bring your ${platform.name} schedule into Meadow and manage publishing alongside your other social channels.`}</p>
             <div className="landing-cta-actions">
-              <button className="landing-cta-primary" onClick={onGetStarted}>{platform.comingSoon ? "Explore Meadow" : "Start posting"} <ArrowIcon /></button>
+              <button className="landing-cta-primary" onClick={onGetStarted}>{platform.chatOnly ? "Explore Meadow" : "Start posting"} <ArrowIcon /></button>
               <a className="landing-cta-secondary" href="/#platforms">See all platforms</a>
             </div>
           </div>

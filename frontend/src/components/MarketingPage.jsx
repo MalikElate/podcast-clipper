@@ -25,7 +25,7 @@ function CheckIcon() {
 
 function PlatformMark({ platform, variant = "default" }) {
   return (
-    <span className="landing-platform-mark" style={{ "--platform-color": platform.color }} role="img" aria-label={`${platform.name}${platform.comingSoon ? " — Coming soon" : ""}`} title={`${platform.name}${platform.comingSoon ? " — Coming soon" : ""}`}>
+    <span className="landing-platform-mark" style={{ "--platform-color": platform.color }} role="img" aria-label={platform.name} title={platform.name}>
       <PlatformIcon platform={platform.id} size={variant === "hero" ? 32 : 24} variant={variant} />
     </span>
   );
@@ -89,7 +89,7 @@ export default function MarketingPage({ page, onGetStarted }) {
       <main>
         <section className="landing-hero" id="top">
           <div className="hero-copy">
-            <div className="hero-platforms" aria-label="Social platforms, including upcoming integrations">
+            <div className="hero-platforms" aria-label="Social platforms">
               {PLATFORMS.map(platform => <PlatformMark platform={platform} variant="hero" key={platform.id} />)}
             </div>
             <h1 className="landing-title">{page.headline}</h1>
@@ -160,7 +160,7 @@ export default function MarketingPage({ page, onGetStarted }) {
             {PLATFORMS.map(platform => (
               <a href={`/${platform.slug}`} key={platform.id} style={{ "--platform-color": platform.color }}>
                 <PlatformMark platform={platform} />
-                <span>{platform.name}{platform.comingSoon && <small className="platform-availability">Coming soon</small>}</span>
+                <span>{platform.name}</span>
               </a>
             ))}
           </div>

@@ -7,8 +7,7 @@ export default function ClippingStudioComingSoon() {
       <span className="bridge-coming-soon-ring ring-two"/>
       <span className="bridge-coming-soon-icon"><Icon name="clips" size={38}/></span>
     </div>
-    <span className="bridge-coming-soon-label">Coming soon</span>
-    <h2>Clipping studio is on the way</h2>
-    <p>We’re preparing a focused workspace for turning long videos into polished, social-ready clips.</p>
+    <h2>Clipping studio</h2>
+    <p>Clipping tools are not available in this workspace.</p>
   </section>;
 }

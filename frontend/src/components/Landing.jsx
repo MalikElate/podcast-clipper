@@ -9,8 +9,8 @@ import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
 
 const PLATFORMS = [
-  ...sortPlatforms(PLATFORM_USE_CASES.filter(platform => !platform.comingSoon)),
-  ...sortPlatforms(PLATFORM_USE_CASES.filter(platform => platform.comingSoon)),
+  ...sortPlatforms(PLATFORM_USE_CASES.filter(platform => !platform.chatOnly)),
+  ...sortPlatforms(PLATFORM_USE_CASES.filter(platform => platform.chatOnly)),
 ];
 
 const PLATFORM_ORBIT_MOTION = [
@@ -110,9 +110,9 @@ function HeroPlatformRail() {
   return (
     <div className="hero-platform-rail" aria-label="Social publishing destinations">
       {PLATFORMS.map((platform) => (
-        <span className="hero-platform-item" key={platform.id} title={`${platform.name}${platform.comingSoon ? " — Coming soon" : ""}`} style={{ "--platform-color": platform.color }}>
+        <span className="hero-platform-item" key={platform.id} title={platform.name} style={{ "--platform-color": platform.color }}>
           <PlatformIcon platform={platform.id} size={24} variant="hero" />
-          <span className="sr-only">{platform.name}{platform.comingSoon ? " — Coming soon" : ""}</span>
+          <span className="sr-only">{platform.name}</span>
         </span>
       ))}
     </div>
@@ -209,9 +209,8 @@ export default function Landing({ onGetStarted }) {
             </div>
             <div className="platform-orbit" aria-label="Social publishing platforms">
               {PLATFORMS.map((platform, index) => (
-                <a className={`orbit-platform-logo orbit-card-${index + 1}`} data-platform={platform.id} data-motion-x={PLATFORM_ORBIT_MOTION[index][0]} data-motion-y={PLATFORM_ORBIT_MOTION[index][1]} key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing${platform.comingSoon ? " — Coming soon" : ""}`} title={`${platform.name}${platform.comingSoon ? " — Coming soon" : ""}`} style={{ "--platform-color": platform.color, "--logo-tilt": PLATFORM_ORBIT_MOTION[index][2] }}>
+                <a className={`orbit-platform-logo orbit-card-${index + 1}`} data-platform={platform.id} data-motion-x={PLATFORM_ORBIT_MOTION[index][0]} data-motion-y={PLATFORM_ORBIT_MOTION[index][1]} key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing`} title={platform.name} style={{ "--platform-color": platform.color, "--logo-tilt": PLATFORM_ORBIT_MOTION[index][2] }}>
                   <span className="orbit-platform-logo-inner"><PlatformIcon platform={platform.id} size={96} variant={platform.id === "google_business" ? "hero" : "default"} /></span>
-                  {platform.comingSoon && <small className="orbit-platform-status">Coming soon</small>}
                 </a>
               ))}
             </div>
@@ -270,7 +269,7 @@ export default function Landing({ onGetStarted }) {
           <div className="faq-heading"><h2>Questions, answered.</h2></div>
           <div className="faq-grid">
             <article className="faq-card"><h3>How can I use Meadow?</h3><p>Create directly in the Meadow workspace, connect a supported AI agent through MCP, or build an automated workflow with the API. All three paths use the same connected accounts and publishing structure.</p></article>
-            <article className="faq-card"><h3>Which social platforms can I connect?</h3><p>Meadow supports workflows across all eleven platforms: Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, Telegram, and Google Business. Connect Telegram channels and groups through the Meadow bot. Twitch and Kick chat publishing are coming soon. Connection availability can vary by platform status.</p></article>
+            <article className="faq-card"><h3>Which social platforms can I connect?</h3><p>Meadow supports workflows across all eleven platforms: Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, Telegram, and Google Business, plus chat integrations for Twitch and Kick. Connect Telegram channels and groups through the Meadow bot. Connection availability can vary by platform status.</p></article>
             <article className="faq-card"><h3>Can I save work before it is published?</h3><p>Yes. You can keep content as a draft, review the destination details, and publish only when it is ready.</p></article>
             <article className="faq-card"><h3>Can I schedule posts?</h3><p>Yes. Choose a future date and time for supported destinations, then follow scheduled and published delivery from Meadow.</p></article>
             <article className="faq-card"><h3>What content formats can I prepare?</h3><p>Prepare text, images, video, carousels, stories, reels, and documents where the selected destination supports that format.</p></article>

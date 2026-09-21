@@ -25,7 +25,7 @@ test("cross-platform pages have search metadata and answered questions", () => {
 });
 
 test("Telegram is included in the public platform catalog and both marketing pages", () => {
-  assert.equal(PLATFORM_USE_CASES.filter(platform => !platform.comingSoon).length, 11);
+  assert.equal(PLATFORM_USE_CASES.filter(platform => !platform.chatOnly).length, 11);
   const telegram = getPlatformUseCaseBySlug("telegram-publishing");
   assert.equal(telegram.id, "telegram");
   assert.match(telegram.intro, /channels and groups/);
@@ -39,14 +39,15 @@ test("Telegram is included in the public platform catalog and both marketing pag
   }
 });
 
-test("Twitch and Kick are listed as upcoming chat integrations, not available video destinations", () => {
-  assert.deepEqual(PLATFORM_USE_CASES.filter(platform => platform.comingSoon).map(platform => platform.id), ["twitch", "kick"]);
+test("Twitch and Kick describe chat capabilities without launch labels", () => {
+  assert.deepEqual(PLATFORM_USE_CASES.filter(platform => platform.chatOnly).map(platform => platform.id), ["twitch", "kick"]);
   for (const id of ["twitch", "kick"]) {
     const platform = getPlatformUseCaseBySlug(`${id}-publishing`);
-    assert.match(platform.title, /Coming Soon/);
-    assert.match(platform.headline, /chat publishing is coming soon/);
+    assert.match(platform.title, /Chat Publishing & Scheduling/);
+    assert.doesNotMatch(JSON.stringify(platform), /coming[ -]soon/i);
+    assert.match(platform.headline, /chat publishing, organized in one place/);
     assert.match(platform.sectionBody, /not video uploads or live broadcasting/);
     assert.match(platform.sectionBody, /analytics are not available/);
   }
-  for (const page of GENERAL_PAGES) assert.ok(page.faqs.some(faq => faq.q.includes("Twitch and Kick") && faq.a.includes("coming soon")));
+  for (const page of GENERAL_PAGES) assert.ok(page.faqs.some(faq => faq.q.includes("Twitch and Kick") && faq.a.includes("Connection availability depends on platform configuration")));
 });

@@ -40,7 +40,7 @@ function WaysLinks() {
 function PlatformLinks() {
   return <>
     {FEATURED_PLATFORMS.map((platform) => <a href={href(`/${platform.slug}`)} key={platform.id}>{platform.name}</a>)}
-    {PLATFORM_USE_CASES.filter(platform => platform.comingSoon).map(platform => <a href={href(`/${platform.slug}`)} key={platform.id}>{platform.name} — coming soon</a>)}
+    {PLATFORM_USE_CASES.filter(platform => platform.chatOnly).map(platform => <a href={href(`/${platform.slug}`)} key={platform.id}>{platform.name}</a>)}
     <a href={href("/#platforms")}>View all platforms</a>
   </>;
 }
@@ -65,7 +65,7 @@ export default function SiteFooter({ onGetStarted }) {
           <p>Publish everywhere</p>
           <div className="footer-network-icons" aria-label="Featured social platforms">
             {PLATFORMS.map((platform) => (
-              <span key={platform.id} title={`${platform.name}${platform.comingSoon ? " — Coming soon" : ""}`}><PlatformIcon platform={platform.id} size={23} /><span className="sr-only">{platform.name}{platform.comingSoon ? " — Coming soon" : ""}</span></span>
+              <span key={platform.id} title={platform.name}><PlatformIcon platform={platform.id} size={23} /><span className="sr-only">{platform.name}</span></span>
             ))}
           </div>
         </div>

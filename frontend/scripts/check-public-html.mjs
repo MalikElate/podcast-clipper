@@ -18,7 +18,7 @@ for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
 const landingHtml = await readFile("dist/index.html", "utf8");
 assert.ok(landingHtml.includes('aria-label="Learn about Telegram publishing"'), "Homepage must include Telegram in its platform grid");
 assert.ok(landingHtml.includes("all eleven platforms"), "Homepage must show the current platform count");
-assert.ok(!landingHtml.includes("Telegram and Snapchat are coming soon"));
+assert.doesNotMatch(landingHtml, /coming[ -]soon/i);
 assert.ok(!landingHtml.includes('class="upcoming-platforms"'), "Upcoming logos belong in the existing platform sections");
 for (const id of ["twitch", "kick"]) assert.ok(landingHtml.includes(`data-platform="${id}"`), `${id} must appear in the homepage logo showcase`);
 for (const platform of PLATFORM_USE_CASES) {
@@ -27,9 +27,9 @@ for (const platform of PLATFORM_USE_CASES) {
   assert.ok(html.includes(`content="${platform.description}"`), `${platform.slug} must have a platform-specific description`);
   assert.ok(html.includes(platform.headline), `${platform.slug} must render its own heading without JavaScript`);
   assert.ok(landingHtml.includes(`href="/${platform.slug}"`), `${platform.slug} must be linked from the homepage`);
-  if (platform.comingSoon) {
-    assert.ok(html.includes("Coming soon"), `${platform.slug} must disclose its upcoming status`);
-    assert.ok(html.includes("Production activation is still pending"));
+  if (platform.chatOnly) {
+    assert.doesNotMatch(html, /coming[ -]soon/i);
+    assert.ok(html.includes("depend on platform configuration"));
     assert.ok(!html.includes(">Start posting "), `${platform.slug} must not offer immediate publishing`);
   }
 }
@@ -45,6 +45,6 @@ for (const page of GENERAL_PAGES) {
   assert.ok(html.includes("Can I publish to Telegram channels and groups?"), `${page.path} must explain Telegram setup`);
   for (const id of ["twitch", "kick"]) assert.ok(html.includes(`href="/${id}-publishing"`), `${page.path} must link to ${id}`);
   assert.ok(!html.includes('class="upcoming-platforms"'));
-  for (const name of ["Twitch", "Kick"]) assert.ok(html.includes(`aria-label="${name} — Coming soon"`), `${page.path} must include ${name} in its logo sections`);
+  for (const name of ["Twitch", "Kick"]) assert.ok(html.includes(`aria-label="${name}"`), `${page.path} must include ${name} in its logo sections`);
 }
 console.log("All public pages and dashboard routes have deployable HTML entry points.");
