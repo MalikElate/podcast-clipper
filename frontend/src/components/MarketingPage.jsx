@@ -12,7 +12,7 @@ const PREVIEW = [
   { platform: "youtube", title: "Behind the scenes, episode 12", when: "Tomorrow, 9:00 AM", status: "Scheduled" },
   { platform: "tiktok", title: "3 editing tips in 30 seconds", when: "Friday, 2:00 PM", status: "Scheduled" },
   { platform: "linkedin", title: "What we learned shipping v2", when: "2 hours ago", status: "Published" },
-  { platform: "pinterest", title: "Studio setup checklist", when: "Yesterday", status: "Published" },
+  { platform: "telegram", title: "Community news and launch updates", when: "Yesterday", status: "Published" },
 ];
 
 function ArrowIcon() {

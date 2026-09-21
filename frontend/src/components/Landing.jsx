@@ -210,7 +210,7 @@ export default function Landing({ onGetStarted }) {
             <div className="section-heading platform-heading">
               <span className="section-eyebrow">Supported platforms</span>
               <h2>Every network your agent needs. One publishing API.</h2>
-              <p>Connect the accounts you already use once. Your agent gets one consistent workflow for publishing across all ten destinations.</p>
+              <p>Connect the accounts you already use once, including Telegram channels and groups. Your agent gets one consistent workflow for publishing across all eleven platforms.</p>
             </div>
             <div className="platform-grid" aria-label="Supported publishing platforms">
               {PLATFORMS.map((platform) => (
@@ -226,7 +226,7 @@ export default function Landing({ onGetStarted }) {
           <div className="how-heading">
             <span className="section-eyebrow">How it works</span>
             <h2 id="how-title">From agent prompt to published campaign.</h2>
-            <p>Meadow gives your AI agent a safe, structured last mile for social publishing—without making it learn ten different platform APIs.</p>
+            <p>Meadow gives your AI agent a safe, structured last mile for social publishing—without making it learn eleven different platform APIs.</p>
           </div>
           <div className="how-grid">
             {HOW_STEPS.map((step) => (
@@ -285,7 +285,7 @@ export default function Landing({ onGetStarted }) {
             </article>
             <article className="faq-card">
               <h3>Which social platforms can my agent reach?</h3>
-              <p>Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, and Google Business—all through one Meadow workflow. Telegram and Snapchat are coming soon.</p>
+              <p>Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, Telegram, and Google Business—all through one Meadow workflow. Connect Telegram channels and groups through the Meadow bot. Snapchat is coming soon.</p>
             </article>
             <article className="faq-card">
               <h3>Does Meadow validate posts before publishing?</h3>

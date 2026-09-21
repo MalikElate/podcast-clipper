@@ -7,7 +7,7 @@ import { GENERAL_PAGES } from "../src/marketing/generalPages.js";
 // Build public HTML once; no auth, API calls, or container startup at request time.
 const server = await createServer({ server: { middlewareMode: true }, appType: "custom" });
 const pages = [
-  { path: "", kind: null, title: "Meadow — Publish content from your agents", description: "Give your agents one secure Meadow API key to preview, schedule, publish, and track posts across Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, and Google Business." },
+  { path: "", kind: null, title: "Meadow — Publish content from your agents", description: "Give your agents one secure Meadow API key to preview, schedule, publish, and track delivery across Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, Telegram, and Google Business." },
   { path: "404", kind: "not-found", title: "Page not found · Meadow", description: "The page could not be found. Head back to Meadow to keep your publishing work in one place." },
   { path: "pricing", kind: "pricing", title: "Pricing · Meadow", description: "Compare Meadow plans for creating, scheduling, and publishing across your social channels." },
   { path: "terms", kind: "terms", title: "Terms of Service · Meadow", description: "Read the terms for using Meadow's social publishing and scheduling service." },

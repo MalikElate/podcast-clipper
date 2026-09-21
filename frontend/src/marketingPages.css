@@ -1,6 +1,6 @@
 /* Cross-platform marketing pages (social media scheduler, cross posting). */
 .mkt-page a.btn-primary, .mkt-page a.btn-ghost, .mkt-page a.btn-small-primary, .mkt-page a.pricing-button { text-decoration: none; }
-.mkt-page .hero-platforms { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 12px; margin-bottom: 32px; }
+.mkt-page .hero-platforms { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; margin-bottom: 32px; }
 .mkt-page .hero-platforms .landing-platform-mark { width: 32px; height: 32px; }
 .mkt-page .mkt-hero-actions { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px; }
 .landing .mkt-hero-actions .landing-cta { width: auto; }

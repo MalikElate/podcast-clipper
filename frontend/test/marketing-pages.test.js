@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { GENERAL_PAGES, findMarketingPage } from "../src/marketing/generalPages.js";
-import { PLATFORM_USE_CASES } from "../src/platformUseCases.js";
+import { PLATFORM_USE_CASES, getPlatformUseCaseBySlug } from "../src/platformUseCases.js";
 import { isDashboardPath } from "../src/bridge/dashboardRoutes.js";
 
 test("cross-platform pages have unique paths that do not collide with other routes", () => {
@@ -21,5 +21,20 @@ test("cross-platform pages have search metadata and answered questions", () => {
     assert.ok(page.description.length >= 80 && page.description.length <= 200, `${page.path} description length`);
     assert.ok(page.faqs.length >= 5);
     assert.equal(new Set(page.faqs.map(item => item.q)).size, page.faqs.length, `${page.path} has duplicate questions`);
+  }
+});
+
+test("Telegram is included in the public platform catalog and both marketing pages", () => {
+  assert.equal(PLATFORM_USE_CASES.length, 11);
+  const telegram = getPlatformUseCaseBySlug("telegram-publishing");
+  assert.equal(telegram.id, "telegram");
+  assert.match(telegram.intro, /channels and groups/);
+  assert.match(telegram.sectionBody, /administrator with permission to post/);
+  assert.match(telegram.sectionBody, /metrics are not available/);
+  for (const page of GENERAL_PAGES) {
+    assert.match(page.title, /11/);
+    assert.match(page.description, /Telegram/);
+    assert.ok(page.faqs.some(faq => /Telegram channels and groups/.test(faq.q)));
+    assert.doesNotMatch(JSON.stringify(page), /\bten\b|\b10 (?:Social )?Platforms/);
   }
 });

@@ -2,7 +2,8 @@
 // Keep claims to what Meadow ships.
 
 const SHARED_FAQS = [
-  { q: "Do I need to share my social media passwords with Meadow?", a: "No. You connect each account through the platform’s own sign-in and authorization page. Meadow never asks for your password, and you can disconnect an account at any time from Connections." },
+  { q: "Do I need to share my social media passwords with Meadow?", a: "No. You connect accounts through the platform’s own sign-in and authorization page, or through the Meadow bot for Telegram. Meadow never asks for your password, and you can disconnect an account at any time from Connections." },
+  { q: "Can I publish to Telegram channels and groups?", a: "Yes. Connect through the Meadow bot, then add it to your group or make it a channel administrator with permission to post messages. Publish or schedule text, photos, videos, albums, and documents alongside your other social posts. Meadow tracks delivery status; Telegram post-performance metrics are not available through the Bot API." },
   { q: "Can I connect more than one account on the same platform?", a: "Yes. Every plan supports multiple accounts per platform. Free includes 5 connected social accounts, Starter includes 10, Creator includes 25, and Pro includes unlimited accounts. Those accounts can all be on one platform or spread across several." },
   { q: "How many posts can I publish?", a: "Posts are unlimited on every paid plan. Platforms still apply their own daily limits, and Meadow checks those allowances again before each delivery." },
   { q: "Can I cancel anytime?", a: "Yes. You can manage or cancel your subscription from Meadow’s Billing page, and the cancellation date is shown in the billing portal." },
@@ -12,12 +13,12 @@ const SHARED_FAQS = [
 export const GENERAL_PAGES = [
   {
     path: "/social-media-scheduler", kind: "scheduler", footerLabel: "Social media scheduler",
-    title: "Social Media Scheduler for 10 Platforms · Meadow",
-    description: "Meadow is a social media scheduler for X, Instagram, LinkedIn, Facebook, TikTok, YouTube, Bluesky, Threads, Pinterest, and Google Business. Unlimited posts on every plan.",
-    headline: "A social media scheduler for all ten of your platforms.",
+    title: "Social Media Scheduler for 11 Platforms · Meadow",
+    description: "Schedule posts to X, Instagram, LinkedIn, Facebook, TikTok, YouTube, Bluesky, Threads, Pinterest, Telegram, and Google Business from one Meadow workspace.",
+    headline: "A social media scheduler for all eleven of your platforms.",
     subtitle: "Write a post once and schedule it to every account you run. Unlimited posts on every plan, multiple accounts per platform, and API access so your tools and AI agents can post too.",
     steps: [
-      { title: "Connect your accounts", text: "Sign in to each platform through its own authorization page. Connect more than one account per platform whenever you need to." },
+      { title: "Connect your accounts", text: "Use each platform’s authorization page, or add the Meadow bot to your Telegram channel or group. Connect more than one account per platform whenever you need to." },
       { title: "Write the post once", text: "Add your media and caption, then adjust the caption, title, format, and settings for any destination that needs its own version." },
       { title: "Publish now or schedule", text: "Choose a date and time in your workspace’s time zone. Meadow publishes each destination and tracks its delivery." },
     ],
@@ -32,7 +33,7 @@ export const GENERAL_PAGES = [
       { title: "Performance in one place", text: "View available metrics for posts published through Meadow across the platforms that provide them." },
     ],
     faqs: [
-      { q: "What is a social media scheduler?", a: "A social media scheduler lets you write posts once and publish them later across several platforms and accounts, instead of opening every app and posting by hand. Meadow schedules to ten platforms from one workspace." },
+      { q: "What is a social media scheduler?", a: "A social media scheduler lets you write posts once and publish them later across several platforms and accounts, instead of opening every app and posting by hand. Meadow schedules to eleven platforms, including Telegram, from one workspace." },
       { q: "Can I schedule video, carousels, and stories?", a: "Yes, wherever the destination supports them. Meadow publishes text, images, video, carousels, stories, reels, and documents, and checks each format against the platform before scheduling." },
       { q: "What happens if a post fails on one platform?", a: "Each destination is delivered independently. A failure on one platform is shown with its reason and does not stop the others from publishing." },
       { q: "Can an AI agent schedule posts for me?", a: "Yes. Create a private API key in Meadow and your scripts, server automations, or AI agent can create and schedule posts through the Meadow API." },
@@ -41,10 +42,10 @@ export const GENERAL_PAGES = [
   },
   {
     path: "/cross-posting", kind: "cross-posting", footerLabel: "Cross posting",
-    title: "Cross Posting to 10 Social Platforms · Meadow",
-    description: "Cross post to X, Instagram, LinkedIn, Facebook, TikTok, YouTube, Bluesky, Threads, Pinterest, and Google Business with Meadow, with a tailored version for every platform.",
+    title: "Cross Posting to 11 Social Platforms · Meadow",
+    description: "Cross post to X, Instagram, LinkedIn, Facebook, TikTok, YouTube, Bluesky, Threads, Pinterest, Telegram, and Google Business with Meadow, with a tailored version for every platform.",
     headline: "Cross post everywhere without sounding copy-pasted.",
-    subtitle: "Upload once and publish to ten platforms together, with a caption, format, and settings that fit each one.",
+    subtitle: "Upload once and publish to eleven platforms together, including Telegram channels and groups, with a caption, format, and settings that fit each one.",
     problem: {
       heading: "Cross posting done badly is obvious",
       text: "Hashtag walls on LinkedIn. A caption cut off at 280 characters on X. A post that silently never went out on one network. Meadow is built so the same idea looks native everywhere it lands.",
@@ -56,7 +57,7 @@ export const GENERAL_PAGES = [
       { title: "Results for each platform", text: "Every destination publishes on its own and reports its own status. One failure never holds back the rest of your post." },
     ],
     platformHeading: "Choose where your post goes",
-    platformText: "Pick any mix of connected accounts across ten platforms for each post.",
+    platformText: "Pick any mix of connected accounts across eleven platforms for each post, including your Telegram channels and groups.",
     faqs: [
       { q: "What is cross posting?", a: "Cross posting means sharing the same content on several social platforms. Meadow lets you publish once to all of them while giving each platform its own version." },
       { q: "Will cross posting hurt my reach?", a: "Meadow publishes through each platform’s official API, the same way the platform’s approved partners do. Tailoring the caption and format for each network helps your post feel native wherever it appears." },

@@ -16,6 +16,9 @@ for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
   assert.match(html, /<title>Dashboard · Meadow<\/title>/);
 }
 const landingHtml = await readFile("dist/index.html", "utf8");
+assert.ok(landingHtml.includes('aria-label="Learn about Telegram publishing"'), "Homepage must include Telegram in its platform grid");
+assert.ok(landingHtml.includes("all eleven platforms"), "Homepage must show the current platform count");
+assert.ok(!landingHtml.includes("Telegram and Snapchat are coming soon"));
 for (const platform of PLATFORM_USE_CASES) {
   const html = await readFile(`dist/${platform.slug}/index.html`, "utf8");
   assert.ok(html.includes(`<title>${platform.title}</title>`), `${platform.slug} must have a platform-specific title`);
@@ -31,5 +34,7 @@ for (const page of GENERAL_PAGES) {
   assert.ok(html.includes("application/ld+json"), `${page.path} must include FAQ structured data`);
   assert.ok(!html.includes("BridgeApp-"), "Public HTML must not preload the authenticated workspace");
   assert.ok(landingHtml.includes(`href="${page.path}"`), `${page.path} must be linked from the homepage`);
+  assert.ok(html.includes('href="/telegram-publishing"'), `${page.path} must link to Telegram publishing`);
+  assert.ok(html.includes("Can I publish to Telegram channels and groups?"), `${page.path} must explain Telegram setup`);
 }
 console.log("All public pages and dashboard routes have deployable HTML entry points.");
