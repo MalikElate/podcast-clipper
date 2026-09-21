@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { tiktokAccountAnalytics, pinterestAccountAnalytics, xAccountAnalytics } from "../src/bridge/platforms/accountAnalytics.js";
 import { HttpTransport } from "../src/bridge/platforms/HttpTransport.js";
 import { AccountViewsService } from "../src/bridge/services/AccountViewsService.js";
+import { XProvider } from "../src/bridge/platforms/XProvider.js";
 const now = Date.parse('2026-09-21T12:00:00Z');
 const clock = () => now;
 const created = date => Date.parse(date) / 1000;
@@ -67,4 +68,14 @@ test('selected account analytics are scoped, cached, and separate from strict 18
   assert.equal(report.accounts[0].availableViews.value, 20);
   await service.report('owner', 'p', { accountIds: ['brand'] }); assert.equal(calls, 1);
   await assert.rejects(service.report('owner', 'p', { accountIds: ['foreign'] }));
+});
+
+test('X errors inside successful responses remain explicit and never leak request details', async () => {
+  for (const [type, code] of [['resource-not-found', 'x_resource_missing'], ['client-forbidden', 'x_app_access_required'], ['usage-capped', 'x_credits_required'], ['not-authorized-for-resource', 'provider_permissions'], ['unknown', 'x_response_incomplete']]) {
+    const error = { type: 'https://api.x.com/2/problems/' + type, detail: 'private-token' };
+    const provider = new XProvider({ env: {}, http: { request: async () => ({ errors: [error] }) }, clock });
+    await assert.rejects(provider.metrics({ credentials: {}, delivery: { externalId: 'one' } }), e => e.code === code && !JSON.stringify(e).includes('private-token'));
+    const http = new HttpTransport({ fetcher: async () => new Response(JSON.stringify(error), { status: 403 }) });
+    await assert.rejects(http.request('https://api.x.com/2/users/owner/tweets'), e => e.code === code && !JSON.stringify(e).includes('private-token'));
+  }
 });
