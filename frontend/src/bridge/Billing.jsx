@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { Icon } from "./Icons.jsx";
 import { Alert } from "./ui.jsx";
 import { api } from "./BridgeApi.js";
-import { PAID_PLANS as PLANS } from "../pricing.js";
-import { SUBSCRIPTION_STATUSES, checkoutNotice, billingWarning } from "./billingState.js";
+import { PLANS, planBillingNote } from "../pricing.js";
+import { SUBSCRIPTION_STATUSES, checkoutNotice, billingWarning, billingPlanAction } from "./billingState.js";
 
 export default function Billing({ localPreview, returnSearch = "" }) {
   const [returnParams] = useState(() => new URLSearchParams(returnSearch));
@@ -48,9 +48,11 @@ export default function Billing({ localPreview, returnSearch = "" }) {
   const active = SUBSCRIPTION_STATUSES.has(billing?.status);
 
   async function goToBilling(planId) {
+    const { action } = billingPlanAction(planId, billing);
+    if (action === "none") return;
     setError(""); setNotice(""); setBusy(planId);
     try {
-      const { url } = active ? await api.createBillingPortal() : await api.createCheckout(planId, yearly ? "yearly" : "monthly");
+      const { url } = action === "portal" ? await api.createBillingPortal() : await api.createCheckout(planId, yearly ? "yearly" : "monthly");
       window.location.assign(url);
     } catch (actionError) {
       if (actionError.code === "subscription_exists") { await manageBilling(); return; }
@@ -72,7 +74,20 @@ export default function Billing({ localPreview, returnSearch = "" }) {
     {billing && !billing.configured && !localPreview && <Alert message="Checkout is temporarily unavailable. Please try again later or contact hello@findmeadow.com."/>}
     {active && <div className="bridge-panel bridge-billing-summary"><div><span>Current plan</span><strong>{PLANS.find(plan => plan.id === billing.planId)?.name || (billing.planId === "growth" ? "Growth" : "Paid plan")}</strong></div><div><span>Status</span><strong>{billing.status.replaceAll("_", " ")}</strong></div><div><span>Billing</span><strong>{billing.cycle || "—"}</strong></div>{billing.currentPeriodEnd && <div><span>{billing.cancelAtPeriodEnd ? "Ends" : "Renews"}</span><strong>{new Date(billing.currentPeriodEnd).toLocaleDateString()}</strong></div>}</div>}
     <div className="bridge-billing-cycle" role="group" aria-label="Billing frequency"><button className={!yearly ? "active" : ""} onClick={() => setYearly(false)}>Monthly</button><button className={yearly ? "active" : ""} onClick={() => setYearly(true)}>Yearly <span>Save up to 17%</span></button></div>
-    <div className="bridge-plan-grid">{PLANS.map(plan => <article className={`bridge-panel bridge-plan-card ${billing?.planId === plan.id && active ? "current" : ""}`} key={plan.name}>{billing?.planId === plan.id && active && <span className="bridge-current-plan">Current plan</span>}<div className="bridge-plan-heading"><h2>{plan.name}</h2>{plan.popular && <span>Most popular</span>}{plan.best && <span>Best value</span>}</div><p>{plan.description}</p><div className="bridge-plan-price"><strong>${yearly ? plan.yearly : plan.monthly}</strong><span>/month</span></div><small>{yearly ? `Billed $${plan.yearly * 12} yearly` : "Billed monthly"}</small><ul><li className="strong"><Icon name="check" size={17}/>{plan.accounts}</li>{plan.features.map(feature => <li key={feature}><Icon name="check" size={17}/>{feature}</li>)}</ul><button className={`bridge-button ${billing?.planId === plan.id && active ? "secondary" : ""}`} disabled={localPreview || Boolean(busy) || checking || !billing || (!active && !billing.configured)} onClick={() => goToBilling(plan.id)}>{busy === plan.id ? "Opening…" : active ? billing?.planId === plan.id ? "Manage current plan" : `Switch to ${plan.name}` : `Choose ${plan.name}`} {busy !== plan.id && <Icon name="arrow" size={16}/>}</button></article>)}</div>
+    <div className="bridge-plan-grid">{PLANS.map(plan => {
+      const { current, action, label } = billingPlanAction(plan.id, billing);
+      return <article className={`bridge-panel bridge-plan-card ${current ? "current" : ""}`} key={plan.id}>
+        {current && <span className="bridge-current-plan">Current plan</span>}
+        <div className="bridge-plan-heading"><h2>{plan.name}</h2>{plan.popular && <span>Most popular</span>}{plan.best && <span>Best value</span>}</div>
+        <p>{plan.description}</p>
+        <div className="bridge-plan-price"><strong>${yearly ? plan.yearly : plan.monthly}</strong><span>/month</span></div>
+        <small>{planBillingNote(plan, yearly)}</small>
+        <ul><li className="strong"><Icon name="check" size={17}/>{plan.accounts}</li>{plan.features.map(feature => <li key={feature}><Icon name="check" size={17}/>{feature}</li>)}</ul>
+        <button className={`bridge-button ${current || plan.id === "free" ? "secondary" : ""}`} disabled={localPreview || Boolean(busy) || checking || !billing || action === "none" || (!active && !billing.configured)} onClick={() => goToBilling(plan.id)}>
+          {busy === plan.id ? "Opening…" : label}{busy !== plan.id && action !== "none" && <Icon name="arrow" size={16}/>}
+        </button>
+      </article>;
+    })}</div>
     <p className="bridge-billing-footnote"><Icon name="check" size={15}/> Secure subscription checkout and billing management are provided by Stripe.</p>
   </>;
 }
