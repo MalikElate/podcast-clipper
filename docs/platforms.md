@@ -15,6 +15,7 @@ The following is the implemented Meadow capability set. Defaults live in `backen
 | `pinterest` | Account with selected board | Image Pin, video Pin, multi-image Pin where API/account permits |
 | `threads` | Authorized Threads profile | Text, image, video, mixed carousel |
 | `bluesky` | Authorized AT Protocol identity | Text, images, video, multi-image post |
+| `telegram` | Channel or group where Meadow Publisher is a member | Text, image, video, photo/video album, document |
 | `google_business` | Managed business location | Standard local post with text and optional photos |
 
 API-native event/offer posts, polls, paid-ad flows, livestreaming, platform music catalogs, link-preview/card customization, article publishing, and interactive story elements are not part of this first implementation. Multi-image posts use the platform's supported API representation; not every platform exposes a native carousel product to every account. Provider errors remain visible per destination without re-posting successful destinations.
@@ -38,6 +39,12 @@ https://your-meadow-domain.example/oauth/bluesky/callback
 https://your-meadow-domain.example/oauth/google_business/callback
 ```
 
+Telegram uses a bot deep link instead of OAuth. Register its webhook at:
+
+```text
+https://your-meadow-domain.example/api/telegram/webhook
+```
+
 | Provider | Environment credentials | Requested scopes/configuration |
 | --- | --- | --- |
 | Instagram | `INSTAGRAM_CLIENT_ID`, `INSTAGRAM_CLIENT_SECRET` | `instagram_business_basic`, `instagram_business_content_publish`, `instagram_business_manage_insights` |
@@ -49,6 +56,7 @@ https://your-meadow-domain.example/oauth/google_business/callback
 | LinkedIn | `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` | Defaults: `openid profile w_member_social`; restricted read/organization scopes require separate access |
 | Pinterest | `PINTEREST_CLIENT_ID`, `PINTEREST_CLIENT_SECRET` | `user_accounts:read`, `boards:read`, `pins:read`, `pins:write` |
 | Bluesky | `BLUESKY_PRIVATE_KEY` and HTTPS origin | Official OAuth client, DPoP, ES256 private-key authentication, `atproto transition:generic` |
+| Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET` | Bot added to a group, or channel administrator with permission to post messages; webhook secret header verification |
 | Google Business | `GOOGLE_BUSINESS_CLIENT_ID` / `GOOGLE_BUSINESS_CLIENT_SECRET`, shared `GOOGLE_*`, or the existing `YOUTUBE_*` Google OAuth client | `https://www.googleapis.com/auth/business.manage`; relevant Business Profile APIs enabled and approved |
 
 `BRIDGE_ENCRYPTION_KEY` is required for connections. Tokens and OAuth sessions are encrypted at rest. OAuth state expires, is consumed once, and remains bound to the authenticated initiating user and project. After authorization, the user selects which returned accounts to attach to that project.
@@ -64,6 +72,8 @@ Pinterest requires an approved business-account developer app. Set `PINTEREST_EN
 For LinkedIn organizations, add the approved `rw_organization_admin`, `w_organization_social`, and required read scopes to `LINKEDIN_SCOPES`; the adapter then enumerates eligible organizations. Member read analytics require restricted access and are not granted merely by Share on LinkedIn. The current request header defaults to `LinkedIn-Version: 202607`; keep it on a supported version as the platform retires versions. [LinkedIn Posts API](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api?view=li-lms-2026-07)
 
 For Bluesky, supply a PKCS#8 ES256 private PEM as a backend secret. The official client publishes its public metadata and JWKS at `/oauth/bluesky/client-metadata.json` and `/oauth/bluesky/jwks.json`. These addresses must be publicly readable over HTTPS. The database stores the client's state/session data encrypted; the browser never receives the private key. [Official AT Protocol OAuth client](https://github.com/bluesky-social/atproto/tree/main/packages/oauth/oauth-client-node)
+
+For Telegram, create the bot through BotFather and keep its token in the backend secret store. The public username is ordinary configuration; the webhook secret must be a separate random value of at least 16 characters. Meadow registers `allowed_updates` for messages and bot membership changes. A user starts the bot privately, then adds it to a group or to a channel as an administrator with post permission. Removing the bot causes Meadow to queue deletion of that destination connection. Telegram does not expose channel or group post-performance metrics through the Bot API. [Telegram Bot API](https://core.telegram.org/bots/api), [Telegram bot deep links](https://core.telegram.org/api/links)
 
 ## Publication constraints and quotas
 
@@ -90,6 +100,7 @@ X media follows initialize, append, finalize and status checks before post creat
 | Pinterest | Pin impressions, engagements, saves, outbound clicks and available video views |
 | Threads | Views, likes, replies, reposts/quotes and shares where returned |
 | Bluesky | Likes, replies and reposts + quotes; no fabricated view count |
+| Telegram | Unavailable; the Bot API does not expose channel or group post-performance metrics |
 | Google Business | Individual local post metrics unavailable; Google retired the post insights endpoint |
 
 Metrics are normalized into views, impressions, likes, comments, shares, saves and clicks. Engagement is the sum of available likes, comments, shares and saves. Components differ by provider, so comparisons are directional activity comparisons rather than identical measurements or deduplicated audience reach. Pinterest engagements are not relabeled as likes. Missing values are `null`, not zero. A provider failure preserves the last successful reading and displays its age/error.

@@ -13,6 +13,7 @@ test("the public privacy page covers every supported social platform", () => {
     "pinterest",
     "threads",
     "bluesky",
+    "telegram",
     "google-business-profile",
   ]);
   assert.equal(new Set(PLATFORM_PRIVACY.map(platform => platform.id)).size, PLATFORM_PRIVACY.length);

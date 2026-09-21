@@ -1,6 +1,6 @@
 // Keep these notices aligned with the fields and scopes used by each adapter.
-// A compact summary and a link to the platform's public privacy section are shown before OAuth.
-export const CONNECTION_PRIVACY_VERSION = "2026-09-16-connections-5";
+// A compact summary and a link to the platform's public privacy section are shown before authorization.
+export const CONNECTION_PRIVACY_VERSION = "2026-09-21-connections-6";
 
 const authorization = {
   name: "Authorization and consent",
@@ -16,6 +16,24 @@ const googlePolicies = [
 ];
 
 const notices = {
+  telegram: {
+    name: "Telegram",
+    connectionSummary: "Connect a Telegram channel or group to publish and schedule posts through the Meadow Publisher bot.",
+    requirement: "You must be allowed to add the Meadow Publisher bot to the destination. Channels must grant it permission to post messages.",
+    revokeSummary: "You can disconnect in Meadow at any time. Also remove Meadow Publisher from the Telegram channel or group to end its access there.",
+    shortAgreement: "I agree to connect this Telegram destination and allow the access described above.",
+    introduction: "Choose whether Meadow may use its Telegram bot in a channel or group you select to deliver the posts you submit.",
+    data: [
+      { name: "Telegram identity and destination", detail: "Telegram supplies your numeric user ID during setup and the selected channel or group ID, type, title, and public username when available. Meadow uses them to complete the connection and identify where a post should be sent." },
+      { name: "Posts you submit", detail: "Meadow sends the text, images, videos, documents, captions, and schedule you choose to the connected destination. We keep Telegram message IDs, delivery status, and a public message link when Telegram provides one." },
+      { name: "Membership changes", detail: "Telegram tells Meadow when the bot is added to or removed from a connected destination. Meadow uses removal events to stop publishing and delete the affected connection data." },
+      { name: "Bot authorization", detail: "Meadow stores the selected destination ID and type in encrypted connection credentials. Telegram does not give Meadow your Telegram password or a personal Telegram access token." },
+    ],
+    retention: "The temporary setup link and Telegram user ID expire after ten minutes or are removed when setup finishes. The destination identity, encrypted routing data, and delivery records remain while the connection is active and are removed when you disconnect. Original media and captions remain until you delete them or your Meadow account.",
+    platformNote: "Disconnecting in Meadow stops new deliveries and removes Meadow’s stored connection data, but it cannot remove a bot from a Telegram chat. Remove Meadow Publisher from the channel’s administrators or the group’s members to end its access in Telegram. Posts already published remain until a Telegram administrator deletes them.",
+    agreement: "I agree to this Telegram connection privacy notice and Meadow’s Privacy Policy and Terms of Service, and allow the data access described above.",
+    policies: [{ label: "Telegram Privacy Policy", url: "https://telegram.org/privacy" }],
+  },
   pinterest: {
     name: "Pinterest",
     connectionSummary: "Connect a Pinterest account to publish and schedule Pins and view available performance.",

@@ -118,6 +118,17 @@ export const PLATFORM_PRIVACY = [
     links: [{ label: "Bluesky Privacy Policy", url: "https://bsky.social/about/support/privacy-policy" }],
   },
   {
+    id: "telegram",
+    name: "Telegram",
+    intro: "Meadow publishes to a Telegram channel or group through the Meadow Publisher bot after an administrator adds it.",
+    details: [
+      { label: "Data Meadow accesses", text: "Your numeric Telegram user ID during setup; the selected channel or group ID, type, title and public username when available; membership changes involving the bot; the text, images, videos, documents and captions you submit; and returned message IDs, delivery status and public message links when available." },
+      { label: "How Meadow uses it", text: "To bind a short-lived setup request to you, identify the selected destination, publish only the posts you request, confirm delivery and stop publishing when Telegram reports that the bot was removed." },
+      { label: "Retention and removal", text: "Temporary setup data expires after ten minutes or is removed when setup finishes. Destination routing data and delivery records remain while connected and are deleted when you disconnect. Also remove Meadow Publisher from the channel’s administrators or group’s members to end its access in Telegram." },
+    ],
+    links: [{ label: "Telegram Privacy Policy", url: "https://telegram.org/privacy" }],
+  },
+  {
     id: "google-business-profile",
     name: "Google Business Profile",
     intro: "Meadow connects to Google Business Profile accounts and locations that the selected Google Account manages.",

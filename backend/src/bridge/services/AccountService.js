@@ -47,6 +47,80 @@ export class AccountService {
     return { url: await provider.authorizationUrl({ state, verifier, handle }) };
   }
 
+  async telegramWebhook(update) {
+    invariant(update && Number.isSafeInteger(update.update_id), "Invalid Telegram update.");
+    const provider = this.registry.get("telegram"), message = update.message;
+    if (message?.text && message.from?.id != null) {
+      const command = message.text.match(/^\/start(?:@[A-Za-z0-9_]+)?(?:\s+([A-Za-z0-9_-]{20,64}))?$/);
+      const state = command?.[1];
+      if (state && message.chat?.type === "private") {
+        const saved = this.store.peekState(SecretVault.hash(state), this.clock());
+        if (!saved || saved.platform !== "telegram") {
+          await provider.sendMessage(message.from.id, "This Meadow connection link has expired. Return to Meadow and start the Telegram connection again.");
+          return { received: true };
+        }
+        this.projects.require(saved.uid, saved.projectId);
+        const id = String(message.from.id), expiresAt = (saved.createdAt || this.clock()) + 10 * 60000;
+        this.store.put("telegramLink", { id, ownerUid: saved.uid, projectId: saved.projectId, encrypted: this.vault.encrypt({ state }, `telegramLink:${id}`), expiresAt, createdAt: this.clock() });
+        await this.store.flush?.();
+        await provider.sendConnectionPrompt(message.from.id, state);
+        return { received: true };
+      }
+      if (state && ["group", "supergroup"].includes(message.chat?.type)) {
+        const account = await this.completeTelegramConnection(state, message.chat, message.from.id);
+        if (account) await provider.sendConnected(message.from.id, message.chat).catch(() => {});
+        return { received: true };
+      }
+    }
+
+    const membership = update.my_chat_member;
+    if (membership?.chat?.id != null) {
+      const status = membership.new_chat_member?.status;
+      if (["left", "kicked"].includes(status)) {
+        for (const account of this.store.list("account", { limit: null }).filter(item => item.platform === "telegram" && item.remoteId === String(membership.chat.id))) {
+          if (!this.privacy?.blocked(account.ownerUid)) this.privacy?.requestConnection(account.ownerUid, account.projectId, account.id, { alreadyRevoked: true });
+        }
+        await this.store.flush?.();
+        return { received: true };
+      }
+      const channelReady = membership.chat.type === "channel" && status === "administrator" && membership.new_chat_member?.can_post_messages === true;
+      const groupReady = ["group", "supergroup"].includes(membership.chat.type) && ["member", "administrator"].includes(status);
+      if (channelReady || groupReady) {
+        const linkId = String(membership.from?.id || ""), link = this.store.get("telegramLink", linkId);
+        if (link?.expiresAt > this.clock()) {
+          let state;
+          try { state = this.vault.decrypt(link.encrypted, `telegramLink:${linkId}`).state; } catch { this.store.remove("telegramLink", linkId); }
+          if (state) {
+            const account = await this.completeTelegramConnection(state, membership.chat, membership.from.id);
+            if (account) await provider.sendConnected(membership.from.id, membership.chat).catch(() => {});
+          }
+        }
+      }
+    }
+    return { received: true };
+  }
+
+  async completeTelegramConnection(state, chat, telegramUserId) {
+    const saved = this.store.consumeState(SecretVault.hash(state), this.clock());
+    if (!saved || saved.platform !== "telegram") return null;
+    this.projects.require(saved.uid, saved.projectId);
+    this.privacy?.requireConnectionConsent("telegram", saved.privacyConsent);
+    invariant(!this.privacy?.connectionBarrier(saved.uid, "telegram") || (saved.createdAt || 0) > this.privacy.connectionBarrier(saved.uid, "telegram"), "This connection request predates connection removal. Connect again.");
+    const remoteId = String(chat.id), connectionId = randomUUID();
+    const candidate = {
+      remoteId,
+      label: chat.title || (chat.username ? `@${chat.username}` : chat.type === "channel" ? "Telegram channel" : "Telegram group"),
+      profileUrl: chat.username ? `https://t.me/${chat.username}` : undefined,
+      credentials: { chatId: remoteId, chatType: chat.type },
+    };
+    this.store.put("connection", { id: connectionId, ownerUid: saved.uid, projectId: saved.projectId, platform: "telegram", privacyConsent: saved.privacyConsent || null, authorizationStartedAt: saved.createdAt, createdAt: this.clock(), expiresAt: this.clock() + 10 * 60000,
+      encrypted: this.vault.encrypt([candidate], `connection:${connectionId}`) });
+    const [account] = this.attach(saved.uid, saved.projectId, connectionId, [remoteId]);
+    if (telegramUserId != null) this.store.remove("telegramLink", String(telegramUserId));
+    await this.store.flush?.();
+    return account;
+  }
+
   async callback(platform, params) {
     this.pendingCallbacks = (this.pendingCallbacks || 0) + 1;
     try { return await this.finishCallback(platform, params); }

@@ -12,6 +12,7 @@ import { LinkedInProvider } from "../src/bridge/platforms/LinkedInProvider.js";
 import { PinterestProvider } from "../src/bridge/platforms/PinterestProvider.js";
 import { YouTubeProvider, GoogleBusinessProvider } from "../src/bridge/platforms/GoogleProviders.js";
 import { BlueskyProvider } from "../src/bridge/platforms/BlueskyProvider.js";
+import { TelegramProvider } from "../src/bridge/platforms/TelegramProvider.js";
 import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 import { SecretVault } from "../src/bridge/core/SecretVault.js";
 import { LockService } from "../src/bridge/core/LockService.js";
@@ -67,6 +68,60 @@ test("Google Business can reuse the existing YouTube OAuth client", async () => 
   assert.equal(url.searchParams.get("client_id"), "existing-google-client");
   assert.equal(url.searchParams.get("scope"), "https://www.googleapis.com/auth/business.manage");
   assert.equal(url.searchParams.get("redirect_uri"), "https://bridge.example/oauth/google_business/callback");
+});
+
+test("Telegram connects through a private bot link, verifies webhooks, and publishes supported posts", async () => {
+  const http = transport((url, options) => {
+    if (url.endsWith("/setWebhook")) return { ok: true, result: true };
+    if (url.endsWith("/sendMediaGroup")) return { ok: true, result: [{ message_id: 13, chat: { username: "meadow_updates" } }] };
+    return { ok: true, result: { message_id: url.endsWith("/sendMessage") ? 11 : 12, chat: { username: "meadow_updates" } } };
+  });
+  const provider = new TelegramProvider({
+    publicUrl: "https://bridge.example",
+    env: {
+      BRIDGE_APP_URL: "https://app.example",
+      TELEGRAM_BOT_TOKEN: "123456:fixture_bot_token_abcdefghijklmnopqrstuvwxyz",
+      TELEGRAM_BOT_USERNAME: "FindMeadowAppBot",
+      TELEGRAM_WEBHOOK_SECRET: "fixture-webhook-secret-1234",
+    },
+    transport: http,
+  });
+
+  assert.equal(provider.configured, true);
+  const authorization = new URL(provider.authorizationUrl({ state: "fresh-telegram-state-123456" }));
+  assert.equal(authorization.href, "https://t.me/FindMeadowAppBot?start=fresh-telegram-state-123456");
+  assert.equal(provider.verifyWebhook("fixture-webhook-secret-1234"), true);
+  assert.equal(provider.verifyWebhook("wrong-secret"), false);
+
+  await provider.configureWebhook();
+  assert.deepEqual(http.calls[0].options.json, {
+    url: "https://bridge.example/api/telegram/webhook",
+    secret_token: "fixture-webhook-secret-1234",
+    allowed_updates: ["message", "my_chat_member"],
+  });
+
+  const text = context(); text.credentials.chatId = "123";
+  assert.equal((await provider.publish(text)).externalId, "11");
+  assert.deepEqual(http.calls[1].options.json, { chat_id: "123", text: "A caption" });
+
+  const single = context([image]); single.credentials.chatId = "123";
+  assert.equal((await provider.publish(single)).externalId, "12");
+  assert.ok(http.calls[2].options.body instanceof FormData);
+  assert.equal(http.calls[2].options.body.get("chat_id"), "123");
+  assert.equal(http.calls[2].options.body.get("caption"), "A caption");
+
+  const document = context([{ id: "doc", filename: "brief.pdf", kind: "document", mime: "application/pdf", status: "ready", bytes: 20 }]); document.credentials.chatId = "123";
+  assert.equal((await provider.publish(document)).externalId, "12");
+  assert.equal(http.calls[3].options.body.get("document").name, "brief.pdf");
+
+  const album = context([image, { ...video, id: "video2" }]); album.credentials.chatId = "123";
+  assert.equal((await provider.publish(album)).externalId, "13");
+  const media = JSON.parse(http.calls[4].options.body.get("media"));
+  assert.deepEqual(media.map(item => item.type), ["photo", "video"]);
+  assert.equal(media[0].caption, "A caption");
+
+  assert.ok(provider.validate({ ...album.content, caption: "x".repeat(1025) }).some(error => /1,024/.test(error)));
+  assert.ok(provider.validate({ ...album.content, media: [image, { id: "doc", filename: "brief.pdf", kind: "document", status: "ready", bytes: 20 }] }).some(error => /one document/.test(error)));
 });
 
 test("transport respects reset headers and holds unsafe or interrupted requests for review", async () => {

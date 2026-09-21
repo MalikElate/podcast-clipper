@@ -5,8 +5,8 @@ Meadow is a publishing workspace for creating, scheduling, and analyzing social 
 ## Implemented workflows
 
 - Clerk sign-in, with ownership enforced on every project API.
-- Direct provider adapters for Instagram, TikTok, YouTube, Facebook Pages, X, LinkedIn, Pinterest, Threads, Bluesky, and Google Business Profile.
-- Telegram and Snapchat are listed as coming-soon connections while their production API integrations are prepared and verified.
+- Direct provider adapters for Instagram, TikTok, YouTube, Facebook Pages, X, LinkedIn, Pinterest, Threads, Bluesky, Telegram, and Google Business Profile.
+- Snapchat is listed as a coming-soon connection. Telegram remains marked coming soon until its production bot and webhook pass live acceptance.
 - Saved social connections survive sign-out and container replacement, with proactive token renewal. Provider revocation, expired grants, or changed permissions can still require reconnection.
 - Media upload inside the composer, destination-specific formats and settings, validation, and queue preview.
 - Single-post composition with manual date, time, and timezone scheduling.
@@ -15,7 +15,7 @@ Meadow is a publishing workspace for creating, scheduling, and analyzing social 
 - Public pricing, Stripe subscription Checkout, webhook-backed billing status, and Stripe Customer Portal management.
 - Configuration screens for project settings, service readiness, API-key management, plan comparison, and Privacy & Account.
 - An API-key authenticated, stateless MCP endpoint for reading projects, accounts, posts and cached analytics, and for saving idempotent drafts.
-- Platform-specific privacy notices before Pinterest, TikTok, YouTube, and Google Business Profile connections, durable account and connection erasure, TikTok authorization-removal webhooks, and platform data retention.
+- Platform-specific privacy notices before Pinterest, TikTok, YouTube, Telegram, and Google Business Profile connections, durable account and connection erasure, provider authorization-removal webhooks, and platform data retention.
 
 The working clipping studio, affiliate program, multi-workspace controls, standalone media library, and bulk composer controls are deferred. Their complete implementations are preserved on the `deferred-features` branch and are absent from the active application code. The Clipping studio page remains as a coming-soon notice. Collaborators and paid-plan entitlement enforcement are also deferred. See [deferred features](docs/deferred-features.md) for the preserved scope and [platform setup and formats](docs/platforms.md) for provider limitations.
 

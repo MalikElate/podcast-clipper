@@ -42,7 +42,8 @@
     "BRIDGE_APP_URL": "https://app.findmeadow.com",
     "BRIDGE_PUBLIC_URL": "https://findmeadow.com",
     "BRIDGE_MAX_UPLOAD_MB": "1024",
-    "BRIDGE_PUBLISHING_ENABLED": "true"
+    "BRIDGE_PUBLISHING_ENABLED": "true",
+    "TELEGRAM_BOT_USERNAME": "FindMeadowAppBot"
   },
   "routes": [
     { "pattern": "findmeadow.com", "custom_domain": true },

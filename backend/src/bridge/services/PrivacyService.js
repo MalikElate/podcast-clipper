@@ -287,7 +287,7 @@ export class PrivacyService {
     this.expireRevocationCredentials();
     this.metaPrivacy?.prune();
     this.store.pruneStates(this.clock());
-    for (const kind of ["connection", "blueskyState", "revocation", "connectionBarrier"]) for (const record of this.store.list(kind, { limit: null })) {
+    for (const kind of ["connection", "blueskyState", "telegramLink", "revocation", "connectionBarrier"]) for (const record of this.store.list(kind, { limit: null })) {
       if ((kind === "connectionBarrier" ? !record.expiresAt || record.expiresAt <= this.clock() : record.expiresAt <= this.clock()) && (kind !== "revocation" || record.status !== "pending")) this.store.remove(kind, record.id);
     }
     for (const account of this.store.list("account", { limit: null })) {

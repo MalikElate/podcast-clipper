@@ -267,7 +267,7 @@ for (const platform of ["pinterest", "youtube", "google_business", "tiktok"]) te
   assert.ok(disclosure.revokeSummary);
   assert.ok(disclosure.shortAgreement);
   assert.ok(disclosure.data.length >= 4);
-  assert.equal((await (await h.request("/api/bridge/privacy/connections")).json()).disclosures.length, 4);
+  assert.equal((await (await h.request("/api/bridge/privacy/connections")).json()).disclosures.length, 5);
   assert.equal((await h.request(`/api/bridge/privacy/connections/${platform}`, { user: null })).status, 401);
 
   const endpoint = `${h.root}/accounts/connect/${platform}`;
@@ -326,6 +326,73 @@ for (const platform of ["pinterest", "youtube", "google_business", "tiktok"]) te
     await assert.rejects(app.accounts.callback(platform, new URLSearchParams({ code: "fixture-code", state: oldState })), error => error.code === "connection_consent_required");
   }
   assert.equal(exchanges, 2, "Missing or stale callback consent is rejected before token exchange");
+});
+
+test("Telegram webhook requires its secret and connects then removes the selected channel", async t => {
+  const webhookSecret = "fixture-webhook-secret-1234";
+  const h = await setup(t, { envOverrides: {
+    BRIDGE_ENCRYPTION_KEY: randomBytes(32).toString("base64"),
+    BRIDGE_PUBLIC_URL: "https://findmeadow.example",
+    TELEGRAM_BOT_TOKEN: "123456:fixture_bot_token_abcdefghijklmnopqrstuvwxyz",
+    TELEGRAM_BOT_USERNAME: "FindMeadowAppBot",
+    TELEGRAM_WEBHOOK_SECRET: webhookSecret,
+  } });
+  const provider = h.application.registry.get("telegram"), calls = [];
+  provider.http = { request: async (url, options = {}) => { calls.push({ url, options }); return { ok: true, result: { message_id: calls.length } }; } };
+
+  const { disclosure } = await (await h.request("/api/bridge/privacy/connections/telegram")).json();
+  const consent = { accepted: true, platform: "telegram", version: disclosure.version };
+  const missingConsent = await h.request(`${h.root}/accounts/connect/telegram`, { method: "POST", body: {} });
+  assert.equal(missingConsent.status, 400);
+  assert.equal((await missingConsent.json()).code, "connection_consent_required");
+
+  const connect = await h.request(`${h.root}/accounts/connect/telegram`, { method: "POST", body: { consent } });
+  assert.equal(connect.status, 200);
+  const authorization = new URL((await connect.json()).url), state = authorization.searchParams.get("start");
+  assert.equal(authorization.hostname, "t.me");
+  assert.ok(state);
+
+  const unauthorized = await h.request("/api/telegram/webhook", { method: "POST", user: null, headers: { "X-Telegram-Bot-Api-Secret-Token": "wrong" }, body: { update_id: 1 } });
+  assert.equal(unauthorized.status, 401);
+
+  const start = await h.request("/api/telegram/webhook", { method: "POST", user: null, headers: { "X-Telegram-Bot-Api-Secret-Token": webhookSecret }, body: {
+    update_id: 2,
+    message: { message_id: 1, from: { id: 44 }, chat: { id: 44, type: "private" }, text: `/start ${state}` },
+  } });
+  assert.equal(start.status, 200);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].options.json.chat_id, 44);
+  assert.equal(calls[0].options.json.reply_markup.inline_keyboard.length, 2);
+
+  const added = {
+    update_id: 3,
+    my_chat_member: {
+      from: { id: 44 },
+      chat: { id: -100777, type: "channel", title: "Meadow updates", username: "meadow_updates" },
+      new_chat_member: { status: "administrator", can_post_messages: true },
+    },
+  };
+  const connected = await h.request("/api/telegram/webhook", { method: "POST", user: null, headers: { "X-Telegram-Bot-Api-Secret-Token": webhookSecret }, body: added });
+  assert.equal(connected.status, 200);
+  const [account] = h.application.accounts.list("alice", h.project.id);
+  assert.equal(account.platform, "telegram");
+  assert.equal(account.remoteId, "-100777");
+  assert.equal(account.label, "Meadow updates");
+  assert.equal(account.privacyConsent.accepted, true);
+  assert.equal(account.privacyConsent.platform, "telegram");
+  assert.equal(account.privacyConsent.version, consent.version);
+  assert.ok(account.privacyConsent.acceptedAt > 0);
+  assert.ok(!JSON.stringify(account).includes("fixture_bot_token"));
+
+  await h.request("/api/telegram/webhook", { method: "POST", user: null, headers: { "X-Telegram-Bot-Api-Secret-Token": webhookSecret }, body: { ...added, update_id: 4 } });
+  assert.equal(h.application.accounts.list("alice", h.project.id).length, 1, "a replay cannot create a duplicate connection");
+
+  const removed = await h.request("/api/telegram/webhook", { method: "POST", user: null, headers: { "X-Telegram-Bot-Api-Secret-Token": webhookSecret }, body: {
+    update_id: 5,
+    my_chat_member: { from: { id: 44 }, chat: added.my_chat_member.chat, new_chat_member: { status: "left" } },
+  } });
+  assert.equal(removed.status, 200);
+  assert.equal(h.application.store.get("account", account.id).status, "deleting");
 });
 
 test("Clerk deletion webhooks verify the raw signature and erase the deleted identity's workspaces", async t => {

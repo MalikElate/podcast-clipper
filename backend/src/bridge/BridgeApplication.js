@@ -37,7 +37,8 @@ import { XProvider } from "./platforms/XProvider.js";
 import { LinkedInProvider } from "./platforms/LinkedInProvider.js";
 import { PinterestProvider } from "./platforms/PinterestProvider.js";
 import { BlueskyProvider } from "./platforms/BlueskyProvider.js";
-import { TelegramProvider, SnapchatProvider } from "./platforms/UpcomingProviders.js";
+import { SnapchatProvider } from "./platforms/UpcomingProviders.js";
+import { TelegramProvider } from "./platforms/TelegramProvider.js";
 import { clerkMiddleware, clerkClient } from "@clerk/express";
 import { verifyWebhook } from "@clerk/express/webhooks";
 import { requireAuth } from "../lib/clerkAuth.js";
@@ -185,6 +186,11 @@ export class BridgeApplication {
 
   registerPublicRoutes() {
     const app = this.app;
+    app.post("/api/telegram/webhook", route(async (req, res) => {
+      const provider = this.registry.get("telegram");
+      invariant(provider.verifyWebhook(req.headers["x-telegram-bot-api-secret-token"]), "Invalid Telegram webhook signature.", { status: 401 });
+      res.json(await this.accounts.telegramWebhook(req.body));
+    }));
     app.get("/oauth/bluesky/client-metadata.json", route(async (req, res) => res.json((await this.registry.get("bluesky").client()).clientMetadata)));
     app.get("/oauth/bluesky/jwks.json", route(async (req, res) => res.json((await this.registry.get("bluesky").client()).jwks)));
     app.get("/oauth/:platform/callback", route(async (req, res) => {
@@ -268,6 +274,8 @@ export class BridgeApplication {
   }
   start() {
     this.worker.start();
+    const telegram = this.registry.list().find(provider => provider.id === "telegram");
+    if (telegram?.configured) telegram.configureWebhook().catch(error => console.error("Telegram webhook:", error.code || error.name));
     this.privacy.tick().catch(error => console.error("Privacy worker:", error.code || error.name));
     this.privacyTimer = setInterval(() => this.privacy.tick().catch(error => console.error("Privacy worker:", error.code || error.name)), 15000);
     this.privacyTimer.unref?.();

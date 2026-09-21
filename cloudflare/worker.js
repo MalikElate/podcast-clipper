@@ -67,6 +67,9 @@ export class PodcastClipperBackend extends Container {
     GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET,
     BLUESKY_PRIVATE_KEY: env.BLUESKY_PRIVATE_KEY,
+    TELEGRAM_BOT_TOKEN: env.TELEGRAM_BOT_TOKEN,
+    TELEGRAM_BOT_USERNAME: env.TELEGRAM_BOT_USERNAME,
+    TELEGRAM_WEBHOOK_SECRET: env.TELEGRAM_WEBHOOK_SECRET,
   });
 
   get durableState() { return new DurableState(this.ctx.storage); }
