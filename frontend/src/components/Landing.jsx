@@ -13,6 +13,10 @@ const PLATFORMS = [
   ...sortPlatforms(PLATFORM_USE_CASES.filter(platform => !platform.chatOnly)),
   ...sortPlatforms(PLATFORM_USE_CASES.filter(platform => platform.chatOnly)),
 ];
+const SHOWCASE_SWAPS = { twitch: "youtube", youtube: "twitch", facebook: "kick", kick: "facebook" };
+const SHOWCASE_PLATFORMS = PLATFORMS.map(platform =>
+  PLATFORMS.find(item => item.id === (SHOWCASE_SWAPS[platform.id] || platform.id))
+);
 
 const PLATFORM_ORBIT_MOTION = [
   [22, 16, "-5deg"],
@@ -209,7 +213,7 @@ export default function Landing({ onGetStarted }) {
               <a className="platform-showcase-button" href={appHref("/dashboard")}>Try for free <ArrowIcon /></a>
             </div>
             <div className="platform-orbit" aria-label="Social publishing platforms">
-              {PLATFORMS.map((platform, index) => (
+              {SHOWCASE_PLATFORMS.map((platform, index) => (
                 <a className={`orbit-platform-logo orbit-card-${index + 1}`} data-platform={platform.id} data-motion-x={PLATFORM_ORBIT_MOTION[index][0]} data-motion-y={PLATFORM_ORBIT_MOTION[index][1]} key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing`} title={platform.name} style={{ "--platform-color": platform.color, "--logo-tilt": PLATFORM_ORBIT_MOTION[index][2] }}>
                   <span className="orbit-platform-logo-inner"><PlatformIcon platform={platform.id} size={96} variant={platform.id === "google_business" ? "hero" : "default"} /></span>
                 </a>
