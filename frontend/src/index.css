@@ -2059,16 +2059,13 @@ input[type="range"]::-moz-range-thumb {
 
 /* Silent product demo, with a stable poster and explicit playback control. */
 .hero-demo { position: relative; align-self: center; min-width: 0; margin: 0; overflow: hidden; border: 1px solid #d8e0d0; border-radius: 22px; background: #fffefb; box-shadow: 0 28px 70px -44px rgba(29,50,38,.38); }
-.hero-demo-video { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; object-fit: contain; background: #f6f8f2; }
-.hero-demo-caption { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 68px; padding: 12px 20px; border-top: 1px solid #e1e7db; color: var(--text); }
-.hero-demo-caption > span { display: grid; gap: 4px; }
-.hero-demo-caption strong { font-size: 13px; font-weight: 650; }
-.hero-demo-duration { color: var(--text-muted); font-size: 11px; }
-.hero-demo-toggle { display: inline-flex; min-height: 44px; min-width: 86px; align-items: center; justify-content: center; gap: 8px; padding: 9px 12px; border: 1px solid #d9e1d0; border-radius: 999px; background: #f5f8ef; color: #354930; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.hero-demo > .sr-only { top: 0; left: 0; margin: -1px; }
+.hero-demo-video { display: block; width: 100%; height: auto; aspect-ratio: 128 / 65; object-fit: contain; background: #f6f8f2; }
+.hero-demo-toggle { position: absolute; right: 12px; bottom: 12px; display: inline-flex; min-height: 44px; min-width: 44px; align-items: center; justify-content: center; gap: 8px; padding: 9px 12px; border: 1px solid #d9e1d0; border-radius: 999px; background: #f5f8ef; color: #354930; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 .hero-demo-toggle:hover { background: #e9f0df; }
 .hero-demo-toggle:focus-visible { outline: 3px solid #3266df; outline-offset: 3px; }
 .hero-demo-toggle svg { width: 14px; height: 14px; }
-.hero-demo-download { color: #3266df; font-size: 12px; }
+.hero-demo-download { position: absolute; right: 14px; bottom: 14px; padding: 10px; background: #fffefb; border-radius: 12px; color: #3266df; font-size: 12px; }
 
 .goals-section { padding-top: 124px; }
 .goals-heading, .audience-heading { max-width: 770px; margin: 0 auto; text-align: center; }

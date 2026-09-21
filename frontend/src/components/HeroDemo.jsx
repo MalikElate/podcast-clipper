@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-const ASSET = "/marketing/meadow-publishing-demo-v1";
+const ASSET = "/marketing/meadow-publishing-demo-v2";
 
 export default function HeroDemo() {
   const videoRef = useRef(null);
@@ -50,7 +50,7 @@ export default function HeroDemo() {
         ref={videoRef}
         className="hero-demo-video"
         width="1280"
-        height="800"
+        height="650"
         muted
         loop
         playsInline
@@ -64,17 +64,13 @@ export default function HeroDemo() {
       >
         <source src={`${ASSET}.webm`} type="video/webm" />
         <source src={`${ASSET}.mp4`} type="video/mp4" />
-        <p>Choose connected accounts, write and preview a post, then schedule it in Meadow.</p>
+        <p>Create, preview, and publish directly in Meadow or through a connected chatbot.</p>
       </video>
-      <figcaption className="hero-demo-caption">
-        <span><strong>From idea to scheduled.</strong><span className="hero-demo-duration">22-second walkthrough</span></span>
-        {!failed && <button type="button" className="hero-demo-toggle" onClick={togglePlayback} aria-label={playing ? "Pause Meadow demo" : "Play Meadow demo"}>
-          {playing ? <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10" stroke="currentColor" strokeWidth="2.5" /></svg> : <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 2 9 6-9 6z" fill="currentColor" /></svg>}
-          {playing ? "Pause" : "Play"}
-        </button>}
-        {failed && <a className="hero-demo-download" href={`${ASSET}.mp4`}>Watch demo</a>}
-      </figcaption>
-      <p id="hero-demo-description" className="sr-only">An illustrative walkthrough with sample content: select connected LinkedIn, Threads, and Bluesky accounts; write a studio launch post with an image; preview it; choose Friday at 10:30 AM; and see all three destinations marked Scheduled. The video has no audio.</p>
+      {!failed && <button type="button" className="hero-demo-toggle" onClick={togglePlayback} aria-label={playing ? "Pause Meadow demo" : "Play Meadow demo"}>
+        {playing ? <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10" stroke="currentColor" strokeWidth="2.5" /></svg> : <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 2 9 6-9 6z" fill="currentColor" /></svg>}
+      </button>}
+      {failed && <a className="hero-demo-download" href={`${ASSET}.mp4`}>Watch demo</a>}
+      <p id="hero-demo-description" className="sr-only">An illustrative walkthrough with sample content: create and preview a studio launch post in Meadow, click Publish now, and see LinkedIn, Threads, and Bluesky marked Published. Then ask a custom chatbot connected to the Meadow publishing API to post the studio launch, review its preview, confirm publication, and see all three channels marked Published. The video has no audio.</p>
     </figure>
   );
 }
