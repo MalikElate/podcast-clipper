@@ -3,7 +3,7 @@
 
 const SHARED_FAQS = [
   { q: "Do I need to share my social media passwords with Meadow?", a: "No. You connect each account through the platform’s own sign-in and authorization page. Meadow never asks for your password, and you can disconnect an account at any time from Connections." },
-  { q: "Can I connect more than one account on the same platform?", a: "Yes. Every plan supports multiple accounts per platform. Your plan sets the total number of connected social accounts, so five accounts on Starter could all be on one platform or spread across several." },
+  { q: "Can I connect more than one account on the same platform?", a: "Yes. Every plan supports multiple accounts per platform. Free includes 5 connected social accounts, Starter includes 10, Creator includes 25, and Pro includes unlimited accounts. Those accounts can all be on one platform or spread across several." },
   { q: "How many posts can I publish?", a: "Posts are unlimited on every paid plan. Platforms still apply their own daily limits, and Meadow checks those allowances again before each delivery." },
   { q: "Can I cancel anytime?", a: "Yes. You can manage or cancel your subscription from Meadow’s Billing page, and the cancellation date is shown in the billing portal." },
   { q: "I have another question", a: "Email hello@findmeadow.com and a person on the Meadow team will get back to you." },

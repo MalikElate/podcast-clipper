@@ -7,7 +7,7 @@ export const PLANS = [
     description: "For getting started",
     monthly: 0,
     yearly: 0,
-    accounts: "Connect your social accounts",
+    accounts: "5 connected social accounts",
     features: ["Create and schedule posts", "AI agent access", "No credit card required"],
   },
   {
@@ -16,7 +16,7 @@ export const PLANS = [
     description: "For new creators",
     monthly: 29,
     yearly: 24,
-    accounts: "5 connected social accounts",
+    accounts: "10 connected social accounts",
     features: ["Multiple accounts per platform", "Unlimited posts", "Schedule posts", "AI agent access", "Carousel posts", "Human support"],
   },
   {
@@ -25,7 +25,7 @@ export const PLANS = [
     description: "For growing creators",
     monthly: 39,
     yearly: 33,
-    accounts: "15 connected social accounts",
+    accounts: "25 connected social accounts",
     popular: true,
     features: ["Everything in Starter", "Bulk video scheduling", "Content studio access", "Analytics", "Human support"],
   },
