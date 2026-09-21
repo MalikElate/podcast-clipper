@@ -7,9 +7,11 @@ import { sortPlatforms } from "../bridge/platforms.js";
 import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
-import UpcomingPlatforms from "./UpcomingPlatforms.jsx";
 
-const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES.filter(platform => !platform.comingSoon));
+const PLATFORMS = [
+  ...sortPlatforms(PLATFORM_USE_CASES.filter(platform => !platform.comingSoon)),
+  ...sortPlatforms(PLATFORM_USE_CASES.filter(platform => platform.comingSoon)),
+];
 
 const PLATFORM_ORBIT_MOTION = [
   [22, 16, "-5deg"],
@@ -23,6 +25,8 @@ const PLATFORM_ORBIT_MOTION = [
   [16, 24, "-6deg"],
   [-20, 18, "6deg"],
   [18, -20, "-3deg"],
+  [-16, 18, "4deg"],
+  [20, -16, "-4deg"],
 ];
 
 const GOALS = [
@@ -106,9 +110,9 @@ function HeroPlatformRail() {
   return (
     <div className="hero-platform-rail" aria-label="Social publishing destinations">
       {PLATFORMS.map((platform) => (
-        <span className="hero-platform-item" key={platform.id} title={platform.name} style={{ "--platform-color": platform.color }}>
+        <span className="hero-platform-item" key={platform.id} title={`${platform.name}${platform.comingSoon ? " — Coming soon" : ""}`} style={{ "--platform-color": platform.color }}>
           <PlatformIcon platform={platform.id} size={24} variant="hero" />
-          <span className="sr-only">{platform.name}</span>
+          <span className="sr-only">{platform.name}{platform.comingSoon ? " — Coming soon" : ""}</span>
         </span>
       ))}
     </div>
@@ -205,15 +209,14 @@ export default function Landing({ onGetStarted }) {
             </div>
             <div className="platform-orbit" aria-label="Social publishing platforms">
               {PLATFORMS.map((platform, index) => (
-                <a className={`orbit-platform-logo orbit-card-${index + 1}`} data-platform={platform.id} data-motion-x={PLATFORM_ORBIT_MOTION[index][0]} data-motion-y={PLATFORM_ORBIT_MOTION[index][1]} key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing`} title={platform.name} style={{ "--platform-color": platform.color, "--logo-tilt": PLATFORM_ORBIT_MOTION[index][2] }}>
+                <a className={`orbit-platform-logo orbit-card-${index + 1}`} data-platform={platform.id} data-motion-x={PLATFORM_ORBIT_MOTION[index][0]} data-motion-y={PLATFORM_ORBIT_MOTION[index][1]} key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing${platform.comingSoon ? " — Coming soon" : ""}`} title={`${platform.name}${platform.comingSoon ? " — Coming soon" : ""}`} style={{ "--platform-color": platform.color, "--logo-tilt": PLATFORM_ORBIT_MOTION[index][2] }}>
                   <span className="orbit-platform-logo-inner"><PlatformIcon platform={platform.id} size={96} variant={platform.id === "google_business" ? "hero" : "default"} /></span>
+                  {platform.comingSoon && <small className="orbit-platform-status">Coming soon</small>}
                 </a>
               ))}
             </div>
           </div>
         </section>
-
-        <UpcomingPlatforms />
 
         <section className="landing-hero landing-hero-v2">
           <div className="hero-copy">

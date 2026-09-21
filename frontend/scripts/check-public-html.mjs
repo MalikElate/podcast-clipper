@@ -19,6 +19,8 @@ const landingHtml = await readFile("dist/index.html", "utf8");
 assert.ok(landingHtml.includes('aria-label="Learn about Telegram publishing"'), "Homepage must include Telegram in its platform grid");
 assert.ok(landingHtml.includes("all eleven platforms"), "Homepage must show the current platform count");
 assert.ok(!landingHtml.includes("Telegram and Snapchat are coming soon"));
+assert.ok(!landingHtml.includes('class="upcoming-platforms"'), "Upcoming logos belong in the existing platform sections");
+for (const id of ["twitch", "kick"]) assert.ok(landingHtml.includes(`data-platform="${id}"`), `${id} must appear in the homepage logo showcase`);
 for (const platform of PLATFORM_USE_CASES) {
   const html = await readFile(`dist/${platform.slug}/index.html`, "utf8");
   assert.ok(html.includes(`<title>${platform.title}</title>`), `${platform.slug} must have a platform-specific title`);
@@ -42,6 +44,7 @@ for (const page of GENERAL_PAGES) {
   assert.ok(html.includes('href="/telegram-publishing"'), `${page.path} must link to Telegram publishing`);
   assert.ok(html.includes("Can I publish to Telegram channels and groups?"), `${page.path} must explain Telegram setup`);
   for (const id of ["twitch", "kick"]) assert.ok(html.includes(`href="/${id}-publishing"`), `${page.path} must link to ${id}`);
-  assert.ok(html.includes("Twitch and Kick chat publishing — coming soon"));
+  assert.ok(!html.includes('class="upcoming-platforms"'));
+  for (const name of ["Twitch", "Kick"]) assert.ok(html.includes(`aria-label="${name} — Coming soon"`), `${page.path} must include ${name} in its logo sections`);
 }
 console.log("All public pages and dashboard routes have deployable HTML entry points.");

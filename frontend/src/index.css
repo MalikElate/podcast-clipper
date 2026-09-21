@@ -2315,6 +2315,10 @@ input[type="range"]::-moz-range-thumb {
 .orbit-card-9 { left: 14%; top: 31%; width: clamp(66px,6.3vw,92px); }
 .orbit-card-10 { right: 14%; bottom: 29%; width: clamp(66px,6.3vw,92px); }
 .orbit-card-11 { left: 14%; bottom: 29%; width: clamp(66px,6.3vw,92px); }
+.orbit-card-12 { left: 28%; top: 12%; }
+.orbit-card-13 { right: 28%; top: 12%; }
+.orbit-platform-status { position: absolute; top: calc(100% + 6px); color: #bdc1c6; font-size: 10px; white-space: nowrap; }
+.platform-availability { display: block; color: var(--text-muted); font-size: 10px; font-weight: 400; }
 
 @media (max-width: 1100px) {
   .platform-showcase { min-height: 740px; }
@@ -2339,17 +2343,12 @@ input[type="range"]::-moz-range-thumb {
   .platform-showcase-center p { margin-top: 17px; font-size: 14px; }
   .platform-showcase-button { margin-top: 24px; }
   .platform-orbit { position: relative; inset: auto; display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); align-items: center; justify-items: center; gap: 18px 7px; margin-top: 68px; }
-  .orbit-platform-logo, .orbit-card-1, .orbit-card-2, .orbit-card-3, .orbit-card-4, .orbit-card-5, .orbit-card-6, .orbit-card-7, .orbit-card-8, .orbit-card-9, .orbit-card-10, .orbit-card-11 { position: static; display: grid; width: 56px; translate: none; }
-  .orbit-card-11 { grid-column: 3; }
+  .orbit-platform-logo, .orbit-card-1, .orbit-card-2, .orbit-card-3, .orbit-card-4, .orbit-card-5, .orbit-card-6, .orbit-card-7, .orbit-card-8, .orbit-card-9, .orbit-card-10, .orbit-card-11, .orbit-card-12, .orbit-card-13 { position: relative; inset: auto; display: grid; width: min(56px,100%); translate: none; }
+  .orbit-card-11 { grid-column: 2; }
+  .orbit-card-12 { grid-column: 3; }
+  .orbit-card-13 { grid-column: 4; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .orbit-platform-logo-inner { transform: rotate(var(--logo-tilt,0deg)); transition: none; }
 }
-
-.upcoming-platforms { max-width: 1100px; margin: 0 auto 48px; padding: 0 24px; text-align: center; }
-.upcoming-platforms > p { margin: 0 0 16px; color: var(--text-muted); font-size: 14px; }
-.upcoming-platforms > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 28px; }
-.upcoming-platforms a { display: inline-flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; }
-.upcoming-platforms a > svg { color: var(--platform-color); }
-.upcoming-platforms small { display: block; font-size: 11px; color: var(--text-muted); }

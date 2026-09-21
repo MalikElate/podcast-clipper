@@ -5,9 +5,8 @@ import BrandLogo from "./BrandLogo.jsx";
 import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
-import UpcomingPlatforms from "./UpcomingPlatforms.jsx";
 
-const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES.filter(platform => !platform.comingSoon));
+const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
 
 const PREVIEW = [
   { platform: "youtube", title: "Behind the scenes, episode 12", when: "Tomorrow, 9:00 AM", status: "Scheduled" },
@@ -26,7 +25,7 @@ function CheckIcon() {
 
 function PlatformMark({ platform, variant = "default" }) {
   return (
-    <span className="landing-platform-mark" style={{ "--platform-color": platform.color }} role="img" aria-label={platform.name} title={platform.name}>
+    <span className="landing-platform-mark" style={{ "--platform-color": platform.color }} role="img" aria-label={`${platform.name}${platform.comingSoon ? " — Coming soon" : ""}`} title={`${platform.name}${platform.comingSoon ? " — Coming soon" : ""}`}>
       <PlatformIcon platform={platform.id} size={variant === "hero" ? 32 : 24} variant={variant} />
     </span>
   );
@@ -90,7 +89,7 @@ export default function MarketingPage({ page, onGetStarted }) {
       <main>
         <section className="landing-hero" id="top">
           <div className="hero-copy">
-            <div className="hero-platforms" aria-label="Supported social platforms">
+            <div className="hero-platforms" aria-label="Social platforms, including upcoming integrations">
               {PLATFORMS.map(platform => <PlatformMark platform={platform} variant="hero" key={platform.id} />)}
             </div>
             <h1 className="landing-title">{page.headline}</h1>
@@ -161,13 +160,11 @@ export default function MarketingPage({ page, onGetStarted }) {
             {PLATFORMS.map(platform => (
               <a href={`/${platform.slug}`} key={platform.id} style={{ "--platform-color": platform.color }}>
                 <PlatformMark platform={platform} />
-                <span>{platform.name}</span>
+                <span>{platform.name}{platform.comingSoon && <small className="platform-availability">Coming soon</small>}</span>
               </a>
             ))}
           </div>
         </section>
-
-        <UpcomingPlatforms />
 
         <section className="landing-section home-pricing-section" id="pricing" aria-labelledby="mkt-pricing-title">
           <PlanGrid />

@@ -5,7 +5,7 @@ import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import { GENERAL_PAGES } from "../marketing/generalPages.js";
 import { appHref, marketingHref, siteSurface } from "../siteUrls.js";
 
-const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES.filter(platform => !platform.comingSoon));
+const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
 const FEATURED_PLATFORM_IDS = ["instagram", "tiktok", "youtube", "linkedin", "facebook", "x"];
 const FEATURED_PLATFORMS = FEATURED_PLATFORM_IDS.map((id) => PLATFORMS.find((platform) => platform.id === id)).filter(Boolean);
 
@@ -65,7 +65,7 @@ export default function SiteFooter({ onGetStarted }) {
           <p>Publish everywhere</p>
           <div className="footer-network-icons" aria-label="Featured social platforms">
             {PLATFORMS.map((platform) => (
-              <span key={platform.id} title={platform.name}><PlatformIcon platform={platform.id} size={23} /><span className="sr-only">{platform.name}</span></span>
+              <span key={platform.id} title={`${platform.name}${platform.comingSoon ? " — Coming soon" : ""}`}><PlatformIcon platform={platform.id} size={23} /><span className="sr-only">{platform.name}{platform.comingSoon ? " — Coming soon" : ""}</span></span>
             ))}
           </div>
         </div>
