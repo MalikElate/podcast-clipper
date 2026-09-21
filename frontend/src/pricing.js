@@ -1,4 +1,15 @@
+import { appHref } from "./siteUrls.js";
+
 export const PLANS = [
+  {
+    id: "free",
+    name: "Free",
+    description: "For getting started",
+    monthly: 0,
+    yearly: 0,
+    accounts: "Connect your social accounts",
+    features: ["Create and schedule posts", "AI agent access", "No credit card required"],
+  },
   {
     id: "starter",
     name: "Starter",
@@ -19,15 +30,6 @@ export const PLANS = [
     features: ["Everything in Starter", "Bulk video scheduling", "Content studio access", "Analytics", "Human support"],
   },
   {
-    id: "growth",
-    name: "Growth",
-    description: "For growing teams and agencies",
-    monthly: 59,
-    yearly: 49,
-    accounts: "50 connected social accounts",
-    features: ["Everything in Creator", "Viral growth reports", "Priority human support", "Invite team members"],
-  },
-  {
     id: "pro",
     name: "Pro",
     description: "For scaling brands",
@@ -35,7 +37,16 @@ export const PLANS = [
     yearly: 83,
     accounts: "Unlimited connected accounts",
     best: true,
-    features: ["Everything in Growth", "Advanced API access", "Priority processing", "Viral growth consulting"],
+    features: ["Everything in Creator", "Viral growth reports", "Priority human support", "Invite team members", "Advanced API access", "Priority processing", "Viral growth consulting"],
   },
 ];
 
+export const PAID_PLANS = PLANS.filter(plan => plan.id !== "free");
+
+export function planHref(plan, cycle) {
+  return plan.id === "free" ? appHref("/dashboard") : `/pricing?checkout=${encodeURIComponent(plan.id)}&cycle=${cycle}`;
+}
+
+export function planBillingNote(plan, yearly) {
+  return plan.id === "free" ? "No credit card required" : yearly ? `Billed $${plan.yearly * 12} yearly` : "Billed monthly";
+}

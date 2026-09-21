@@ -3,7 +3,7 @@ import { SiClaude, SiCursor } from "react-icons/si";
 import { PlatformIcon } from "../bridge/ui.jsx";
 import BrandLogo from "./BrandLogo.jsx";
 import { sortPlatforms } from "../bridge/platforms.js";
-import { PLANS } from "../pricing.js";
+import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
 
@@ -250,7 +250,7 @@ export default function Landing({ onGetStarted }) {
         <section className="landing-section home-pricing-section" id="pricing" aria-labelledby="home-pricing-title">
           <div className="home-pricing-heading">
             <h2 id="home-pricing-title">Choose the space your publishing needs.</h2>
-            <p>Every plan includes unlimited posts, scheduling, and API access for your agent. Choose the number of connected accounts that fits your publishing workflow.</p>
+            <p>Start for free, then choose the paid plan that fits your publishing workflow.</p>
             <div className="pricing-cycle" role="group" aria-label="Billing frequency">
               <button className={!yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(false)}>Monthly</button>
               <button className={yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(true)}>Yearly <span>Save up to 17%</span></button>
@@ -266,9 +266,9 @@ export default function Landing({ onGetStarted }) {
                   {(plan.popular || plan.best) && <span className="pricing-badge">{plan.popular ? "Most popular" : "Best value"}</span>}
                 </div>
                 <div className="pricing-price"><strong>${price}</strong><span>/month</span></div>
-                <p className="pricing-billing-note">{yearlyPricing ? `Billed $${price * 12} yearly` : "Billed monthly"}</p>
+                <p className="pricing-billing-note">{planBillingNote(plan, yearlyPricing)}</p>
                 <ul><li className="pricing-account"><CheckIcon />{plan.accounts}</li>{plan.features.map(feature => <li key={feature}><CheckIcon />{feature}</li>)}</ul>
-                <a className={plan.popular ? "btn-primary" : "pricing-button"} href={`/pricing?checkout=${encodeURIComponent(plan.id)}&cycle=${cycle}`}>Choose {plan.name} <ArrowIcon /></a>
+                <a className={plan.popular ? "btn-primary" : "pricing-button"} href={planHref(plan, cycle)}>{plan.id === "free" ? "Try for free" : `Choose ${plan.name}`} <ArrowIcon /></a>
               </article>;
             })}
           </div>

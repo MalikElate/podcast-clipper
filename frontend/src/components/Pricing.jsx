@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { PLANS } from "../pricing.js";
+import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import BrandLogo from "./BrandLogo.jsx";
 import SiteFooter from "./SiteFooter.jsx";
 import { marketingHref } from "../siteUrls.js";
@@ -31,7 +31,7 @@ export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error =
       <main className="pricing-main">
         <section className="pricing-intro">
           <h1>Choose the space your publishing needs.</h1>
-          <p>Every plan includes unlimited posts and scheduling. Pick the number of connected accounts and level of support that fit your workflow.</p>
+          <p>Start for free, then choose the paid plan that fits your publishing workflow.</p>
           <div className="pricing-cycle" role="group" aria-label="Billing frequency">
             <button className={!yearly ? "active" : ""} onClick={() => setYearly(false)}>Monthly</button>
             <button className={yearly ? "active" : ""} onClick={() => setYearly(true)}>Yearly <span>Save up to 17%</span></button>
@@ -50,9 +50,9 @@ export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error =
                 {(plan.popular || plan.best) && <span className="pricing-badge">{plan.popular ? "Most popular" : "Best value"}</span>}
               </div>
               <div className="pricing-price"><strong>${price}</strong><span>/month</span></div>
-              <p className="pricing-billing-note">{yearly ? `Billed $${price * 12} yearly` : "Billed monthly"}</p>
+              <p className="pricing-billing-note">{planBillingNote(plan, yearly)}</p>
               <ul><li className="pricing-account"><CheckIcon />{plan.accounts}</li>{plan.features.map(feature => <li key={feature}><CheckIcon />{feature}</li>)}</ul>
-              <button className={plan.popular ? "btn-primary" : "pricing-button"} disabled={Boolean(busyPlan)} onClick={() => onChoosePlan(plan.id, yearly ? "yearly" : "monthly")}>{loading ? "Opening secure checkout…" : `Choose ${plan.name}`} {!loading && <ArrowIcon />}</button>
+              {plan.id === "free" ? <a className="pricing-button" href={planHref(plan)}>Try for free <ArrowIcon /></a> : <button className={plan.popular ? "btn-primary" : "pricing-button"} disabled={Boolean(busyPlan)} onClick={() => onChoosePlan(plan.id, yearly ? "yearly" : "monthly")}>{loading ? "Opening secure checkout…" : `Choose ${plan.name}`} {!loading && <ArrowIcon />}</button>}
             </article>;
           })}
         </section>

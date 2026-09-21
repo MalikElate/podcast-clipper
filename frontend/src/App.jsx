@@ -8,7 +8,7 @@ import PlatformUseCasePage from "./components/PlatformUseCasePage.jsx";
 import MarketingPage from "./components/MarketingPage.jsx";
 import { findMarketingPage } from "./marketing/generalPages.js";
 import NotFound from "./components/NotFound.jsx";
-import { PLANS } from "./pricing.js";
+import { PAID_PLANS as PLANS } from "./pricing.js";
 import { api, localPreview } from "./bridge/BridgeApi.js";
 import { isDashboardPath } from "./bridge/dashboardRoutes.js";
 import { appHref, isLocalMarketingPreview, siteSurface } from "./siteUrls.js";
