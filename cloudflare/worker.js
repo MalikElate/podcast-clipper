@@ -202,6 +202,10 @@ export default {
     const url = new URL(request.url);
     const appRedirect = appDomainRedirect(url);
     if (appRedirect) return Response.redirect(appRedirect, 308);
+    if (url.pathname === "/runtime-config.js") {
+      const config = JSON.stringify({ clerkPublishableKey: workerEnv.CLERK_PUBLISHABLE_KEY || "" });
+      return new Response(`globalThis.__MEADOW_CONFIG__=${config};`, { headers: { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "no-store" } });
+    }
     if (url.pathname === "/api/internal/durable-migration") {
       if (!migrationAuthorized(request, workerEnv)) return new Response("Not found", { status: 404 });
       try {

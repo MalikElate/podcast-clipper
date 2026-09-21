@@ -9,7 +9,7 @@ import "./borderless.css";
 import "./platformUseCases.css";
 import "./marketingPages.css";
 
-const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || globalThis.__MEADOW_CONFIG__?.clerkPublishableKey;
 const posthogKey = import.meta.env.VITE_POSTHOG_KEY;
 const localPreview = import.meta.env.VITE_BRIDGE_LOCAL_PREVIEW === "true";
 
