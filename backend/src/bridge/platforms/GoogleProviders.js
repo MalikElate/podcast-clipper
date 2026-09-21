@@ -24,6 +24,23 @@ class GoogleProvider extends PlatformProvider {
 
 export class YouTubeProvider extends GoogleProvider {
   constructor(deps) { super("youtube", deps); }
+  async accountViews({ account, credentials, window }) {
+    const query = new URLSearchParams({ ids: `channel==${account.remoteId}`, startDate: window.startDate, endDate: window.endDate, metrics: "views", dimensions: "day", sort: "day", maxResults: "200" });
+    const report = await this.http.request(`https://youtubeanalytics.googleapis.com/v2/reports?${query}`, { token: credentials.accessToken });
+    const dayColumn = report.columnHeaders?.findIndex(column => column.name === "day");
+    const viewColumn = report.columnHeaders?.findIndex(column => column.name === "views");
+    invariant(dayColumn >= 0 && viewColumn >= 0 && (!report.rows || Array.isArray(report.rows)), "YouTube returned an invalid account report.");
+    let value = 0, throughDate = null;
+    const seen = new Set();
+    for (const row of report.rows || []) {
+      const day = row[dayColumn], views = row[viewColumn];
+      invariant(typeof day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isFinite(Date.parse(day)) && new Date(day).toISOString().slice(0, 10) === day && day >= window.startDate && day <= window.endDate && !seen.has(day) && Number.isSafeInteger(views) && views >= 0, "YouTube returned invalid daily views.");
+      seen.add(day); value += views;
+      invariant(Number.isSafeInteger(value), "YouTube returned an invalid view total.");
+      if (!throughDate || day > throughDate) throughDate = day;
+    }
+    return { value, throughDate };
+  }
   async accounts(credentials) {
     const result = await this.http.request("https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true", { token: credentials.accessToken });
     return (result.items || []).map(item => ({ remoteId: item.id, label: item.snippet.title, avatar: item.snippet.thumbnails?.default?.url, profileUrl: `https://www.youtube.com/channel/${item.id}` }));
