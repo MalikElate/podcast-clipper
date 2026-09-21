@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'frontend/public/marketing'
-W, H, FPS, SECONDS = 1280, 800, 24, 22
+W, H, FPS, SECONDS = 1280, 650, 24, 34
 INK, MUTED, BLUE, GREEN = '#233247', '#748173', '#3266df', '#42734a'
 FONT_DIR = Path(os.environ.get('MEADOW_FONT_DIR', '/System/Library/Fonts/Supplemental'))
 FONTS = {}
@@ -59,15 +59,8 @@ def cursor(d, x, y, click=False):
     pts=[(x,y),(x+4,y+31),(x+12,y+24),(x+20,y+37),(x+27,y+33),(x+19,y+20),(x+31,y+17)]
     d.polygon(pts, fill='#25374b', outline='white', width=2)
 
-def frame(t):
-    im=Image.new('RGB',(W,H),'#f6f8f2'); d=ImageDraw.Draw(im)
-    # Quiet product chrome, large enough to read in the hero.
-    d.rectangle((0,0,W,75), fill='#fffefb')
-    d.line((0,75,W,75),fill='#dce3d5',width=2)
-    text(d,(30,18),'meadow.',31,INK,True)
-    rect(d,(1023,22,1248,54),'#eef3e7',16)
-    d.ellipse((1041,33,1051,43),fill='#79a35d')
-    text(d,(1062,28),'Studio workspace',18,GREEN)
+def direct_frame(t):
+    im=Image.new('RGB',(W,800),'#f6f8f2'); d=ImageDraw.Draw(im)
     d.rectangle((0,77,201,725),fill='#f0f4e9')
     active = 'Posts' if t >=18 else 'Create post'
     for y,label in [(115,'Create post'),(180,'Posts'),(245,'Connections')]:
@@ -76,9 +69,9 @@ def frame(t):
     text(d,(32,632),'YOUR WORKSPACE',12,MUTED,True)
     text(d,(32,658),'Studio',22,INK,True)
     step = 0 if t<5 else 1 if t<12 else 2 if t<18 else 3
-    labels=['Choose your channels','Make it yours','Pick the perfect time','Ready for what’s next']
+    labels=['Choose your channels','Make it yours','Publish from Meadow','Your post is live']
     text(d,(240,104),labels[step],38,INK,True)
-    text(d,(241,157),['One post. Three connected accounts.','Write once. Preview before you publish.','Schedule every destination together.','Your post is scheduled across three channels.'][step],23,MUTED)
+    text(d,(241,157),['One post. Three connected accounts.','Write once. Preview before you publish.','Review your post, then share it everywhere.','Published to all three connected channels.'][step],23,MUTED)
     if t < 18:
         # Select the destinations in sequence, then retain them throughout.
         for i,name in enumerate(['LinkedIn','Threads','Bluesky']):
@@ -116,56 +109,103 @@ def frame(t):
                 cursor(d,prev[0]+(dest[0]-prev[0])*p,prev[1]+(dest[1]-prev[1])*p,abs(t-(1.2+idx*.85))<.16)
         else:
             rect(d,(240,313,1221,686),'white',20,'#dce3d5')
-            text(d,(273,341),'Publish',25,INK,True)
-            rect(d,(273,395,590,451),'#f5f7f1',13,'#dce3d5')
-            text(d,(298,410),'Now',22,MUTED)
-            rect(d,(433,399,586,447),'#e8efff',10)
-            text(d,(456,410),'Schedule',22,BLUE,True)
-            text(d,(273,485),'DATE',14,MUTED,True); text(d,(655,485),'TIME',14,MUTED,True)
-            rect(d,(273,518,623,578),'#fffefb',12,'#ccd7c0')
-            rect(d,(655,518,990,578),'#fffefb',12,'#ccd7c0')
-            text(d,(296,536),'Friday, October 2',24,INK)
-            text(d,(678,536),'10:30 AM',24,INK)
-            text(d,(274,625),'3 destinations · Preview checked',21,GREEN)
+            text(d,(273,341),'Ready to share',25,INK,True)
+            rect(d,(273,395,1188,568),'#f5f7f1',13)
+            text(d,(298,416),'Studio launch',27,INK,True)
+            text(d,(298,464),'LinkedIn, Threads, and Bluesky',24,INK)
+            text(d,(298,514),'Post and image previewed · Publish now',22,GREEN)
+            text(d,(274,625),'3 connected destinations',21,GREEN)
             rect(d,(875,608,1188,662),BLUE if t<17.2 else '#2854b9',12)
-            text(d,(925,623),'Schedule post',22,'white',True)
+            text(d,(945,623),'Publish now',22,'white',True)
             if t>14.8:
                 p=ease((t-14.8)/1.9); cursor(d,766+(1076-766)*p,460+(638-460)*p,17.1<t<17.4)
     else:
         rect(d,(240,212,1221,293),'#e7f0df',16)
         d.ellipse((265,231,308,274),fill=GREEN); check(d,285,252,size=18)
-        text(d,(328,229),'All set. Your post is scheduled.',27,GREEN,True)
-        text(d,(329,264),'Friday, October 2 · 10:30 AM',18,GREEN)
+        text(d,(328,229),'Your post has been published.',27,GREEN,True)
+        text(d,(329,264),'One post. Live on all three channels.',18,GREEN)
         for i,name in enumerate(['LinkedIn','Threads','Bluesky']):
             y=317+i*117
             rect(d,(240,y,1221,y+99),'white',16,'#dce3d5')
             platform(d,266,y+27,name,44)
             text(d,(331,y+21),'Studio launch',25,INK,True)
             text(d,(332,y+58),name,20,MUTED)
-            text(d,(743,y+35),'Oct 2 · 10:30 AM',22,INK)
+            text(d,(743,y+35),'Just now',22,INK)
             rect(d,(1021,y+29,1195,y+70),'#e8f0df',20)
-            text(d,(1043,y+38),'Scheduled',20,GREEN,True)
-    # Chapters and progress are baked into the video; no sound is required.
-    d.rectangle((0,727,W,H),fill='#fffefb')
-    d.line((0,727,W,727),fill='#dce3d5',width=2)
-    for i,label in enumerate(['Select','Create','Schedule','Done']):
-        x=43+i*305
-        d.ellipse((x,752,x+27,779),fill=BLUE if i==step else '#edf1e6')
-        text(d,(x+9,756),str(i+1),15,'white' if i==step else MUTED,True)
-        text(d,(x+40,754),label,21,INK if i==step else MUTED,i==step)
-    d.rectangle((0,796,int(W*t/SECONDS),799),fill=BLUE)
-    # Gentle dip through the opening frame makes the loop intentional.
-    if t>21.5:
-        im=Image.blend(im,frame(0),ease((t-21.5)/.5))
+            text(d,(1043,y+38),'Published',20,GREEN,True)
+    return im.crop((0,77,W,727))
+
+def bubble(d, box, fill='white', outline='#dce3d5'):
+    rect(d,box,fill,20,outline)
+
+def chatbot_frame(t):
+    im=Image.new('RGB',(W,H),'#f6f8f2'); d=ImageDraw.Draw(im)
+    d.rectangle((0,0,201,H),fill='#f0f4e9')
+    text(d,(28,38),'Your chatbot',24,INK,True)
+    rect(d,(16,98,185,146),'#e0e9d5',12)
+    text(d,(30,110),'Studio launch',21,INK,True)
+    text(d,(30,536),'CONNECTED TO',12,MUTED,True)
+    text(d,(30,565),'Meadow',24,GREEN,True)
+    # A custom chatbot uses Meadow's publishing API; no third-party branding.
+    prompt='Post our studio launch to LinkedIn,\nThreads, and Bluesky.'
+    typed=prompt[:int(min(1,t/2.4)*len(prompt))]
+    bubble(d,(348,26,1235,140),'#e8efff','#d1ddf4')
+    text(d,(375,44),'You',17,BLUE,True)
+    # Wrap at a fixed phrase so the entire request remains legible.
+    for i,line in enumerate(typed.split('\n')): text(d,(375,76+i*29),line,25,INK)
+    if t<3:
+        text(d,(241,187),'Meadow assistant',19,GREEN,True)
+        text(d,(241,225),'Preparing your post'+'.'*(1+int(t*2)%3),25,MUTED)
+    elif t<10:
+        text(d,(241,176),'Meadow assistant',19,GREEN,True)
+        text(d,(241,211),'Ready to publish. Here is your preview:',26,INK)
+        bubble(d,(240,258,1235,464))
+        text(d,(266,281),'A little space for your next big idea.',27,INK,True)
+        text(d,(266,324),'Our new studio opens Friday.',25,INK)
+        text(d,(266,362),'Come make something with us.',25,INK)
+        for i,name in enumerate(['LinkedIn','Threads','Bluesky']):
+            x=267+i*270; platform(d,x,411,name,30); text(d,(x+43,414),name,20,INK)
+        if t<6.5:
+            text(d,(242,500),'Shall I publish this to all three channels now?',25,INK)
+        else:
+            bubble(d,(694,493,1235,578),'#e8efff','#d1ddf4')
+            text(d,(720,510),'You',17,BLUE,True)
+            reply='Yes, publish it now.'
+            text(d,(720,539),reply[:int(min(1,(t-6.5)/1.2)*len(reply))],25,INK)
+    else:
+        text(d,(241,176),'Meadow assistant',19,GREEN,True)
+        if t<11.7:
+            text(d,(241,215),'Publishing through Meadow'+'.'*(1+int(t*2)%3),28,INK,True)
+        else:
+            text(d,(241,215),'Published. Your studio launch is live.',28,GREEN,True)
+        for i,name in enumerate(['LinkedIn','Threads','Bluesky']):
+            y=275+i*99
+            bubble(d,(240,y,1235,y+80))
+            platform(d,263,y+19,name,42)
+            text(d,(325,y+27),name,25,INK,True)
+            done=t>11.7+i*.5
+            rect(d,(1001,y+20,1206,y+62),'#e8f0df' if done else '#edf2ff',20)
+            text(d,(1026,y+30),'Published' if done else 'Publishing…',20,GREEN if done else BLUE,True)
+            if done: check(d,1177,y+40,GREEN,10)
+    return im
+
+def frame(t):
+    # Both routes get a complete review -> publish -> confirmation sequence.
+    if t<17:
+        im=direct_frame(t*1.28)
+        if t>16.65: im=Image.blend(im,chatbot_frame(0),ease((t-16.65)/.35))
+        return im
+    im=chatbot_frame(t-17)
+    if t>33.6: im=Image.blend(im,direct_frame(0),ease((t-33.6)/.4))
     return im
 
 if __name__=='__main__':
     OUT.mkdir(parents=True,exist_ok=True)
-    frame(10.5).save(OUT/'meadow-publishing-demo-v1.webp',quality=86)
-    command=['ffmpeg','-y','-loglevel','error','-f','rawvideo','-pix_fmt','rgb24','-s',f'{W}x{H}','-r',str(FPS),'-i','-','-an','-c:v','libx264','-preset','slow','-crf','23','-pix_fmt','yuv420p','-movflags','+faststart',str(OUT/'meadow-publishing-demo-v1.mp4')]
+    frame(10.5).save(OUT/'meadow-publishing-demo-v2.webp',quality=86)
+    command=['ffmpeg','-y','-loglevel','error','-f','rawvideo','-pix_fmt','rgb24','-s',f'{W}x{H}','-r',str(FPS),'-i','-','-an','-c:v','libx264','-preset','slow','-crf','23','-pix_fmt','yuv420p','-movflags','+faststart',str(OUT/'meadow-publishing-demo-v2.mp4')]
     proc=subprocess.Popen(command,stdin=subprocess.PIPE)
     for n in range(FPS*SECONDS): proc.stdin.write(frame(n/FPS).tobytes())
     proc.stdin.close()
     if proc.wait(): raise SystemExit('FFmpeg failed')
-    subprocess.run(['ffmpeg','-y','-loglevel','error','-i',str(OUT/'meadow-publishing-demo-v1.mp4'),'-an','-c:v','libvpx-vp9','-b:v','0','-crf','34','-row-mt','1',str(OUT/'meadow-publishing-demo-v1.webm')],check=True)
-    print('Rendered 22-second Meadow demo and poster to',OUT)
+    subprocess.run(['ffmpeg','-y','-loglevel','error','-i',str(OUT/'meadow-publishing-demo-v2.mp4'),'-an','-c:v','libvpx-vp9','-b:v','0','-crf','34','-row-mt','1',str(OUT/'meadow-publishing-demo-v2.webm')],check=True)
+    print('Rendered 34-second Meadow demo and poster to',OUT)
