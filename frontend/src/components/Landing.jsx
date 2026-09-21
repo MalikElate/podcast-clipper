@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { SiClaude, SiCursor } from "react-icons/si";
 import { PlatformIcon } from "../bridge/ui.jsx";
 import BrandLogo from "./BrandLogo.jsx";
@@ -71,28 +71,6 @@ const GOALS = [
   },
 ];
 
-const HOW_STEPS = [
-  { number: "01", title: "Connect your channels", text: "Bring the social accounts you already use into one private Meadow workspace." },
-  { number: "02", title: "Create your campaign", text: "Prepare the message, media, destinations, and timing for each post." },
-  { number: "03", title: "Review every version", text: "Preview destination-specific details before anything is submitted." },
-  { number: "04", title: "Publish and follow delivery", text: "Publish now or schedule later, then check status from the same workspace." },
-];
-
-const AGENT_SETUP = `Meadow publishing API - setup for coding agents
-
-MCP URL: https://findmeadow.com/mcp
-Base URL: https://findmeadow.com/api/bridge
-Auth header: Authorization: Bearer br_live_...
-Create a key in Meadow under Configuration > API Keys. It is shown once.
-Read it from the environment; never hardcode or commit it.
-
-MCP tools
-  get_profile, list_projects, list_accounts, list_posts, get_post,
-  create_draft, get_analytics
-
-Start with list_projects and list_accounts. Use create_draft to prepare work for
-review, or use the REST preview endpoint before a publish request.`;
-
 function ArrowIcon() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
@@ -120,34 +98,6 @@ function PlatformMark({ platform, className = "", variant = "default" }) {
     <span className={`landing-platform-mark ${className}`} style={{ "--platform-color": platform.color }} role="img" aria-label={platform.name} title={platform.name}>
       <PlatformIcon platform={platform.id} size={variant === "hero" ? 32 : 24} variant={variant} />
     </span>
-  );
-}
-
-function AgentSetupCopyButton() {
-  const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    if (!copied) return undefined;
-    const timer = setTimeout(() => setCopied(false), 2200);
-    return () => clearTimeout(timer);
-  }, [copied]);
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(AGENT_SETUP);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-  }
-
-  return (
-    <button type="button" className="hero-agent-copy" onClick={copy} data-copied={copied ? "true" : undefined}>
-      <span>{copied ? "Setup copied" : "Copy agent setup"}</span>
-      <span className="hero-agent-logos" aria-hidden="true">
-        {AGENT_LOGOS.map((agent) => <span key={agent.name} className={agent.className} title={agent.name}><agent.Icon /></span>)}
-      </span>
-      <svg className="hero-agent-copy-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="5.25" y="2.25" width="7.5" height="8.5" rx="1.25" stroke="currentColor" strokeWidth="1.25" /><path d="M3.25 5.5v7.25c0 .69.56 1.25 1.25 1.25h6.25" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" /></svg>
-    </button>
   );
 }
 
@@ -260,7 +210,7 @@ export default function Landing({ onGetStarted }) {
             <div className="platform-showcase-center">
               <h2><span>Plan once. Publish across</span>{" "}<span>the platforms that matter.</span></h2>
               <p>Bring every destination into one consistent Meadow workflow.</p>
-              <a className="platform-showcase-button" href="#how-it-works">See how it works <ArrowIcon /></a>
+              <a className="platform-showcase-button" href="#ways-to-use">See how it works <ArrowIcon /></a>
             </div>
             <div className="platform-orbit" aria-label="Social publishing platforms">
               {PLATFORMS.map((platform, index) => (
@@ -297,12 +247,6 @@ export default function Landing({ onGetStarted }) {
               <div className="usage-card-copy"><h3>For custom workflows</h3><p>Connect internal tools, scheduled jobs, or your own application to Meadow&apos;s publishing layer.</p><ul><li><CheckIcon />Use one consistent API</li><li><CheckIcon />Preview and validate destinations</li><li><CheckIcon />Track delivery programmatically</li></ul></div>
             </article>
           </div>
-        </section>
-
-        <section className="landing-section how-section" id="how-it-works" aria-labelledby="how-title">
-          <div className="how-heading"><h2 id="how-title">However you start, Meadow carries the work forward.</h2><p>The same drafting, review, scheduling, and delivery steps support hands-on creators, agent-assisted work, and automated systems.</p></div>
-          <div className="how-grid">{HOW_STEPS.map((step) => <article className="how-card" key={step.number}><span className="how-number">{step.number}</span><h3>{step.title}</h3><p>{step.text}</p></article>)}</div>
-          <div className="how-info-panel automation-panel"><div><h3>Direct, agent, and automated work stay together.</h3></div><p>Use one secure Meadow key to connect supported clients or your own workflow. Drafts, previews, publishing, delivery status, and available performance data follow the same structure.</p><AgentSetupCopyButton /></div>
         </section>
 
         <section className="landing-section home-pricing-section" id="pricing" aria-labelledby="home-pricing-title">
