@@ -48,7 +48,10 @@ export class LinkedInProvider extends PlatformProvider {
   }
   async finish(ctx, uploads) {
     for (const upload of uploads) {
-      const result = await this.request(`${upload.collection}/${encodeURIComponent(upload.urn)}`, ctx.credentials);
+      // LinkedIn's versioned Images GET rejects write-only w_member_social.
+      // Its documented legacy Images GET supports the image owner's token.
+      const memberImage = upload.kind === "image" && ctx.account.remoteId.startsWith("urn:li:person:");
+      const result = await this.request(`${upload.collection}/${encodeURIComponent(upload.urn)}`, ctx.credentials, memberImage ? { headers: { "X-Restli-Protocol-Version": "2.0.0" } } : {});
       if (["PROCESSING_FAILED", "FAILED"].includes(result.status)) throw new ProviderError("LinkedIn could not process this file.");
       if (result.status !== "AVAILABLE") return { status: "processing", progress: { uploads }, pollAfterMs: 15000 };
     }
