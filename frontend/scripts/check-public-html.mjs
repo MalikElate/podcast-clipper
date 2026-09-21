@@ -17,7 +17,7 @@ for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
 }
 const landingHtml = await readFile("dist/index.html", "utf8");
 assert.ok(landingHtml.includes('aria-label="Learn about Telegram publishing"'), "Homepage must include Telegram in its platform grid");
-assert.ok(landingHtml.includes("all eleven platforms"), "Homepage must show the current platform count");
+assert.ok(landingHtml.includes("all these platforms"), "Homepage must introduce its current platform list");
 assert.doesNotMatch(landingHtml, /coming[ -]soon/i);
 assert.ok(!landingHtml.includes('class="upcoming-platforms"'), "Upcoming logos belong in the existing platform sections");
 for (const id of ["twitch", "kick"]) assert.ok(landingHtml.includes(`data-platform="${id}"`), `${id} must appear in the homepage logo showcase`);

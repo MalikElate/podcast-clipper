@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { SiClaude, SiCursor } from "react-icons/si";
 import { PlatformIcon } from "../bridge/ui.jsx";
 import BrandLogo from "./BrandLogo.jsx";
@@ -165,30 +165,24 @@ function ScenarioVisual({ goal }) {
   );
 }
 
-function GoalScenarios() {
-  const [activeId, setActiveId] = useState(GOALS[0].id);
-  const activeGoal = useMemo(() => GOALS.find((goal) => goal.id === activeId) ?? GOALS[0], [activeId]);
+function GoalScenarios({ onGetStarted }) {
+  const schedulingGoal = GOALS[0];
   return (
-    <section className="landing-section goals-section" id="workflows" aria-labelledby="goals-title">
-      <div className="goals-heading">
-        <h2 id="goals-title">Plan, repurpose, publish everywhere. <span className="goal-once-highlight">Once!</span></h2>
-        <p>Turn one idea into channel-ready posts, keep a consistent publishing calendar, coordinate launches, and schedule every connected destination from one workspace.</p>
+    <section className="landing-section goals-section scheduling-use-case" id="workflows" aria-labelledby="goals-title">
+      <div className="scheduling-use-case-visual">
+        <ScenarioVisual goal={schedulingGoal} />
       </div>
-      <div className="goal-tabs" role="tablist" aria-label="Content goals">
-        {GOALS.map((goal) => (
-          <button type="button" role="tab" id={`goal-tab-${goal.id}`} aria-controls={`goal-panel-${goal.id}`} aria-selected={activeId === goal.id} className={activeId === goal.id ? "active" : ""} key={goal.id} onClick={() => setActiveId(goal.id)}>{goal.tab}</button>
-        ))}
-      </div>
-      <div className="goal-panel" role="tabpanel" id={`goal-panel-${activeGoal.id}`} aria-labelledby={`goal-tab-${activeGoal.id}`}>
-        <div className="goal-panel-copy">
-          <h3>{activeGoal.title}</h3>
-          <p>{activeGoal.text}</p>
-          <div className="goal-audience-notes goal-workflow-notes">
-            <div><p>{activeGoal.noteA}</p></div>
-            <div><p>{activeGoal.noteB}</p></div>
-          </div>
+      <div className="scheduling-use-case-copy">
+        <div className="scheduling-use-case-kicker">
+          <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3v3m10-3v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg></span>
+          Scheduling
         </div>
-        <ScenarioVisual goal={activeGoal} />
+        <h2 id="goals-title">Plan, repurpose, publish everywhere. <span className="goal-once-highlight">Once!</span></h2>
+        <p>Turn one idea into channel-ready posts, tailor each version for its destination, and schedule every connected platform from one Meadow campaign.</p>
+        <div className="scheduling-use-case-actions">
+          <button type="button" className="scheduling-use-case-primary" onClick={onGetStarted}>Start scheduling <ArrowIcon /></button>
+          <a className="scheduling-use-case-secondary" href="#ways-to-use">See how it works</a>
+        </div>
       </div>
     </section>
   );
@@ -232,7 +226,7 @@ export default function Landing({ onGetStarted }) {
           <HeroDemo />
         </section>
 
-        <GoalScenarios />
+        <GoalScenarios onGetStarted={onGetStarted} />
 
         <section className="landing-section audience-section usage-section" id="ways-to-use" aria-labelledby="usage-title">
           <div className="audience-heading"><h2 id="usage-title">Three paths. One publishing workspace.</h2><p>Choose the level of control and automation that fits the way you work today. You can move between them whenever your workflow changes.</p></div>
@@ -274,7 +268,7 @@ export default function Landing({ onGetStarted }) {
           <div className="faq-heading"><h2>Questions, answered.</h2></div>
           <div className="faq-grid">
             <article className="faq-card"><h3>How can I use Meadow?</h3><p>Create directly in the Meadow workspace, connect a supported AI agent through MCP, or build an automated workflow with the API. All three paths use the same connected accounts and publishing structure.</p></article>
-            <article className="faq-card"><h3>Which social platforms can I connect?</h3><p>Meadow supports workflows across all eleven platforms: Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, Telegram, and Google Business, plus chat integrations for Twitch and Kick. Connect Telegram channels and groups through the Meadow bot. Connection availability can vary by platform status.</p></article>
+            <article className="faq-card"><h3>Which social platforms can I connect?</h3><p>Meadow supports workflows across all these platforms: Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, Telegram, and Google Business, plus chat integrations for Twitch and Kick. Connect Telegram channels and groups through the Meadow bot. Connection availability can vary by platform status.</p></article>
             <article className="faq-card"><h3>Can I save work before it is published?</h3><p>Yes. You can keep content as a draft, review the destination details, and publish only when it is ready.</p></article>
             <article className="faq-card"><h3>Can I schedule posts?</h3><p>Yes. Choose a future date and time for supported destinations, then follow scheduled and published delivery from Meadow.</p></article>
             <article className="faq-card"><h3>What content formats can I prepare?</h3><p>Prepare text, images, video, carousels, stories, reels, and documents where the selected destination supports that format.</p></article>

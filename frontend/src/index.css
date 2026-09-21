@@ -2102,6 +2102,21 @@ input[type="range"]::-moz-range-thumb {
 .goal-audience-notes span { color: #365bb5; font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
 .goal-audience-notes p { margin: 5px 0 0; color: #526477; font-size: 12px; line-height: 1.5; }
 .goal-workflow-notes p { margin: 0; }
+.scheduling-use-case { display: grid; grid-template-columns: minmax(0,.92fr) minmax(0,1.08fr); align-items: center; gap: clamp(58px,8vw,116px); padding-top: 136px; padding-bottom: 136px; }
+.scheduling-use-case-visual { padding: clamp(22px,3vw,34px); border-radius: 28px; background: #f7f8f7; box-shadow: inset 0 0 0 1px #e5e9e4; }
+.scheduling-use-case-visual .scenario-visual { padding: clamp(16px,2vw,24px); border-radius: 20px; box-shadow: 0 28px 58px -42px rgba(28,45,64,.55); }
+.scheduling-use-case-copy { max-width: 610px; }
+.scheduling-use-case-kicker { display: inline-flex; align-items: center; gap: 10px; color: #59a957; font-size: 13px; font-weight: 800; letter-spacing: .055em; text-transform: uppercase; }
+.scheduling-use-case-kicker > span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #eef8ee; }
+.scheduling-use-case-kicker svg { width: 20px; height: 20px; }
+.scheduling-use-case-copy h2 { max-width: 12ch; margin: 24px 0 22px; color: #26344a; font-size: clamp(46px,5.2vw,68px); line-height: .98; letter-spacing: -.055em; }
+.scheduling-use-case-copy > p { max-width: 620px; margin: 0; color: #687487; font-size: 17px; line-height: 1.65; }
+.scheduling-use-case-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 30px; }
+.scheduling-use-case-primary, .scheduling-use-case-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 50px; padding: 13px 24px; border: 0; border-radius: 999px; font-family: inherit; font-size: 14px; font-weight: 750; text-decoration: none; }
+.scheduling-use-case-primary { background: #68c782; color: #173823; box-shadow: 0 16px 28px -20px rgba(40,130,70,.62); }
+.scheduling-use-case-primary:hover { background: #79d390; transform: translateY(-1px); }
+.scheduling-use-case-secondary { background: #fff; color: #28364a; box-shadow: inset 0 0 0 1px #d5dad6; }
+.scheduling-use-case-secondary:hover { background: #f7f8f7; }
 .scenario-visual { --scenario-accent: #5a7ee7; min-width: 0; padding: 22px; border: 1px solid rgba(103,130,170,.22); border-radius: 22px; background: rgba(255,255,255,.94); box-shadow: 0 30px 55px -42px rgba(27,55,95,.58); }
 .scenario-visual.accent-green { --scenario-accent: #67a04b; }.scenario-visual.accent-violet { --scenario-accent: #8664d7; }.scenario-visual.accent-orange { --scenario-accent: #d47b3c; }
 .scenario-topline { display: flex; align-items: center; justify-content: space-between; padding-bottom: 17px; border-bottom: 1px solid #e6ebef; }
@@ -2150,6 +2165,8 @@ input[type="range"]::-moz-range-thumb {
   .hero-demo { width: min(100%,800px); margin: 0 auto; }
   .goal-panel { grid-template-columns: 1fr; }
   .goal-panel-copy h3 { max-width: 13ch; }
+  .scheduling-use-case { grid-template-columns: 1fr; gap: 48px; }
+  .scheduling-use-case-copy { max-width: 720px; }
   .goal-audience-notes { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .audience-card img { height: 275px; }
   .landing-v2 .platform-section-layout { padding: 42px; }
@@ -2164,6 +2181,10 @@ input[type="range"]::-moz-range-thumb {
   .landing-hero-v2 .hero-actions-v2 { flex-direction: column; gap: 4px; }
   .landing-hero-v2 .hero-platform-rail { max-width: 360px; margin-top: 32px; }
   .goals-section, .audience-section { padding-top: 94px; }
+  .scheduling-use-case { gap: 38px; padding-top: 94px; padding-bottom: 94px; }
+  .scheduling-use-case-visual { padding: 16px; border-radius: 22px; }
+  .scheduling-use-case-copy h2 { max-width: 11ch; margin-top: 20px; font-size: clamp(40px,12vw,54px); }
+  .scheduling-use-case-copy > p { font-size: 15px; }
   .goal-tabs { display: flex; margin: 34px -18px 0; padding: 7px 18px; overflow-x: auto; border-radius: 0; scroll-snap-type: x mandatory; }
   .goal-tabs button { min-width: max-content; scroll-snap-align: start; }
   .goal-panel { min-height: 0; margin: 12px -6px 0; padding: 34px 24px; border-radius: 24px; }
