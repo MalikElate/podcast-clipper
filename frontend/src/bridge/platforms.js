@@ -1,6 +1,6 @@
 // Canonical order for platform groups, account selectors and delivery icons.
-export const PLATFORM_ORDER = ["x", "instagram", "linkedin", "facebook", "tiktok", "snapchat", "youtube", "telegram", "bluesky", "threads", "pinterest", "google_business"];
-export const PLATFORM_COLORS = { x: "#171717", instagram: "#e4405f", linkedin: "#0a66c2", facebook: "#1877f2", tiktok: "#111111", snapchat: "#111111", youtube: "#ff0033", telegram: "#229ed9", bluesky: "#168aff", threads: "#111111", pinterest: "#e60023", google_business: "#4285f4" };
+export const PLATFORM_ORDER = ["x", "instagram", "linkedin", "facebook", "tiktok", "snapchat", "youtube", "telegram", "twitch", "kick", "bluesky", "threads", "pinterest", "google_business"];
+export const PLATFORM_COLORS = { x: "#171717", instagram: "#e4405f", linkedin: "#0a66c2", facebook: "#1877f2", tiktok: "#111111", snapchat: "#111111", youtube: "#ff0033", telegram: "#229ed9", twitch: "#9146ff", kick: "#238b00", bluesky: "#168aff", threads: "#111111", pinterest: "#e60023", google_business: "#4285f4" };
 export function sortPlatforms(items) {
   const rank = item => {
     const index = PLATFORM_ORDER.indexOf(item.platform || item.id);

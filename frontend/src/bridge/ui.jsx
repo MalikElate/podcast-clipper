@@ -10,10 +10,11 @@ import {
   FaTelegram,
   FaThreads,
   FaTiktok,
+  FaTwitch,
   FaXTwitter,
   FaYoutube,
 } from "react-icons/fa6";
-import { SiBluesky } from "react-icons/si";
+import { SiBluesky, SiKick } from "react-icons/si";
 import { api } from "./BridgeApi.js";
 import { Icon } from "./Icons.jsx";
 import { PLATFORM_COLORS } from "./platforms.js";
@@ -38,6 +39,8 @@ export function PlatformIcon({ platform, size = 22, variant = "default" }) {
     pinterest: isHero ? FaPinterest : FaPinterestP,
     snapchat: FaSnapchat,
     telegram: FaTelegram,
+    twitch: FaTwitch,
+    kick: SiKick,
     threads: FaThreads,
     tiktok: FaTiktok,
     x: FaXTwitter,

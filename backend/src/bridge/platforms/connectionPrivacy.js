@@ -1,6 +1,6 @@
 // Keep these notices aligned with the fields and scopes used by each adapter.
 // A compact summary and a link to the platform's public privacy section are shown before authorization.
-export const CONNECTION_PRIVACY_VERSION = "2026-09-21-connections-6";
+export const CONNECTION_PRIVACY_VERSION = "2026-09-21-connections-7";
 
 const authorization = {
   name: "Authorization and consent",
@@ -16,6 +16,42 @@ const googlePolicies = [
 ];
 
 const notices = {
+  twitch: {
+    name: "Twitch",
+    connectionSummary: "Connect your Twitch channel to schedule chat messages and replies.",
+    requirement: "Authorize the channel you own with permission to send chat messages.",
+    revokeSummary: "Disconnect in Meadow or remove Meadow in the platform’s connected-app settings.",
+    shortAgreement: "I agree to connect Twitch and allow the access described above.",
+    introduction: "Choose whether Meadow may identify your channel and send the chat messages you submit. Twitch also permits colored announcements. Messages sent during Shared Chat can appear in all participating channels.",
+    data: [
+      { name: "Channel identity", detail: "Account ID, channel name, profile image and channel link, used to identify the destination." },
+      { name: "Messages you submit", detail: "Message text, optional reply IDs and follow-up messages, and your publishing choices. Meadow stores confirmed message IDs and delivery status to avoid resending successful messages. Chat engagement analytics are unavailable." },
+      authorization,
+    ],
+    retention: "The channel identity, encrypted authorization and delivery records remain while connected. Disconnecting removes this connection data. Credentials needed only to retry revocation are destroyed within seven days. Your original drafts remain until you delete them or your Meadow account.",
+    platformNote: "Connecting does not send messages by itself. Disconnecting stops new deliveries and requests token revocation; messages already sent remain on the platform. You can also remove Meadow in the platform’s connected-app settings.",
+    agreement: "I agree to this Twitch connection privacy notice and Meadow’s Privacy Policy and Terms of Service, and allow the data access described above.",
+    policies: [{ label: "Twitch Privacy Policy", url: "https://www.twitch.tv/p/en/legal/privacy-notice/" }],
+  },
+
+  kick: {
+    name: "Kick",
+    connectionSummary: "Connect your Kick channel to schedule chat messages and replies.",
+    requirement: "Authorize the channel you own with permission to send chat messages.",
+    revokeSummary: "Disconnect in Meadow or remove Meadow in the platform’s connected-app settings.",
+    shortAgreement: "I agree to connect Kick and allow the access described above.",
+    introduction: "Choose whether Meadow may identify your channel and send the chat messages you submit. Kick’s user lookup includes an email address; Meadow does not save it.",
+    data: [
+      { name: "Channel identity", detail: "Account ID, channel name, profile image and channel link, used to identify the destination." },
+      { name: "Messages you submit", detail: "Message text, optional reply IDs and follow-up messages, and your publishing choices. Meadow stores confirmed message IDs and delivery status to avoid resending successful messages. Chat engagement analytics are unavailable." },
+      authorization,
+    ],
+    retention: "The channel identity, encrypted authorization and delivery records remain while connected. Disconnecting removes this connection data. Credentials needed only to retry revocation are destroyed within seven days. Your original drafts remain until you delete them or your Meadow account.",
+    platformNote: "Connecting does not send messages by itself. Disconnecting stops new deliveries and requests token revocation; messages already sent remain on the platform. You can also remove Meadow in the platform’s connected-app settings.",
+    agreement: "I agree to this Kick connection privacy notice and Meadow’s Privacy Policy and Terms of Service, and allow the data access described above.",
+    policies: [{ label: "Kick Privacy Policy", url: "https://kick.com/privacy-policy" }],
+  },
+
   telegram: {
     name: "Telegram",
     connectionSummary: "Connect a Telegram channel or group to publish and schedule posts through the Meadow Publisher bot.",

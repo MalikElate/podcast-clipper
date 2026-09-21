@@ -71,7 +71,7 @@ export class PublishingWorker {
         account = { ...account, options: freshOptions };
         const post = this.store.get("post", delivery.postId);
         if (!post) throw new BridgeError("The post is no longer available.");
-        const content = polling && delivery.contentSnapshot ? { ...delivery.contentSnapshot, accountOptions: account.options || {}, media: delivery.contentSnapshot.mediaIds.map(id => this.store.get("media", id)).filter(Boolean), thumbnail: delivery.contentSnapshot.thumbnailMediaId ? this.store.get("media", delivery.contentSnapshot.thumbnailMediaId) : null } : this.posts.content(post, account);
+        const content = (polling || delivery.progress?.chat) && delivery.contentSnapshot ? { ...delivery.contentSnapshot, accountOptions: account.options || {}, media: delivery.contentSnapshot.mediaIds.map(id => this.store.get("media", id)).filter(Boolean), thumbnail: delivery.contentSnapshot.thumbnailMediaId ? this.store.get("media", delivery.contentSnapshot.thumbnailMediaId) : null } : this.posts.content(post, account);
         if (content.media.length !== post.mediaIds.length) throw new BridgeError("A media item is no longer available.");
         provider.assertValid(content);
         delivery = this.store.transaction(() => {

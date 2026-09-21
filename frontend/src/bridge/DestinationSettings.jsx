@@ -6,6 +6,20 @@ export function DestinationSettings({ account, settings = {}, onChange, hasVideo
   const update = (key, value) => onChange({ ...settings, [key]: value });
   const creator = account.options?.creator;
   return <div className="bridge-destination-settings">
+    {["twitch", "kick"].includes(account.platform) && <>
+      <p className="bridge-small">Posts go to your channel’s chat as your account. Each message allows 500 characters. Links are welcome; media uploads are unavailable.</p>
+      {account.platform === "twitch" && <>
+        <Field label="Twitch post type"><select value={settings.messageType || "message"} onChange={event => onChange({ ...settings, messageType: event.target.value, replyToMessageId: "" })}><option value="message">Chat message</option><option value="announcement">Announcement</option></select></Field>
+        {settings.messageType === "announcement" && <Field label="Announcement color"><select value={settings.announcementColor || "primary"} onChange={event => update("announcementColor", event.target.value)}><option value="primary">Channel color</option><option value="blue">Blue</option><option value="green">Green</option><option value="orange">Orange</option><option value="purple">Purple</option></select></Field>}
+        <p className="bridge-small">During Twitch Shared Chat, chat messages can appear in every participating channel.</p>
+      </>}
+      {settings.messageType !== "announcement" && <Field label="Reply to a message (optional)" hint="Paste a message ID from this channel to start with a reply."><input value={settings.replyToMessageId || ""} maxLength={128} onChange={event => update("replyToMessageId", event.target.value.trim())} placeholder="Message ID"/></Field>}
+      {(settings.replies || []).map((reply, index) => <div key={index}>
+        <Field label={`${settings.messageType === "announcement" ? "Follow-up announcement" : "Follow-up reply"} ${index + 1}`} hint="Sent after the preceding message succeeds. Up to 500 characters."><textarea rows={3} value={reply} onChange={event => update("replies", settings.replies.map((text, position) => position === index ? event.target.value : text))}/></Field>
+        <button type="button" className="bridge-text-button" onClick={() => update("replies", settings.replies.filter((_, position) => position !== index))}>Remove follow-up {index + 1}</button>
+      </div>)}
+      {(settings.replies || []).length < 10 && <button type="button" className="bridge-button secondary small" onClick={() => update("replies", [...(settings.replies || []), ""])}>Add {settings.messageType === "announcement" ? "follow-up announcement" : "reply"}</button>}
+    </>}
     {account.platform === "youtube" && <>
       <Field label="Visibility"><select value={settings.privacy || ""} onChange={event => update("privacy", event.target.value)}><option value="">Choose visibility</option><option value="public">Public</option><option value="unlisted">Unlisted</option><option value="private">Private</option></select></Field>
       <Field label="Audience"><select value={settings.madeForKids === undefined ? "" : String(settings.madeForKids)} onChange={event => update("madeForKids", event.target.value === "" ? undefined : event.target.value === "true")}><option value="">Is this made for kids?</option><option value="false">No, this is not made for kids</option><option value="true">Yes, this is made for kids</option></select></Field>

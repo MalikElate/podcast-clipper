@@ -69,6 +69,10 @@ export class PodcastClipperBackend extends Container {
     GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET,
     BLUESKY_PRIVATE_KEY: env.BLUESKY_PRIVATE_KEY,
+    TWITCH_CLIENT_ID: env.TWITCH_CLIENT_ID,
+    TWITCH_CLIENT_SECRET: env.TWITCH_CLIENT_SECRET,
+    KICK_CLIENT_ID: env.KICK_CLIENT_ID,
+    KICK_CLIENT_SECRET: env.KICK_CLIENT_SECRET,
     TELEGRAM_BOT_TOKEN: env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_BOT_USERNAME: env.TELEGRAM_BOT_USERNAME,
     TELEGRAM_WEBHOOK_SECRET: env.TELEGRAM_WEBHOOK_SECRET,
@@ -224,6 +228,7 @@ export default {
     return workerEnv.ASSETS.fetch(request);
   },
   async scheduled(event, workerEnv) {
+    if (event.cron === "*/30 * * * *" && !workerEnv.TWITCH_CLIENT_ID) return;
     const response = await workerEnv.BACKEND.getByName("primary").fetch(new Request("http://backend/health"));
     if (!response.ok) throw new Error("Meadow connection maintenance could not start.");
   },
