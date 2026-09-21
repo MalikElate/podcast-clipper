@@ -21,3 +21,6 @@
 
 /privacy
   Cache-Control: public, max-age=60, stale-while-revalidate=300
+
+/marketing/meadow-publishing-demo-v1.*
+  Cache-Control: public, max-age=31536000, immutable

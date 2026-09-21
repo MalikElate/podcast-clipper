@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { SiClaude, SiCursor } from "react-icons/si";
 import { PlatformIcon } from "../bridge/ui.jsx";
 import BrandLogo from "./BrandLogo.jsx";
+import HeroDemo from "./HeroDemo.jsx";
 import { sortPlatforms } from "../bridge/platforms.js";
 import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
@@ -163,34 +164,6 @@ function HeroPlatformRail() {
   );
 }
 
-function HeroWorkflow() {
-  const destinations = ["instagram", "tiktok", "linkedin", "youtube"].map((id) => PLATFORMS.find((platform) => platform.id === id)).filter(Boolean);
-  return (
-    <div className="hero-workflow" aria-label="Illustration of one campaign prepared for multiple social channels">
-      <div className="workflow-toolbar"><span className="workflow-brand-dot" /><span>Autumn studio launch</span><span className="workflow-status">Draft saved</span></div>
-      <div className="workflow-body">
-        <article className="workflow-composer">
-          <div className="workflow-composer-head"><span className="workflow-avatar">M</span><div><strong>New campaign</strong><small>4 destinations selected</small></div></div>
-          <div className="workflow-media"><span>New collection</span><strong>Made for the way your day moves.</strong></div>
-          <p>Meet the collection built for busy mornings, long afternoons, and everything in between.</p>
-          <div className="workflow-schedule"><span>Publish</span><strong>Thursday · 10:30 AM</strong></div>
-        </article>
-        <div className="workflow-routes" aria-hidden="true"><span /><span /><span /><span /></div>
-        <div className="workflow-destinations">
-          {destinations.map((platform, index) => (
-            <div className="workflow-destination" key={platform.id} style={{ "--platform-color": platform.color, "--delay": `${index * 80}ms` }}>
-              <PlatformMark platform={platform} variant="hero" />
-              <div><strong>{platform.name}</strong><span>{index === 2 ? "Company update" : index === 3 ? "Video release" : "Social post"}</span></div>
-              <span className="workflow-ready">Ready</span>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="workflow-note">One campaign. The right version for every connected channel.</div>
-    </div>
-  );
-}
-
 function movePlatformOrbit(event) {
   const bounds = event.currentTarget.getBoundingClientRect();
   const x = Math.max(-1, Math.min(1, ((event.clientX - bounds.left) / bounds.width) * 2 - 1));
@@ -279,7 +252,7 @@ export default function Landing({ onGetStarted }) {
             <div className="hero-actions hero-actions-v2" data-rise style={{ "--d": "340ms" }}><button className="btn-primary landing-cta" onClick={onGetStarted}>Get started <ArrowIcon /></button><a className="hero-text-link" href="#ways-to-use">See ways to use Meadow</a></div>
             <HeroPlatformRail />
           </div>
-          <HeroWorkflow />
+          <HeroDemo />
         </section>
 
         <section className="landing-section platform-section platform-showcase-section" id="platforms">
