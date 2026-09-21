@@ -19,6 +19,7 @@ import { AccountService } from "./services/AccountService.js";
 import { PostService } from "./services/PostService.js";
 import { RateLimitService } from "./services/RateLimitService.js";
 import { AnalyticsService } from "./services/AnalyticsService.js";
+import { AccountViewsService } from "./services/AccountViewsService.js";
 import { ApiKeyService } from "./services/ApiKeyService.js";
 import { PublishingWorker } from "./services/PublishingWorker.js";
 import { BillingService } from "./services/BillingService.js";
@@ -77,6 +78,7 @@ export class BridgeApplication {
     this.accounts = new AccountService({ ...deps, registry: this.registry, projects: this.projects, clock, localPreview: this.localPreview });
     this.posts = new PostService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, media: this.media, schedules: this.schedules, rates: this.rates, clock, localPreview: this.localPreview });
     this.analytics = new AnalyticsService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, posts: this.posts, clock });
+    this.accountViews = new AccountViewsService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, clock });
     this.billing = new BillingService({ store: this.store, env, appUrl: this.appUrl, stripe, locks: this.locks, clock });
     this.privacy = new PrivacyService({ ...deps, registry: this.registry, storage: this.storage, projects: this.projects, billing: this.billing, clock,
       deleteIdentity: deleteIdentity || (async uid => { if (this.localPreview) return; try { await clerkClient.users.deleteUser(uid); } catch (error) { if (error.status !== 404) throw error; } }),
@@ -270,6 +272,7 @@ export class BridgeApplication {
     app.post(`${root}/queue/reorder`, route((req, res) => res.json({ posts: this.posts.reorder(req.uid, req.params.projectId, req.body.accountId, req.body.deliveryIds) })));
     app.post(`${root}/deliveries/:id/retry`, route((req, res) => res.json({ post: this.posts.retry(req.uid, req.params.projectId, req.params.id, req.body) })));
     app.get(`${root}/analytics`, route((req, res) => res.json(this.analytics.report(req.uid, req.params.projectId))));
+    app.get(`${root}/analytics/account-views`, route(async (req, res) => res.json(await this.accountViews.report(req.uid, req.params.projectId, { days: req.query.days ?? 180, refresh: req.query.refresh === "true" }))));
     app.post(`${root}/analytics/refresh`, route(async (req, res) => res.json(await this.analytics.refresh(req.uid, req.params.projectId, req.body))));
   }
   start() {

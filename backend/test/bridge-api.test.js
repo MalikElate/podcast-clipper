@@ -30,11 +30,23 @@ function fileForm(bytes = pdf, name = "document.pdf", type = "application/pdf") 
 test("all project routes require authentication and reject another owner's project", async t => {
   const h = await setup(t);
   assert.equal((await h.request(`${h.root}/media`, { user: null })).status, 401);
-  for (const endpoint of ["/media", "/accounts", "/posts", "/analytics"]) assert.equal((await h.request(h.root + endpoint, { user: "bob" })).status, 404);
+  for (const endpoint of ["/media", "/accounts", "/posts", "/analytics", "/analytics/account-views"]) assert.equal((await h.request(h.root + endpoint, { user: "bob" })).status, 404);
   const projects = await (await h.request("/api/bridge/projects", { user: "bob" })).json(); assert.deepEqual(projects.projects, []);
   const config = await (await h.request("/api/bridge/config")).json(); assert.equal(config.platforms.length, 12); assert.equal(config.connectionsReady, false);
   assert.equal(config.platforms.find(platform => platform.id === "telegram")?.configured, false);
   assert.equal(config.platforms.find(platform => platform.id === "snapchat")?.configured, false);
+});
+
+test("account view reports require authentication and expose an explicit 180-day window", async t => {
+  const h = await setup(t);
+  assert.equal((await h.request(`${h.root}/analytics/account-views`, { user: null })).status, 401);
+  assert.equal((await h.request(`${h.root}/analytics/account-views?days=30`)).status, 400);
+  const response = await h.request(`${h.root}/analytics/account-views?days=180`);
+  assert.equal(response.status, 200);
+  const report = await response.json();
+  assert.equal(report.window.days, 180);
+  assert.deepEqual(report.accounts, []);
+  assert.equal((Date.parse(report.window.endDate) - Date.parse(report.window.startDate)) / 86400000, 179);
 });
 
 test("a first-time user gets one reusable default workspace", async t => {
