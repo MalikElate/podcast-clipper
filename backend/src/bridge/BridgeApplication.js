@@ -272,7 +272,7 @@ export class BridgeApplication {
     app.post(`${root}/queue/reorder`, route((req, res) => res.json({ posts: this.posts.reorder(req.uid, req.params.projectId, req.body.accountId, req.body.deliveryIds) })));
     app.post(`${root}/deliveries/:id/retry`, route((req, res) => res.json({ post: this.posts.retry(req.uid, req.params.projectId, req.params.id, req.body) })));
     app.get(`${root}/analytics`, route((req, res) => res.json(this.analytics.report(req.uid, req.params.projectId))));
-    app.get(`${root}/analytics/account-views`, route(async (req, res) => res.json(await this.accountViews.report(req.uid, req.params.projectId, { days: req.query.days ?? 180, refresh: req.query.refresh === "true" }))));
+    app.get(`${root}/analytics/account-views`, route(async (req, res) => res.json(await this.accountViews.report(req.uid, req.params.projectId, { days: req.query.days ?? 180, refresh: req.query.refresh === "true", ...(req.query.accountIds !== undefined ? { accountIds: typeof req.query.accountIds === "string" ? req.query.accountIds.split(",") : [] } : {}) }))));
     app.post(`${root}/analytics/refresh`, route(async (req, res) => res.json(await this.analytics.refresh(req.uid, req.params.projectId, req.body))));
   }
   start() {

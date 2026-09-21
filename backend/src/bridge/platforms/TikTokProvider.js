@@ -1,7 +1,9 @@
 import { PlatformProvider } from "./PlatformProvider.js";
+import { tiktokAccountAnalytics } from "./accountAnalytics.js";
 import { invariant, ProviderError } from "../core/errors.js";
 
 export class TikTokProvider extends PlatformProvider {
+  availableAccountViews({ credentials }) { return tiktokAccountAnalytics(this, credentials); }
   constructor(deps) { super("tiktok", deps); }
   async revoke(credentials) {
     await this.http.request("https://open.tiktokapis.com/v2/oauth/revoke/", {
