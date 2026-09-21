@@ -6,6 +6,7 @@ Meadow is a publishing workspace for creating, scheduling, and analyzing social 
 
 - Clerk sign-in, with ownership enforced on every project API.
 - Direct provider adapters for Instagram, TikTok, YouTube, Facebook Pages, X, LinkedIn, Pinterest, Threads, Bluesky, and Google Business Profile.
+- Telegram and Snapchat are listed as coming-soon connections while their production API integrations are prepared and verified.
 - Saved social connections survive sign-out and container replacement, with proactive token renewal. Provider revocation, expired grants, or changed permissions can still require reconnection.
 - Media upload inside the composer, destination-specific formats and settings, validation, and queue preview.
 - Single-post composition with manual date, time, and timezone scheduling.

@@ -32,7 +32,9 @@ test("all project routes require authentication and reject another owner's proje
   assert.equal((await h.request(`${h.root}/media`, { user: null })).status, 401);
   for (const endpoint of ["/media", "/accounts", "/posts", "/analytics"]) assert.equal((await h.request(h.root + endpoint, { user: "bob" })).status, 404);
   const projects = await (await h.request("/api/bridge/projects", { user: "bob" })).json(); assert.deepEqual(projects.projects, []);
-  const config = await (await h.request("/api/bridge/config")).json(); assert.equal(config.platforms.length, 10); assert.equal(config.connectionsReady, false);
+  const config = await (await h.request("/api/bridge/config")).json(); assert.equal(config.platforms.length, 12); assert.equal(config.connectionsReady, false);
+  assert.equal(config.platforms.find(platform => platform.id === "telegram")?.configured, false);
+  assert.equal(config.platforms.find(platform => platform.id === "snapchat")?.configured, false);
 });
 
 test("a first-time user gets one reusable default workspace", async t => {

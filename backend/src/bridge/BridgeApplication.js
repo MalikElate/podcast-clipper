@@ -37,6 +37,7 @@ import { XProvider } from "./platforms/XProvider.js";
 import { LinkedInProvider } from "./platforms/LinkedInProvider.js";
 import { PinterestProvider } from "./platforms/PinterestProvider.js";
 import { BlueskyProvider } from "./platforms/BlueskyProvider.js";
+import { TelegramProvider, SnapchatProvider } from "./platforms/UpcomingProviders.js";
 import { clerkMiddleware, clerkClient } from "@clerk/express";
 import { verifyWebhook } from "@clerk/express/webhooks";
 import { requireAuth } from "../lib/clerkAuth.js";
@@ -68,7 +69,7 @@ export class BridgeApplication {
       try { signingKey = fs.readFileSync(keyPath, "utf8"); } catch (error) { if (error.code !== "ENOENT") throw error; signingKey = randomBytes(32).toString("base64"); fs.writeFileSync(keyPath, signingKey, { mode: 0o600 }); }
     }
     const deps = { env, publicUrl: this.publicUrl, store: this.store, vault: this.vault, locks: this.locks };
-    this.registry = registry || new ProviderRegistry([InstagramProvider, TikTokProvider, YouTubeProvider, FacebookProvider, XProvider, LinkedInProvider, PinterestProvider, ThreadsProvider, BlueskyProvider, GoogleBusinessProvider].map(Provider => new Provider(deps)), { disabled: (env.BRIDGE_DISABLED_PLATFORMS || "").split(",").filter(Boolean) });
+    this.registry = registry || new ProviderRegistry([InstagramProvider, TikTokProvider, SnapchatProvider, YouTubeProvider, FacebookProvider, XProvider, LinkedInProvider, PinterestProvider, ThreadsProvider, BlueskyProvider, TelegramProvider, GoogleBusinessProvider].map(Provider => new Provider(deps)), { disabled: (env.BRIDGE_DISABLED_PLATFORMS || "").split(",").filter(Boolean) });
     this.media = new MediaService({ store: this.store, projects: this.projects, storage: this.storage, publicUrl: this.publicUrl, signingKey, clock, maxBytes: Number(env.BRIDGE_MAX_UPLOAD_MB || 1024) * 1024 ** 2 });
     this.uploadTokens = new UploadTokenService({ store: this.store, projects: this.projects, maxBytes: this.media.maxBytes, clock });
     this.rates = new RateLimitService({ store: this.store, clock });

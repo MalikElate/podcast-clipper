@@ -295,7 +295,7 @@ export default function Landing({ onGetStarted }) {
           <div className="faq-grid">
             <article className="faq-card">
               <h3>Which social platforms does Meadow support?</h3>
-              <p>Meadow supports Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, and Google Business.</p>
+              <p>Meadow supports Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, and Google Business. Telegram and Snapchat are coming soon.</p>
             </article>
             <article className="faq-card">
               <h3>What can I publish?</h3>
