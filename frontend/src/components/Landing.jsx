@@ -7,6 +7,7 @@ import { sortPlatforms } from "../bridge/platforms.js";
 import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
+import { appHref } from "../siteUrls.js";
 
 const PLATFORMS = [
   ...sortPlatforms(PLATFORM_USE_CASES.filter(platform => !platform.chatOnly)),
@@ -205,7 +206,7 @@ export default function Landing({ onGetStarted }) {
             <div className="platform-showcase-center">
               <h2><span>Plan once. Publish across</span>{" "}<span>the platforms that matter.</span></h2>
               <p>Bring every destination into one consistent Meadow workflow.</p>
-              <a className="platform-showcase-button" href="#ways-to-use">See how it works <ArrowIcon /></a>
+              <a className="platform-showcase-button" href={appHref("/dashboard")}>Try for free <ArrowIcon /></a>
             </div>
             <div className="platform-orbit" aria-label="Social publishing platforms">
               {PLATFORMS.map((platform, index) => (
