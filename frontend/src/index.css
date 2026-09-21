@@ -2307,7 +2307,7 @@ input[type="range"]::-moz-range-thumb {
 /* Immersive platform showcase with destinations surrounding the message. */
 .landing-v2 .platform-showcase-section { width: 100vw; margin-left: calc(50% - 50vw); padding: 0; }
 .platform-showcase { position: relative; width: 100%; height: 100svh; min-height: 720px; margin-left: 0; overflow: hidden; background: #202124; }
-.platform-showcase-center { position: absolute; left: 50%; top: 50%; z-index: 3; display: flex; width: min(1000px,84vw); flex-direction: column; align-items: center; text-align: center; transform: translate(-50%,-50%); }
+.platform-showcase-center { position: absolute; left: 50%; top: 45%; z-index: 3; display: flex; width: min(1000px,84vw); flex-direction: column; align-items: center; text-align: center; transform: translate(-50%,-50%); }
 .platform-showcase-center h2 { max-width: none; margin: 0; color: #fff; font-size: clamp(28px,5.5vw,76px); line-height: 1.03; letter-spacing: -.055em; }
 .platform-showcase-center h2 span { display: block; white-space: nowrap; }
 .platform-showcase-center p { max-width: 520px; margin: 22px 0 0; color: #bdc1c6; font-size: 16px; line-height: 1.6; }
