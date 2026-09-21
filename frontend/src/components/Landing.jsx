@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { SiClaude, SiCursor } from "react-icons/si";
 import { PlatformIcon } from "../bridge/ui.jsx";
 import BrandLogo from "./BrandLogo.jsx";
@@ -94,6 +94,28 @@ const AGENT_LOGOS = [
   { name: "Cursor", Icon: SiCursor, className: "is-cursor" },
 ];
 
+const HOW_STEPS = [
+  {
+    number: "01",
+    title: "Connect your accounts",
+    text: "Authorize the social accounts you already use. Meadow keeps each connection organized in one private workspace.",
+  },
+  {
+    number: "02",
+    title: "Give your agent one key",
+    text: "Create a private Meadow API key, store it in your agent's secret manager, and copy the ready-made setup prompt.",
+  },
+  {
+    number: "03",
+    title: "Ask for the campaign",
+    text: "Your agent can prepare text, images, video, carousels, titles, timing, and destination-specific settings.",
+  },
+  {
+    number: "04",
+    title: "Preview, publish, and track",
+    text: "Meadow validates every destination before publishing, then returns delivery status and available performance metrics.",
+  },
+];
 function AgentSetupCopyButton() {
   const [copied, setCopied] = useState(false);
 
@@ -115,6 +137,7 @@ function AgentSetupCopyButton() {
 
   return (
     <button type="button" className="hero-agent-copy" onClick={copy} data-copied={copied ? "true" : undefined}>
+      <span>{copied ? "Setup copied" : "Copy setup prompt"}</span>
       <span className="hero-agent-logos" aria-hidden="true">
         {AGENT_LOGOS.map((agent) => (
           <span key={agent.name} className={agent.className} title={agent.name}>
@@ -122,91 +145,29 @@ function AgentSetupCopyButton() {
           </span>
         ))}
       </span>
-      {copied ? "Setup copied" : "Copy setup prompt"}
+      <svg className="hero-agent-copy-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <rect x="5.25" y="2.25" width="7.5" height="8.5" rx="1.25" stroke="currentColor" strokeWidth="1.25" />
+        <path d="M3.25 5.5v7.25c0 .69.56 1.25 1.25 1.25h6.25" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+      </svg>
     </button>
   );
 }
 
-// Marks drift around the copy instead of sitting in a strip above it. Order
-// only decides which .hf-* slot each platform lands in; the slots themselves
-// are positioned in CSS so the layout stays declarative.
-function HeroFloat({ fieldRef }) {
+function HeroPlatformRail() {
   return (
-    <div className="hero-float" aria-hidden="true" ref={fieldRef}>
+    <div className="hero-platform-rail" aria-label="Supported social platforms">
       {PLATFORMS.map((platform) => (
-        <span className={`hero-float-mark hf-${platform.id}`} key={platform.id}>
-          <span className="hero-float-card" style={{ "--platform-color": platform.color }}>
-            <PlatformIcon platform={platform.id} size={32} variant="hero" />
-          </span>
+        <span className="hero-platform-item" key={platform.id} title={platform.name} style={{ "--platform-color": platform.color }}>
+          <PlatformIcon platform={platform.id} size={24} variant="hero" />
+          <span className="sr-only">{platform.name}</span>
         </span>
       ))}
     </div>
   );
 }
 
-// Pointer parallax, skipped for coarse pointers and reduced-motion users. The
-// pointer position is stored and applied on an animation frame so a burst of
-// move events still writes the custom properties at most once per frame.
-function useHeroParallax(heroRef, fieldRef) {
-  useEffect(() => {
-    const hero = heroRef.current;
-    const field = fieldRef.current;
-    if (!hero || !field || typeof window.matchMedia !== "function") return undefined;
-
-    const finePointer = window.matchMedia("(pointer: fine)");
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const enabled = () => finePointer.matches && !reducedMotion.matches;
-    let frame;
-    let point = null;
-
-    const reset = () => {
-      if (frame) cancelAnimationFrame(frame);
-      frame = undefined;
-      point = null;
-      field.style.setProperty("--px", "0px");
-      field.style.setProperty("--py", "0px");
-    };
-
-    const move = (event) => {
-      if (!enabled()) return;
-      point = { x: event.clientX, y: event.clientY };
-      frame ??= requestAnimationFrame(() => {
-        frame = undefined;
-        if (!point || !enabled()) return;
-        const rect = hero.getBoundingClientRect();
-        if (!rect.width || !rect.height) return;
-        field.style.setProperty("--px", `${(((point.x - rect.left) / rect.width - 0.5) * 36).toFixed(1)}px`);
-        field.style.setProperty("--py", `${(((point.y - rect.top) / rect.height - 0.5) * 28).toFixed(1)}px`);
-      });
-    };
-
-    const sync = () => {
-      field.style.setProperty("--parallax-duration", enabled() ? "0.7s" : "0s");
-      if (!enabled()) reset();
-    };
-
-    hero.addEventListener("pointermove", move);
-    hero.addEventListener("pointerleave", reset);
-    finePointer.addEventListener("change", sync);
-    reducedMotion.addEventListener("change", sync);
-    sync();
-
-    return () => {
-      hero.removeEventListener("pointermove", move);
-      hero.removeEventListener("pointerleave", reset);
-      finePointer.removeEventListener("change", sync);
-      reducedMotion.removeEventListener("change", sync);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, [heroRef, fieldRef]);
-}
-
-
 export default function Landing({ onGetStarted }) {
   const [yearlyPricing, setYearlyPricing] = useState(true);
-  const heroRef = useRef(null);
-  const heroFieldRef = useRef(null);
-  useHeroParallax(heroRef, heroFieldRef);
 
   return (
     <div className="landing">
@@ -215,31 +176,32 @@ export default function Landing({ onGetStarted }) {
           <BrandLogo />
         </a>
         <nav className="landing-nav" aria-label="Main navigation">
+          <a href="#how-it-works">How it works</a>
           <a href="#platforms">Platforms</a>
           <a href="/pricing">Pricing</a>
         </nav>
         <div className="landing-actions">
           <button className="btn-ghost" onClick={onGetStarted}>Sign in</button>
-          <button className="btn-small-primary" onClick={onGetStarted}>Start posting <ArrowIcon /></button>
+          <button className="btn-small-primary" onClick={onGetStarted}>Connect an agent <ArrowIcon /></button>
         </div>
       </header>
 
       <main>
-        <section className="landing-hero" id="top" ref={heroRef}>
-          <HeroFloat fieldRef={heroFieldRef} />
+        <section className="landing-hero" id="top">
           <div className="hero-copy">
             <h1 className="landing-title">
               <span data-rise>Publish across</span>
               <span data-rise style={{ "--d": "90ms" }}>every social media</span>
-              <span data-rise style={{ "--d": "180ms" }}>from one place.</span>
+              <span data-rise style={{ "--d": "180ms" }}>from your AI agent.</span>
             </h1>
             <p className="landing-subtitle" data-rise style={{ "--d": "300ms" }}>
-              Create text, image, video, and carousel posts. Publish now or schedule them across your connected accounts, then track every delivery in Meadow.
+              Give Claude, Codex, Cursor, or your own automation one secure Meadow key. Your agent can preview, publish, schedule, and track posts across every connected account.
             </p>
             <div className="hero-actions" data-rise style={{ "--d": "400ms" }}>
-              <button className="btn-primary landing-cta" onClick={onGetStarted}>Post for free <ArrowIcon /></button>
+              <button className="btn-primary landing-cta" onClick={onGetStarted}>Connect your AI agent <ArrowIcon /></button>
               <AgentSetupCopyButton />
             </div>
+            <HeroPlatformRail />
           </div>
         </section>
 
@@ -248,8 +210,8 @@ export default function Landing({ onGetStarted }) {
           <div className="platform-section-layout">
             <div className="section-heading platform-heading">
               <span className="section-eyebrow">Supported platforms</span>
-              <h2>Ten platforms. One publishing workflow.</h2>
-              <p>Connect the accounts you already use and manage each one from the same dashboard.</p>
+              <h2>Every network your agent needs. One publishing API.</h2>
+              <p>Connect the accounts you already use once. Your agent gets one consistent workflow for publishing across all ten destinations.</p>
             </div>
             <div className="platform-grid" aria-label="Supported publishing platforms">
               {PLATFORMS.map((platform) => (
@@ -261,10 +223,35 @@ export default function Landing({ onGetStarted }) {
           </div>
         </section>
 
+        <section className="landing-section how-section" id="how-it-works" aria-labelledby="how-title">
+          <div className="how-heading">
+            <span className="section-eyebrow">How it works</span>
+            <h2 id="how-title">From agent prompt to published campaign.</h2>
+            <p>Meadow gives your AI agent a safe, structured last mile for social publishing—without making it learn ten different platform APIs.</p>
+          </div>
+          <div className="how-grid">
+            {HOW_STEPS.map((step) => (
+              <article className="how-card" key={step.number}>
+                <span className="how-number">{step.number}</span>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+              </article>
+            ))}
+          </div>
+          <div className="how-info-panel">
+            <div>
+              <span className="how-info-kicker">Built for controlled automation</span>
+              <h3>Your agent prepares the work. Meadow validates the delivery.</h3>
+            </div>
+            <p>Use the preview endpoint before publishing to catch destination-specific issues. Idempotent request IDs prevent accidental duplicates, and every submitted post returns a delivery status your agent can check.</p>
+            <AgentSetupCopyButton />
+          </div>
+        </section>
+
         <section className="landing-section home-pricing-section" id="pricing" aria-labelledby="home-pricing-title">
           <div className="home-pricing-heading">
             <h2 id="home-pricing-title">Choose the space your publishing needs.</h2>
-            <p>Every plan includes unlimited posts and scheduling. Pick the number of connected accounts and level of support that fit your workflow.</p>
+            <p>Every plan includes unlimited posts, scheduling, and API access for your agent. Choose the number of connected accounts that fits your publishing workflow.</p>
             <div className="pricing-cycle" role="group" aria-label="Billing frequency">
               <button className={!yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(false)}>Monthly</button>
               <button className={yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(true)}>Yearly <span>Save up to 17%</span></button>
@@ -294,35 +281,35 @@ export default function Landing({ onGetStarted }) {
           </div>
           <div className="faq-grid">
             <article className="faq-card">
-              <h3>Which social platforms does Meadow support?</h3>
-              <p>Meadow supports Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, and Google Business. Telegram and Snapchat are coming soon.</p>
+              <h3>How does an AI agent publish through Meadow?</h3>
+              <p>Create a private API key, copy Meadow's setup prompt into your agent, and keep the key in its secret manager. The agent can then preview, publish, schedule, and check delivery status through the Meadow API.</p>
             </article>
             <article className="faq-card">
-              <h3>What can I publish?</h3>
-              <p>You can create text, image, video, carousel, story, reel, and document posts where the destination supports that format.</p>
+              <h3>Which social platforms can my agent reach?</h3>
+              <p>Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, and Google Business—all through one Meadow workflow. Telegram and Snapchat are coming soon.</p>
             </article>
             <article className="faq-card">
-              <h3>Can I publish immediately or schedule posts?</h3>
-              <p>Both. Publish right away or choose a future date and time, then monitor drafts, scheduled posts, published posts, and failed deliveries.</p>
+              <h3>Does Meadow validate posts before publishing?</h3>
+              <p>Yes. Your agent can call the preview endpoint first to receive destination-specific validation errors before it submits the campaign.</p>
             </article>
             <article className="faq-card">
-              <h3>Can I use Meadow with an AI agent or my own tools?</h3>
-              <p>Yes. Meadow can create private API keys for a CLI, server automation, or an AI agent that calls the Meadow API.</p>
+              <h3>What can my agent publish?</h3>
+              <p>Text, images, video, carousels, stories, reels, and documents where the selected destination supports that format.</p>
             </article>
             <article className="faq-card">
-              <h3>Can Meadow create clips?</h3>
-              <p>Clipping is coming soon. Today, you can upload finished media and use Meadow to adapt, schedule, publish, and track each post.</p>
+              <h3>Can my agent publish now or schedule later?</h3>
+              <p>Both. It can publish immediately or choose a future date and time, then monitor scheduled, published, and failed deliveries from the same API.</p>
             </article>
           </div>
         </section>
 
         <section className="landing-cta-section" aria-labelledby="landing-cta-title">
           <div className="landing-cta-content">
-            <h2 id="landing-cta-title">Ready to publish?</h2>
-            <p>Start posting across every platform from one calm workspace.</p>
+            <h2 id="landing-cta-title">Turn one agent prompt into posts everywhere.</h2>
+            <p>Connect your accounts, copy one secure setup prompt, and let Meadow handle validation, scheduling, delivery, and status.</p>
             <div className="landing-cta-actions">
-              <button className="landing-cta-primary" onClick={onGetStarted}>Start posting free <ArrowIcon /></button>
-              <a className="landing-cta-secondary" href="#pricing">View pricing</a>
+              <button className="landing-cta-primary" onClick={onGetStarted}>Connect your AI agent <ArrowIcon /></button>
+              <a className="landing-cta-secondary" href="#how-it-works">See how it works</a>
             </div>
           </div>
         </section>
