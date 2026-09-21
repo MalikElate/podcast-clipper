@@ -2044,7 +2044,22 @@ input[type="range"]::-moz-range-thumb {
 
 /* --- Landing audience refresh --- */
 .landing-v2 { --landing-blue: #3266df; --landing-blue-soft: #eaf0ff; --landing-green-soft: #e8f3df; }
-.landing-v2 .landing-header { position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--bg) 92%, transparent); }
+.landing-v2 .landing-header {
+  --text: #fff;
+  --text-muted: #bdc1c6;
+  --border: #5f6368;
+  --accent-hover: #ffb36b;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-bottom: 0;
+  padding-inline: max(28px, calc((100vw - 1280px) / 2));
+  border-bottom: 0;
+  background: #202124;
+  color: var(--text);
+}
 .landing-v2 .landing-nav { gap: 28px; }
 .landing-v2 .landing-nav a { font-size: 13px; }
 .landing-hero-v2 { display: grid; grid-template-columns: minmax(0,.8fr) minmax(520px,1.2fr); gap: clamp(42px,6vw,88px); padding: 78px 0 112px; text-align: left; }
@@ -2141,6 +2156,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (max-width: 720px) {
+  .landing-v2 .landing-header { padding-inline: 18px; }
   .landing-hero-v2 { padding: 50px 0 80px; }
   .landing-hero-v2 .hero-kicker { font-size: 8px; }
   .landing-hero-v2 .landing-title { margin-top: 18px; font-size: clamp(43px,13vw,60px); }
