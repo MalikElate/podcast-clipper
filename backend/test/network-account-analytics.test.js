@@ -79,3 +79,29 @@ test('X errors inside successful responses remain explicit and never leak reques
     await assert.rejects(http.request('https://api.x.com/2/users/owner/tweets'), e => e.code === code && !JSON.stringify(e).includes('private-token'));
   }
 });
+
+test('X preserves measured impressions when some post metrics are missing, with explicit partial coverage', async () => {
+  const provider = new XProvider({ env: {}, clock, http: { request: async url => url.includes('/users/') ? {
+    data: [{ id: 'one', created_at: '2026-09-01', public_metrics: { impression_count: 42 } }, { id: 'two', created_at: '2026-09-02' }],
+    errors: [{ type: 'https://api.x.com/2/problems/resource-not-found' }], meta: { result_count: 2 },
+  } : { errors: [{ type: 'https://api.x.com/2/problems/client-forbidden' }] } } });
+  const result = await xAccountAnalytics(provider, { remoteId: 'owner' }, {});
+  assert.equal(result.value, 42); assert.equal(result.partial, true); assert.equal(result.postCount, 1);
+  assert.equal(result.basis, 'recent_posts');
+});
+
+test('X retries one transient read failure, never permission failures or invalid empty timelines', async () => {
+  let attempts = 0;
+  const provider = { clock, request: async () => {
+    attempts++;
+    if (attempts === 1) throw Object.assign(new Error('Temporary outage'), { code: 'provider_unavailable' });
+    return { data: [], meta: { result_count: 0 } };
+  } };
+  assert.equal((await xAccountAnalytics(provider, { remoteId: 'owner' }, {})).value, 0);
+  assert.equal(attempts, 2);
+  attempts = 0;
+  provider.request = async () => { attempts++; throw Object.assign(new Error('Denied'), { code: 'provider_permissions' }); };
+  await assert.rejects(xAccountAnalytics(provider, { remoteId: 'owner' }, {})); assert.equal(attempts, 1);
+  provider.request = async () => ({ meta: { result_count: 3 } });
+  await assert.rejects(xAccountAnalytics(provider, { remoteId: 'owner' }, {}), e => e.code === 'x_timeline_incomplete');
+});

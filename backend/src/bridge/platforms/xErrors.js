@@ -2,9 +2,10 @@ import { ProviderError } from "../core/errors.js";
 
 // X can return an HTTP 200 envelope containing only errors. Never turn that into
 // zero metrics, and never pass response details (which may contain tokens) on.
-export function assertXResponse(data) {
+export function assertXResponse(data, { allowPartial = false } = {}) {
   const errors = [...(Array.isArray(data?.errors) ? data.errors : []), ...(data?.type ? [data] : [])];
   if (!errors.length) return data;
+  if (allowPartial && Array.isArray(data?.data) && data.data.length > 0) return data;
   const types = errors.map(error => {
     try { const url = new URL(error.type); return ["api.x.com", "api.twitter.com"].includes(url.hostname) ? url.pathname.split("/").pop() : "unknown"; }
     catch { return "unknown"; }

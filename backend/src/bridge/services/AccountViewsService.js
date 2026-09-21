@@ -46,7 +46,7 @@ export class AccountViewsService {
         }
       } catch (error) {
         value = unavailable(error.reconnect ? "Reconnect this account in Meadow to load its views." : "Account view history is unavailable. Check this connection's analytics access in Meadow.", error.reconnect ? "reconnect_required" : "error");
-        if (["analytics_sandbox", "provider_permissions", "pinterest_app_access_required", "x_credits_required", "rate_limited", "x_app_access_required", "x_resource_missing", "x_invalid_request", "x_response_incomplete"].includes(error.code)) value.reasonCode = error.code;
+        if (["analytics_sandbox", "provider_permissions", "pinterest_app_access_required", "x_credits_required", "rate_limited", "x_app_access_required", "x_resource_missing", "x_invalid_request", "x_response_incomplete", "x_timeline_incomplete", "x_paging_incomplete", "x_metrics_missing", "provider_connection", "provider_unavailable", "provider_rejected"].includes(error.code)) value.reasonCode = error.code;
       }
       if (!this.current(account)) return unavailable("This account connection changed. Refresh the village.");
       for (const [entry, cached] of this.cache) if (cached.at < this.clock() - 5 * 60000) this.cache.delete(entry);

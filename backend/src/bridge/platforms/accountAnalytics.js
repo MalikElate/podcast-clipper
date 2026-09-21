@@ -52,22 +52,31 @@ export async function xAccountAnalytics(provider, account, credentials) {
   const window = reportingWindow(provider.clock(), 180);
   const start = Date.parse(window.startDate), end = Date.parse(window.endDate) + DAY;
   const posts = new Map(), cursors = new Set(), deadline = Date.now() + 45000;
-  let next, complete = false;
+  let next, complete = false, partial = false;
+  const request = async (path, options = {}) => {
+    try { return await provider.request(path, credentials, { timeoutMs: 15000, ...options }); }
+    catch (error) {
+      if (!["provider_connection", "provider_unavailable"].includes(error.code) || Date.now() + 15000 > deadline) throw error;
+      return provider.request(path, credentials, { timeoutMs: 15000, ...options });
+    }
+  };
   // Include older posts: period analytics can count their new impressions too.
   for (let page = 0; page < 32 && Date.now() < deadline; page++) {
     const query = new URLSearchParams({ max_results: "100", "tweet.fields": "created_at,public_metrics", exclude: "retweets", ...(next ? { pagination_token: next } : {}) });
-    const result = await provider.request(`users/${encodeURIComponent(account.remoteId)}/tweets?${query}`, credentials, { timeoutMs: 15000 });
-    invariant(!result.errors?.length && Array.isArray(result.data || []) && Number.isSafeInteger(result.meta?.result_count), "X returned incomplete account analytics.");
+    const result = await request(`users/${encodeURIComponent(account.remoteId)}/tweets?${query}`, { allowPartial: true });
+    invariant(Array.isArray(result.data || []) && Number.isSafeInteger(result.meta?.result_count) && result.meta.result_count === (result.data || []).length, "X returned incomplete account analytics.", { code: "x_timeline_incomplete" });
+    partial ||= Boolean(result.errors?.length);
     for (const post of result.data || []) {
-      invariant(typeof post.id === "string" && Number.isFinite(Date.parse(post.created_at)), "X returned an invalid post.");
+      if (typeof post.id !== "string" || !Number.isFinite(Date.parse(post.created_at))) { partial = true; continue; }
       posts.set(post.id, post);
     }
     next = result.meta.next_token;
     if (!next) { complete = posts.size < 3200; break; }
-    invariant(typeof next === "string" && !cursors.has(next), "X repeated its analytics page."); cursors.add(next);
+    invariant(typeof next === "string" && !cursors.has(next), "X repeated its analytics page.", { code: "x_paging_incomplete" }); cursors.add(next);
   }
   const ids = [...posts.keys()];
-  if (!ids.length) return report(provider, window, 0, "x_post_metrics", "post_impressions", "recent_posts", { postCount: 0, partial: !complete });
+  invariant(ids.length || !partial && complete, "X did not return usable post analytics.", { code: "x_metrics_missing" });
+  if (!ids.length) return report(provider, window, 0, "x_post_metrics", "post_impressions", "recent_posts", { postCount: 0, partial: false });
   // Use actual period impressions when this account's API access permits it.
   try {
     let value = 0;
@@ -75,7 +84,7 @@ export async function xAccountAnalytics(provider, account, credentials) {
       invariant(Date.now() < deadline, "X analytics exceeded its request budget.");
       const batch = ids.slice(offset, offset + 100), seen = new Set();
       const query = new URLSearchParams({ ids: batch.join(","), start_time: new Date(start).toISOString(), end_time: new Date(end).toISOString(), granularity: "total", "analytics.fields": "impressions" });
-      const result = await provider.request(`tweets/analytics?${query}`, credentials, { timeoutMs: 15000 });
+      const result = await request(`tweets/analytics?${query}`);
       invariant(!result.errors?.length && Array.isArray(result.data), "X period analytics are unavailable.");
       for (const row of result.data) {
         invariant(batch.includes(row.id) && !seen.has(row.id) && count(row.impressions), "X returned invalid period impressions.");
@@ -83,16 +92,18 @@ export async function xAccountAnalytics(provider, account, credentials) {
       }
       invariant(seen.size === batch.length, "X omitted period analytics for some posts.");
     }
-    return report(provider, window, value, "x_post_analytics", "post_impressions", "period", { postCount: ids.length, partial: !complete });
+    return report(provider, window, value, "x_post_analytics", "post_impressions", "period", { postCount: ids.length, partial: partial || !complete });
   } catch (error) {
     if (error.reconnect) throw error;
   }
-  let value = 0, postCount = 0;
+  let value = 0, postCount = 0, eligible = 0;
   for (const post of posts.values()) {
     const created = Date.parse(post.created_at);
     if (created < start || created >= end) continue;
-    invariant(count(post.public_metrics?.impression_count), "X did not report post impressions.");
+    eligible++;
+    if (!count(post.public_metrics?.impression_count)) { partial = true; continue; }
     value += post.public_metrics.impression_count; postCount++;
   }
-  return report(provider, window, value, "x_post_metrics", "post_impressions", "recent_posts", { postCount, partial: !complete });
+  invariant(!eligible || postCount, "X did not report post impressions.", { code: "x_metrics_missing" });
+  return report(provider, window, value, "x_post_metrics", "post_impressions", "recent_posts", { postCount, partial: partial || !complete });
 }
