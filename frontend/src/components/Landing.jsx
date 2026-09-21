@@ -189,10 +189,10 @@ export default function Landing({ onGetStarted }) {
       <main>
         <section className="landing-hero" id="top">
           <div className="hero-copy">
+            <HeroPlatformRail />
             <h1 className="landing-title">
-              <span data-rise>Publish across</span>
-              <span data-rise style={{ "--d": "90ms" }}>every social media</span>
-              <span data-rise style={{ "--d": "180ms" }}>from your AI agent.</span>
+              <span data-rise>Publish content</span>
+              <span data-rise style={{ "--d": "90ms" }}>from your agents.</span>
             </h1>
             <p className="landing-subtitle" data-rise style={{ "--d": "300ms" }}>
               Give Claude, Codex, Cursor, or your own automation one secure Meadow key. Your agent can preview, publish, schedule, and track posts across every connected account.
@@ -201,7 +201,6 @@ export default function Landing({ onGetStarted }) {
               <button className="btn-primary landing-cta" onClick={onGetStarted}>Connect your AI agent <ArrowIcon /></button>
               <AgentSetupCopyButton />
             </div>
-            <HeroPlatformRail />
           </div>
         </section>
 
