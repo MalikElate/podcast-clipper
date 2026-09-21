@@ -1,13 +1,14 @@
 import fs from "node:fs";
 import { PlatformProvider } from "./PlatformProvider.js";
 import { xAccountAnalytics } from "./accountAnalytics.js";
+import { assertXResponse } from "./xErrors.js";
 import { invariant, ProviderError } from "../core/errors.js";
 
 export class XProvider extends PlatformProvider {
   availableAccountViews({ account, credentials }) { return xAccountAnalytics(this, account, credentials); }
   constructor(deps) { super("x", deps); }
   get oauth() { return { authorize: "https://x.com/i/oauth2/authorize", token: "https://api.x.com/2/oauth2/token", clientId: this.env.X_CLIENT_ID, clientSecret: this.env.X_CLIENT_SECRET, basicAuth: true, pkce: true, scopes: ["tweet.read", "tweet.write", "users.read", "media.write", "offline.access"] }; }
-  request(path, credentials, options = {}) { return this.http.request(`https://api.x.com/2/${path}`, { token: credentials.accessToken, ...options }); }
+  async request(path, credentials, options = {}) { return assertXResponse(await this.http.request(`https://api.x.com/2/${path}`, { token: credentials.accessToken, ...options })); }
   async accounts(credentials) {
     const { data } = await this.request("users/me?user.fields=profile_image_url", credentials);
     invariant(data?.id, "X did not return a profile.");
