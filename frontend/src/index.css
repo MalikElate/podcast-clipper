@@ -1379,7 +1379,7 @@ input[type="range"]::-moz-range-thumb {
 /* --- Meadow marketing surface --- */
 .landing-shell { align-items: flex-start; padding: 0 28px; }
 .landing { width: 100%; max-width: 1280px; margin: 0 auto; color: var(--text); }
-.landing-header { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid rgba(67,80,119,.32); }
+.landing-header { position: sticky; top: 0; z-index: 50; min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid rgba(67,80,119,.32); }
 .landing-logo-link { color: inherit; text-decoration: none; flex-shrink: 0; }
 .landing .brand { justify-content: flex-start; }
 .landing .brand-logo-image { width: 40px; height: 40px; }
@@ -2044,7 +2044,7 @@ input[type="range"]::-moz-range-thumb {
 
 /* --- Landing audience refresh --- */
 .landing-v2 { --landing-blue: #3266df; --landing-blue-soft: #eaf0ff; --landing-green-soft: #e8f3df; }
-.landing-v2 .landing-header { position: relative; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); }
+.landing-v2 .landing-header { position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--bg) 92%, transparent); }
 .landing-v2 .landing-nav { gap: 28px; }
 .landing-v2 .landing-nav a { font-size: 13px; }
 .landing-hero-v2 { display: grid; grid-template-columns: minmax(0,.8fr) minmax(520px,1.2fr); gap: clamp(42px,6vw,88px); padding: 78px 0 112px; text-align: left; }
