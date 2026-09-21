@@ -240,7 +240,7 @@ export default function Landing({ onGetStarted }) {
     <div className="landing landing-v2">
       <header className="landing-header">
         <a className="landing-logo-link" href="#top" aria-label="Meadow home"><BrandLogo /></a>
-        <nav className="landing-nav" aria-label="Main navigation"><a href="#ways-to-use">Ways to use</a><a href="#workflows">Workflows</a><a href="#platforms">Platforms</a><a href="/pricing">Pricing</a></nav>
+        <nav className="landing-nav" aria-label="Main navigation"><a href="#platforms">Platforms</a><a href="/pricing">Pricing</a></nav>
         <div className="landing-actions"><button className="btn-ghost" onClick={onGetStarted}>Sign in</button><button className="btn-small-primary" onClick={onGetStarted}>Try for free <ArrowIcon /></button></div>
       </header>
 
