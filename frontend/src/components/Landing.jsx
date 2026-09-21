@@ -182,7 +182,7 @@ export default function Landing({ onGetStarted }) {
         </nav>
         <div className="landing-actions">
           <button className="btn-ghost" onClick={onGetStarted}>Sign in</button>
-          <button className="btn-small-primary" onClick={onGetStarted}>Connect an agent <ArrowIcon /></button>
+          <button className="btn-small-primary" onClick={onGetStarted}>Try for free <ArrowIcon /></button>
         </div>
       </header>
 
@@ -198,7 +198,7 @@ export default function Landing({ onGetStarted }) {
               Give Claude, Codex, Cursor, or your own automation one secure Meadow key. Your agent can preview, publish, schedule, and track posts across every connected account.
             </p>
             <div className="hero-actions" data-rise style={{ "--d": "400ms" }}>
-              <button className="btn-primary landing-cta" onClick={onGetStarted}>Connect your AI agent <ArrowIcon /></button>
+              <button className="btn-primary landing-cta" onClick={onGetStarted}>Try for free <ArrowIcon /></button>
               <AgentSetupCopyButton />
             </div>
           </div>
@@ -307,7 +307,7 @@ export default function Landing({ onGetStarted }) {
             <h2 id="landing-cta-title">Turn one agent prompt into posts everywhere.</h2>
             <p>Connect your accounts, copy one secure setup prompt, and let Meadow handle validation, scheduling, delivery, and status.</p>
             <div className="landing-cta-actions">
-              <button className="landing-cta-primary" onClick={onGetStarted}>Connect your AI agent <ArrowIcon /></button>
+              <button className="landing-cta-primary" onClick={onGetStarted}>Try for free <ArrowIcon /></button>
               <a className="landing-cta-secondary" href="#how-it-works">See how it works</a>
             </div>
           </div>
