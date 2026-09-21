@@ -237,7 +237,7 @@ function GoalScenarios() {
 export default function Landing({ onGetStarted }) {
   const [yearlyPricing, setYearlyPricing] = useState(true);
   return (
-    <div className="landing landing-v2">
+    <div className="landing landing-v2" id="top">
       <header className="landing-header">
         <a className="landing-logo-link" href="#top" aria-label="Meadow home"><BrandLogo /></a>
         <nav className="landing-nav" aria-label="Main navigation"><a href="#platforms">Platforms</a><a href="/pricing">Pricing</a></nav>
@@ -245,16 +245,6 @@ export default function Landing({ onGetStarted }) {
       </header>
 
       <main>
-        <section className="landing-hero landing-hero-v2" id="top">
-          <div className="hero-copy">
-            <h1 className="landing-title"><span data-rise style={{ "--d": "70ms" }}>Publish your way.</span><span data-rise style={{ "--d": "150ms" }}>Reach every channel.</span></h1>
-            <p className="landing-subtitle" data-rise style={{ "--d": "250ms" }}>Create directly in Meadow, work through an AI agent, or connect your own automation. Every path leads to one clear publishing workspace.</p>
-            <div className="hero-actions hero-actions-v2" data-rise style={{ "--d": "340ms" }}><button className="btn-primary landing-cta" onClick={onGetStarted}>Get started <ArrowIcon /></button><a className="hero-text-link" href="#ways-to-use">See ways to use Meadow</a></div>
-            <HeroPlatformRail />
-          </div>
-          <HeroDemo />
-        </section>
-
         <section className="landing-section platform-section platform-showcase-section" id="platforms">
           <div className="platform-showcase" onPointerDown={movePlatformOrbit} onPointerMove={movePlatformOrbit} onPointerLeave={resetPlatformOrbit} onPointerCancel={resetPlatformOrbit} onPointerUp={resetPlatformOrbit}>
             <div className="platform-showcase-center">
@@ -270,6 +260,16 @@ export default function Landing({ onGetStarted }) {
               ))}
             </div>
           </div>
+        </section>
+
+        <section className="landing-hero landing-hero-v2">
+          <div className="hero-copy">
+            <h1 className="landing-title"><span data-rise style={{ "--d": "70ms" }}>Publish your way.</span><span data-rise style={{ "--d": "150ms" }}>Reach every channel.</span></h1>
+            <p className="landing-subtitle" data-rise style={{ "--d": "250ms" }}>Create directly in Meadow, work through an AI agent, or connect your own automation. Every path leads to one clear publishing workspace.</p>
+            <div className="hero-actions hero-actions-v2" data-rise style={{ "--d": "340ms" }}><button className="btn-primary landing-cta" onClick={onGetStarted}>Get started <ArrowIcon /></button><a className="hero-text-link" href="#ways-to-use">See ways to use Meadow</a></div>
+            <HeroPlatformRail />
+          </div>
+          <HeroDemo />
         </section>
 
         <GoalScenarios />
