@@ -5,7 +5,7 @@ import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import { GENERAL_PAGES } from "../marketing/generalPages.js";
 import { appHref, marketingHref, siteSurface } from "../siteUrls.js";
 
-const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
+const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES.filter(platform => !platform.comingSoon));
 const FEATURED_PLATFORM_IDS = ["instagram", "tiktok", "youtube", "linkedin", "facebook", "x"];
 const FEATURED_PLATFORMS = FEATURED_PLATFORM_IDS.map((id) => PLATFORMS.find((platform) => platform.id === id)).filter(Boolean);
 
@@ -40,6 +40,7 @@ function WaysLinks() {
 function PlatformLinks() {
   return <>
     {FEATURED_PLATFORMS.map((platform) => <a href={href(`/${platform.slug}`)} key={platform.id}>{platform.name}</a>)}
+    {PLATFORM_USE_CASES.filter(platform => platform.comingSoon).map(platform => <a href={href(`/${platform.slug}`)} key={platform.id}>{platform.name} — coming soon</a>)}
     <a href={href("/#platforms")}>View all platforms</a>
   </>;
 }

@@ -2346,3 +2346,10 @@ input[type="range"]::-moz-range-thumb {
 @media (prefers-reduced-motion: reduce) {
   .orbit-platform-logo-inner { transform: rotate(var(--logo-tilt,0deg)); transition: none; }
 }
+
+.upcoming-platforms { max-width: 1100px; margin: 0 auto 48px; padding: 0 24px; text-align: center; }
+.upcoming-platforms > p { margin: 0 0 16px; color: var(--text-muted); font-size: 14px; }
+.upcoming-platforms > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 28px; }
+.upcoming-platforms a { display: inline-flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; }
+.upcoming-platforms a > svg { color: var(--platform-color); }
+.upcoming-platforms small { display: block; font-size: 11px; color: var(--text-muted); }

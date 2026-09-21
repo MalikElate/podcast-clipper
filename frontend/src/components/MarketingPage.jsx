@@ -5,8 +5,9 @@ import BrandLogo from "./BrandLogo.jsx";
 import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
+import UpcomingPlatforms from "./UpcomingPlatforms.jsx";
 
-const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
+const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES.filter(platform => !platform.comingSoon));
 
 const PREVIEW = [
   { platform: "youtube", title: "Behind the scenes, episode 12", when: "Tomorrow, 9:00 AM", status: "Scheduled" },
@@ -165,6 +166,8 @@ export default function MarketingPage({ page, onGetStarted }) {
             ))}
           </div>
         </section>
+
+        <UpcomingPlatforms />
 
         <section className="landing-section home-pricing-section" id="pricing" aria-labelledby="mkt-pricing-title">
           <PlanGrid />

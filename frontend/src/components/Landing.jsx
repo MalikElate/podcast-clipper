@@ -7,8 +7,9 @@ import { sortPlatforms } from "../bridge/platforms.js";
 import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
+import UpcomingPlatforms from "./UpcomingPlatforms.jsx";
 
-const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
+const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES.filter(platform => !platform.comingSoon));
 
 const PLATFORM_ORBIT_MOTION = [
   [22, 16, "-5deg"],
@@ -212,6 +213,8 @@ export default function Landing({ onGetStarted }) {
           </div>
         </section>
 
+        <UpcomingPlatforms />
+
         <section className="landing-hero landing-hero-v2">
           <div className="hero-copy">
             <h1 className="landing-title"><span data-rise style={{ "--d": "70ms" }}>Publish your way.</span><span data-rise style={{ "--d": "150ms" }}>Reach every channel.</span></h1>
@@ -264,7 +267,7 @@ export default function Landing({ onGetStarted }) {
           <div className="faq-heading"><h2>Questions, answered.</h2></div>
           <div className="faq-grid">
             <article className="faq-card"><h3>How can I use Meadow?</h3><p>Create directly in the Meadow workspace, connect a supported AI agent through MCP, or build an automated workflow with the API. All three paths use the same connected accounts and publishing structure.</p></article>
-            <article className="faq-card"><h3>Which social platforms can I connect?</h3><p>Meadow supports workflows across all eleven platforms: Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, Telegram, and Google Business. Connect Telegram channels and groups through the Meadow bot. Connection availability can vary by platform status.</p></article>
+            <article className="faq-card"><h3>Which social platforms can I connect?</h3><p>Meadow supports workflows across all eleven platforms: Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, Telegram, and Google Business. Connect Telegram channels and groups through the Meadow bot. Twitch and Kick chat publishing are coming soon. Connection availability can vary by platform status.</p></article>
             <article className="faq-card"><h3>Can I save work before it is published?</h3><p>Yes. You can keep content as a draft, review the destination details, and publish only when it is ready.</p></article>
             <article className="faq-card"><h3>Can I schedule posts?</h3><p>Yes. Choose a future date and time for supported destinations, then follow scheduled and published delivery from Meadow.</p></article>
             <article className="faq-card"><h3>What content formats can I prepare?</h3><p>Prepare text, images, video, carousels, stories, reels, and documents where the selected destination supports that format.</p></article>

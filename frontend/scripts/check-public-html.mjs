@@ -25,6 +25,11 @@ for (const platform of PLATFORM_USE_CASES) {
   assert.ok(html.includes(`content="${platform.description}"`), `${platform.slug} must have a platform-specific description`);
   assert.ok(html.includes(platform.headline), `${platform.slug} must render its own heading without JavaScript`);
   assert.ok(landingHtml.includes(`href="/${platform.slug}"`), `${platform.slug} must be linked from the homepage`);
+  if (platform.comingSoon) {
+    assert.ok(html.includes("Coming soon"), `${platform.slug} must disclose its upcoming status`);
+    assert.ok(html.includes("Production activation is still pending"));
+    assert.ok(!html.includes(">Start posting "), `${platform.slug} must not offer immediate publishing`);
+  }
 }
 for (const page of GENERAL_PAGES) {
   const html = await readFile(`dist${page.path}/index.html`, "utf8");
@@ -36,5 +41,7 @@ for (const page of GENERAL_PAGES) {
   assert.ok(landingHtml.includes(`href="${page.path}"`), `${page.path} must be linked from the homepage`);
   assert.ok(html.includes('href="/telegram-publishing"'), `${page.path} must link to Telegram publishing`);
   assert.ok(html.includes("Can I publish to Telegram channels and groups?"), `${page.path} must explain Telegram setup`);
+  for (const id of ["twitch", "kick"]) assert.ok(html.includes(`href="/${id}-publishing"`), `${page.path} must link to ${id}`);
+  assert.ok(html.includes("Twitch and Kick chat publishing — coming soon"));
 }
 console.log("All public pages and dashboard routes have deployable HTML entry points.");
