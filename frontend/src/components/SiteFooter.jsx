@@ -33,7 +33,7 @@ function WaysLinks() {
     <a href={href("/#ways-to-use")}>Create directly</a>
     <a href={href("/#ways-to-use")}>Publish through agents</a>
     <a href={href("/#ways-to-use")}>Connect automation</a>
-    <a href={href("/#how-it-works")}>API and MCP</a>
+    <a href={href("/#ways-to-use")}>API and MCP</a>
   </>;
 }
 
