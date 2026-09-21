@@ -238,8 +238,8 @@ function GoalScenarios() {
   return (
     <section className="landing-section goals-section" id="workflows" aria-labelledby="goals-title">
       <div className="goals-heading">
-        <h2 id="goals-title">What do you want your content to do?</h2>
-        <p>Meadow gives every workflow a clear path from idea to published campaign.</p>
+        <h2 id="goals-title">Plan, repurpose, publish everywhere. <span className="goal-once-highlight">Once!</span></h2>
+        <p>Turn one idea into channel-ready posts, keep a consistent publishing calendar, coordinate launches, and schedule every connected destination from one workspace.</p>
       </div>
       <div className="goal-tabs" role="tablist" aria-label="Content goals">
         {GOALS.map((goal) => (
@@ -285,7 +285,7 @@ export default function Landing({ onGetStarted }) {
         <section className="landing-section platform-section platform-showcase-section" id="platforms">
           <div className="platform-showcase" onPointerDown={movePlatformOrbit} onPointerMove={movePlatformOrbit} onPointerLeave={resetPlatformOrbit} onPointerCancel={resetPlatformOrbit} onPointerUp={resetPlatformOrbit}>
             <div className="platform-showcase-center">
-              <h2>Plan once. Publish across the places that matter.</h2>
+              <h2><span>Plan once. Publish across</span>{" "}<span>the platforms that matter.</span></h2>
               <p>Bring every destination into one consistent Meadow workflow.</p>
               <a className="platform-showcase-button" href="#how-it-works">See how it works <ArrowIcon /></a>
             </div>
