@@ -1,3 +1,5 @@
+import { handleTikTokRoast } from "./roast/handler.js";
+export { RoastBudget } from "./roast/budget.js";
 import { Container } from "@cloudflare/containers";
 import { env } from "cloudflare:workers";
 import { timingSafeEqual } from "node:crypto";
@@ -204,8 +206,9 @@ function migrationAuthorized(request, workerEnv) {
 }
 
 export default {
-  async fetch(request, workerEnv) {
+  async fetch(request, workerEnv, ctx) {
     const url = new URL(request.url);
+    if (url.pathname === "/api/tools/tiktok-roast") return handleTikTokRoast(request, workerEnv, ctx);
     const appRedirect = appDomainRedirect(url);
     if (appRedirect) return Response.redirect(appRedirect, 308);
     if (url.pathname === "/runtime-config.js") {
