@@ -120,8 +120,7 @@ export default function TikTokRoastFeed({ result }) {
     setTourPlaying(true);
   };
 
-  return <section className="roast-feed" aria-labelledby="roast-feed-title">
-    <div className="roast-feed-heading"><div><h2 id="roast-feed-title">One post. One roast. Keep scrolling.</h2></div><p>Watch the posts and follow the commentary. Roasts are based on each caption.</p></div>
+  return <section className="roast-feed" aria-label="TikTok post roast feed">
     <div className="roast-tour-bar" ref={toolbar}>
       <button type="button" className="roast-tour-toggle" onClick={toggleTour} aria-pressed={tourPlaying}>{tourPlaying ? 'Ⅱ Pause walkthrough' : '▷ Play walkthrough'}</button>
       <span className="roast-tour-count" aria-live="polite" aria-atomic="true">Post {active + 1} of {posts.length}</span>
