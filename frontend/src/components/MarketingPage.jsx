@@ -19,10 +19,6 @@ function ArrowIcon() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-function CheckIcon() {
-  return <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true"><path d="m3.5 8.8 3.1 3.1 6.9-7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-}
-
 function PlatformMark({ platform, variant = "default" }) {
   return (
     <span className="landing-platform-mark" style={{ "--platform-color": platform.color }} role="img" aria-label={platform.name} title={platform.name}>
@@ -37,7 +33,7 @@ function PlanGrid() {
     <>
       <div className="home-pricing-heading">
         <h2 id="mkt-pricing-title">Get more reach, with less effort.</h2>
-        <p>Pricing</p>
+
         <div className="pricing-cycle" role="group" aria-label="Billing frequency">
           <button className={!yearly ? "active" : ""} onClick={() => setYearly(false)}>Monthly</button>
           <button className={yearly ? "active" : ""} onClick={() => setYearly(true)}>Yearly <span>Save up to 17%</span></button>
@@ -50,11 +46,11 @@ function PlanGrid() {
           return <article className={`pricing-card ${plan.popular ? "featured" : ""}`} key={plan.id}>
             <div className="pricing-card-top">
               <div><h3>{plan.name}</h3><p>{plan.description}</p></div>
-              {(plan.popular || plan.best) && <span className="pricing-badge">{plan.popular ? "Most popular" : "Best value"}</span>}
+
             </div>
             <div className="pricing-price"><strong>${price}</strong><span>/month</span></div>
             <p className="pricing-billing-note">{planBillingNote(plan, yearly)}</p>
-            <ul><li className="pricing-account"><CheckIcon />{plan.accounts}</li>{plan.features.map(feature => <li key={feature}><CheckIcon />{feature}</li>)}</ul>
+            <ul><li className="pricing-account">{plan.accounts}</li>{plan.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
             <a className={plan.popular ? "btn-primary" : "pricing-button"} href={planHref(plan, cycle)}>{plan.id === "free" ? "Try for free" : `Choose ${plan.name}`} <ArrowIcon /></a>
           </article>;
         })}
@@ -101,15 +97,6 @@ export default function MarketingPage({ page, onGetStarted }) {
           </div>
         </section>
 
-        {page.steps && (
-          <section className="landing-section" aria-labelledby="mkt-steps-title">
-            <div className="section-heading"><h2 id="mkt-steps-title">How scheduling works</h2></div>
-            <ol className="mkt-card-grid mkt-card-grid-3">
-              {page.steps.map((step, index) => <li className="mkt-card" key={step.title}><span className="mkt-card-index">{index + 1}</span><h3>{step.title}</h3><p>{step.text}</p></li>)}
-            </ol>
-          </section>
-        )}
-
         {page.problem && (
           <section className="landing-section mkt-problem" aria-labelledby="mkt-problem-title">
             <div className="section-heading"><h2 id="mkt-problem-title">{page.problem.heading}</h2><p>{page.problem.text}</p></div>
@@ -130,9 +117,9 @@ export default function MarketingPage({ page, onGetStarted }) {
             <h2 id="mkt-preview-title">Scroll less and publish more.</h2>
             <p>Upload once and send it everywhere it belongs. Meadow takes the repetitive posting off your plate so you can spend your time making the next thing.</p>
             <ul className="mkt-checklist">
-              <li><CheckIcon />One upload for every destination</li>
-              <li><CheckIcon />A clear status for each platform</li>
-              <li><CheckIcon />A link to every live post</li>
+              <li>One upload for every destination</li>
+              <li>A clear status for each platform</li>
+              <li>A link to every live post</li>
             </ul>
           </div>
           <div className="mkt-preview-card" aria-label="Example Meadow publishing queue">

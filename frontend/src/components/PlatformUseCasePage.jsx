@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { PlatformIcon } from "../bridge/ui.jsx";
 import BrandLogo from "./BrandLogo.jsx";
 import SiteFooter from "./SiteFooter.jsx";
+import HeroDemo from "./HeroDemo.jsx";
 
 function ArrowIcon() {
   return (
@@ -36,9 +37,8 @@ export default function PlatformUseCasePage({ platform, onGetStarted }) {
         <section className="platform-use-case-hero">
           <div className="platform-use-case-hero-grid">
             <div className="platform-use-case-copy">
-              <div className="platform-use-case-identity" style={{ "--platform-color": platform.color }}>
+              <div className="platform-use-case-identity" role="img" aria-label={platform.name} style={{ "--platform-color": platform.color }}>
                 <span className="platform-use-case-icon" aria-hidden="true"><PlatformIcon platform={platform.id} size={30} /></span>
-                <span>{platform.name} publishing</span>
               </div>
               <h1>{platform.headline}</h1>
               <p>{platform.intro}</p>
@@ -47,32 +47,18 @@ export default function PlatformUseCasePage({ platform, onGetStarted }) {
                 <a className="platform-use-case-secondary" href="/#platforms">Explore all platforms</a>
               </div>
             </div>
-            <aside className="platform-use-case-panel" aria-label={`Publishing workflow for ${platform.name}`}>
-              <p className="platform-use-case-panel-label">One publishing workflow</p>
-              <ul>
-                <li><span aria-hidden="true">01</span><div><strong>Plan ahead</strong><small>Keep upcoming {platform.name} posts in view.</small></div></li>
-                <li><span aria-hidden="true">02</span><div><strong>Schedule publishing</strong><small>Coordinate timing with your other channels.</small></div></li>
-                <li><span aria-hidden="true">03</span><div><strong>Follow delivery</strong><small>See post status from the same workspace.</small></div></li>
-              </ul>
-            </aside>
+            <HeroDemo />
           </div>
         </section>
 
         <section className="landing-section platform-use-case-details">
           <div className="section-heading">
-            <span className="section-eyebrow">Publishing for {platform.name}</span>
             <h2>{platform.sectionHeading}</h2>
             <p>{platform.sectionBody}</p>
           </div>
-          <div className="platform-use-case-grid">
-            {platform.useCases.map((useCase, index) => (
-              <article className="platform-use-case-card" key={useCase}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <h3>{useCase}</h3>
-                <p>Plan this {platform.name} activity in Meadow, then keep its publishing timing connected to your wider social calendar.</p>
-              </article>
-            ))}
-          </div>
+          <ul className="platform-use-case-list" aria-label={`${platform.name} use cases`}>
+            {platform.useCases.map(useCase => <li key={useCase}>{useCase}</li>)}
+          </ul>
         </section>
 
         <section className="landing-cta-section platform-use-case-cta">

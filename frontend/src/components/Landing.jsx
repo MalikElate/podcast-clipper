@@ -85,10 +85,6 @@ function ArrowIcon() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-function CheckIcon() {
-  return <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true"><path d="m3.5 8.8 3.1 3.1 6.9-7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-}
-
 function CodexLogo() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -173,10 +169,6 @@ function GoalScenarios({ onGetStarted }) {
         <ScenarioVisual goal={schedulingGoal} />
       </div>
       <div className="scheduling-use-case-copy">
-        <div className="scheduling-use-case-kicker">
-          <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3v3m10-3v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg></span>
-          Scheduling
-        </div>
         <h2 id="goals-title">Plan, repurpose, publish everywhere. <span className="goal-once-highlight">Once!</span></h2>
         <p>Turn one idea into channel-ready posts, tailor each version for its destination, and schedule every connected platform from one Meadow campaign.</p>
         <div className="scheduling-use-case-actions">
@@ -229,37 +221,23 @@ export default function Landing({ onGetStarted }) {
         <GoalScenarios onGetStarted={onGetStarted} />
 
         <section className="landing-section audience-section usage-section" id="ways-to-use" aria-labelledby="usage-title">
-          <div className="audience-heading"><h2 id="usage-title">Three paths. One publishing workspace.</h2><p>Choose the level of control and automation that fits the way you work today. You can move between them whenever your workflow changes.</p></div>
-          <div className="usage-grid">
-            <article className="usage-card usage-creator">
-              <div className="usage-card-media"><img src="/marketing/meadow-creator-studio.webp" alt="A content creator recording and editing in a bright home studio" /></div>
-              <div className="usage-card-copy"><h3>For creators and teams</h3><p>Plan, draft, preview, schedule, and publish from Meadow&apos;s visual workspace.</p><ul><li><CheckIcon />Stay hands-on from idea to delivery</li><li><CheckIcon />Save drafts and review every destination</li><li><CheckIcon />Keep your publishing calendar clear</li></ul></div>
-            </article>
-            <article className="usage-card usage-agents">
-              <div className="usage-card-media usage-agent-visual" aria-label="AI agents connected to a Meadow draft">
-                <div className="usage-agent-prompt"><span>New request</span><strong>Prepare the launch campaign.</strong></div>
-                <div className="usage-agent-row" aria-hidden="true">{AGENT_LOGOS.map((agent) => <span key={agent.name} className={agent.className} title={agent.name}><agent.Icon /></span>)}</div>
-                <div className="usage-agent-result"><span className="workflow-brand-dot" /><div><strong>Campaign draft ready</strong><small>4 destinations · waiting for review</small></div></div>
-              </div>
-              <div className="usage-card-copy"><h3>For agent-assisted publishing</h3><p>Let a supported AI client prepare work through Meadow while you keep visibility and control.</p><ul><li><CheckIcon />Use one private Meadow key</li><li><CheckIcon />Create structured drafts through MCP</li><li><CheckIcon />Review before anything is published</li></ul></div>
-            </article>
-            <article className="usage-card usage-automation">
-              <div className="usage-card-media usage-automation-visual">
-                <img src="/marketing/meadow-business-team.webp" alt="A team planning an automated publishing workflow" />
-                <div className="usage-automation-flow" aria-label="API and MCP publishing workflow"><span>Trigger</span><strong>API + MCP</strong><span>Connected channels</span></div>
-              </div>
-              <div className="usage-card-copy"><h3>For custom workflows</h3><p>Connect internal tools, scheduled jobs, or your own application to Meadow&apos;s publishing layer.</p><ul><li><CheckIcon />Use one consistent API</li><li><CheckIcon />Preview and validate destinations</li><li><CheckIcon />Track delivery programmatically</li></ul></div>
-            </article>
+          <div className="audience-heading">
+            <h2 id="usage-title">However you work, publish with Meadow.</h2>
+            <p>Draft, preview, and schedule in Meadow. Connect Claude, Codex, or Cursor through MCP to prepare posts for your review, or use the API from your own tools. Your connected accounts and delivery status stay in one workspace.</p>
           </div>
+          <div className="usage-integrations" aria-label="Supported AI clients">
+            {AGENT_LOGOS.map((agent) => <span key={agent.name} className={agent.className}><agent.Icon /><span>{agent.name}</span></span>)}
+          </div>
+          <a className="btn-primary usage-start" href={appHref("/dashboard")}>Open Meadow <ArrowIcon /></a>
         </section>
 
         <section className="landing-section home-pricing-section" id="pricing" aria-labelledby="home-pricing-title">
-          <div className="home-pricing-heading"><h2 id="home-pricing-title">Choose the space your publishing needs.</h2><p>Pricing</p><div className="pricing-cycle" role="group" aria-label="Billing frequency"><button className={!yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(false)}>Monthly</button><button className={yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(true)}>Yearly <span>Save up to 17%</span></button></div></div>
+          <div className="home-pricing-heading"><h2 id="home-pricing-title">Choose the space your publishing needs.</h2><div className="pricing-cycle" role="group" aria-label="Billing frequency"><button className={!yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(false)}>Monthly</button><button className={yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(true)}>Yearly <span>Save up to 17%</span></button></div></div>
           <div className="pricing-grid" aria-label="Meadow plans">
             {PLANS.map((plan) => {
               const price = yearlyPricing ? plan.yearly : plan.monthly;
               const cycle = yearlyPricing ? "yearly" : "monthly";
-              return <article className={`pricing-card ${plan.popular ? "featured" : ""}`} key={plan.id}><div className="pricing-card-top"><div><h3>{plan.name}</h3><p>{plan.description}</p></div>{(plan.popular || plan.best) && <span className="pricing-badge">{plan.popular ? "Most popular" : "Best value"}</span>}</div><div className="pricing-price"><strong>${price}</strong><span>/month</span></div><p className="pricing-billing-note">{planBillingNote(plan, yearlyPricing)}</p><ul><li className="pricing-account"><CheckIcon />{plan.accounts}</li>{plan.features.map((feature) => <li key={feature}><CheckIcon />{feature}</li>)}</ul><a className={plan.popular ? "btn-primary" : "pricing-button"} href={planHref(plan, cycle)}>{plan.id === "free" ? "Try for free" : `Choose ${plan.name}`} <ArrowIcon /></a></article>;
+              return <article className={`pricing-card ${plan.popular ? "featured" : ""}`} key={plan.id}><div className="pricing-card-top"><div><h3>{plan.name}</h3><p>{plan.description}</p></div></div><div className="pricing-price"><strong>${price}</strong><span>/month</span></div><p className="pricing-billing-note">{planBillingNote(plan, yearlyPricing)}</p><ul><li className="pricing-account">{plan.accounts}</li>{plan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul><a className={plan.popular ? "btn-primary" : "pricing-button"} href={planHref(plan, cycle)}>{plan.id === "free" ? "Try for free" : `Choose ${plan.name}`} <ArrowIcon /></a></article>;
             })}
           </div>
         </section>
