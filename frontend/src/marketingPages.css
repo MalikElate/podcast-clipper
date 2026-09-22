@@ -9,7 +9,6 @@
 .mkt-card-grid-2 { grid-template-columns: repeat(2,minmax(0,1fr)); }
 .mkt-card-grid-3 { grid-template-columns: repeat(3,minmax(0,1fr)); }
 .mkt-card { display: flex; min-width: 0; flex-direction: column; padding: 26px 24px 28px; border-radius: var(--radius-md); background: rgba(252,253,248,.74); box-shadow: 0 16px 30px -30px #233247; }
-.mkt-card-index { margin-bottom: 18px; color: var(--cta); font-family: var(--font-mono); font-size: 12px; font-weight: 600; }
 .mkt-card h3 { margin: 0 0 10px; color: var(--text); font-size: 18px; line-height: 1.25; letter-spacing: -.035em; }
 .mkt-card p { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.65; }
 .mkt-problem .section-heading { max-width: 760px; margin: 0 auto; text-align: center; }
@@ -20,7 +19,6 @@
 .mkt-preview-copy p { margin: 0; color: var(--text-muted); font-size: 15px; line-height: 1.6; }
 .mkt-checklist { display: grid; gap: 11px; margin: 24px 0 0; padding: 0; list-style: none; }
 .mkt-checklist li { display: flex; align-items: center; gap: 9px; color: var(--text); font-size: 14px; font-weight: 600; }
-.mkt-checklist svg { color: var(--score); }
 .mkt-preview-card { display: grid; gap: 22px; padding: 24px; border-radius: var(--radius-lg); background: var(--surface); box-shadow: 0 30px 70px -40px #233247; }
 .mkt-preview-group h3 { margin: 0 0 10px; color: var(--text-faint); font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
 .mkt-preview-row { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius-sm); background: var(--bg); }

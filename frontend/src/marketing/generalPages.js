@@ -18,11 +18,6 @@ export const GENERAL_PAGES = [
     description: "Schedule posts to X, Instagram, LinkedIn, Facebook, TikTok, YouTube, Bluesky, Threads, Pinterest, Telegram, and Google Business from one Meadow workspace.",
     headline: "A social media scheduler for all eleven of your platforms.",
     subtitle: "Write a post once and schedule it to every account you run. Unlimited posts on every plan, multiple accounts per platform, and API access so your tools and AI agents can post too.",
-    steps: [
-      { title: "Connect your accounts", text: "Use each platform’s authorization page, or add the Meadow bot to your Telegram channel or group. Connect more than one account per platform whenever you need to." },
-      { title: "Write the post once", text: "Add your media and caption, then adjust the caption, title, format, and settings for any destination that needs its own version." },
-      { title: "Publish now or schedule", text: "Choose a date and time in your workspace’s time zone. Meadow publishes each destination and tracks its delivery." },
-    ],
     platformHeading: "Schedule to every platform you actually use",
     platformText: "Each platform has its own rules for formats, lengths, and file sizes. Meadow checks them before a post is queued, so nothing quietly fails on one network.",
     features: [

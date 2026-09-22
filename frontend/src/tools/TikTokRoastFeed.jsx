@@ -15,13 +15,13 @@ export function RoastProfile({ profile, postCount }) {
   return <div className="roast-creator-profile">
     <ProfileImage src={profile.avatarUrl} name={profile.name} />
     <div className="roast-creator-copy">
-      <span className="roast-eyebrow">PROFILE LOADED · {postCount} POSTS IN THE HOT SEAT</span>
       <h2 id="roast-result-title">{profile.name}{profile.verified && <span className="roast-verified" aria-label="Verified on TikTok">✓</span>}</h2>
       <a href={profile.url} target="_blank" rel="noreferrer">@{profile.handle} <span aria-hidden="true">↗</span></a>
       {profile.bio && <p>{profile.bio}</p>}
       <dl className="roast-profile-stats">
         {[[profile.following, 'Following'], [profile.followers, 'Followers'], [profile.likes, 'Likes']].filter(([value]) => Number.isFinite(value)).map(([value, label]) => <div key={label}><dt>{label}</dt><dd title={value.toLocaleString()}>{formatCount(value)}</dd></div>)}
       </dl>
+      <p className="roast-profile-sample">{postCount} public posts loaded</p>
     </div>
   </div>;
 }
@@ -52,7 +52,7 @@ function PostPlayer({ post, playing, onPlay }) {
 
 function PostCommentary({ post, index, total, className = '' }) {
   return <div className={`roast-post-commentary ${className}`}>
-    <span className="roast-eyebrow">POST {String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</span>
+    <span className="roast-post-position">POST {String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</span>
     <span className={`roast-bucket ${post.bucket}`}>{labels[post.bucket]}</span>
     <h3>{post.roast || post.reason}</h3>
     <p>{post.reason}</p>
@@ -121,7 +121,7 @@ export default function TikTokRoastFeed({ result }) {
   };
 
   return <section className="roast-feed" aria-labelledby="roast-feed-title">
-    <div className="roast-feed-heading"><div><span className="roast-eyebrow">LET’S SCROLL THE RECEIPTS</span><h2 id="roast-feed-title">One post. One roast. Keep scrolling.</h2></div><p>Watch the posts and follow the commentary. Roasts are based on each caption.</p></div>
+    <div className="roast-feed-heading"><div><h2 id="roast-feed-title">One post. One roast. Keep scrolling.</h2></div><p>Watch the posts and follow the commentary. Roasts are based on each caption.</p></div>
     <div className="roast-tour-bar" ref={toolbar}>
       <button type="button" className="roast-tour-toggle" onClick={toggleTour} aria-pressed={tourPlaying}>{tourPlaying ? 'Ⅱ Pause walkthrough' : '▷ Play walkthrough'}</button>
       <span className="roast-tour-count" aria-live="polite" aria-atomic="true">Post {active + 1} of {posts.length}</span>
@@ -139,7 +139,7 @@ export default function TikTokRoastFeed({ result }) {
         <p className="roast-feed-end">That’s the {posts.length}-post sample. Your verdict is below. ↓</p>
       </div>
       <aside className="roast-feed-commentator" aria-label="Commentary for the current post">
-        <div className="roast-commentator-label"><span aria-hidden="true">✳</span><div><strong>Meadow’s running commentary</strong><span>Scroll the feed. We’ll bring the heat.</span></div></div>
+        <div className="roast-commentator-label"><div><strong>Meadow’s running commentary</strong><span>Scroll the feed. We’ll bring the heat.</span></div></div>
         <PostCommentary post={posts[active]} index={active} total={posts.length} />
         <p className="roast-commentary-note">Caption check · Video and audio aren’t scored.</p>
       </aside>
