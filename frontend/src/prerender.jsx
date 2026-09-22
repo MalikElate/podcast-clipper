@@ -5,11 +5,13 @@ import LegalPage from "./components/LegalPage.jsx";
 import Pricing from "./components/Pricing.jsx";
 import PlatformUseCasePage from "./components/PlatformUseCasePage.jsx";
 import MarketingPage from "./components/MarketingPage.jsx";
+import TikTokRoast from "./tools/TikTokRoast.jsx";
 import NotFound from "./components/NotFound.jsx";
 import { findMarketingPage } from "./marketing/generalPages.js";
 import { getPlatformUseCaseById } from "./platformUseCases.js";
 
 export function render(kind, platformId) {
+  if (kind === "tiktok-roast") return renderToString(<TikTokRoast />);
   if (kind === "marketing") {
     const page = findMarketingPage(platformId);
     if (!page) throw new Error(`Unknown marketing page: ${platformId}`);

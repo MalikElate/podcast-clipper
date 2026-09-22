@@ -7,6 +7,7 @@ import Pricing from "./components/Pricing.jsx";
 import PlatformUseCasePage from "./components/PlatformUseCasePage.jsx";
 import MarketingPage from "./components/MarketingPage.jsx";
 import { findMarketingPage } from "./marketing/generalPages.js";
+import TikTokRoast from "./tools/TikTokRoast.jsx";
 import NotFound from "./components/NotFound.jsx";
 import { PAID_PLANS as PLANS } from "./pricing.js";
 import { api, localPreview } from "./bridge/BridgeApi.js";
@@ -24,6 +25,7 @@ export default function App() {
   if (isTermsPage || isPrivacyPage) {
     return <LegalPage kind={isPrivacyPage ? "privacy" : "terms"} />;
   }
+  if (pathname === "/tiktok-roast") return <TikTokRoast />;
   if (pathname === "/pricing") return <PricingSurface marketing={surface === "marketing"} />;
   const platformPage = surface === "app" ? undefined : getPlatformUseCaseBySlug(pathname.slice(1));
   if (platformPage) return <PublicPlatformLanding platform={platformPage} onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;
