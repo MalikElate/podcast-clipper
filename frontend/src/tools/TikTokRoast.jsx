@@ -93,6 +93,10 @@ export default function TikTokRoast() {
           <aside className={`roast-host ${busy?'is-thinking':''}`} aria-label="Meet your roaster"><div className="roast-speech">{busy ? 'Looking for the hook. Please let there be a hook.' : result ? result.roast : '“Link in bio” is not a personality. Let’s start there.'}</div><RoastFlower smile={result && result.score<30}/><span className="roast-host-name">Meadow, with the gloves off.</span><span className="roast-host-note">A little heat. A lot of room to grow.</span></aside>
         </div>
       </section>
+      <section className="roast-cta-bar" aria-label="Schedule and cross-post with Meadow">
+        <div><span>Turn the roast into your next post.</span><h2>Schedule your TikTok posts and cross-post them to every platform.</h2></div>
+        <a href={appHref('/dashboard')}>Try for free <span aria-hidden="true">↗</span></a>
+      </section>
       {result && <section className="roast-results" ref={output} tabIndex="-1" aria-labelledby="roast-result-title">
         <div className="roast-result-top"><div><h2 id="roast-result-title">@{result.profile.handle}, you’re up.</h2><p>{result.posts.length} public captions sampled · {new Date(result.sampledAt).toLocaleDateString()}</p></div><a className="roast-profile-link" href={result.profile.url} target="_blank" rel="noreferrer">View TikTok profile ↗</a></div>
         <div className="roast-verdict"><div className="roast-number"><strong>{result.score}<span>/100</span></strong><span>Caption roast score</span><ScoreDial score={result.score}/></div><div className="roast-verdict-copy"><span>{result.label}</span><blockquote>{result.roast}</blockquote><small>{result.voice==='meadow-ai'?'AI punchline · Transparent caption checks':'Based on transparent caption checks'} · Not a video-quality rating</small></div></div>
