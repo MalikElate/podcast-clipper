@@ -102,7 +102,7 @@ export function analyzeProfile(profile) {
     bait: ['The caption has a tip jar out before the show starts.', 'Give the useful detail first. Ask for a response only when it adds to the conversation.'],
     repeated: ['Your copy-and-paste keys deserve their own creator fund.', 'Give each post its own hook: name the moment, result, or question that makes it different.'],
     promo: ['The bio link has had more screen time than the idea.', 'Share a useful result, example, or story before the sales instruction.'],
-    thin: ['Your caption is playing hard to get. The scroll button is not.', 'Replace a vague phrase with the specific thing someone will learn, see, or laugh at.'],
+    thin: ['Whose profile am I roasting today?', 'Replace a vague phrase with the specific thing someone will learn, see, or laugh at.'],
   };
   const observations = issues.slice(0, 3).map(({issue,count}) => ({ title: fixes[issue][0], evidence: `${count} of ${rows.length} sampled captions: ${rows.find(p => p.issue === issue).reason}`, fix: fixes[issue][1] }));
   if (!observations.length) observations.push({ title: 'Fine. The captions actually brought something to the table.', evidence: `${counts.strong} captions include distinct, readable context.`, fix: 'Keep the specificity. Test different opening lines against the performance you see in TikTok.' });
