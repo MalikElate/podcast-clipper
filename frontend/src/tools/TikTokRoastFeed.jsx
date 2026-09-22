@@ -1,147 +1,155 @@
 import { useEffect, useRef, useState } from 'react';
+import RoastFlower from './RoastFlower.jsx';
+import { nextWalkthroughStep, postVerdict, runningSlopScore } from './tiktokWalkthrough.js';
 
-const labels = { strong: 'Strong caption', thin: 'Thin caption', filler: 'Extra crispy', unscored: 'No caption' };
 const formatCount = value => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
-const scrollBehavior = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function ProfileImage({ src, name, className = '' }) {
+function ProfileImage({ src, name }) {
   const [failed, setFailed] = useState(false);
-  return <span className={`roast-avatar ${className}`}>
-    {src && !failed ? <img src={src} alt="" referrerPolicy="no-referrer" onError={() => setFailed(true)} /> : <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>}
-  </span>;
+  return <span className="roast-avatar">{src && !failed ? <img src={src} alt="" referrerPolicy="no-referrer" onError={() => setFailed(true)} /> : <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>}</span>;
 }
 
-export function RoastProfile({ profile, postCount }) {
-  return <div className="roast-creator-profile">
+function RoastProfile({ profile }) {
+  return <header className="roast-creator-profile">
     <ProfileImage src={profile.avatarUrl} name={profile.name} />
     <div className="roast-creator-copy">
       <h2 id="roast-result-title">{profile.name}{profile.verified && <span className="roast-verified" aria-label="Verified on TikTok">✓</span>}</h2>
-      <a href={profile.url} target="_blank" rel="noreferrer">@{profile.handle} <span aria-hidden="true">↗</span></a>
+      <a href={profile.url} target="_blank" rel="noreferrer">@{profile.handle} ↗</a>
       {profile.bio && <p>{profile.bio}</p>}
-      <dl className="roast-profile-stats">
-        {[[profile.following, 'Following'], [profile.followers, 'Followers'], [profile.likes, 'Likes']].filter(([value]) => Number.isFinite(value)).map(([value, label]) => <div key={label}><dt>{label}</dt><dd title={value.toLocaleString()}>{formatCount(value)}</dd></div>)}
-      </dl>
-      <p className="roast-profile-sample">{postCount} public posts loaded</p>
+      <dl className="roast-profile-stats">{[[profile.following, 'Following'], [profile.followers, 'Followers'], [profile.likes, 'Likes']].filter(([value]) => Number.isFinite(value)).map(([value, label]) => <div key={label}><dd title={value.toLocaleString()}>{formatCount(value)}</dd><dt>{label}</dt></div>)}</dl>
     </div>
+  </header>;
+}
+
+function SlopMeter({ score, reading }) {
+  const angle = (score ?? 50) * 1.8 - 90;
+  return <div className={`roast-meter ${reading ? 'is-reading' : ''}`} role={score === null ? "status" : "meter"} aria-label="Running slop score" aria-valuemin={score === null ? undefined : 0} aria-valuemax={score === null ? undefined : 100} aria-valuenow={score ?? undefined} aria-valuetext={score === null ? 'Checking the first caption' : `${score}% slop`}>
+    <svg viewBox="0 0 320 218" aria-hidden="true">
+      <g fill="none" strokeWidth="43">{['#55a55a', '#92be4f', '#ebd84e', '#ef934c', '#d95743'].map((color, index) => {
+        const a = Math.PI + index * Math.PI / 5 + .024, b = Math.PI + (index + 1) * Math.PI / 5 - .024;
+        return <path key={color} stroke={color} d={`M ${160 + 112 * Math.cos(a)} ${160 + 112 * Math.sin(a)} A 112 112 0 0 1 ${160 + 112 * Math.cos(b)} ${160 + 112 * Math.sin(b)}`} />;
+      })}</g>
+      <g className="roast-meter-needle" style={{ '--needle-angle': `${angle}deg` }}><path d="M153 160 160 48 167 160Z" fill="currentColor" /><circle cx="160" cy="160" r="13" fill="currentColor" /></g>
+      <text x="160" y="209" textAnchor="middle" className="roast-meter-title">SLOP</text>
+    </svg>
+    <div className="roast-meter-labels" aria-hidden="true"><span>LOW</span><span>MEDIUM</span><span>HIGH</span></div>
+    <p className="roast-meter-value"><strong>{score ?? '—'}</strong><span>% slop</span></p>
   </div>;
 }
 
-function PostPlayer({ post, playing, onPlay }) {
-  const frame = useRef(null);
-  const [coverFailed, setCoverFailed] = useState(false);
-  const [playerFailed, setPlayerFailed] = useState(false);
-  useEffect(() => {
-    if (!playing) return;
-    setPlayerFailed(false);
-    const receive = event => {
-      if (event.origin !== 'https://www.tiktok.com' || event.source !== frame.current?.contentWindow || event.data?.['x-tiktok-player'] !== true) return;
-      if (event.data.type === 'onPlayerError' && event.data.value?.errorCode !== 3002) setPlayerFailed(true);
-    };
-    window.addEventListener('message', receive);
-    return () => window.removeEventListener('message', receive);
-  }, [playing]);
-  return <div className="roast-video-stage">
-    {post.coverUrl && !coverFailed && <img className="roast-video-cover" src={post.coverUrl} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setCoverFailed(true)} />}
-    {playing && !playerFailed ? <iframe ref={frame} title={`TikTok post ${post.id}`} src={`https://www.tiktok.com/player/v1/${post.id}?autoplay=1&controls=1&description=0&music_info=0&rel=0`} allow="autoplay; fullscreen; encrypted-media" allowFullScreen onError={() => setPlayerFailed(true)} /> : <div className="roast-video-overlay">
-      {playerFailed ? <><p>TikTok couldn’t play this post here.</p><a href={post.url} target="_blank" rel="noreferrer">Open on TikTok ↗</a></> : <button className="roast-video-play" type="button" onClick={onPlay} aria-label={`Play TikTok post ${post.id}`}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4v16l13-8z" fill="currentColor" /></svg><span>Play post</span></button>}
-      {!post.coverUrl || coverFailed ? <span className="roast-preview-unavailable">Preview unavailable · You can still open the post</span> : null}
-    </div>}
-    {Number.isFinite(post.views) && <span className="roast-video-views" title={`${post.views.toLocaleString()} views`}>▷ {formatCount(post.views)} views</span>}
-  </div>;
-}
-
-function PostCommentary({ post, index, total, className = '' }) {
-  return <div className={`roast-post-commentary ${className}`}>
-    <span className="roast-post-position">POST {String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</span>
-    <span className={`roast-bucket ${post.bucket}`}>{labels[post.bucket]}</span>
-    <h3>{post.roast || post.reason}</h3>
-    <p>{post.reason}</p>
-    <div className="roast-post-fix"><span>Make the next one better</span><p>{post.fix || 'Give this post its own specific opening line.'}</p></div>
+function PostPreview({ post }) {
+  const [failed, setFailed] = useState(false);
+  return <div className={`roast-phone-media ${!post.coverUrl || failed ? 'is-missing' : ''}`}>
+    {post.coverUrl && !failed ? <img src={post.coverUrl} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} /> : <span>Preview unavailable</span>}
+    {Number.isFinite(post.views) && <span className="roast-phone-views">▷ {formatCount(post.views)} views</span>}
   </div>;
 }
 
 export default function TikTokRoastFeed({ result }) {
   const { profile, posts } = result;
+  const [step, setStep] = useState({ index: 0, phase: 'reading' });
+  const [browsing, setBrowsing] = useState(reducedMotion);
   const [active, setActive] = useState(0);
-  const [tourPlaying, setTourPlaying] = useState(false);
-  const [playingId, setPlayingId] = useState(null);
-  const cards = useRef([]);
-  const toolbar = useRef(null);
-
-  function goTo(index) {
-    const card = cards.current[index];
-    if (!card) return;
-    setActive(index);
-    const offset = (toolbar.current?.offsetHeight || 72) + 28;
-    window.scrollTo({ top: Math.max(0, window.scrollY + card.getBoundingClientRect().top - offset), behavior: scrollBehavior() });
-  }
+  const [onScreen, setOnScreen] = useState(false);
+  const [visible, setVisible] = useState(!document.hidden);
+  const phone = useRef(null), feed = useRef(null), cards = useRef([]);
+  const complete = step.phase === 'complete';
+  const index = browsing ? active : step.index;
+  const reading = !browsing && !complete && step.phase === 'reading';
+  const revealedCount = browsing ? index + 1 : complete ? posts.length : step.index + (reading ? 0 : 1);
+  const score = runningSlopScore(posts, revealedCount);
+  const current = posts[index];
+  const verdict = postVerdict(current);
+  const takeover = () => setBrowsing(true);
 
   useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => setOnScreen(entry.isIntersecting && entry.intersectionRatio >= .15), { threshold: .15 });
+    if (phone.current) observer.observe(phone.current);
+    const visibility = () => setVisible(!document.hidden);
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const motion = () => { if (preference.matches) setBrowsing(true); };
+    const escape = event => { if (event.key === 'Escape') setBrowsing(true); };
+    document.addEventListener('visibilitychange', visibility);
+    window.addEventListener('keydown', escape);
+    preference.addEventListener('change', motion);
+    return () => { observer.disconnect(); document.removeEventListener('visibilitychange', visibility); window.removeEventListener('keydown', escape); preference.removeEventListener('change', motion); };
+  }, []);
+
+  useEffect(() => {
+    if (browsing || complete || !onScreen || !visible || !posts.length) return;
+    const timer = setTimeout(() => setStep(previous => nextWalkthroughStep(previous, posts.length)), reading ? 2200 : 1350);
+    return () => clearTimeout(timer);
+  }, [browsing, complete, onScreen, visible, reading, step.index, posts.length]);
+
+  useEffect(() => {
+    if (browsing || !onScreen || !visible) return;
+    const card = cards.current[step.index], container = feed.current;
+    if (!card || !container) return;
+    // Keep the animation inside the phone; never move the page as posts advance.
+    const top = container.scrollTop + card.getBoundingClientRect().top - container.getBoundingClientRect().top - 10;
+    container.scrollTo({ top, behavior: reducedMotion() ? 'auto' : 'smooth' });
+  }, [step.index, browsing, onScreen, visible]);
+
+  useEffect(() => {
+    if (!browsing || !feed.current) return;
+    const container = feed.current;
     let raf = 0;
     const measure = () => {
       raf = 0;
-      const anchor = Math.max((toolbar.current?.offsetHeight || 72) + 36, window.innerHeight * .42);
-      let closest = 0, distance = Infinity;
-      cards.current.forEach((card, index) => {
+      const anchor = container.getBoundingClientRect().top + container.clientHeight * .4;
+      let nearest = 0, distance = Infinity;
+      cards.current.forEach((card, i) => {
         if (!card) return;
         const rect = card.getBoundingClientRect();
-        const nextDistance = Math.max(rect.top - anchor, anchor - rect.bottom, 0);
-        if (nextDistance < distance) { closest = index; distance = nextDistance; }
+        const next = Math.max(rect.top - anchor, anchor - rect.bottom, 0);
+        if (next < distance) { nearest = i; distance = next; }
       });
-      setActive(closest);
+      setActive(nearest);
     };
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(measure); };
-    window.addEventListener('scroll', onScroll, { passive: true });
+    container.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
     measure();
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); };
-  }, [posts]);
+    return () => { cancelAnimationFrame(raf); container.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); };
+  }, [browsing]);
 
-  useEffect(() => { setPlayingId(current => current === posts[active]?.id ? current : null); }, [active, posts]);
-
-  useEffect(() => {
-    if (!tourPlaying) return;
-    const pause = () => setTourPlaying(false);
-    const onKey = event => { if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', 'Escape', ' '].includes(event.key)) pause(); };
-    const onVisibility = () => { if (document.hidden) pause(); };
-    const timer = setTimeout(() => { if (active < posts.length - 1) goTo(active + 1); else pause(); }, 9000);
-    window.addEventListener('wheel', pause, { passive: true });
-    window.addEventListener('touchstart', pause, { passive: true });
-    window.addEventListener('keydown', onKey);
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => { clearTimeout(timer); window.removeEventListener('wheel', pause); window.removeEventListener('touchstart', pause); window.removeEventListener('keydown', onKey); document.removeEventListener('visibilitychange', onVisibility); };
-  }, [tourPlaying, active, posts.length]);
-
-  const navigate = index => { setTourPlaying(false); goTo(index); };
-  const toggleTour = () => {
-    if (tourPlaying) { setTourPlaying(false); return; }
-    setPlayingId(null);
-    goTo(active === posts.length - 1 ? 0 : active);
-    setTourPlaying(true);
-  };
-
-  return <section className="roast-feed" aria-label="TikTok post roast feed">
-    <div className="roast-tour-bar" ref={toolbar}>
-      <button type="button" className="roast-tour-toggle" onClick={toggleTour} aria-pressed={tourPlaying}>{tourPlaying ? 'Ⅱ Pause walkthrough' : '▷ Play walkthrough'}</button>
-      <span className="roast-tour-count" aria-live="polite" aria-atomic="true">Post {active + 1} of {posts.length}</span>
-      <div className="roast-tour-navigation"><button type="button" onClick={() => navigate(active - 1)} disabled={active === 0} aria-label="Previous post">↑</button><button type="button" onClick={() => navigate(active + 1)} disabled={active === posts.length - 1} aria-label="Next post">↓</button></div>
-      <span className="roast-tour-progress" aria-hidden="true"><span style={{ width: `${100 * (active + 1) / posts.length}%` }} /></span>
+  if (!current) return null;
+  return <section className={`roast-walkthrough ${reading && onScreen && visible ? 'is-scanning' : ''}`} aria-label="TikTok post walkthrough">
+    <div className="roast-judging-panel">
+      <RoastProfile profile={profile} />
     </div>
-    <div className="roast-feed-layout">
-      <div className="roast-feed-posts">
-        {posts.map((post, index) => <article className={`roast-feed-post ${index === active ? 'is-active' : ''}`} key={post.id} ref={el => { cards.current[index] = el; }} aria-label={`Post ${index + 1} by @${profile.handle}`} data-post-id={post.id}>
-          <header className="roast-post-header"><ProfileImage src={profile.avatarUrl} name={profile.name} /><div><strong>{profile.name}</strong><span>@{profile.handle}</span></div><a href={post.url} target="_blank" rel="noreferrer" aria-label={`Open post ${index + 1} on TikTok`}>TikTok ↗</a></header>
-          <PostPlayer post={post} playing={playingId === post.id && index === active} onPlay={() => { setTourPlaying(false); setActive(index); setPlayingId(post.id); }} />
-          <div className="roast-post-caption"><span>THE CAPTION</span><p>{post.caption || 'No caption available'}</p></div>
-          <PostCommentary className="roast-inline-commentary" post={post} index={index} total={posts.length} />
-        </article>)}
-        <p className="roast-feed-end">That’s the {posts.length}-post sample. Your verdict is below. ↓</p>
+    <div className="roast-live-viewer">
+      <div className="roast-live-judging"><div className="roast-judging-scene">
+        <SlopMeter score={score} reading={reading && onScreen && visible} />
+        <div className={`roast-reaction ${reading && onScreen && visible ? 'is-thinking' : ''}`}>
+          <RoastFlower smile={!reading && verdict.tone === 'fresh'} mood={reading ? 'thinking' : verdict.tone} />
+          <p className="roast-reaction-speech">{reading ? ['Let’s see what you brought.', 'Hold on. There might be something here.', 'Looking for the plot.'][index % 3] : complete && !browsing ? result.roast : current.roast || current.reason}</p>
+        </div>
       </div>
-      <aside className="roast-feed-commentator" aria-label="Commentary for the current post">
-        <div className="roast-commentator-label"><div><strong>Meadow’s running commentary</strong><span>Scroll the feed. We’ll bring the heat.</span></div></div>
-        <PostCommentary post={posts[active]} index={active} total={posts.length} />
-        <p className="roast-commentary-note">Caption check · Video and audio aren’t scored.</p>
-      </aside>
+      <div className="roast-scan-status" role="status" aria-live="polite" aria-atomic="true">
+        <span>{complete && !browsing ? 'The verdict is in.' : reading ? `Checking post ${index + 1}…` : `Post ${index + 1}: ${verdict.label}`}</span>
+        <span>{complete && !browsing ? `${posts.length} posts checked` : `${index + 1} / ${posts.length}`}</span>
+      </div>
+      <p className="roast-scroll-hint">Scroll the phone to look through your posts.</p></div>
+    <div className="roast-phone" ref={phone}>
+      <div className="roast-phone-notch" aria-hidden="true" />
+      <div className="roast-phone-top"><span>@{profile.handle}</span><span>TikTok</span></div>
+      <div className="roast-phone-feed" ref={feed} tabIndex={0} role="region" aria-label={`Posts by @${profile.handle}. Scroll to browse; Escape stops the animation.`} onWheel={takeover} onTouchStart={takeover} onPointerDown={takeover} onFocus={takeover} onKeyDown={event => { if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' '].includes(event.key)) takeover(); }}>
+        {posts.map((post, i) => {
+          const judged = browsing || complete || i < step.index || (i === step.index && !reading);
+          const stamp = postVerdict(post);
+          return <article key={post.id} ref={element => { cards.current[i] = element; }} className={`roast-phone-post ${i === index ? 'is-active' : ''} ${judged ? 'is-judged' : ''}`} data-post-id={post.id} aria-label={`Post ${i + 1} by @${profile.handle}`}>
+            <header><ProfileImage src={profile.avatarUrl} name={profile.name} /><div><strong>{profile.name}</strong><span>@{profile.handle}</span></div><a href={post.url} target="_blank" rel="noreferrer" aria-label={`Open post ${i + 1} on TikTok`}>↗</a></header>
+            <div className="roast-phone-preview"><PostPreview post={post} />{judged && <span className={`roast-stamp ${stamp.tone}`}>{stamp.label}</span>}{i === index && reading && <span className="roast-scanning-line" aria-hidden="true" />}</div>
+            <p className="roast-phone-caption">{post.caption || 'No caption available'}</p>
+            <div className="roast-post-reading">{i === index && reading ? 'Meadow is checking…' : judged ? stamp.label : 'Up next'}<span className="roast-post-scan-track" aria-hidden="true"><span /></span></div>
+          </article>;
+        })}
+        <p className="roast-phone-end">You’re all caught up.</p>
+      </div>
+      <div className="roast-phone-home" aria-hidden="true" />
+    </div>
     </div>
   </section>;
 }
