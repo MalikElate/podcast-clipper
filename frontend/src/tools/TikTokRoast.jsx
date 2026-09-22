@@ -100,12 +100,12 @@ export default function TikTokRoast() {
         <div className="roast-intro"><span className="roast-powered-badge">Powered by Jev</span><h1 id="roast-title">TikTok <span>Hot or Not.</span></h1></div>
         <div className="roast-workspace">
           <aside className={`roast-host ${busy?'is-thinking':''}`} aria-label="Meet your roaster"><div className="roast-speech">{busy ? 'Looking for the hook. Please let there be a hook.' : result ? result.roast : 'Okay, whose TikTok am I roasting?'}</div><RoastFlower smile={result && result.score<30}/></aside>
-          <div className="roast-input-card"><h2>Drop your handle.</h2><form onSubmit={roast}><label htmlFor="roast-handle">TikTok handle or profile URL</label><div className="roast-input-wrap"><span aria-hidden="true">@</span><input id="roast-handle" name="handle" value={handle} onChange={e=>setHandle(e.target.value)} placeholder="yourhandle" maxLength={180} autoCapitalize="none" autoCorrect="off" spellCheck="false" required disabled={busy}/></div><button className="roast-submit" disabled={busy || !handle.trim()} type="submit">{busy ? 'Preparing your roast…' : 'Roast my TikTok'}<span aria-hidden="true">{busy ? '◌' : '↗'}</span></button></form>{busy && <p className="roast-loading" role="status">Loading the profile, lining up the posts, and preparing each roast. This can take a few seconds.</p>}{error && <p className="roast-error" role="alert">{error}</p>}</div>
+          <div className="roast-input-card"><h2>Drop your handle.</h2><form onSubmit={roast}><label htmlFor="roast-handle">TikTok handle or profile URL</label><div className="roast-input-wrap"><span aria-hidden="true">@</span><input id="roast-handle" name="handle" value={handle} onChange={e=>setHandle(e.target.value)} placeholder="yourhandle" maxLength={180} autoCapitalize="none" autoCorrect="off" spellCheck="false" required disabled={busy}/></div><button className="roast-submit" disabled={busy || !handle.trim()} type="submit">{busy ? 'Preparing your roast…' : 'Roast my TikTok'}{busy && <span aria-hidden="true">◌</span>}</button></form>{busy && <p className="roast-loading" role="status">Loading the profile, lining up the posts, and preparing each roast. This can take a few seconds.</p>}{error && <p className="roast-error" role="alert">{error}</p>}</div>
         </div>
       </section>
       <section className="roast-cta-bar" aria-label="Schedule and cross-post with Meadow">
         <div><h2>Schedule your TikToks and cross-post them to every platform.</h2></div>
-        <a href={appHref('/dashboard')}>Try for free <span aria-hidden="true">↗</span></a>
+        <a href={appHref('/dashboard')}>Try for free</a>
       </section>
       {result && <section className="roast-results" ref={output} tabIndex="-1" aria-labelledby="roast-result-title">
         <RoastProfile key={result.profile.handle} profile={result.profile} postCount={result.posts.length} />
@@ -127,7 +127,7 @@ export default function TikTokRoast() {
         </div>
         <div className="roast-fixes">{result.observations.map(o=><article key={o.title}><h3>{o.title}</h3><p>{o.evidence}</p><div><strong>Try this next</strong><p>{o.fix}</p></div></article>)}</div>
 
-        <div className="roast-recovery"><div><h2>Better captions. Meet a better workflow.</h2><p>Draft, preview, and schedule your content with Meadow.</p></div><a href={appHref('/dashboard')}>Start free with Meadow ↗</a></div>
+        <div className="roast-recovery"><div><h2>Better captions. Meet a better workflow.</h2><p>Draft, preview, and schedule your content with Meadow.</p></div><a href={appHref('/dashboard')}>Start free with Meadow</a></div>
       </section>}
       <section className="roast-faq" aria-labelledby="roast-faq-title"><h2 id="roast-faq-title">Before you blame the algorithm.</h2>{FAQs.map(([q,a])=><details key={q}><summary>{q}<span aria-hidden="true">+</span></summary><p>{a}</p></details>)}</section>
     </main><SiteFooter />
