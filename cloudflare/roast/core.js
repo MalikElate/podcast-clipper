@@ -43,8 +43,8 @@ export async function limitedText(response, maxBytes) {
 export async function fetchProfile(handle, fetcher = fetch) {
   let response;
   try {
-    response = await fetcher(`https://www.tiktok.com/embed/@${handle}`, { headers: { 'Accept': 'text/html' }, redirect: 'error', signal: AbortSignal.timeout(12000) });
-  } catch { throw new RoastError('TikTok took too long to respond. Please try again in a moment.', 502, 'upstream_unavailable'); }
+    response = await fetcher(`https://www.tiktok.com/embed/@${handle}`, { headers: { 'Accept': 'text/html' }, redirect: 'manual', signal: AbortSignal.timeout(12000) });
+  } catch { throw new RoastError('Meadow could not reach TikTok just now. Please try again in a moment.', 502, 'upstream_unavailable'); }
   if (!response.ok) throw new RoastError('TikTok is not sharing this profile right now. Check the handle or try again later.', 422, 'profile_unavailable');
   return parseEmbed(await limitedText(response, 1500000), handle);
 }
