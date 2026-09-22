@@ -50,6 +50,15 @@ export default function TikTokRoast() {
   const [notice,setNotice]=useState('');
   const controller=useRef(null), output=useRef(null);
   useEffect(()=>{const value=new URLSearchParams(window.location.search).get('handle');if(value)setHandle(value.slice(0,180));return()=>controller.current?.abort();},[]);
+  useEffect(() => {
+    if (!result) return;
+    // Wait for React to mount the results before revealing the walkthrough.
+    const frame = requestAnimationFrame(() => {
+      output.current?.focus({ preventScroll: true });
+      output.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [result]);
   async function roast(event) {
     event.preventDefault();if(busy)return;
     setError('');setNotice('');setResult(null);setBusy(true);
@@ -60,7 +69,6 @@ export default function TikTokRoast() {
       const data=await response.json();
       if (!response.ok) throw new Error(data.error || 'The roast could not finish. Try again in a moment.');
       setResult(data);
-      requestAnimationFrame(()=>{output.current?.focus({preventScroll:true});output.current?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});});
     } catch(e) {setError(e.name==='AbortError' ? 'That took too long. Please try again in a moment.' : e.message);}
     finally {clearTimeout(timer);setBusy(false);}
   }
