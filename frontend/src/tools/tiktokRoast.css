@@ -30,7 +30,7 @@
 .roast-host-note{font-size:11px;color:var(--roast-muted);}
 .roast-loading,.roast-error{font-size:13px;line-height:1.6;padding:12px;border-radius:9px;background:#edf2e4;}
 .roast-error{color:#853d27;background:#fff0e5;}
-.roast-cta-bar{display:flex;align-items:center;justify-content:space-between;gap:36px;max-width:1064px;margin:0 auto 88px;padding:30px 34px;border:1px solid var(--roast-border);border-radius:22px;background:linear-gradient(135deg,#fffefa,#edf2e5);box-shadow:0 24px 70px -48px #5f7058;}
+.roast-cta-bar{display:flex;align-items:center;justify-content:space-between;gap:36px;max-width:1064px;margin:0 auto 88px;padding:30px 34px;border:1px solid var(--roast-border);border-radius:22px;background:#fffefa;}
 .roast-cta-bar>div{max-width:710px;}
 .roast-cta-bar h2{margin:0;font-size:clamp(24px,3.1vw,37px);line-height:1.14;letter-spacing:-.045em;overflow-wrap:anywhere;}
 .roast-cta-bar>a{display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:0 0 auto;min-height:50px;padding:14px 21px;border-radius:999px;background:#293e31;color:#fffdf4;font-size:13px;font-weight:750;text-decoration:none;}
