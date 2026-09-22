@@ -56,6 +56,9 @@ export function sanitizeAnalyticsEvent(event) {
   const source = event.properties || {};
   const clean = {};
   for (const name of properties) if (source[name] !== undefined) clean[name] = source[name];
+  // PostHog requires this SDK field to derive the daily cookieless hash,
+  // then strips it during processing. HTTP headers alone are insufficient.
+  if (typeof source.$raw_user_agent === "string") clean.$raw_user_agent = source.$raw_user_agent;
   for (const name of ["$current_url", "$session_entry_url", "$session_exit_url", "$prev_pageview_url"]) {
     const url = cleanAnalyticsUrl(source[name]);
     if (url) clean[name] = url;
@@ -79,7 +82,7 @@ export function sanitizeAnalyticsEvent(event) {
   clean.distinct_id = "$posthog_cookieless";
   clean.$cookieless_mode = true;
   clean.$geoip_disable = true;
-  clean.meadow_analytics_version = "2026-09-22";
+  clean.meadow_analytics_version = "2026-09-22.1";
   return { event: event.event, properties: clean, ...(event.timestamp ? { timestamp: event.timestamp } : {}), ...(event.uuid ? { uuid: event.uuid } : {}) };
 }
 
