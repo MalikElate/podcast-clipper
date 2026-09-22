@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import BrandLogo from "./BrandLogo.jsx";
 import SiteFooter from "./SiteFooter.jsx";
 import { PLATFORM_PRIVACY } from "./platformPrivacy.js";
+import AnalyticsPreference from "./AnalyticsPreference.jsx";
 
 const PAGE_COPY = {
   terms: {
@@ -68,7 +69,7 @@ const PAGE_COPY = {
   privacy: {
     label: "Privacy policy",
     title: "Privacy Policy",
-    effectiveDate: "September 16, 2026",
+    effectiveDate: "September 22, 2026",
     intro: <>This policy explains the information Meadow receives, how we use it, how long we keep it, and how you can withdraw access or delete it. Google and YouTube data are covered in plain language in the <a href="#privacy-youtube">YouTube section</a>.</>,
     sections: [
       { heading: "1. Account and workspace information", paragraphs: [
@@ -87,7 +88,9 @@ const PAGE_COPY = {
       ] },
       { heading: "4. Cookies and product analytics", paragraphs: [
         "Trybe uses a first-party visitor cookie to attribute purchases to creator referrals. When a payment succeeds, we send Trybe the visitor identifier, order identifier, amount, currency, payment time, and customer email. This includes subscription renewals. Trybe hashes customer emails for attribution; we do not send card details or connected-platform content to Trybe.",
-        "Meadow and Clerk use browser storage and cookies needed for sign-in, security, and workspace preferences. Product analytics tracking is currently disabled; Meadow does not send new product usage events to PostHog. Earlier versions used PostHog and may have sent usage events, your account identifier, email address, and name. Account deletion includes a request to remove historical analytics associated with your account.",
+        "Meadow and Clerk use browser storage and cookies needed for sign-in, security, and workspace preferences. Meadow uses PostHog in the United States for cookie-free usage analytics: page visits, browser and device categories, referring website domains, and successful actions such as saving a draft or submitting a post. PostHog uses a daily-changing hash derived from request information, including the IP address and user agent, to estimate visitors without storing an analytics identifier in your browser. Cookieless events have their IP address removed before processing. These counts do not identify your Meadow account or track return visits across days.",
+        "We exclude email addresses, names, account and social-platform identifiers, post content, media, credentials, URL query strings, and URL fragments from new PostHog events. Session recordings and automatic form or text capture are disabled. We honor supported Do Not Track and Global Privacy Control browser settings. You can turn usage analytics off below or in Settings → Privacy & Account; a preference cookie remembers that choice across Meadow’s website and app for one year. Earlier versions sent identified analytics; account deletion still requests removal of historical analytics associated with your account.",
+        <AnalyticsPreference />,
         "Social performance analytics are separate from product usage tracking. They use your connected-platform permissions to show the results of the posts you published. Your browser may contact a platform when displaying its profile images or when you follow a platform link.",
       ] },
       { heading: "5. Retention", paragraphs: [
