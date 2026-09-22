@@ -42,7 +42,7 @@ From the repository root on a Docker host:
 docker compose --env-file frontend/.env up --build -d
 ```
 
-Compose passes Clerk and optional PostHog public settings to the frontend build and supplies backend secrets only at runtime. It mounts `bridge-data` at `/data`, runs as the unprivileged Node user, and exposes the service at `127.0.0.1:8787`. Put an HTTPS reverse proxy in front of it and preserve the named volume across updates.
+Compose passes Clerk and optional PostHog public-token overrides to the frontend build and supplies backend secrets only at runtime. It mounts `bridge-data` at `/data`, runs as the unprivileged Node user, and exposes the service at `127.0.0.1:8787`. Put an HTTPS reverse proxy in front of it and preserve the named volume across updates.
 
 The reverse proxy must support large request bodies, media byte ranges, and long upload timeouts. Set its upload limit consistently with `BRIDGE_MAX_UPLOAD_MB` (default 1 GiB). Provider retrieval of signed `/media/...` URLs and `/oauth/...` callbacks must be publicly reachable without a login wall.
 
@@ -94,3 +94,9 @@ These checks require actual provider credentials and approved test accounts:
 - Frontend unit tests and production bundle.
 
 These checks do not claim a live social publication, Docker image build, or production deployment.
+
+## Product usage analytics
+
+The production hosts `findmeadow.com`, `www.findmeadow.com`, and `app.findmeadow.com` use the public write-only token for Meadow’s US PostHog project 604661. Localhost and preview domains are excluded. `VITE_POSTHOG_ENABLED=false` disables the integration at build time; `VITE_POSTHOG_KEY` overrides the default public token. Keep **Settings → Web analytics → Cookieless tracking** enabled in the matching PostHog project or it will drop cookieless events. Never place a personal API key in a frontend variable.
+
+Page views follow browser history changes. Product events are emitted only after the corresponding API request succeeds: checkout started, post submitted (accepted, not confirmed published), draft saved, connection started, account connected/disconnected, and media uploaded. These are anonymous UI usage counts, not billing records or authoritative publishing outcomes. Counts cannot be linked to Meadow accounts or reliably joined across days. Consent preferences, DNT, GPC, network failures, and blockers can reduce observed counts. Legacy identified-data erasure still uses the backend runtime secrets described in `privacy-operations.md`.

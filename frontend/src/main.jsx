@@ -8,9 +8,9 @@ import "./meadow.css";
 import "./borderless.css";
 import "./platformUseCases.css";
 import "./marketingPages.css";
+import { initProductAnalytics } from "./productAnalytics.js";
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || globalThis.__MEADOW_CONFIG__?.clerkPublishableKey;
-const posthogKey = import.meta.env.VITE_POSTHOG_KEY;
 const localPreview = import.meta.env.VITE_BRIDGE_LOCAL_PREVIEW === "true";
 
 if (!clerkPublishableKey && !localPreview) {
@@ -21,12 +21,7 @@ function Application() {
   return <AuthProvider><App /></AuthProvider>;
 }
 
-// Product tracking is disabled. Remove the old deployment's browser identifier.
-if (posthogKey) {
-  const key = `ph_${posthogKey}_posthog`;
-  try { localStorage.removeItem(key); sessionStorage.removeItem(key); } catch { /* Browser storage may be disabled. */ }
-  document.cookie = `${key}=; Max-Age=0; Path=/; SameSite=Lax`;
-}
+void initProductAnalytics();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

@@ -1,11 +1,12 @@
 import { getAuthToken } from "../authToken.js";
 import { normalizePlatformCollections } from "./platforms.js";
 import { uploadWithProgress } from "./uploadTransport.js";
+import { captureRequestSuccess } from "../productAnalytics.js";
 export const localPreview = Boolean(import.meta.env?.DEV && import.meta.env?.VITE_BRIDGE_LOCAL_PREVIEW === "true");
 const sessionError = () => Object.assign(new Error("Your Meadow sign-in could not be verified. Please sign in again to continue."), { code: "authentication_required", status: 401 });
 export class BridgeApi {
-  constructor({ getToken = getAuthToken, fetcher = (...args) => fetch(...args), uploader = uploadWithProgress, preview = localPreview } = {}) {
-    Object.assign(this, { getToken, fetcher, uploader, preview });
+  constructor({ getToken = getAuthToken, fetcher = (...args) => fetch(...args), uploader = uploadWithProgress, preview = localPreview, track = captureRequestSuccess } = {}) {
+    Object.assign(this, { getToken, fetcher, uploader, preview, track });
   }
   async headers(json = true, refresh = false) {
     let token = this.preview ? null : await this.getToken({ skipCache: refresh });
@@ -34,6 +35,7 @@ export class BridgeApi {
       Object.assign(error, { code: data.code, details: data.details, status: res.status });
       throw error;
     }
+    if (!this.preview) { try { this.track(path, method); } catch { /* Tracking cannot fail a successful request. */ } }
     return normalizePlatformCollections(data);
   }
   projectPath(projectId, path = "") { return `/projects/${encodeURIComponent(projectId)}${path}`; }
@@ -61,6 +63,7 @@ export class BridgeApi {
       Object.assign(error, { code: data.code, details: data.details, status });
       throw error;
     }
+    if (!this.preview) { try { this.track(this.projectPath(projectId, "/media"), "POST"); } catch { /* Tracking cannot fail an upload. */ } }
     return normalizePlatformCollections(data);
   }
 }
