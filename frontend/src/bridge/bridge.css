@@ -1,4 +1,4 @@
-.bridge{ --b-bg:#090d16; --b-panel:#101621; --b-raised:#151d2b; --b-line:#263044; --b-text:#edf2fa; --b-muted:#99a7bd; --b-blue:#638aff; --b-blue-dark:#355cdb; min-height:100vh; background:var(--b-bg); color:var(--b-text); color-scheme:dark; font-family:var(--font-body),sans-serif; font-size:1rem; line-height:1.5; }
+.bridge{ --b-bg:#090d16; --b-panel:#101621; --b-raised:#151d2b; --b-line:#263044; --b-text:#edf2fa; --b-muted:#99a7bd; --b-blue:#638aff; --b-blue-dark:#355cdb; min-height:100vh; background:var(--b-bg); color:var(--b-text); font-family:var(--font-body),sans-serif; font-size:1rem; line-height:1.5; }
 .bridge button,.bridge input,.bridge textarea,.bridge select{ font:inherit; }
 .bridge button{ cursor:pointer; }
 .bridge button:disabled{ cursor:not-allowed; opacity:.55; }
