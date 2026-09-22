@@ -2283,7 +2283,7 @@ input[type="range"]::-moz-range-thumb {
 .footer-legal-brand .brand { justify-content: flex-start; gap: 8px; }
 .footer-legal-brand .brand-logo-image { width: 29px; height: 29px; }
 .footer-legal-brand .brand-name { font-size: 21px; }
-.footer-meta-row { display: flex; align-items: center; justify-content: flex-end; padding-top: 26px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 14px; }
+.footer-meta-row { display: flex; align-items: center; justify-content: center; padding-top: 38px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 14px; text-align: center; }
 
 @media (max-width: 900px) {
   .footer-columns { gap: 30px; }
@@ -2302,7 +2302,7 @@ input[type="range"]::-moz-range-thumb {
   .footer-mobile-group summary span::after { transform: rotate(90deg); }
   .footer-mobile-group[open] summary span::after { transform: rotate(0); }
   .footer-mobile-group > div { display: flex; padding: 0 0 24px; flex-direction: column; align-items: flex-start; gap: 15px; }
-  .footer-meta-row { justify-content: flex-start; padding-top: 24px; }
+  .footer-meta-row { justify-content: center; padding-top: 32px; }
   .footer-copyright { font-size: 12px; }
 }
 
