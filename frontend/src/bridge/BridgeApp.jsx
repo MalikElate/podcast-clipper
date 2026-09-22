@@ -51,7 +51,7 @@ export default function BridgeApp() {
     window.addEventListener("meadow:account-deletion", onDeletion);
     return () => window.removeEventListener("meadow:account-deletion", onDeletion);
   }, []);
-  if (deletion) return <div className="bridge" data-theme="light"><DeletionReceipt deletion={deletion} signOut={signOut}/></div>;
+  if (deletion) return <div className="bridge" data-theme="dark"><DeletionReceipt deletion={deletion} signOut={signOut}/></div>;
   if (!user && !localPreview) return <div className="bridge-signin"><div className="bridge-signin-brand"><img src={MEADOW_LOGO_URL} alt="" width="38" height="38"/><span>meadow</span></div><Auth /></div>;
   return <Workspace key={user?.id || "preview"} user={user} signOut={signOut}/>;
 }
@@ -147,7 +147,7 @@ function Workspace({ user, signOut }) {
     try { await signOut(); }
     catch (error) { setError(error.message || "Could not sign out. Please try again."); setSigningOut(false); setMenuOpen(false); }
   }
-  return <div className="bridge" data-theme="light">
+  return <div className="bridge" data-theme="dark">
     {menuOpen && <button className="bridge-scrim" onClick={() => setMenuOpen(false)} aria-label="Close navigation"/>}
     <aside className={`bridge-sidebar ${menuOpen ? "is-open" : ""}`}>
       <a className="bridge-logo" href={dashboardPath("compose")} onClick={event => follow(event, "compose")}><img className="bridge-logo-image" src={MEADOW_LOGO_URL} alt="" width="31" height="31"/><span>meadow<span className="bridge-logo-dot">.</span></span></a>
