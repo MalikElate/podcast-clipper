@@ -124,7 +124,7 @@ export class MediaService {
     const used = this.store.list("post", { projectId }).some(post => {
       if (!post.mediaIds?.includes(id)) return false;
       const deliveries = projectDeliveries.filter(delivery => delivery.postId === post.id);
-      return !deliveries.length || deliveries.some(delivery => !["published", "cancelled"].includes(delivery.status));
+      return !deliveries.length || deliveries.some(delivery => !["published", "awaiting_publish", "cancelled"].includes(delivery.status));
     });
     invariant(!used, "This file is used by an active post. Remove it from that post or cancel the post first.", { status: 409 });
     this.store.put("media", { ...record, status: "deleting" });

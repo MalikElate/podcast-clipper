@@ -3,7 +3,7 @@ import { BridgeError, invariant } from "../core/errors.js";
 import { SecretVault } from "../core/SecretVault.js";
 import { isPendingDelivery } from "./RateLimitService.js";
 
-const terminal = new Set(["published", "cancelled"]);
+const terminal = new Set(["published", "awaiting_publish", "cancelled"]);
 const hasSentChat = item => (item.progress?.chat?.sent?.length || item.chatMessagesSent || 0) > 0;
 const editableDelivery = item => !hasSentChat(item) && (isPendingDelivery(item) || ["failed", "needs_account"].includes(item.status));
 
@@ -134,7 +134,7 @@ export class PostService {
       const id = `preview:${index}:${accountId}`;
       const requestedAt = post.accountSchedules[accountId].requestedAt;
       proposed.push({ id, rateKey: account.rateKey, requestedAt, order: this.clock() * 100 + index, status: "queued" });
-      return { id, accountId, accountName: account.label, platform: account.platform, errors, requestedAt };
+      return { id, accountId, accountName: account.label, platform: account.platform, ...(account.platform === "tiktok" ? { deliveryMode: post.overrides?.[accountId]?.settings?.deliveryMode || "direct" } : {}), errors, requestedAt };
     }) }));
     for (const rateKey of new Set(proposed.map(item => item.rateKey))) {
       const allocations = this.rates.plan(rateKey, proposed.filter(item => item.rateKey === rateKey), { excludeIds });
@@ -221,10 +221,10 @@ export class PostService {
     const deliveries = this.store.list("delivery", { projectId: post.projectId }).filter(delivery => delivery.postId === post.id).map(delivery => {
       const { progress, leaseUntil, workerId, ...visible } = delivery;
       const account = this.store.get("account", delivery.accountId);
-      return { ...visible, ...(progress?.chat ? { chatMessagesSent: progress.chat.sent.length } : {}), accountName: account?.label || "Disconnected account", accountStatus: account?.status || "disconnected" };
+      return { ...visible, ...(delivery.platform === "tiktok" ? { deliveryMode: delivery.contentSnapshot?.settings?.deliveryMode || post.overrides?.[delivery.accountId]?.settings?.deliveryMode || "direct" } : {}), ...(progress?.chat ? { chatMessagesSent: progress.chat.sent.length } : {}), accountName: account?.label || "Disconnected account", accountStatus: account?.status || "disconnected" };
     });
-    const status = !deliveries.length ? "draft" : deliveries.every(item => item.status === "published") ? "published" : deliveries.every(item => item.status === "cancelled") ? "cancelled" : deliveries.some(item => ["publishing", "processing"].includes(item.status)) ? "publishing" : deliveries.some(item => ["failed", "needs_review", "needs_account"].includes(item.status)) ? "needs_attention" : deliveries.some(item => item.status === "published") ? "partially_published" : "scheduled";
-    return { ...post, status, deliveries, media: (post.mediaIds || []).map(id => this.store.get("media", id)).filter(Boolean).map(item => this.media.toPublic(item)), editable: !deliveries.length || deliveries.some(editableDelivery) && deliveries.every(item => editableDelivery(item) || terminal.has(item.status)), deletable: deliveries.every(item => !["publishing", "processing"].includes(item.status)) };
+    const status = !deliveries.length ? "draft" : deliveries.every(item => item.status === "published") ? "published" : deliveries.every(item => item.status === "cancelled") ? "cancelled" : deliveries.some(item => ["publishing", "processing"].includes(item.status)) ? "publishing" : deliveries.some(item => ["failed", "needs_review", "needs_account"].includes(item.status)) ? "needs_attention" : deliveries.every(item => terminal.has(item.status)) && deliveries.some(item => item.status === "awaiting_publish") ? "awaiting_publish" : deliveries.some(item => item.status === "published") ? "partially_published" : "scheduled";
+    return { ...post, status, deliveries, media: (post.mediaIds || []).map(id => this.store.get("media", id)).filter(Boolean).map(item => this.media.toPublic(item)), editable: !deliveries.length || deliveries.some(editableDelivery) && deliveries.every(item => editableDelivery(item) || terminal.has(item.status)), deletable: deliveries.every(item => !["publishing", "processing", "awaiting_publish"].includes(item.status)) };
   }
 
   async update(uid, projectId, id, input) {
@@ -288,7 +288,7 @@ export class PostService {
         invariant(original.status === "draft", "This draft has already been queued and cannot be deleted as a draft.", { status: 409, code: "draft_already_submitted" });
         invariant(Number.isInteger(revision) && revision === original.revision, "This draft changed in another window. Refresh it before deleting.", { status: 409, code: "revision_conflict" });
       }
-      invariant(!original.deliveries.some(item => item.status === "published" || hasSentChat(item)), "Published posts stay in your history. Deleting a post from a social network must be done on that network.", { status: 409 });
+      invariant(!original.deliveries.some(item => ["published", "awaiting_publish"].includes(item.status) || hasSentChat(item)), "Published posts and content sent to TikTok stay in your history. Manage content already sent to a social network on that network.", { status: 409 });
       const post = this.cancel(uid, projectId, id);
       post.deliveries.forEach(item => this.store.remove("delivery", item.id));
       this.store.remove("post", id);
@@ -312,7 +312,8 @@ export class PostService {
   retry(uid, projectId, deliveryId, { confirmedNotPublished = false } = {}) {
     const delivery = this.projects.requireRecord(uid, projectId, "delivery", deliveryId);
     invariant(["failed", "needs_account", "needs_review"].includes(delivery.status), "This delivery cannot be retried.", { status: 409 });
-    invariant(delivery.status !== "needs_review" || confirmedNotPublished === true, "Check the social account and confirm the unconfirmed message was not published, to avoid a duplicate.", { status: 409, code: "confirmation_required" });
+    const inboxDelivery = delivery.platform === "tiktok" && (delivery.contentSnapshot?.settings?.deliveryMode === "inbox" || delivery.progress?.deliveryMode === "inbox");
+    invariant(delivery.status !== "needs_review" || confirmedNotPublished === true, inboxDelivery ? "Check your TikTok inbox and confirm this upload was not received before retrying, to avoid a duplicate." : "Check the social account and confirm the unconfirmed message was not published, to avoid a duplicate.", { status: 409, code: "confirmation_required" });
     const account = this.accounts.require(uid, projectId, delivery.accountId);
     invariant(account.status === "connected", "Reconnect this account before retrying.");
     if (delivery.status === "needs_account" && delivery.resumeStatus === "processing") {

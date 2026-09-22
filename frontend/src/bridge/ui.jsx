@@ -24,7 +24,7 @@ const TIKTOK_PATH = "M448,209.91a210.06,210.06,0,0,1-122.77-39.25V349.38A162.55,
 
 export const number = value => Number.isFinite(value) ? new Intl.NumberFormat(undefined, { notation: value >= 100000 ? "compact" : "standard", maximumFractionDigits: 1 }).format(value) : "—";
 export const dateTime = (value, timeZone) => value ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short", timeZone }).format(new Date(value)) : "—";
-export const statusLabel = value => (value || "unknown").replaceAll("_", " ");
+export const statusLabel = value => value === "awaiting_publish" ? "Finish in TikTok" : (value || "unknown").replaceAll("_", " ");
 export function Badge({ status, children }) { return <span className={`bridge-badge ${status || ""}`}>{children || statusLabel(status)}</span>; }
 export function PlatformIcon({ platform, size = 22, variant = "default" }) {
   const gradientId = useId();

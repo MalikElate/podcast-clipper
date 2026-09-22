@@ -22,6 +22,14 @@ Keys have the same workspace access as their owner, are displayed once, and can 
 
 The initial tool contract does not connect accounts, upload media, refresh provider data, queue posts, or publish. Continue using the authenticated product and REST upload flow for those actions.
 
+## TikTok inbox delivery status
+
+`list_posts` and `get_post` can return `awaiting_publish` when a TikTok inbox upload has been delivered and the user must finish editing and posting in TikTok. Treat it as a completed transfer, not a published post. A post containing a mixture of confirmed publications and completed inbox transfers also uses `awaiting_publish` once all its deliveries are complete; inspect individual deliveries for their outcomes.
+
+TikTok deliveries expose `deliveryMode` (`direct` or `inbox`). An inbox handoff has `deliveredAt` rather than `publishedAt`; do not invent a public post URL, claim the post is live, or retry the transfer because it is awaiting the user's action. Direct publishing remains the default. An inbox item stays awaiting publication in Meadow after the user finishes in TikTok because Meadow does not infer that later publication from the transfer alone.
+
+Saving a Meadow draft with `create_draft` is separate from sending content to the TikTok inbox. The MCP draft tool does not send media to TikTok.
+
 ## Local inspection
 
 Run Meadow, create an API key in the dashboard, then start MCP Inspector:

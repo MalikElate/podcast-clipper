@@ -1,6 +1,6 @@
 // Keep these notices aligned with the fields and scopes used by each adapter.
 // A compact summary and a link to the platform's public privacy section are shown before authorization.
-export const CONNECTION_PRIVACY_VERSION = "2026-09-21-connections-7";
+export const CONNECTION_PRIVACY_VERSION = "2026-09-22-connections-8";
 
 const authorization = {
   name: "Authorization and consent",
@@ -126,19 +126,19 @@ const notices = {
   },
   tiktok: {
     name: "TikTok",
-    connectionSummary: "Connect a TikTok account to publish and schedule content and view available performance.",
+    connectionSummary: "Connect a TikTok account to publish content, send it to TikTok to finish editing, and view available performance.",
     requirement: "Your TikTok account must be eligible for the publishing options you select.",
     revokeSummary: "You can disconnect in Meadow and revoke access from TikTok’s app-permissions settings at any time.",
     shortAgreement: "I agree to connect TikTok and allow the access described above.",
-    introduction: "Choose whether Meadow may access this TikTok creator account to show its publishing choices, deliver the content you submit, and retrieve available video performance.",
+    introduction: "Choose whether Meadow may access this TikTok creator account to show its publishing choices, publish content directly or send it to your TikTok inbox to finish editing, and retrieve available public-video performance. You choose the delivery method for each post.",
     data: [
       { name: "Creator identity and publishing choices", detail: "Your TikTok open ID, display name, avatar, and creator nickname or username. We also retrieve available visibility options, comment, Duet and Stitch restrictions, and maximum video duration to present valid publishing settings." },
-      { name: "Content you submit", detail: "Your videos or photos, caption or title, visibility and interaction choices, commercial-content disclosures, and schedule. We receive upload and publish IDs, delivery status, published video IDs and links, and any platform rejection reason to track your submission." },
-      { name: "Performance and authorization changes", detail: "Available views, likes, comment counts, and shares for videos published through Meadow. TikTok also sends authorization-removal events containing your app-specific account ID so we can stop publishing and remove the connection data." },
+      { name: "Content you submit", detail: "Your videos or photos, caption or title, delivery method and schedule. Direct Post also sends your visibility, interaction, commercial-content and AI-content choices. Inbox delivery uploads your selected media to TikTok; photo uploads can include a title and caption, while video captions must be added in TikTok. We receive upload and publish IDs, delivery status, published video IDs and links when available, and any platform rejection reason to track your submission." },
+      { name: "Performance and authorization changes", detail: "Your public video IDs, creation dates and available view counts for account analytics; available views, likes, comment counts and shares for public videos published through Meadow. Unfinished inbox uploads and private posts do not provide public-video analytics. TikTok also sends authorization-removal events containing your app-specific account ID so we can stop publishing and remove the connection data." },
       authorization,
     ],
     retention: "Creator details, publishing choices, authorizations, delivery records, and available video metrics remain while the connection is active. Removing it starts deletion of that data. Credentials retained only to retry TikTok revocation are destroyed within seven days. Original uploads and captions remain until you delete them or your Meadow account.",
-    platformNote: "You can also remove Meadow from TikTok’s security and app-permissions settings. Connecting does not publish anything by itself: you choose the content, visibility, and other settings before submitting each post.",
+    platformNote: "Connecting does not publish or send content by itself. Direct Post uses video.publish; sending to your TikTok inbox uses video.upload. For inbox delivery, open TikTok’s notification to finish editing and publish manually. A scheduled inbox delivery only schedules the transfer, not the final post. Meadow cannot access drafts saved on your phone. Reconnect an existing account to grant the inbox-upload permission. You can also remove Meadow from TikTok’s security and app-permissions settings.",
     agreement: "I agree to this TikTok connection privacy notice and Meadow’s Privacy Policy and Terms of Service, and allow the data access described above.",
     policies: [{ label: "TikTok Privacy Policy", url: "https://www.tiktok.com/legal/page/row/privacy-policy/en" }],
   },

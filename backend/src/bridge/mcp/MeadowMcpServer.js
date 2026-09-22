@@ -14,13 +14,14 @@ const analyticsTotalsSchema = z.object({ values: z.object(metricValueShape), cov
 const deliverySchema = z.object({
   id: z.string(), accountId: z.string(), accountName: z.string(), platform: z.string(), status: z.string(),
   requestedAt: z.number(), dueAt: z.number(), url: z.string().optional(), error: z.string().optional(),
+  deliveryMode: z.enum(["direct", "inbox"]).optional(), deliveredAt: z.number().optional(),
 });
 const postSchema = z.object({
   id: z.string(),
   caption: z.string(),
   title: z.string(),
   format: z.string(),
-  status: z.enum(["draft", "scheduled", "publishing", "published", "cancelled", "needs_attention", "partially_published"]),
+  status: z.enum(["draft", "scheduled", "publishing", "published", "awaiting_publish", "cancelled", "needs_attention", "partially_published"]),
   schedule: z.object({
     mode: z.enum(["now", "scheduled"]),
     timeZone: z.string(),
@@ -86,6 +87,8 @@ const deliveryView = delivery => ({
   status: delivery.status,
   requestedAt: delivery.requestedAt,
   dueAt: delivery.dueAt,
+  ...(delivery.deliveryMode ? { deliveryMode: delivery.deliveryMode } : {}),
+  ...(Number.isFinite(delivery.deliveredAt) ? { deliveredAt: delivery.deliveredAt } : {}),
   ...(delivery.url ? { url: delivery.url } : {}),
   ...(delivery.error ? { error: delivery.error } : {}),
 });
@@ -123,7 +126,7 @@ export function createMeadowMcpServer(application, uid) {
   const server = new McpServer(
     { name: "meadow", version: "0.1.0" },
     {
-      instructions: "Use Meadow to review social publishing workspaces, connected accounts, saved posts, and analytics. Create a draft when the user wants to save new post content. Never claim a draft was published.",
+      instructions: "Use Meadow to review social publishing workspaces, connected accounts, saved posts, and analytics. Create a draft when the user wants to save new post content. Never claim a draft was published. An awaiting_publish delivery has been sent to the TikTok inbox; the user must open TikTok to finish editing and posting. It is not a confirmed published post.",
     },
   );
 
@@ -164,7 +167,7 @@ export function createMeadowMcpServer(application, uid) {
     description: "List drafts, scheduled posts, and publishing history for one Meadow project. Results are newest first and paginated by offset.",
     inputSchema: {
       projectId: z.string().min(1).describe("A project ID returned by list_projects"),
-      status: z.enum(["draft", "scheduled", "publishing", "published", "cancelled", "needs_attention", "partially_published"]).optional(),
+      status: z.enum(["draft", "scheduled", "publishing", "published", "awaiting_publish", "cancelled", "needs_attention", "partially_published"]).optional(),
       offset: z.number().int().min(0).default(0),
       limit: z.number().int().min(1).max(100).default(20),
     },

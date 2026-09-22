@@ -42,7 +42,7 @@ export class PublishingWorker {
 
   async deliver(id) {
     const initial = this.store.get("delivery", id);
-    if (!initial || initial.status === "published") return;
+    if (!initial || ["published", "awaiting_publish"].includes(initial.status)) return;
     return this.locks.withLock(`publishing:${initial.rateKey}`, async () => {
       let delivery = this.store.get("delivery", id);
       if (!delivery || !(isPendingDelivery(delivery) || delivery.status === "processing") || delivery.dueAt > this.clock()) return;
@@ -73,7 +73,9 @@ export class PublishingWorker {
         if (!post) throw new BridgeError("The post is no longer available.");
         const content = (polling || delivery.progress?.chat) && delivery.contentSnapshot ? { ...delivery.contentSnapshot, accountOptions: account.options || {}, media: delivery.contentSnapshot.mediaIds.map(id => this.store.get("media", id)).filter(Boolean), thumbnail: delivery.contentSnapshot.thumbnailMediaId ? this.store.get("media", delivery.contentSnapshot.thumbnailMediaId) : null } : this.posts.content(post, account);
         if (content.media.length !== post.mediaIds.length) throw new BridgeError("A media item is no longer available.");
-        provider.assertValid(content);
+        // A TikTok inbox upload has already been accepted at this point. Query
+        // its outcome even if the connection's current upload options changed.
+        if (!(polling && account.platform === "tiktok" && content.settings.deliveryMode === "inbox" && delivery.progress?.publishId)) provider.assertValid(content);
         delivery = this.store.transaction(() => {
           const current = this.store.get("delivery", id);
           if (!(isPendingDelivery(current) || current.status === "processing")) return null;
@@ -110,14 +112,15 @@ export class PublishingWorker {
           if (this.clock() - current.startedAt > 24 * 3600000) throw new BridgeError("The platform is still processing after 24 hours. Check the account before retrying.", { code: "processing_timeout" });
           this.store.put("delivery", { ...current, status: "processing", externalId: result.externalId || current.externalId || null, progress: { ...current.progress, ...result.progress }, dueAt: this.clock() + Math.max(5000, Math.min(result.pollAfterMs || 15000, 300000)), leaseUntil: null, updatedAt: this.clock() });
         } else {
-          if (result.status !== "published" || !result.externalId) throw new BridgeError("The platform did not confirm a published post.", { code: "unconfirmed_publication" });
-          const url = result.url?.startsWith("https://") ? result.url : null;
-          this.store.put("delivery", { ...current, status: "published", externalId: String(result.externalId), url, error: null, publishedAt: this.clock(), leaseUntil: null, progress: { ...current.progress, ...(result.progress || {}) }, updatedAt: this.clock() });
+          const inboxDelivered = result.status === "awaiting_publish" && account.platform === "tiktok" && content.settings.deliveryMode === "inbox";
+          if ((!inboxDelivered && result.status !== "published") || !result.externalId) throw new BridgeError("The platform did not confirm the delivery.", { code: "unconfirmed_publication" });
+          const url = !inboxDelivered && result.url?.startsWith("https://") ? result.url : null;
+          this.store.put("delivery", { ...current, status: inboxDelivered ? "awaiting_publish" : "published", externalId: String(result.externalId), url, error: null, ...(inboxDelivered ? { deliveredAt: this.clock() } : { publishedAt: this.clock() }), leaseUntil: null, progress: { ...current.progress, ...(result.progress || {}) }, updatedAt: this.clock() });
           this.rates.replan(account.rateKey);
         }
       } catch (error) {
         const current = this.store.get("delivery", id);
-        if (!current || current.status === "published" || !claimed && !isPendingDelivery(current) && current.status !== "processing") return;
+        if (!current || ["published", "awaiting_publish"].includes(current.status) || !claimed && !isPendingDelivery(current) && current.status !== "processing") return;
         if (dispatched && (error.durableCheckpoint || error.code?.startsWith("durable_"))) {
           this.store.put("delivery", { ...current, status: "needs_review", error: "Meadow could not save the platform's response. Check the social account before retrying.", leaseUntil: null, updatedAt: this.clock() });
           return;

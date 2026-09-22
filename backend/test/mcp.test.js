@@ -90,6 +90,22 @@ test("MCP requires an API key and exposes Meadow's initial tool contract", async
   ]), []);
 });
 
+test("MCP exposes a TikTok inbox handoff without calling it published", async t => {
+  const h = await setup(t), now = Date.now();
+  const { posts: [draft] } = h.application.posts.createDrafts("alice", h.project.id, { requestId: "mcp-tiktok-inbox-history", items: [{ caption: "Finish editing in TikTok", mediaIds: [], accountIds: [], schedule: { mode: "now", timeZone: "UTC" } }] });
+  h.application.store.put("post", { ...h.application.store.get("post", draft.id), accountIds: ["tiktok"], overrides: { tiktok: { settings: { deliveryMode: "inbox", uploadConsent: true } } } });
+  h.application.store.put("delivery", { id: "inbox-handoff", postId: draft.id, accountId: "tiktok", ownerUid: "alice", projectId: h.project.id, platform: "tiktok", status: "awaiting_publish", requestedAt: now, dueAt: now, deliveredAt: now, externalId: "transfer-id" });
+  const result = await h.client.callTool({ name: "list_posts", arguments: { projectId: h.project.id, status: "awaiting_publish" } });
+  assert.ok(!result.isError);
+  const post = result.structuredContent.posts[0];
+  assert.equal(post.status, "awaiting_publish");
+  assert.equal(post.deliveries[0].deliveryMode, "inbox");
+  assert.equal(post.deliveries[0].deliveredAt, now);
+  assert.equal(post.editable, false);
+  const analytics = await h.client.callTool({ name: "get_analytics", arguments: { projectId: h.project.id } });
+  assert.equal(analytics.structuredContent.publishedCount, 0);
+});
+
 test("MCP lists the authenticated owner's project and creates one idempotent non-empty draft", async t => {
   const h = await setup(t);
   const profile = await h.client.callTool({ name: "get_profile", arguments: {} });

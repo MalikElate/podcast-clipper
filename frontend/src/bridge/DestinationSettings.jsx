@@ -5,6 +5,8 @@ const privacyNames = { PUBLIC_TO_EVERYONE: "Everyone", MUTUAL_FOLLOW_FRIENDS: "F
 export function DestinationSettings({ account, settings = {}, onChange, hasVideo, hasImages }) {
   const update = (key, value) => onChange({ ...settings, [key]: value });
   const creator = account.options?.creator;
+  const inbox = settings.deliveryMode === "inbox";
+  const permissions = account.options?.tiktokPermissions;
   return <div className="bridge-destination-settings">
     {["twitch", "kick"].includes(account.platform) && <>
       <p className="bridge-small">Posts go to your channel’s chat as your account. Each message allows 500 characters. Links are welcome; media uploads are unavailable.</p>
@@ -26,6 +28,15 @@ export function DestinationSettings({ account, settings = {}, onChange, hasVideo
       <Check checked={settings.syntheticMedia === true} onChange={event => update("syntheticMedia", event.target.checked)}>Contains realistic altered or synthetic content</Check>
     </>}
     {account.platform === "tiktok" && <>
+      <Field label="TikTok delivery"><select value={inbox ? "inbox" : "direct"} onChange={event => onChange({ ...settings, deliveryMode: event.target.value, uploadConsent: false })}><option value="direct">Publish directly from Meadow</option><option value="inbox">Send to TikTok to finish editing</option></select></Field>
+      {inbox ? <>
+        <p className="bridge-small">Meadow sends your media to TikTok. Open the inbox notification in the TikTok app to finish editing and post it yourself. This does not publish automatically or save to your device’s drafts.</p>
+        {hasVideo && <p className="bridge-small">Add the video caption, music, audience, and other publishing settings in TikTok. The text entered in Meadow is not sent with this video.</p>}
+        {hasImages && <p className="bridge-small">Your photo title and caption are sent with the images. Review them and choose music, audience, and other publishing settings in TikTok.</p>}
+        {permissions?.canUpload !== true && <p className="bridge-notice" role="status">Reconnect this TikTok account from Connections and allow video upload before sending media to TikTok.</p>}
+        <Check checked={settings.uploadConsent === true} onChange={event => update("uploadConsent", event.target.checked)}>I agree to send this media to TikTok and understand I must open TikTok to finish editing and publish.</Check>
+      </> : <>
+      {permissions?.canPublish === false && <p className="bridge-notice" role="status">Reconnect this TikTok account from Connections and allow direct publishing.</p>}
       {creator && <div className="bridge-creator-info">{creator.avatar && <img src={creator.avatar} alt=""/>}<span>Posting to <strong>{creator.nickname}</strong><small>@{creator.username} · Videos up to {creator.maxVideoSeconds}s</small></span></div>}
       <Field label="Who can see this post?" hint="TikTok requires an audience choice for each post."><select value={settings.privacy || ""} onChange={event => update("privacy", event.target.value)}><option value="">Choose an audience</option>{(creator?.privacyOptions || []).map(value => <option key={value} value={value} disabled={settings.brandedContent && value === "SELF_ONLY"}>{privacyNames[value] || value}</option>)}</select></Field>
       <div className="bridge-check-grid"><Check checked={settings.allowComments === true} disabled={creator?.commentsDisabled || !creator} onChange={event => update("allowComments", event.target.checked)}>Allow comments</Check>{hasVideo && <><Check checked={settings.allowDuet === true} disabled={creator?.duetDisabled || !creator} onChange={event => update("allowDuet", event.target.checked)}>Allow Duet</Check><Check checked={settings.allowStitch === true} disabled={creator?.stitchDisabled || !creator} onChange={event => update("allowStitch", event.target.checked)}>Allow Stitch</Check></>}</div>
@@ -35,6 +46,7 @@ export function DestinationSettings({ account, settings = {}, onChange, hasVideo
       {(settings.ownBrand || settings.brandedContent) && <p className="bridge-small">TikTok will label this {settings.brandedContent ? "Paid partnership" : "Promotional content"}.</p>}
       <Check checked={settings.aiGenerated === true} onChange={event => update("aiGenerated", event.target.checked)}>Contains AI-generated content</Check>
       <Check checked={settings.consent === true} onChange={event => update("consent", event.target.checked)}>By posting, I agree to TikTok’s <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noreferrer">Music Usage Confirmation</a>{settings.brandedContent && <> and <a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noreferrer">Branded Content Policy</a></>}.</Check>
+      </>}
     </>}
     {account.platform === "pinterest" && <><Field label="Board"><select value={settings.boardId || ""} onChange={event => update("boardId", event.target.value)}><option value="">Choose a board</option>{(account.options?.boards || []).map(board => <option key={board.id} value={board.id}>{board.name}</option>)}</select></Field><Field label="Destination link (optional)"><input type="url" value={settings.link || ""} onChange={event => update("link", event.target.value)} placeholder="https://…"/></Field></>}
     {account.platform === "bluesky" && (hasImages || hasVideo) && <Field label="Media alt text"><textarea rows={2} value={settings.altText || ""} maxLength={1000} onChange={event => update("altText", event.target.value)} placeholder="Describe the media for people using screen readers"/></Field>}

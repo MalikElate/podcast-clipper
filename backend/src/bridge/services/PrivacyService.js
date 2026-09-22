@@ -67,7 +67,7 @@ export class PrivacyService {
   }
   markDeleting(account) {
     this.store.put("account", { ...account, status: "deleting", deletionRequestedAt: account.deletionRequestedAt || this.clock(), updatedAt: this.clock() });
-    for (const delivery of this.store.list("delivery", { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountId === account.id && !["published", "publishing"].includes(item.status))) {
+    for (const delivery of this.store.list("delivery", { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountId === account.id && !["published", "awaiting_publish", "publishing"].includes(item.status))) {
       this.store.put("delivery", { ...delivery, status: "cancelled", error: null, updatedAt: this.clock() });
     }
   }
