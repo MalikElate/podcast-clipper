@@ -43,6 +43,18 @@ test("cookie-free initialization disables recordings and content capture", () =>
   assert.equal(options.capture_exceptions, false);
 });
 
+test("cookieless transport keeps the SDK user agent required for ingestion", () => {
+  const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/153.0.0.0 Safari/537.36";
+  const event = sanitizeAnalyticsEvent({ event: "$pageview", properties: {
+    token: "public-token", $raw_user_agent: userAgent, $current_url: "https://findmeadow.com/privacy?secret=value",
+  } });
+  assert.equal(event.properties.$raw_user_agent, userAgent);
+  assert.equal(event.properties.$cookieless_mode, true);
+  assert.equal(event.properties.distinct_id, "$posthog_cookieless");
+  assert.equal(event.properties.$host, "findmeadow.com");
+  assert.doesNotMatch(JSON.stringify(event), /secret/);
+});
+
 test("privacy signals and user opt-out prevent all events even if storage fails", () => {
   for (const nav of [{ globalPrivacyControl: true }, { doNotTrack: "1" }, { doNotTrack: "yes" }]) assert.equal(browserPrivacyOptOut(nav), true);
   const oldWindow = globalThis.window, oldStorage = globalThis.localStorage;
