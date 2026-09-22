@@ -2,39 +2,23 @@ import { useEffect, useRef, useState } from 'react';
 import BrandLogo from '../components/BrandLogo.jsx';
 import SiteFooter from '../components/SiteFooter.jsx';
 import { appHref } from '../siteUrls.js';
-import TikTokRoastFeed, { RoastProfile } from './TikTokRoastFeed.jsx';
+import TikTokRoastFeed from './TikTokRoastFeed.jsx';
+import RoastFlower from './RoastFlower.jsx';
 import './tiktokRoast.css';
 
 function ArrowIcon() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-function RoastFlower({smile=false}) {
-  return <svg className="roast-flower" viewBox="0 0 200 220" role="img" aria-label={smile ? 'A pleased Meadow flower' : 'A skeptical Meadow flower'}>
-    <path d="M102 151q-8 32-1 58M102 187q-32-5-39-28 26-2 39 28M101 179q28-29 43-21-8 23-43 21" fill="#7f956d" stroke="#496745" strokeWidth="5" strokeLinecap="round"/>
-    <g fill="#f6c87b" stroke="#dfac5a" strokeWidth="2">{Array.from({length:8},(_,i)=><ellipse key={i} cx="100" cy="50" rx="24" ry="40" transform={`rotate(${i*45} 100 98)`}/>)}</g>
-    <circle cx="100" cy="98" r="48" fill="#563e32"/>
-    <path d="M68 86l24-5M111 77l23 7" stroke="#fff5d8" strokeWidth="5" strokeLinecap="round"/>
-    <ellipse cx="83" cy="99" rx="4" ry="7" fill="#fff5d8"/><ellipse cx="121" cy="97" rx="4" ry="7" fill="#fff5d8"/>
-    <path d={smile ? 'M86 118q17 19 32-2' : 'M85 124q17-8 30-3'} fill="none" stroke="#fff5d8" strokeWidth="4" strokeLinecap="round"/>
-  </svg>;
-}
-
 const FAQs = [
   ['Is it actually free?', 'Yes. No Meadow account, TikTok connection, or credit card is required. There is a short request limit to keep the tool available for everyone.'],
-  ['What does it look at?', 'TikTok’s public profile embed supplies a bio and a sample of up to 10 recent post captions. You can play each post in the scrolling feed. The score checks the captions for repeated text, engagement bait, sales instructions, hashtag-only text, and missing context. It does not watch the videos, listen to audio, or read text inside a video.'],
-  ['How is the score calculated?', 'Each available caption is Strong, Thin, or Filler. Filler counts as 1, Thin as ½, and Strong as 0. Divide the total by the number of scored captions and multiply by 100. Empty captions are unscored. These are simple editorial checks, not a scientific quality rating or an AI-content detector.'],
+  ['What does it look at?', 'TikTok’s public profile embed supplies a bio and a sample of up to 10 recent post captions. The walkthrough shows each post’s public preview and caption. The score checks the captions for repeated text, engagement bait, sales instructions, hashtag-only text, and missing context. It does not watch the videos, listen to audio, or read text inside a video.'],
+  ['How is the score calculated?', 'Each available caption is labeled NOT SLOP (Strong), MID (Thin), or SLOP (Filler). SLOP counts as 1, MID as ½, and NOT SLOP as 0. The meter adds up the revealed captions and divides by the number scored. The final percentage includes the full sample. Empty captions are unscored. These are simple editorial checks, not a scientific quality rating or an AI-content detector.'],
   ['Why might a great video get roasted?', 'A great visual can have a weak caption. This tool can only judge the text TikTok makes available, so jokes, language, and context can be missed. Use the notes as prompts to improve your next caption, not as a verdict on the creator.'],
   ['Can I roast any profile?', 'Only profiles TikTok makes publicly embeddable, with at least three readable captions. Private, restricted, unavailable, or very new profiles may not work. We show an explanation instead of inventing a score.'],
-  ['What happens to the data?', 'Public results may be cached for one hour. Cloudflare processes the public caption text to generate the optional AI punchline; the score itself comes from the displayed checks. No TikTok password is requested and nothing is posted. Playing a post loads TikTok’s embedded player. Copying or sharing a result is always your choice.'],
+  ['What happens to the data?', 'Public results may be cached for one hour. Cloudflare processes the public caption text to generate the optional AI punchline; the score itself comes from the displayed checks. No TikTok password is requested and nothing is posted. Copying or sharing a result is always your choice.'],
 ];
 
-function ScoreDial({score}) {
-  return <div className="roast-score" aria-label={`Caption roast score: ${score} out of 100`}>
-    <div className="roast-score-track"><span style={{left:`${Math.max(2,Math.min(98,score))}%`}} /></div>
-    <div className="roast-score-labels"><span>Fresh</span><span>Extra crispy</span></div>
-  </div>;
-}
 function wrapCanvas(ctx, text, x, y, maxWidth, lineHeight) {
   let line=''; let count=0;
   for (const word of text.split(/\s+/)) {
@@ -108,10 +92,7 @@ export default function TikTokRoast() {
         <a href={appHref('/dashboard')}>Try for free</a>
       </section>
       {result && <section className="roast-results" ref={output} tabIndex="-1" aria-labelledby="roast-result-title">
-        <RoastProfile key={result.profile.handle} profile={result.profile} postCount={result.posts.length} />
         <TikTokRoastFeed key={`${result.profile.handle}-${result.sampledAt}`} result={result} />
-        <div className="roast-result-top"><div><h2>Your captions, collectively roasted.</h2><p>{result.posts.length} public posts sampled · {new Date(result.sampledAt).toLocaleDateString()} · {result.counts.strong} strong · {result.counts.thin} thin · {result.counts.filler} filler</p></div></div>
-        <div className="roast-verdict"><div className="roast-number"><strong>{result.score}<span>/100</span></strong><span>Caption roast score</span><ScoreDial score={result.score}/></div><div className="roast-verdict-copy"><span>{result.label}</span><blockquote>{result.roast}</blockquote><small>{result.voice==='meadow-ai'?'AI punchline · Transparent caption checks':'Based on transparent caption checks'} · Not a video-quality rating</small></div></div>
         <div className="roast-share">
           <div className="roast-share-actions" role="group" aria-label="Share your roast">
             <button type="button" onClick={()=>share('image')}>
