@@ -65,3 +65,41 @@ test('exhausted AI allowance retains the factual caption report; unavailable pro
   const result=await handleTikTokRoast(req(),env,null,{fetcher});assert.equal(result.status,200);assert.equal((await result.json()).voice,'caption-checks');assert.equal(calls,0);
   const missing=await handleTikTokRoast(req(),allowed,null,{fetcher:async()=>new Response('<html>Unavailable</html>')});assert.equal(missing.status,422);assert.equal((await missing.json()).score,undefined);
 });
+
+test('profile and post previews retain public metadata without fabricating missing counts',()=>{
+  const state=JSON.parse(embed(undefined,{avatarThumbUrl:'https://p16.tiktokcdn.com/avatar.jpeg',verified:true,followerCount:2400,followingCount:0,heartCount:9800}).match(/>(.*)</)[1]);
+  const posts=state.source.data.profile.videoList;
+  posts[0].coverUrl='https://p16-common-sign.tiktokcdn.com/cover.jpeg?signature=public'; posts[0].playCount=0;
+  posts[1].coverUrl='https://tiktokcdn.com.evil.example/cover.jpeg'; posts[1].playCount=-1;
+  posts[2].coverUrl='data:image/svg+xml,bad'; posts[2].playCount='not a number';
+  const profile=parseEmbed(`<script id="__FRONTITY_CONNECT_STATE__">${JSON.stringify(state)}</script>`,handle);
+  const report=analyzeProfile(profile);
+  assert.equal(report.profile.avatarUrl,'https://p16.tiktokcdn.com/avatar.jpeg');
+  assert.equal(report.profile.verified,true); assert.equal(report.profile.followers,2400); assert.equal(report.profile.following,0);
+  assert.equal(report.posts[0].views,0); assert.ok(report.posts[0].coverUrl.startsWith('https://p16-common-sign.tiktokcdn.com/'));
+  for(const post of report.posts.slice(1)) { assert.equal(post.coverUrl,null); assert.equal(post.views,null); }
+  assert.equal(analyzeProfile(parseEmbed(embed(),handle)).profile.followers,null);
+  for(const url of ['http://p16.tiktokcdn.com/a','https://user:password@p16.tiktokcdn.com/a','https://p16.tiktokcdn.com:4000/a','javascript:alert(1)']) {
+    assert.equal(parseEmbed(embed(undefined,{avatarThumbUrl:url}),handle).avatarUrl,null);
+  }
+});
+test('each post receives a sourced roast and improvement while missing captions remain unscored',()=>{
+  const captions=['#fyp #viral','A tiny hint','Shop now with the link in bio','Comment yes below for part 2','I fixed a squeaky door with a little candle wax',''];
+  const report=analyzeProfile(parseEmbed(embed(captions),handle));
+  assert.match(report.posts[0].roast,/2 hashtags/);
+  assert.match(report.posts[1].roast,/A tiny hint/);
+  assert.match(report.posts[2].roast,/Shop now/);
+  assert.equal(report.posts[5].bucket,'unscored');
+  assert.equal(report.score,70);
+  assert.ok(report.posts.every(post=>post.roast && post.fix && post.id && post.url));
+  const repetition=analyzeProfile(parseEmbed(embed(['The same camera trick again','The same camera trick again','Here is a completely different lighting setup for your studio']),handle));
+  assert.match(repetition.posts[0].roast,/2 posts, same opening/);
+});
+test('old caption-only cache entries are not served to the profile walkthrough',async()=>{
+  const keys=[];
+  const cache={match:async key=>{keys.push(key.url);return key.url.includes('/v1/') ? Response.json({old:true}) : undefined;},put:async key=>keys.push(key.url)};
+  const response=await handleTikTokRoast(req(),allowed,null,{cache,fetcher});
+  const report=await response.json();
+  assert.equal(response.status,200);assert.ok(report.posts[0].roast);assert.equal(report.old,undefined);
+  assert.ok(keys.every(key=>key.includes('/v2/')));
+});
