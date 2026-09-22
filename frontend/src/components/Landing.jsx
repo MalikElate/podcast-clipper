@@ -287,7 +287,7 @@ export default function Landing({ onGetStarted }) {
             {PLANS.map((plan) => {
               const price = yearlyPricing ? plan.yearly : plan.monthly;
               const cycle = yearlyPricing ? "yearly" : "monthly";
-              return <article className={`pricing-card ${plan.popular ? "featured" : ""}`} key={plan.id}><div className="pricing-card-top"><div><h3>{plan.name}</h3><p>{plan.description}</p></div></div><div className="pricing-price"><strong>${price}</strong><span>/month</span></div><p className="pricing-billing-note">{planBillingNote(plan, yearlyPricing)}</p><ul><li className="pricing-account">{plan.accounts}</li>{plan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul><a className={plan.popular ? "btn-primary" : "pricing-button"} href={planHref(plan, cycle)}>{plan.id === "free" ? "Try for free" : `Choose ${plan.name}`} <ArrowIcon /></a></article>;
+              return <article className={`pricing-card ${plan.popular ? "featured" : ""}`} key={plan.id}><div className="pricing-card-top"><div><h3>{plan.name}</h3><p>{plan.description}</p></div></div><div className="pricing-price"><strong>${price}</strong><span>/month</span></div><p className="pricing-billing-note">{planBillingNote(plan, yearlyPricing)}</p><div className="pricing-card-divider" aria-hidden="true" /><ul><li className="pricing-account">{plan.accounts}</li>{plan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul><a className={plan.popular ? "btn-primary" : "pricing-button"} href={planHref(plan, cycle)}>{plan.id === "free" ? "Try for free" : `Choose ${plan.name}`} <ArrowIcon /></a></article>;
             })}
           </div>
           <PricingComparison yearly={yearlyPricing} onYearlyChange={setYearlyPricing} />

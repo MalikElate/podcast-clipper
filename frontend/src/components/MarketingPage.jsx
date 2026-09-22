@@ -51,6 +51,7 @@ function PlanGrid() {
             </div>
             <div className="pricing-price"><strong>${price}</strong><span>/month</span></div>
             <p className="pricing-billing-note">{planBillingNote(plan, yearly)}</p>
+            <div className="pricing-card-divider" aria-hidden="true" />
             <ul><li className="pricing-account">{plan.accounts}</li>{plan.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
             <a className={plan.popular ? "btn-primary" : "pricing-button"} href={planHref(plan, cycle)}>{plan.id === "free" ? "Try for free" : `Choose ${plan.name}`} <ArrowIcon /></a>
           </article>;
