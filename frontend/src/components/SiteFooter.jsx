@@ -1,5 +1,4 @@
 import BrandLogo from "./BrandLogo.jsx";
-import { PlatformIcon } from "../bridge/ui.jsx";
 import { sortPlatforms } from "../bridge/platforms.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import { GENERAL_PAGES } from "../marketing/generalPages.js";
@@ -62,13 +61,8 @@ export default function SiteFooter({ onGetStarted }) {
       <div className="site-footer-inner">
         <h2 className="sr-only">Footer links</h2>
 
-        <div className="footer-network-row">
-          <p>Publish everywhere</p>
-          <div className="footer-network-icons" aria-label="Featured social platforms">
-            {PLATFORMS.map((platform) => (
-              <span key={platform.id} title={platform.name}><PlatformIcon platform={platform.id} size={23} /><span className="sr-only">{platform.name}</span></span>
-            ))}
-          </div>
+        <div className="footer-brand-row">
+          <a className="footer-legal-brand" href={href("/")} aria-label="Meadow home"><BrandLogo /></a>
         </div>
 
         <nav className="footer-columns" aria-label="Footer links">
@@ -85,20 +79,7 @@ export default function SiteFooter({ onGetStarted }) {
           <MobileFooterGroup title="Help and company"><HelpLinks /></MobileFooterGroup>
         </nav>
 
-        <p className="footer-disclaimer">Platform features, formats, and connection availability can vary by destination.</p>
-
-        <div className="footer-legal-row">
-          <a className="footer-legal-brand" href={href("/")} aria-label="Meadow home"><BrandLogo /></a>
-          <nav aria-label="Legal links">
-            <a href={href("/pricing")}>Pricing</a>
-            <a href={href("/privacy")}>Privacy</a>
-            <a href={href("/terms")}>Terms</a>
-          </nav>
-        </div>
-
         <div className="footer-meta-row">
-          <a className="footer-help-link" href="mailto:hello@findmeadow.com"><span aria-hidden="true">?</span>Help</a>
-          <span className="footer-locale"><span aria-hidden="true">◎</span>English (Global)</span>
           <span className="footer-copyright">© {new Date().getFullYear()} Meadow</span>
         </div>
       </div>

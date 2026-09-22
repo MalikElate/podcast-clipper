@@ -16,6 +16,11 @@ for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
   assert.match(html, /<title>Dashboard · Meadow<\/title>/);
 }
 const landingHtml = await readFile("dist/index.html", "utf8");
+assert.ok(landingHtml.indexOf('class="footer-brand-row"') < landingHtml.indexOf('class="footer-columns"'), "Footer brand must appear above its link columns");
+for (const removed of ["footer-network-row", "footer-disclaimer", "footer-legal-row", "footer-help-link", "footer-locale"]) {
+  assert.ok(!landingHtml.includes(`class="${removed}"`), `Footer must not render ${removed}`);
+}
+assert.ok(!landingHtml.includes("Platform features, formats, and connection availability can vary by destination."));
 assert.ok(landingHtml.includes('aria-label="Learn about Telegram publishing"'), "Homepage must include Telegram in its platform grid");
 assert.ok(landingHtml.includes("all these platforms"), "Homepage must introduce its current platform list");
 assert.doesNotMatch(landingHtml, /coming[ -]soon/i);
