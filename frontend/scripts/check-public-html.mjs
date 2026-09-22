@@ -15,6 +15,9 @@ for (const [path, heading] of [["tiktok-roast/index.html", "TikTok <span>Hot or 
 const roastHtml = await readFile("dist/tiktok-roast/index.html", "utf8");
 assert.ok(roastHtml.includes("Meadow is a social media scheduling tool, and I’m not sure what this has to do with our main product."), "tiktok-roast/index.html missing requested caption");
 assert.ok(!roastHtml.includes("Turn the roast into your next post."), "tiktok-roast/index.html still contains removed copy");
+assert.ok(roastHtml.includes('class="landing-header"'), "tiktok-roast/index.html must use the standard Meadow navbar");
+assert.ok(!roastHtml.includes('class="roast-nav"'), "tiktok-roast/index.html must not use its old custom navbar");
+for (const navItem of ['href="/#platforms"', 'href="/pricing"', ">Sign in</button>", ">Try for free "]) assert.ok(roastHtml.includes(navItem), `tiktok-roast/index.html missing standard navbar item ${navItem}`);
 for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
   const html = await readFile(`dist${route}/index.html`, "utf8");
   assert.match(html, /<title>Dashboard · Meadow<\/title>/);

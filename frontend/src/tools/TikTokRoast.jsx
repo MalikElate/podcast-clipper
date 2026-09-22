@@ -5,6 +5,10 @@ import { appHref } from '../siteUrls.js';
 import TikTokRoastFeed, { RoastProfile } from './TikTokRoastFeed.jsx';
 import './tiktokRoast.css';
 
+function ArrowIcon() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
 function RoastFlower({smile=false}) {
   return <svg className="roast-flower" viewBox="0 0 200 220" role="img" aria-label={smile ? 'A pleased Meadow flower' : 'A skeptical Meadow flower'}>
     <path d="M102 151q-8 32-1 58M102 187q-32-5-39-28 26-2 39 28M101 179q28-29 43-21-8 23-43 21" fill="#7f956d" stroke="#496745" strokeWidth="5" strokeLinecap="round"/>
@@ -83,8 +87,13 @@ export default function TikTokRoast() {
       else {await navigator.clipboard.writeText(text);setNotice('Roast and link copied.');}
     } catch(e) {setNotice(kind==='image' ? e.message : 'Could not copy automatically. Select and copy the roast text below.');}
   }
-  return <div className="tiktok-roast-page">
-    <header className="roast-nav"><a href="/" aria-label="Meadow home"><BrandLogo /></a><nav aria-label="Roast navigation"><a href="/tiktok-roast" aria-current="page">Free TikTok tool</a><a className="roast-nav-cta" href={appHref('/dashboard')}>Try Meadow <span aria-hidden="true">↗</span></a></nav></header>
+  const openMeadow = () => window.location.assign(appHref('/dashboard'));
+  return <div className="landing tiktok-roast-page">
+    <header className="landing-header">
+      <a className="landing-logo-link" href="/" aria-label="Meadow home"><BrandLogo /></a>
+      <nav className="landing-nav" aria-label="Main navigation"><a href="/#platforms">Platforms</a><a href="/pricing">Pricing</a></nav>
+      <div className="landing-actions"><button className="btn-ghost" type="button" onClick={openMeadow}>Sign in</button><button className="btn-small-primary" type="button" onClick={openMeadow}>Try for free <ArrowIcon /></button></div>
+    </header>
     <main>
       <section className="roast-hero" aria-labelledby="roast-title">
         <div className="roast-intro"><span className="roast-powered-badge">Powered by Jev</span><h1 id="roast-title">TikTok <span>Hot or Not.</span></h1><p>Meadow is a social media scheduling tool, and I’m not sure what this has to do with our main product.</p></div>
