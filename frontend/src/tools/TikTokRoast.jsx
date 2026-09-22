@@ -94,7 +94,7 @@ export default function TikTokRoast() {
         </div>
       </section>
       <section className="roast-cta-bar" aria-label="Schedule and cross-post with Meadow">
-        <div><span>Turn the roast into your next post.</span><h2>Schedule your TikTok posts and cross-post them to every platform.</h2></div>
+        <div><h2>Schedule your TikTok posts and cross-post them to every platform.</h2></div>
         <a href={appHref('/dashboard')}>Try for free <span aria-hidden="true">↗</span></a>
       </section>
       {result && <section className="roast-results" ref={output} tabIndex="-1" aria-labelledby="roast-result-title">
@@ -117,7 +117,7 @@ export default function TikTokRoast() {
         </div>
         <div className="roast-fixes">{result.observations.map(o=><article key={o.title}><h3>{o.title}</h3><p>{o.evidence}</p><div><strong>Try this next</strong><p>{o.fix}</p></div></article>)}</div>
 
-        <div className="roast-recovery"><div><h2>Better captions. Meet a better workflow.</h2><p>Turn the roast into your next post. Draft, preview, and schedule your content with Meadow.</p></div><a href={appHref('/dashboard')}>Start free with Meadow ↗</a></div>
+        <div className="roast-recovery"><div><h2>Better captions. Meet a better workflow.</h2><p>Draft, preview, and schedule your content with Meadow.</p></div><a href={appHref('/dashboard')}>Start free with Meadow ↗</a></div>
       </section>}
       <section className="roast-faq" aria-labelledby="roast-faq-title"><h2 id="roast-faq-title">Before you blame the algorithm.</h2>{FAQs.map(([q,a])=><details key={q}><summary>{q}<span aria-hidden="true">+</span></summary><p>{a}</p></details>)}</section>
     </main><SiteFooter />

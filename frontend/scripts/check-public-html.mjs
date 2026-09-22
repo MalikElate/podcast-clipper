@@ -14,6 +14,7 @@ for (const [path, heading] of [["tiktok-roast/index.html", "TikTok <span>Hot or 
 
 const roastHtml = await readFile("dist/tiktok-roast/index.html", "utf8");
 assert.ok(roastHtml.includes("Meadow is a social media scheduling tool, and I’m not sure what this has to do with our main product."), "tiktok-roast/index.html missing requested caption");
+assert.ok(!roastHtml.includes("Turn the roast into your next post."), "tiktok-roast/index.html still contains removed copy");
 for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
   const html = await readFile(`dist${route}/index.html`, "utf8");
   assert.match(html, /<title>Dashboard · Meadow<\/title>/);
