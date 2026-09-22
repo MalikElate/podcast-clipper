@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { PlatformIcon } from "../bridge/ui.jsx";
 import { sortPlatforms } from "../bridge/platforms.js";
-import BrandLogo from "./BrandLogo.jsx";
 import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
+import SiteHeader from "./SiteHeader.jsx";
 import PricingComparison from "./PricingComparison.jsx";
 
 const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
@@ -73,17 +73,7 @@ export default function MarketingPage({ page, onGetStarted }) {
 
   return (
     <div className="landing mkt-page">
-      <header className="landing-header">
-        <a className="landing-logo-link" href="/" aria-label="Meadow home"><BrandLogo /></a>
-        <nav className="landing-nav" aria-label="Main navigation">
-          <a href="#platforms">Platforms</a>
-          <a href="/pricing">Pricing</a>
-        </nav>
-        <div className="landing-actions">
-          <button className="btn-ghost" onClick={onGetStarted}>Sign in</button>
-          <button className="btn-small-primary" onClick={onGetStarted}>Start posting <ArrowIcon /></button>
-        </div>
-      </header>
+      <SiteHeader onSignIn={onGetStarted} onStartPosting={onGetStarted} />
 
       <main>
         <section className="landing-hero" id="top">

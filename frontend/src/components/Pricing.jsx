@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { PLANS, planHref, planBillingNote } from "../pricing.js";
-import BrandLogo from "./BrandLogo.jsx";
 import SiteFooter from "./SiteFooter.jsx";
+import SiteHeader from "./SiteHeader.jsx";
 import PricingComparison from "./PricingComparison.jsx";
 import { marketingHref } from "../siteUrls.js";
 
@@ -17,13 +17,7 @@ export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error =
 
   return (
     <div className="landing pricing-page">
-      <header className="landing-header">
-        <a className="landing-logo-link" href={homeUrl} aria-label="Meadow home"><BrandLogo /></a>
-        <nav className="landing-nav" aria-label="Main navigation">
-          <a href={marketingHref("/pricing")} aria-current="page">Pricing</a><a href={marketingHref("/#faq")}>FAQ</a>
-        </nav>
-        <div className="landing-actions"><button className="btn-ghost" onClick={onSignIn}>Sign in</button><button className="btn-small-primary" onClick={onSignIn}>Start posting <ArrowIcon /></button></div>
-      </header>
+      <SiteHeader current="pricing" homeHref={homeUrl} onSignIn={onSignIn} onStartPosting={onSignIn} />
 
       <main className="pricing-main">
         <section className="pricing-intro">

@@ -31,8 +31,6 @@
 /* Platform-themed landing pages */
 .platform-use-case.is-platform-themed { position: relative; --platform-ink: #26344a; --platform-muted: #5d6470; }
 .is-platform-themed .landing-header { position: absolute; top: 0; left: 0; z-index: 60; width: 100vw; margin-left: calc(50% - 50vw); margin-bottom: 0; padding-inline: max(28px,calc((100vw - 1280px) / 2)); border-bottom: 0; background: transparent; }
-.is-platform-themed .landing-actions .btn-small-primary { border-color: color-mix(in srgb,var(--platform-action) 30%,transparent); background: var(--platform-action); box-shadow: 0 12px 26px -17px color-mix(in srgb,var(--platform-action) 78%,transparent); }
-.is-platform-themed .landing-actions .btn-small-primary:hover { background: var(--platform-action-hover); }
 .is-platform-themed .platform-use-case-hero { position: relative; display: flex; width: 100vw; min-height: 100svh; align-items: center; margin: 0 0 0 calc(50% - 50vw); overflow: hidden; padding: max(116px,10vh) max(28px,calc((100vw - 1280px) / 2)) clamp(58px,7vh,88px); border: 0; border-radius: 0; background: radial-gradient(circle at 8% 12%,color-mix(in srgb,var(--platform-highlight) 24%,transparent),transparent 31%),radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--platform-secondary) 17%,transparent),transparent 35%),linear-gradient(145deg,var(--platform-surface-from) 0%,color-mix(in srgb,var(--platform-surface-from) 72%,var(--platform-surface-to)) 45%,var(--platform-surface-to) 100%); box-shadow: 0 34px 90px -72px color-mix(in srgb,var(--platform-secondary) 72%,transparent); }
 .is-platform-themed .platform-use-case-hero::before { position: absolute; width: 420px; height: 420px; right: -230px; bottom: -260px; border-radius: 50%; background: linear-gradient(135deg,var(--platform-highlight),var(--platform-accent) 48%,var(--platform-secondary)); filter: blur(18px); opacity: .16; content: ""; pointer-events: none; }
 .is-platform-themed .platform-use-case-hero-grid { position: relative; z-index: 1; width: 100%; grid-template-columns: minmax(0,1fr); gap: clamp(38px,5vw,64px); margin: 0 auto; }
@@ -64,7 +62,7 @@
 
 @media (max-width: 720px) {
   .is-platform-themed .landing-header { padding-inline: 18px; }
-  .is-platform-themed .platform-use-case-hero { min-height: 100svh; padding: 106px 18px 54px; }
+  .is-platform-themed .platform-use-case-hero { min-height: 100svh; padding: 148px 18px 54px; }
   .is-platform-themed .platform-use-case-copy h1 { font-size: clamp(24px,7.6vw,42px); }
   .is-platform-themed.platform-google_business .platform-use-case-copy h1 { font-size: clamp(21px,6.5vw,34px); }
   .is-platform-themed .platform-use-case-details { padding: 48px 20px; }

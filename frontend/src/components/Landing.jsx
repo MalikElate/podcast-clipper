@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { SiClaude, SiCursor } from "react-icons/si";
 import { PlatformIcon } from "../bridge/ui.jsx";
-import BrandLogo from "./BrandLogo.jsx";
 import HeroDemo from "./HeroDemo.jsx";
 import SchedulingDemo from "./SchedulingDemo.jsx";
 import PricingComparison from "./PricingComparison.jsx";
@@ -9,6 +8,7 @@ import { sortPlatforms } from "../bridge/platforms.js";
 import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
+import SiteHeader from "./SiteHeader.jsx";
 import { appHref } from "../siteUrls.js";
 
 const PLATFORMS = [
@@ -214,11 +214,7 @@ export default function Landing({ onGetStarted }) {
   const [yearlyPricing, setYearlyPricing] = useState(true);
   return (
     <div className="landing landing-v2" id="top">
-      <header className="landing-header">
-        <a className="landing-logo-link" href="#top" aria-label="Meadow home"><BrandLogo /></a>
-        <nav className="landing-nav" aria-label="Main navigation"><a href="#platforms">Platforms</a><a href="/pricing">Pricing</a></nav>
-        <div className="landing-actions"><button className="btn-ghost" onClick={onGetStarted}>Sign in</button><button className="btn-small-primary" onClick={onGetStarted}>Try for free <ArrowIcon /></button></div>
-      </header>
+      <SiteHeader homeHref="#top" onSignIn={onGetStarted} onStartPosting={onGetStarted} />
 
       <main>
         <section className="landing-section platform-section platform-showcase-section" id="platforms">

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import BrandLogo from "./BrandLogo.jsx";
 import SiteFooter from "./SiteFooter.jsx";
+import SiteHeader from "./SiteHeader.jsx";
 import { PLATFORM_PRIVACY } from "./platformPrivacy.js";
 import AnalyticsPreference from "./AnalyticsPreference.jsx";
 
@@ -127,16 +127,7 @@ export default function LegalPage({ kind }) {
 
   return (
     <div className={`legal-shell ${privacy ? "legal-shell-privacy" : ""}`}>
-      <header className="legal-header">
-        <a className="legal-brand" href="/" aria-label="Meadow home">
-          <BrandLogo />
-        </a>
-        <nav className="legal-nav" aria-label="Legal navigation">
-          <a className={kind === "terms" ? "active" : ""} href="/terms">Terms</a>
-          <a className={kind === "privacy" ? "active" : ""} href="/privacy">Privacy</a>
-          <a href="/">Back to Meadow</a>
-        </nav>
-      </header>
+      <SiteHeader className="legal-header" />
 
       <main className="legal-page">
         <div className="legal-intro" id={privacy ? "privacy-overview" : undefined}>

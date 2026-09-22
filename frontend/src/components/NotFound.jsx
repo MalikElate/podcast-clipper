@@ -1,16 +1,13 @@
 import { useEffect } from "react";
-import BrandLogo from "./BrandLogo.jsx";
 import SiteFooter from "./SiteFooter.jsx";
+import SiteHeader from "./SiteHeader.jsx";
 
 export default function NotFound() {
   useEffect(() => { document.title = "Page not found · Meadow"; }, []);
 
   return (
     <div className="not-found-shell">
-      <header className="not-found-header">
-        <a href="/" aria-label="Meadow home"><BrandLogo /></a>
-        <a href="/pricing">View pricing</a>
-      </header>
+      <SiteHeader className="not-found-header" />
       <main className="not-found-page">
         <h1>404</h1>
         <p>The link may be outdated, or the page may have moved. Head back to Meadow and keep your publishing work in one place.</p>

@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { PlatformIcon } from "../bridge/ui.jsx";
-import BrandLogo from "./BrandLogo.jsx";
 import SiteFooter from "./SiteFooter.jsx";
 import HeroDemo from "./HeroDemo.jsx";
+import SiteHeader from "./SiteHeader.jsx";
 
 const PLATFORM_THEMES = {
   twitch: { "--platform-accent": "#9146ff", "--platform-secondary": "#5c16c5", "--platform-highlight": "#c8a8ff", "--platform-surface-from": "#fcfaff", "--platform-surface-to": "#f1eaff", "--platform-action": "#772ce8", "--platform-action-hover": "#5c16c5" },
@@ -40,17 +40,7 @@ export default function PlatformUseCasePage({ platform, onGetStarted }) {
 
   return (
     <div className={`landing platform-use-case is-platform-themed platform-${platform.id}`} style={PLATFORM_THEMES[platform.id]}>
-      <header className="landing-header">
-        <a className="landing-logo-link" href="/" aria-label="Meadow home"><BrandLogo /></a>
-        <nav className="landing-nav" aria-label="Main navigation">
-          <a href="/#platforms">Platforms</a>
-          <a href="/pricing">Pricing</a>
-        </nav>
-        <div className="landing-actions">
-          <button className="btn-ghost" onClick={onGetStarted}>Sign in</button>
-          <button className="btn-small-primary" onClick={onGetStarted}>{platform.chatOnly ? "Explore Meadow" : "Start posting"} <ArrowIcon /></button>
-        </div>
-      </header>
+      <SiteHeader onSignIn={onGetStarted} onStartPosting={onGetStarted} />
 
       <main>
         <section className="platform-use-case-hero">

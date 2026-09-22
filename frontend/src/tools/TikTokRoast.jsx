@@ -1,14 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import BrandLogo from '../components/BrandLogo.jsx';
 import SiteFooter from '../components/SiteFooter.jsx';
+import SiteHeader from '../components/SiteHeader.jsx';
 import { appHref } from '../siteUrls.js';
 import TikTokRoastFeed from './TikTokRoastFeed.jsx';
 import RoastFlower from './RoastFlower.jsx';
 import './tiktokRoast.css';
-
-function ArrowIcon() {
-  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-}
 
 const FAQs = [
   ['Is it actually free?', 'Yes. No Meadow account, TikTok connection, or credit card is required. There is a short request limit to keep the tool available for everyone.'],
@@ -82,11 +78,7 @@ export default function TikTokRoast() {
   }
   const openMeadow = () => window.location.assign(appHref('/dashboard'));
   return <div className="landing tiktok-roast-page">
-    <header className="landing-header">
-      <a className="landing-logo-link" href="/" aria-label="Meadow home"><BrandLogo /></a>
-      <nav className="landing-nav" aria-label="Main navigation"><a href="/#platforms">Platforms</a><a href="/pricing">Pricing</a></nav>
-      <div className="landing-actions"><button className="btn-ghost" type="button" onClick={openMeadow}>Sign in</button><button className="btn-small-primary" type="button" onClick={openMeadow}>Try for free <ArrowIcon /></button></div>
-    </header>
+    <SiteHeader onSignIn={openMeadow} onStartPosting={openMeadow} />
     <main>
       <section className="roast-hero" aria-labelledby="roast-title">
         <div className="roast-intro"><span className="roast-powered-badge">Powered by Jev</span><h1 id="roast-title">TikTok <span>Niche or Not</span></h1><p>Find out if you’re making niche content or just normie posting.</p></div>
