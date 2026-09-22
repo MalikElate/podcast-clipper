@@ -1,6 +1,6 @@
 .tiktok-roast-page { --roast-ink:#283b31; --roast-muted:#64715f; --roast-panel:#fffefa; --roast-panel-soft:#eaf0df; --roast-border:#dce3d2; --roast-accent:#b85a39; --bg:#f7f8f1; --surface:#fffefa; --text:#283b31; --text-muted:#64715f; --text-faint:#7b8770; --border:#dce3d2; --accent-hover:#a8492b; width:100%; max-width:none; min-height:100vh; overflow-x:clip; background:#f7f8f1; color:var(--roast-ink); color-scheme:light; }
 .tiktok-roast-page * { box-sizing:border-box; }
-.tiktok-roast-page>.landing-header { width:100%; max-width:1280px; margin:0 auto 40px; padding:0 32px; }
+.tiktok-roast-page>.landing-header { width:100%; max-width:1280px; margin:0 auto 40px; padding:0 32px; background:var(--bg); }
 .roast-hero,.roast-results,.roast-faq { width:100%; max-width:1120px; min-width:0; margin:0 auto; padding:0 28px; }
 .roast-hero { padding-top:70px; }
 .roast-intro { width:100%; max-width:700px; min-width:0; margin:auto; text-align:center; }

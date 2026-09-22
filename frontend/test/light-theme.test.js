@@ -12,4 +12,5 @@ test("the Meadow workspace and free TikTok tool stay light", async () => {
   assert.equal((workspace.match(/data-theme="light"/g) || []).length, 2);
   assert.match(roastStyles, /color-scheme:light/);
   assert.doesNotMatch(roastStyles, /--bg:#050505|background:#050505/);
+  assert.match(roastStyles, /\.tiktok-roast-page>\.landing-header \{[^}]*background:var\(--bg\)/);
 });
