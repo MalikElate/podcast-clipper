@@ -8,6 +8,7 @@
 .roast-hero,.roast-results,.roast-faq { width:100%; max-width:1120px; min-width:0; margin:0 auto; padding:0 28px; }
 .roast-hero { padding-top:70px; }
 .roast-intro { width:100%; max-width:700px; min-width:0; margin:auto; text-align:center; }
+.roast-powered-badge { display:inline-flex; align-items:center; min-height:30px; padding:6px 13px; border:1px solid #3a403c; border-radius:999px; background:#171a18; color:#c5cbc7; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
 .roast-intro h1 { font-size:clamp(44px,6.2vw,72px); line-height:1.02; letter-spacing:-.065em; font-weight:650; margin:24px 0; }
 .roast-intro h1>span { color:var(--roast-accent); }
 .roast-intro>p { color:var(--roast-muted); font-size:18px; line-height:1.65; max-width:550px; margin:0 auto; }
