@@ -97,7 +97,7 @@ export default function TikTokRoast() {
     </header>
     <main>
       <section className="roast-hero" aria-labelledby="roast-title">
-        <div className="roast-intro"><span className="roast-powered-badge">Powered by Jev</span><h1 id="roast-title">TikTok <span>Niche or Not</span></h1></div>
+        <div className="roast-intro"><span className="roast-powered-badge">Powered by Jev</span><h1 id="roast-title">TikTok <span>Niche or Not</span></h1><p>Let Jeff tell you whether your TikTok is niche or not. Find out if you’re a normie.</p></div>
         <div className="roast-workspace">
           <aside className={`roast-host ${busy?'is-thinking':''}`} aria-label="Meet your roaster"><div className="roast-speech">{busy ? 'Looking for the hook. Please let there be a hook.' : result ? result.roast : 'Okay, whose TikTok am I roasting?'}</div><RoastFlower smile={result && result.score<30}/></aside>
           <div className="roast-input-card"><h2>Drop your handle.</h2><form onSubmit={roast}><label htmlFor="roast-handle">TikTok handle or profile URL</label><div className="roast-input-wrap"><span aria-hidden="true">@</span><input id="roast-handle" name="handle" value={handle} onChange={e=>setHandle(e.target.value)} placeholder="yourhandle" maxLength={180} autoCapitalize="none" autoCorrect="off" spellCheck="false" disabled={busy}/></div><button className="roast-submit" disabled={busy} type="submit">{busy ? 'Preparing your roast…' : "Check if I'm niche"}{busy && <span aria-hidden="true">◌</span>}</button></form>{busy && <p className="roast-loading" role="status">Loading the profile, lining up the posts, and preparing each roast. This can take a few seconds.</p>}{error && <p className="roast-error" role="alert">{error}</p>}</div>
