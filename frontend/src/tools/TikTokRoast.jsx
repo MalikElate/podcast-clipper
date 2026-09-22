@@ -14,7 +14,7 @@ function RoastFlower({smile=false}) {
     <path d="M102 151q-8 32-1 58M102 187q-32-5-39-28 26-2 39 28M101 179q28-29 43-21-8 23-43 21" fill="#7f956d" stroke="#496745" strokeWidth="5" strokeLinecap="round"/>
     <g fill="#f6c87b" stroke="#dfac5a" strokeWidth="2">{Array.from({length:8},(_,i)=><ellipse key={i} cx="100" cy="50" rx="24" ry="40" transform={`rotate(${i*45} 100 98)`}/>)}</g>
     <circle cx="100" cy="98" r="48" fill="#563e32"/>
-    <path d="M68 81l24 5M111 84l23-7" stroke="#fff5d8" strokeWidth="5" strokeLinecap="round"/>
+    <path d="M68 86l24-5M111 77l23 7" stroke="#fff5d8" strokeWidth="5" strokeLinecap="round"/>
     <ellipse cx="83" cy="99" rx="4" ry="7" fill="#fff5d8"/><ellipse cx="121" cy="97" rx="4" ry="7" fill="#fff5d8"/>
     <path d={smile ? 'M86 118q17 19 32-2' : 'M85 124q17-8 30-3'} fill="none" stroke="#fff5d8" strokeWidth="4" strokeLinecap="round"/>
   </svg>;
@@ -97,7 +97,7 @@ export default function TikTokRoast() {
     </header>
     <main>
       <section className="roast-hero" aria-labelledby="roast-title">
-        <div className="roast-intro"><span className="roast-powered-badge">Powered by Jev</span><h1 id="roast-title">TikTok <span>Hot or Not.</span></h1></div>
+        <div className="roast-intro"><span className="roast-powered-badge">Powered by Jev</span><h1 id="roast-title">Niche <span>or Not.</span></h1></div>
         <div className="roast-workspace">
           <aside className={`roast-host ${busy?'is-thinking':''}`} aria-label="Meet your roaster"><div className="roast-speech">{busy ? 'Looking for the hook. Please let there be a hook.' : result ? result.roast : 'Okay, whose TikTok am I roasting?'}</div><RoastFlower smile={result && result.score<30}/></aside>
           <div className="roast-input-card"><h2>Drop your handle.</h2><form onSubmit={roast}><label htmlFor="roast-handle">TikTok handle or profile URL</label><div className="roast-input-wrap"><span aria-hidden="true">@</span><input id="roast-handle" name="handle" value={handle} onChange={e=>setHandle(e.target.value)} placeholder="yourhandle" maxLength={180} autoCapitalize="none" autoCorrect="off" spellCheck="false" required disabled={busy}/></div><button className="roast-submit" disabled={busy || !handle.trim()} type="submit">{busy ? 'Preparing your roast…' : 'Roast my TikTok'}{busy && <span aria-hidden="true">◌</span>}</button></form>{busy && <p className="roast-loading" role="status">Loading the profile, lining up the posts, and preparing each roast. This can take a few seconds.</p>}{error && <p className="roast-error" role="alert">{error}</p>}</div>
