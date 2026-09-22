@@ -33,9 +33,10 @@ test('repetition, bait and promotion have evidence while distinct contextual cap
   const fresh=analyzeProfile(parseEmbed(embed(['I tried three camera settings to compare the shadows','Here is the vegetable garden after six weeks of rain','We fixed the squeaky door with a little candle wax']),handle));assert.equal(fresh.score,0);
 });
 test('external requests have a fixed TikTok origin, no redirects and a bounded response',async()=>{
-  let url,opts;await fetchProfile(handle,async(u,o)=>{url=u;opts=o;return new Response(embed());});assert.equal(url,'https://www.tiktok.com/embed/@test.creator');assert.equal(opts.redirect,'error');assert.ok(opts.signal);
+  let url,opts;await fetchProfile(handle,async(u,o)=>{url=u;opts=o;return new Response(embed());});assert.equal(url,'https://www.tiktok.com/embed/@test.creator');assert.equal(opts.redirect,'manual');assert.ok(opts.signal);
   await assert.rejects(()=>limitedText(new Response('a'.repeat(2000)),1000));
   await assert.rejects(()=>fetchProfile(handle,async()=>new Response('',{status:403})),/not sharing/);
+  let requests=0;await assert.rejects(()=>fetchProfile(handle,async()=>{requests++;return new Response('',{status:302,headers:{Location:'https://evil.com'}});}),/not sharing/);assert.equal(requests,1);
 });
 test('AI can change only the punchline, and unavailable/invalid output falls back to real checks',async()=>{
   const original=analyzeProfile(parseEmbed(embed(),handle));
