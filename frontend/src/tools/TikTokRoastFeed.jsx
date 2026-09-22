@@ -53,7 +53,7 @@ export default function TikTokRoastFeed({ result }) {
   const [active, setActive] = useState(0);
   const [onScreen, setOnScreen] = useState(false);
   const [visible, setVisible] = useState(!document.hidden);
-  const phone = useRef(null), feed = useRef(null), cards = useRef([]);
+  const phone = useRef(null), feed = useRef(null), cards = useRef([]), verdictPanel = useRef(null);
   const complete = step.phase === 'complete';
   const index = browsing ? active : step.index;
   const reading = !browsing && !complete && step.phase === 'reading';
@@ -62,6 +62,15 @@ export default function TikTokRoastFeed({ result }) {
   const current = posts[index];
   const verdict = postVerdict(current);
   const takeover = () => setBrowsing(true);
+
+  function skipToResults() {
+    setBrowsing(false);
+    setStep({ index: posts.length - 1, phase: 'complete' });
+    requestAnimationFrame(() => {
+      verdictPanel.current?.focus({ preventScroll: true });
+      verdictPanel.current?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' });
+    });
+  }
 
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => setOnScreen(entry.isIntersecting && entry.intersectionRatio >= .15), { threshold: .15 });
@@ -120,7 +129,7 @@ export default function TikTokRoastFeed({ result }) {
       <RoastProfile profile={profile} />
     </div>
     <div className="roast-live-viewer">
-      <div className="roast-live-judging"><div className="roast-judging-scene">
+      <div className="roast-live-judging" ref={verdictPanel} tabIndex={-1} role="region" aria-label="Roast verdict"><div className="roast-judging-scene">
         <SlopMeter score={score} reading={reading && onScreen && visible} />
         <div className={`roast-reaction ${reading && onScreen && visible ? 'is-thinking' : ''}`}>
           <RoastFlower smile={!reading && verdict.tone === 'fresh'} mood={reading ? 'thinking' : verdict.tone} />
@@ -151,5 +160,6 @@ export default function TikTokRoastFeed({ result }) {
       <div className="roast-phone-home" aria-hidden="true" />
     </div>
     </div>
+    {(!complete || browsing) && <button type="button" className="roast-skip-results" onClick={skipToResults}>Skip to results</button>}
   </section>;
 }

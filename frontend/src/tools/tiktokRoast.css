@@ -222,3 +222,8 @@
   .roast-live-viewer{height:auto;}
   .roast-live-viewer>.roast-phone{height:340px;}
 }
+
+.roast-skip-results{grid-column:2;grid-row:3;justify-self:center;display:block;min-height:44px;margin:8px auto 0;padding:10px 14px;border:0;background:transparent;color:var(--roast-muted);font:inherit;font-size:15px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;touch-action:manipulation;}
+.roast-skip-results:hover{color:var(--roast-ink);}
+.roast-live-judging{scroll-margin-top:100px;}
+.roast-live-judging:focus{outline:none;}
