@@ -3,6 +3,7 @@ import { SiClaude, SiCursor } from "react-icons/si";
 import { PlatformIcon } from "../bridge/ui.jsx";
 import BrandLogo from "./BrandLogo.jsx";
 import HeroDemo from "./HeroDemo.jsx";
+import SchedulingDemo from "./SchedulingDemo.jsx";
 import { sortPlatforms } from "../bridge/platforms.js";
 import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
@@ -85,6 +86,10 @@ function ArrowIcon() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
+function CheckIcon() {
+  return <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true"><path d="m3.5 8.8 3.1 3.1 6.9-7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
 function CodexLogo() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -116,6 +121,31 @@ function HeroPlatformRail() {
           <span className="sr-only">{platform.name}</span>
         </span>
       ))}
+    </div>
+  );
+}
+
+function N8nAutomationBoard() {
+  return (
+    <div className="usage-n8n-board" role="img" aria-label="An n8n automation workflow that prepares content, sends it through the Meadow API, validates the schedule, and publishes to connected channels">
+      <div className="n8n-board-topbar">
+        <span className="n8n-brand-mark" aria-hidden="true"><i /><i /><i /><i /><i /></span>
+        <strong>n8n</strong>
+        <span>Social launch workflow</span>
+        <em>Active</em>
+      </div>
+      <svg className="n8n-board-connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M23 57 C29 57 26 32 34 32" />
+        <path d="M48 32 C54 32 48 57 56 57" />
+        <path d="M70 57 C77 57 72 32 80 32" />
+        <path d="M70 57 C77 57 72 77 80 77" />
+      </svg>
+      <div className="n8n-node n8n-trigger"><span className="n8n-node-icon is-trigger">◷</span><div><small>TRIGGER</small><strong>Weekdays</strong><em>09:00</em></div><b /></div>
+      <div className="n8n-node n8n-content"><span className="n8n-node-icon is-content">{`{ }`}</span><div><small>CONTENT</small><strong>Build content</strong><em>Caption + media</em></div><b /></div>
+      <div className="n8n-node n8n-meadow"><span className="n8n-node-icon is-meadow">✿</span><div><small>MEADOW API</small><strong>Schedule posts</strong><em>3 destinations</em></div><b /></div>
+      <div className="n8n-node n8n-review"><span className="n8n-node-icon is-review">✓</span><div><small>VALIDATE</small><strong>Check posts</strong><em>Ready</em></div><b /></div>
+      <div className="n8n-node n8n-publish"><span className="n8n-node-icon is-publish">↗</span><div><small>PUBLISH</small><strong>Channels</strong><span className="n8n-channel-dots"><i className="instagram" /><i className="tiktok" /><i className="linkedin" /></span></div><b /></div>
+      <div className="n8n-run-status"><span /> Last run completed <strong>5/5</strong></div>
     </div>
   );
 }
@@ -162,11 +192,10 @@ function ScenarioVisual({ goal }) {
 }
 
 function GoalScenarios({ onGetStarted }) {
-  const schedulingGoal = GOALS[0];
   return (
     <section className="landing-section goals-section scheduling-use-case" id="workflows" aria-labelledby="goals-title">
       <div className="scheduling-use-case-visual">
-        <ScenarioVisual goal={schedulingGoal} />
+        <SchedulingDemo />
       </div>
       <div className="scheduling-use-case-copy">
         <h2 id="goals-title">Plan, repurpose, publish everywhere. <span className="goal-once-highlight">Once!</span></h2>
@@ -224,6 +253,26 @@ export default function Landing({ onGetStarted }) {
           <div className="audience-heading">
             <h2 id="usage-title">However you work, publish with Meadow.</h2>
             <p>Draft, preview, and schedule in Meadow. Connect Claude, Codex, or Cursor through MCP to prepare posts for your review, or use the API from your own tools. Your connected accounts and delivery status stay in one workspace.</p>
+          </div>
+          <div className="usage-grid">
+            <article className="usage-card usage-creator">
+              <div className="usage-card-media"><img src="/marketing/meadow-creator-studio.webp" alt="A content creator recording and editing in a bright home studio" /></div>
+              <div className="usage-card-copy"><h3>For creators and teams</h3><p>Plan, draft, preview, schedule, and publish from Meadow&apos;s visual workspace.</p><ul><li><CheckIcon />Stay hands-on from idea to delivery</li><li><CheckIcon />Save drafts and review every destination</li><li><CheckIcon />Keep your publishing calendar clear</li></ul></div>
+            </article>
+            <article className="usage-card usage-agents">
+              <div className="usage-card-media usage-agent-visual" aria-label="AI agents connected to a Meadow draft">
+                <div className="usage-agent-prompt"><span>New request</span><strong>Prepare the launch campaign.</strong></div>
+                <div className="usage-agent-row" aria-hidden="true">{AGENT_LOGOS.map((agent) => <span key={agent.name} className={agent.className} title={agent.name}><agent.Icon /></span>)}</div>
+                <div className="usage-agent-result"><span className="workflow-brand-dot" /><div><strong>Campaign draft ready</strong><small>4 destinations · waiting for review</small></div></div>
+              </div>
+              <div className="usage-card-copy"><h3>For agent-assisted publishing</h3><p>Let a supported AI client prepare work through Meadow while you keep visibility and control.</p><ul><li><CheckIcon />Use one private Meadow key</li><li><CheckIcon />Create structured drafts through MCP</li><li><CheckIcon />Review before anything is published</li></ul></div>
+            </article>
+            <article className="usage-card usage-automation">
+              <div className="usage-card-media usage-automation-visual">
+                <N8nAutomationBoard />
+              </div>
+              <div className="usage-card-copy"><h3>For custom workflows</h3><p>Connect internal tools, scheduled jobs, or your own application to Meadow&apos;s publishing layer.</p><ul><li><CheckIcon />Use one consistent API</li><li><CheckIcon />Preview and validate destinations</li><li><CheckIcon />Track delivery programmatically</li></ul></div>
+            </article>
           </div>
           <div className="usage-integrations" aria-label="Supported AI clients">
             {AGENT_LOGOS.map((agent) => <span key={agent.name} className={agent.className}><agent.Icon /><span>{agent.name}</span></span>)}
