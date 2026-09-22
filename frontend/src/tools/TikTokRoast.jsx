@@ -19,6 +19,7 @@ function RoastFlower({smile=false}) {
     <path d={smile ? 'M86 118q17 19 32-2' : 'M85 124q17-8 30-3'} fill="none" stroke="#fff5d8" strokeWidth="4" strokeLinecap="round"/>
   </svg>;
 }
+
 const FAQs = [
   ['Is it actually free?', 'Yes. No Meadow account, TikTok connection, or credit card is required. There is a short request limit to keep the tool available for everyone.'],
   ['What does it look at?', 'TikTok’s public profile embed supplies a bio and a sample of up to 10 recent post captions. You can play each post in the scrolling feed. The score checks the captions for repeated text, engagement bait, sales instructions, hashtag-only text, and missing context. It does not watch the videos, listen to audio, or read text inside a video.'],
@@ -98,12 +99,12 @@ export default function TikTokRoast() {
       <section className="roast-hero" aria-labelledby="roast-title">
         <div className="roast-intro"><span className="roast-powered-badge">Powered by Jev</span><h1 id="roast-title">TikTok <span>Hot or Not.</span></h1><p>Meadow is a social media scheduling tool, and I’m not sure what this has to do with our main product.</p></div>
         <div className="roast-workspace">
-          <aside className={`roast-host ${busy?'is-thinking':''}`} aria-label="Meet your roaster"><div className="roast-speech">{busy ? 'Looking for the hook. Please let there be a hook.' : result ? result.roast : '“Link in bio” is not a personality. Let’s start there.'}</div><RoastFlower smile={result && result.score<30}/><span className="roast-host-name">Meadow, with the gloves off.</span><span className="roast-host-note">A little heat. A lot of room to grow.</span></aside>
-          <div className="roast-input-card"><h2>Drop your handle.</h2><form onSubmit={roast}><label htmlFor="roast-handle">TikTok handle or profile URL</label><div className="roast-input-wrap"><span aria-hidden="true">@</span><input id="roast-handle" name="handle" value={handle} onChange={e=>setHandle(e.target.value)} placeholder="yourhandle" maxLength={180} autoCapitalize="none" autoCorrect="off" spellCheck="false" required aria-describedby="roast-input-help" disabled={busy}/></div><button className="roast-submit" disabled={busy || !handle.trim()} type="submit">{busy ? 'Preparing your roast…' : 'Roast my TikTok'}<span aria-hidden="true">{busy ? '◌' : '↗'}</span></button><p id="roast-input-help">Public profiles only. No login. Nothing gets posted.</p></form>{busy && <p className="roast-loading" role="status">Loading the profile, lining up the posts, and preparing each roast. This can take a few seconds.</p>}{error && <p className="roast-error" role="alert">{error}</p>}<div className="roast-scope"><p>We roast the <strong>captions</strong>, not the person. Video, audio, and on-screen text aren’t included.</p></div></div>
+          <aside className={`roast-host ${busy?'is-thinking':''}`} aria-label="Meet your roaster"><div className="roast-speech">{busy ? 'Looking for the hook. Please let there be a hook.' : result ? result.roast : 'Okay, whose TikTok am I roasting?'}</div><RoastFlower smile={result && result.score<30}/><span className="roast-host-name">Meadow, with the gloves off.</span><span className="roast-host-note">A little heat. A lot of room to grow.</span></aside>
+          <div className="roast-input-card"><h2>Drop your handle.</h2><form onSubmit={roast}><label htmlFor="roast-handle">TikTok handle or profile URL</label><div className="roast-input-wrap"><span aria-hidden="true">@</span><input id="roast-handle" name="handle" value={handle} onChange={e=>setHandle(e.target.value)} placeholder="yourhandle" maxLength={180} autoCapitalize="none" autoCorrect="off" spellCheck="false" required disabled={busy}/></div><button className="roast-submit" disabled={busy || !handle.trim()} type="submit">{busy ? 'Preparing your roast…' : 'Roast my TikTok'}<span aria-hidden="true">{busy ? '◌' : '↗'}</span></button></form>{busy && <p className="roast-loading" role="status">Loading the profile, lining up the posts, and preparing each roast. This can take a few seconds.</p>}{error && <p className="roast-error" role="alert">{error}</p>}</div>
         </div>
       </section>
       <section className="roast-cta-bar" aria-label="Schedule and cross-post with Meadow">
-        <div><h2>Schedule your TikTok posts and cross-post them to every platform.</h2></div>
+        <div><h2>Schedule your TikToks and cross-post them to every platform.</h2></div>
         <a href={appHref('/dashboard')}>Try for free <span aria-hidden="true">↗</span></a>
       </section>
       {result && <section className="roast-results" ref={output} tabIndex="-1" aria-labelledby="roast-result-title">
