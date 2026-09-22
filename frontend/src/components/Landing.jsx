@@ -293,15 +293,15 @@ export default function Landing({ onGetStarted }) {
           <PricingComparison yearly={yearlyPricing} onYearlyChange={setYearlyPricing} />
         </section>
 
-        <section className="landing-section faq-section" id="faq">
-          <div className="faq-heading"><h2>Questions, answered.</h2></div>
+        <section className="landing-section faq-section" id="faq" aria-labelledby="faq-title">
+          <div className="faq-heading"><h2 id="faq-title">FAQ</h2></div>
           <div className="faq-grid">
-            <article className="faq-card"><h3>How can I use Meadow?</h3><p>Create directly in the Meadow workspace, connect a supported AI agent through MCP, or build an automated workflow with the API. All three paths use the same connected accounts and publishing structure.</p></article>
-            <article className="faq-card"><h3>Which social platforms can I connect?</h3><p>Meadow supports workflows across all these platforms: Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, Telegram, and Google Business, plus chat integrations for Twitch and Kick. Connect Telegram channels and groups through the Meadow bot. Connection availability can vary by platform status.</p></article>
-            <article className="faq-card"><h3>Can I save work before it is published?</h3><p>Yes. You can keep content as a draft, review the destination details, and publish only when it is ready.</p></article>
-            <article className="faq-card"><h3>Can I schedule posts?</h3><p>Yes. Choose a future date and time for supported destinations, then follow scheduled and published delivery from Meadow.</p></article>
-            <article className="faq-card"><h3>What content formats can I prepare?</h3><p>Prepare text, images, video, carousels, stories, reels, and documents where the selected destination supports that format.</p></article>
-            <article className="faq-card"><h3>Can I connect an AI agent or my own app?</h3><p>Yes. Meadow includes API and MCP integration for secure, structured workflows such as creating drafts, previewing posts, publishing, and checking available analytics.</p></article>
+            <details className="faq-card" name="landing-faq"><summary>How can I use Meadow?</summary><p>Create directly in the Meadow workspace, connect a supported AI agent through MCP, or build an automated workflow with the API. All three paths use the same connected accounts and publishing structure.</p></details>
+            <details className="faq-card" name="landing-faq"><summary>Which social platforms can I connect?</summary><p>Meadow supports workflows across all these platforms: Instagram, TikTok, YouTube, Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, Telegram, and Google Business, plus chat integrations for Twitch and Kick. Connect Telegram channels and groups through the Meadow bot. Connection availability can vary by platform status.</p></details>
+            <details className="faq-card" name="landing-faq"><summary>Can I save work before it is published?</summary><p>Yes. You can keep content as a draft, review the destination details, and publish only when it is ready.</p></details>
+            <details className="faq-card" name="landing-faq"><summary>Can I schedule posts?</summary><p>Yes. Choose a future date and time for supported destinations, then follow scheduled and published delivery from Meadow.</p></details>
+            <details className="faq-card" name="landing-faq"><summary>What content formats can I prepare?</summary><p>Prepare text, images, video, carousels, stories, reels, and documents where the selected destination supports that format.</p></details>
+            <details className="faq-card" name="landing-faq"><summary>Can I connect an AI agent or my own app?</summary><p>Yes. Meadow includes API and MCP integration for secure, structured workflows such as creating drafts, previewing posts, publishing, and checking available analytics.</p></details>
           </div>
         </section>
 

@@ -1447,10 +1447,16 @@ input[type="range"]::-moz-range-thumb {
 .faq-section { position: relative; display: block; overflow: hidden; padding-top: 128px; }
 .faq-heading { position: relative; max-width: 620px; margin: 0 auto; text-align: center; }
 .faq-heading h2 { margin: 0; color: var(--text); font-size: clamp(47px,6vw,71px); line-height: .98; letter-spacing: -.06em; }
-.faq-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin-top: 42px; }
-.faq-card { min-width: 0; min-height: 188px; padding: 25px 24px 27px; border: 1px solid #dbe3ed; border-radius: var(--radius-md); background: rgba(252,253,248,.74); box-shadow: 0 1px 3px rgba(35,50,71,.08); }
-.faq-card h3 { margin: 0 0 13px; padding-bottom: 13px; border-bottom: 1px solid #dbe3ed; color: var(--text); font-size: 19px; line-height: 1.28; letter-spacing: -.035em; }
-.faq-card p { margin: 0; color: var(--text-muted); font-size: 15px; line-height: 1.65; }
+.faq-grid { display: grid; max-width: 900px; gap: 12px; margin: 42px auto 0; }
+.faq-card { min-width: 0; overflow: hidden; border: 1px solid #dbe3ed; border-radius: var(--radius-md); background: rgba(252,253,248,.8); box-shadow: 0 10px 28px -25px rgba(35,50,71,.58); transition: border-color .18s ease,box-shadow .18s ease; }
+.faq-card:hover, .faq-card[open] { border-color: #bdcbe0; box-shadow: 0 18px 36px -30px rgba(35,50,71,.7); }
+.faq-card summary { position: relative; padding: 23px 66px 23px 25px; color: var(--text); font-size: 20px; font-weight: 680; line-height: 1.3; letter-spacing: -.03em; list-style: none; cursor: pointer; }
+.faq-card summary::-webkit-details-marker { display: none; }
+.faq-card summary::after { position: absolute; top: 50%; right: 24px; display: grid; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: #e9eefb; color: #315fce; content: "+"; font-size: 24px; font-weight: 400; line-height: 1; transform: translateY(-50%); transition: background .18s ease,color .18s ease; }
+.faq-card[open] summary { border-bottom: 1px solid #dbe3ed; }
+.faq-card[open] summary::after { background: #315fce; color: #fff; content: "−"; }
+.faq-card summary:focus-visible { outline: 2px solid #315fce; outline-offset: -4px; }
+.faq-card p { margin: 0; padding: 21px 25px 24px; color: var(--text-muted); font-size: 17px; line-height: 1.7; }
 .landing-cta-section { margin: 20px calc(50% - 50vw) 0; padding: 88px 24px 92px; background: var(--cta); color: #fff; text-align: center; }
 .landing-cta-content { max-width: 700px; margin: 0 auto; }
 .landing-cta-content h2 { margin: 0; color: #fff; font-size: clamp(37px,4.5vw,55px); line-height: 1.05; letter-spacing: -.05em; }
@@ -1495,7 +1501,7 @@ input[type="range"]::-moz-range-thumb {
   .how-section { padding-top: 84px; }
   .how-grid { grid-template-columns: 1fr; margin-top: 38px; }
   .how-info-panel { grid-template-columns: 1fr; padding: 25px 23px; }
-  .faq-grid { grid-template-columns: repeat(2,minmax(0,1fr)); margin-top: 42px; }
+  .faq-grid { margin-top: 42px; }
   .landing-cta-section { margin-top: 8px; padding: 68px 22px 72px; }
   .landing-cta-content p { font-size: 17px; }
   .landing-cta-actions { flex-direction: column; gap: 10px; margin-top: 25px; }
@@ -1513,8 +1519,9 @@ input[type="range"]::-moz-range-thumb {
   .landing-actions .btn-small-primary { padding: 9px 11px; }
   .platform-grid { grid-template-columns: repeat(5,42px); }
   .platform-card p { white-space: normal; }
-  .faq-grid { grid-template-columns: 1fr; }
-  .faq-card { min-height: 0; }
+  .faq-card summary { padding: 20px 58px 20px 20px; font-size: 18px; }
+  .faq-card summary::after { right: 18px; }
+  .faq-card p { padding: 18px 20px 21px; font-size: 16px; }
 }
 
 /* --- Public pricing --- */
@@ -2199,7 +2206,6 @@ input[type="range"]::-moz-range-thumb {
 .landing-v2 .how-section { padding-top: 132px; }
 .landing-v2 .automation-panel { background: linear-gradient(135deg,#eaf0ff,#f4f8ee); }
 .landing-v2 .home-pricing-heading > .section-eyebrow { display: block; margin-bottom: 15px; }
-.landing-v2 .faq-card { min-height: 176px; }
 .landing-v2 .landing-cta-section { border-radius: 30px 30px 0 0; background: linear-gradient(135deg,#2f61d8,#244caf); }
 
 @media (max-width: 1100px) {
