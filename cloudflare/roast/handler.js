@@ -13,7 +13,7 @@ export async function handleTikTokRoast(request, env, ctx, deps = {}) {
     const rate = await env.ROAST_LIMITER.limit({key:request.headers.get('CF-Connecting-IP') || 'unknown'});
     if (!rate.success) throw new RoastError('Give the roast a minute to cool down, then try again.',429,'rate_limited');
     const cache = deps.cache || globalThis.caches?.default;
-    const cacheKey = new Request(`https://findmeadow.com/__roast-cache/v1/${handle}`);
+    const cacheKey = new Request(`https://findmeadow.com/__roast-cache/v2/${handle}`);
     const cached = await cache?.match(cacheKey);
     if (cached) return Response.json(await cached.json(),{headers});
     const profile = await fetchProfile(handle, deps.fetcher);
