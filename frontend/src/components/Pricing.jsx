@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import BrandLogo from "./BrandLogo.jsx";
 import SiteFooter from "./SiteFooter.jsx";
+import PricingComparison from "./PricingComparison.jsx";
 import { marketingHref } from "../siteUrls.js";
 
 function ArrowIcon() {
@@ -52,6 +53,7 @@ export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error =
             </article>;
           })}
         </section>
+        <PricingComparison yearly={yearly} onYearlyChange={setYearly} onChoosePlan={onChoosePlan} busyPlan={busyPlan} />
 
       </main>
 

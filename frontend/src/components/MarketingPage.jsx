@@ -5,6 +5,7 @@ import BrandLogo from "./BrandLogo.jsx";
 import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
+import PricingComparison from "./PricingComparison.jsx";
 
 const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
 
@@ -55,6 +56,7 @@ function PlanGrid() {
           </article>;
         })}
       </div>
+      <PricingComparison yearly={yearly} onYearlyChange={setYearly} />
     </>
   );
 }
