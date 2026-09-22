@@ -8,10 +8,6 @@ function ArrowIcon() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-function CheckIcon() {
-  return <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true"><path d="m3.5 8.8 3.1 3.1 6.9-7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-}
-
 export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error = "", cancelled = false }) {
   const [yearly, setYearly] = useState(true);
   const homeUrl = marketingHref("/");
@@ -31,7 +27,7 @@ export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error =
       <main className="pricing-main">
         <section className="pricing-intro">
           <h1>Choose the space your publishing needs.</h1>
-          <p>Pricing</p>
+
           <div className="pricing-cycle" role="group" aria-label="Billing frequency">
             <button className={!yearly ? "active" : ""} onClick={() => setYearly(false)}>Monthly</button>
             <button className={yearly ? "active" : ""} onClick={() => setYearly(true)}>Yearly <span>Save up to 17%</span></button>
@@ -47,11 +43,11 @@ export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error =
             return <article className={`pricing-card ${plan.popular ? "featured" : ""}`} key={plan.id}>
               <div className="pricing-card-top">
                 <div><h2>{plan.name}</h2><p>{plan.description}</p></div>
-                {(plan.popular || plan.best) && <span className="pricing-badge">{plan.popular ? "Most popular" : "Best value"}</span>}
+
               </div>
               <div className="pricing-price"><strong>${price}</strong><span>/month</span></div>
               <p className="pricing-billing-note">{planBillingNote(plan, yearly)}</p>
-              <ul><li className="pricing-account"><CheckIcon />{plan.accounts}</li>{plan.features.map(feature => <li key={feature}><CheckIcon />{feature}</li>)}</ul>
+              <ul><li className="pricing-account">{plan.accounts}</li>{plan.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
               {plan.id === "free" ? <a className="pricing-button" href={planHref(plan)}>Try for free <ArrowIcon /></a> : <button className={plan.popular ? "btn-primary" : "pricing-button"} disabled={Boolean(busyPlan)} onClick={() => onChoosePlan(plan.id, yearly ? "yearly" : "monthly")}>{loading ? "Opening secure checkout…" : `Choose ${plan.name}`} {!loading && <ArrowIcon />}</button>}
             </article>;
           })}
