@@ -118,7 +118,7 @@ export function Modal({ title, children, onClose, wide = false, busy = false, cl
   }, []);
   return <div className="bridge-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget && !busy) onClose(); }}><section ref={ref} tabIndex={-1} className={`bridge-modal ${wide ? "wide" : ""} ${className}`.trim()} role="dialog" aria-modal="true" aria-labelledby={id}><button className="bridge-modal-close bridge-icon-button" onClick={onClose} disabled={busy} aria-label="Close dialog"><Icon name="close"/></button><h2 id={id}>{title}</h2>{children}</section></div>;
 }
-export function useProjectResource(projectId, endpoint, initial, { interval = 0, revision = 0 } = {}) {
+export function useProjectResource(projectId, endpoint, initial, { interval = 0, revision = 0, refreshOnFocus = false } = {}) {
   const [data, setData] = useState(initial), [error, setError] = useState(""), [loading, setLoading] = useState(true), [version, setVersion] = useState(0);
   const reload = useCallback(() => setVersion(value => value + 1), []);
   useEffect(() => {
@@ -128,12 +128,14 @@ export function useProjectResource(projectId, endpoint, initial, { interval = 0,
       if (fetching || controller.signal.aborted) return;
       fetching = true;
       try { const result = await api.project(projectId, endpoint, { signal: controller.signal }); if (!controller.signal.aborted) { setData(result); setError(""); } }
-      catch (error) { if (error.name !== "AbortError") setError(error.message); }
+      catch (error) { if (!controller.signal.aborted && error.name !== "AbortError") setError(error.message); }
       finally { fetching = false; if (!controller.signal.aborted) setLoading(false); }
     }
-    fetchData(); const timer = interval ? setInterval(() => { if (!document.hidden) fetchData(); }, interval) : null;
-    return () => { controller.abort(); clearInterval(timer); };
-  }, [projectId, endpoint, interval, revision, version]);
+    const refreshVisible = () => { if (!document.hidden) fetchData(); };
+    fetchData(); const timer = interval ? setInterval(refreshVisible, interval) : null;
+    if (refreshOnFocus) { window.addEventListener("focus", refreshVisible); document.addEventListener("visibilitychange", refreshVisible); }
+    return () => { controller.abort(); clearInterval(timer); window.removeEventListener("focus", refreshVisible); document.removeEventListener("visibilitychange", refreshVisible); };
+  }, [projectId, endpoint, interval, revision, version, refreshOnFocus]);
   return { data, setData, error, loading, reload };
 }
 export function MediaThumb({ media, playable = false }) {

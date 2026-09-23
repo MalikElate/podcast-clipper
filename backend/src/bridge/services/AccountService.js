@@ -14,10 +14,10 @@ export class AccountService {
     const { encryptedCredentials, authorizationId, authorizationGrantedAt, authorizationStartedAt, maintenanceDueAt, maintenanceAttempts, ...visible } = account;
     return visible;
   }
-  list(uid, projectId) { this.projects.require(uid, projectId); return this.store.list("account", { projectId }).map(account => this.toPublic(account)); }
+  list(uid, projectId) { this.projects.require(uid, projectId); return this.store.list("account", { projectId }).filter(account => !["disconnected", "deleting"].includes(account.status)).map(account => this.toPublic(account)); }
   async listFresh(uid, projectId) {
     this.projects.require(uid, projectId);
-    const accounts = this.store.list("account", { projectId });
+    const accounts = this.store.list("account", { projectId }).filter(account => !["disconnected", "deleting"].includes(account.status));
     return Promise.all(accounts.map(async account => {
       if (account.platform !== "pinterest" || account.status !== "connected") return this.toPublic(account);
       try {
@@ -35,15 +35,14 @@ export class AccountService {
 
   async start(uid, projectId, platform, { handle, consent } = {}) {
     this.projects.require(uid, projectId);
-    invariant(!this.store.list("account", { ownerUid: uid, status: "deleting", limit: null }).some(item => item.platform === platform || [item.platform, platform].every(value => ["youtube", "google_business"].includes(value))), "Connection removal is still finishing. Try again shortly.", { status: 409 });
-    invariant(!this.store.list("revocation", { ownerUid: uid, status: "pending", limit: null }).some(item => item.platform === platform || [item.platform, platform].every(value => ["youtube", "google_business"].includes(value))), "Authorization removal is still finishing. Try connecting again shortly.", { status: 409 });
+    this.privacy?.assertConnectionAvailable(uid, platform);
     invariant(!this.localPreview, "Live account connections are disabled in local preview.", { status: 409, code: "preview_mode" });
     invariant(this.vault.configured, "Social account connections are not configured on this server.", { status: 503 });
     const provider = this.registry.get(platform);
     const privacyConsent = this.privacy?.connectionConsent(platform, consent) || null;
     const state = randomBytes(32).toString("base64url");
     const verifier = randomBytes(48).toString("base64url");
-    this.store.saveState(SecretVault.hash(state), { uid, projectId, platform, verifier, privacyConsent, createdAt: this.clock() }, this.clock() + 10 * 60000);
+    this.store.saveState(SecretVault.hash(state), { uid, projectId, platform, verifier, privacyConsent, authorizationBarrier: this.privacy?.connectionBarrierSnapshot(uid, platform), createdAt: this.clock() }, this.clock() + 10 * 60000);
     return { url: await provider.authorizationUrl({ state, verifier, handle }) };
   }
 
@@ -105,7 +104,7 @@ export class AccountService {
     if (!saved || saved.platform !== "telegram") return null;
     this.projects.require(saved.uid, saved.projectId);
     this.privacy?.requireConnectionConsent("telegram", saved.privacyConsent);
-    invariant(!this.privacy?.connectionBarrier(saved.uid, "telegram") || (saved.createdAt || 0) > this.privacy.connectionBarrier(saved.uid, "telegram"), "This connection request predates connection removal. Connect again.");
+    this.privacy?.assertCurrentAuthorization(saved.uid, "telegram", saved);
     const remoteId = String(chat.id), connectionId = randomUUID();
     const candidate = {
       remoteId,
@@ -113,7 +112,7 @@ export class AccountService {
       profileUrl: chat.username ? `https://t.me/${chat.username}` : undefined,
       credentials: { chatId: remoteId, chatType: chat.type },
     };
-    this.store.put("connection", { id: connectionId, ownerUid: saved.uid, projectId: saved.projectId, platform: "telegram", privacyConsent: saved.privacyConsent || null, authorizationStartedAt: saved.createdAt, createdAt: this.clock(), expiresAt: this.clock() + 10 * 60000,
+    this.store.put("connection", { id: connectionId, ownerUid: saved.uid, projectId: saved.projectId, platform: "telegram", privacyConsent: saved.privacyConsent || null, authorizationBarrier: saved.authorizationBarrier, authorizationStartedAt: saved.createdAt, createdAt: this.clock(), expiresAt: this.clock() + 10 * 60000,
       encrypted: this.vault.encrypt([candidate], `connection:${connectionId}`) });
     const [account] = this.attach(saved.uid, saved.projectId, connectionId, [remoteId]);
     if (telegramUserId != null) this.store.remove("telegramLink", String(telegramUserId));
@@ -156,11 +155,12 @@ export class AccountService {
     invariant((saved.createdAt || 0) + 10 * 60000 > this.clock(), "This connection request has expired. Start again.");
     this.projects.require(saved.uid, saved.projectId);
     this.privacy?.requireConnectionConsent(platform, saved.privacyConsent);
-    invariant(!this.privacy?.connectionBarrier(saved.uid, platform) || (saved.createdAt || 0) > this.privacy.connectionBarrier(saved.uid, platform), "This authorization request predates connection removal. Connect again.");
+    this.privacy?.assertCurrentAuthorization(saved.uid, platform, saved);
+    this.privacy?.assertConnectionAvailable(saved.uid, platform);
     invariant(Array.isArray(candidates) && candidates.length, "No eligible accounts were returned. Check your account type and permissions.");
     this.metaPrivacy?.assertAuthorization(platform, candidates, saved.createdAt || 0);
     const id = randomUUID();
-    this.store.put("connection", { id, ownerUid: saved.uid, projectId: saved.projectId, platform, privacyConsent: saved.privacyConsent || null, authorizationStartedAt: saved.createdAt, createdAt: this.clock(), expiresAt: this.clock() + 10 * 60000,
+    this.store.put("connection", { id, ownerUid: saved.uid, projectId: saved.projectId, platform, privacyConsent: saved.privacyConsent || null, authorizationBarrier: saved.authorizationBarrier, authorizationStartedAt: saved.createdAt, createdAt: this.clock(), expiresAt: this.clock() + 10 * 60000,
       encrypted: this.vault.encrypt(candidates.map(candidate => ({ ...(platform === "pinterest" ? { remoteId: candidate.remoteId, label: "Pinterest account" } : candidate), credentials: { ...credentials, ...(candidate.credentials || {}) } })), `connection:${id}`) });
     if (candidates.length === 1) {
       const accounts = this.attach(saved.uid, saved.projectId, id, [candidates[0].remoteId]);
@@ -187,6 +187,8 @@ export class AccountService {
     const connection = this.projects.requireRecord(uid, projectId, "connection", connectionId);
     this.privacy?.requireConnectionConsent(connection.platform, connection.privacyConsent);
     invariant(connection.expiresAt > this.clock(), "This connection has expired. Connect the account again.");
+    this.privacy?.assertCurrentAuthorization(uid, connection.platform, connection);
+    this.privacy?.assertConnectionAvailable(uid, connection.platform);
     invariant(Array.isArray(selectedIds) && selectedIds.length && selectedIds.length <= 100, "Select at least one account.");
     const candidates = this.vault.decrypt(connection.encrypted, `connection:${connectionId}`);
     invariant(selectedIds.every(id => candidates.some(candidate => candidate.remoteId === id)), "An invalid account was selected.");
@@ -194,8 +196,10 @@ export class AccountService {
     return this.store.transaction(() => {
       const accounts = [];
       for (const candidate of candidates.filter(candidate => selectedIds.includes(candidate.remoteId))) {
-        const existing = this.store.list("account", { projectId }).find(account => account.platform === connection.platform && account.remoteId === candidate.remoteId);
-        invariant(existing?.status !== "deleting", "This connection is being removed. Connect again after deletion finishes.", { status: 409 });
+        // A removal job owns the old record until it has purged its data. A
+        // fresh authorization gets a new ID so that cleanup cannot erase it or
+        // resume deliveries the user explicitly cancelled by disconnecting.
+        const existing = this.store.list("account", { projectId }).find(account => account.platform === connection.platform && account.remoteId === candidate.remoteId && !["deleting", "disconnected"].includes(account.status));
         const id = existing?.id || randomUUID();
         const { credentials, ...profile } = candidate;
         const account = this.store.put("account", { ...existing, ...profile, id, ownerUid: uid, projectId, platform: connection.platform, status: "connected", rateKey: `${connection.platform}:${candidate.remoteId}`,

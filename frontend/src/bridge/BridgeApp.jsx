@@ -183,7 +183,16 @@ function ConfigurationWorkspace({ billingSearch, user, project, config, view, on
   </>;
 }
 function ProjectWorkspace({ project, config, view, navigate, compose, draftId, onComposeDirty, onComposeBusy, scheduledDate, clearScheduledDate, draftVersion, connectionId, clearConnection, notify }) {
-  const accountResource = useProjectResource(project.id, "/accounts", { accounts: [] });
+  const accountResource = useProjectResource(project.id, "/accounts", { accounts: null }, { interval: 30000, revision: view, refreshOnFocus: true });
+  const [removingAccounts, setRemovingAccounts] = useState([]);
+  const accountsReady = Array.isArray(accountResource.data.accounts);
+  useEffect(() => {
+    if (!accountsReady) return;
+    setRemovingAccounts(current => current.filter(id => accountResource.data.accounts.some(account => account.id === id && !["disconnected", "deleting"].includes(account.status))));
+  }, [accountResource.data.accounts, accountsReady]);
+  function accountRemovalChanged(id, removing) {
+    setRemovingAccounts(current => removing ? [...new Set([...current, id])] : current.filter(value => value !== id));
+  }
   const mediaResource = useProjectResource(project.id, "/media", { media: [] });
   const catalog = config.platforms || [];
   const media = mediaResource.data.media;
@@ -210,11 +219,11 @@ function ProjectWorkspace({ project, config, view, navigate, compose, draftId, o
     if (uploaded.length) notify(`${uploaded.length} ${uploaded.length === 1 ? "file" : "files"} added to ${project.name}.`);
     return uploaded;
   }
-  const common = { project, config, catalog, media, accounts: accountResource.data.accounts };
+  const common = { project, config, catalog, media, accountsReady, accounts: (accountResource.data.accounts || []).map(account => removingAccounts.includes(account.id) ? { ...account, status: "deleting" } : account) };
   const draftLoading = Boolean(draftId && (draftState.id !== draftId || draftState.loading));
   return <><Alert message={accountResource.error || mediaResource.error || uploadError}/>
     {view === "compose" && (draftLoading ? <div className="bridge-panel bridge-empty"><p>Loading your draft…</p></div> : draftState.error ? <div className="bridge-panel bridge-empty"><Alert message={draftState.error}/><button className="bridge-button secondary" onClick={() => navigate("drafts", { force: true })}>Back to drafts</button></div> : <Composer key={`${draftVersion}:${draftId}:${draftState.post?.revision || 0}`} {...common} draft={draftState.post} scheduledDate={scheduledDate} onDraftStarted={clearScheduledDate} onDirtyChange={onComposeDirty} onBusyChange={onComposeBusy} onAccounts={() => navigate("accounts")} onUpload={upload} onDiscard={() => navigate(draftId ? "drafts" : "posts", { force: true })} onDraftSaved={() => { navigate("drafts", { force: true }); notify("Draft saved."); }} onSubmitted={result => { navigate("posts", { force: true }); notify(`${result.posts.length} ${result.posts.length === 1 ? "post" : "posts"} added to your delivery queue.`); }}/>) }
-    {view === "accounts" && <Accounts {...common} connectionId={connectionId} clearConnection={clearConnection} onChanged={accountResource.reload}/>}
+    {view === "accounts" && <Accounts {...common} connectionId={connectionId} clearConnection={clearConnection} onChanged={accountResource.reload} onRemovalChange={accountRemovalChanged}/>}
     {view === "clips" && <ClippingStudioComingSoon/>}
     {view === "calendar" && <PostsCalendar {...common} onCreate={compose}/>}
     {["posts", "scheduled", "posted", "drafts", "failed"].includes(view) && <PostsQueue {...common} section={view} onCreate={() => compose()} onEditDraft={post => compose("", post.id)} onUpload={upload}/>}
