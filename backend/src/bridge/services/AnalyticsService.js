@@ -20,7 +20,7 @@ export class AnalyticsService {
   }
 
   async syncDelivery(delivery) {
-    if (delivery.status !== "published" || !delivery.externalId) return;
+    if (delivery.demoMetrics || delivery.status !== "published" || !delivery.externalId) return;
     const account = this.store.get("account", delivery.accountId);
     if (!account || account.status !== "connected") return;
     if (this.accounts.privacy?.blocked(account.ownerUid)) return;
@@ -38,6 +38,15 @@ export class AnalyticsService {
       if (!current || latestAccount?.status !== "connected" || latestAccount.authorizationId !== account.authorizationId) return;
       if (account.platform !== "pinterest") this.store.put("delivery", { ...current, metricsAttemptedAt: this.clock(), metricsError: error.message });
     }
+  }
+
+  seedDemoDelivery({ ownerUid, accountId, deliveryId, values, note }) {
+    const account = this.store.get("account", accountId);
+    const delivery = this.store.get("delivery", deliveryId);
+    if (!account || account.ownerUid !== ownerUid || account.id !== accountId || account.platform !== "x" || !delivery || delivery.ownerUid !== ownerUid || delivery.accountId !== accountId || delivery.id !== deliveryId || delivery.status !== "published" || delivery.demoMetrics) return false;
+    const now = this.clock();
+    this.store.put("delivery", { ...delivery, metrics: this.normalize(values), metricsUpdatedAt: now, metricsAttemptedAt: now, metricsError: null, metricsNote: note, demoMetrics: true });
+    return true;
   }
 
   async refresh(uid, projectId, { postId, accountId } = {}) {
