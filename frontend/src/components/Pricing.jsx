@@ -17,7 +17,7 @@ export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error =
 
   return (
     <div className="landing pricing-page">
-      <SiteHeader current="pricing" homeHref={homeUrl} onSignIn={onSignIn} onStartPosting={onSignIn} />
+      <SiteHeader homeHref={homeUrl} onSignIn={onSignIn} onStartPosting={onSignIn} />
 
       <main className="pricing-main">
         <section className="pricing-intro">

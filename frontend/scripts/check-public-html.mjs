@@ -23,7 +23,7 @@ assert.ok(!roastHtml.includes("Meadow, with the gloves off."), "tiktok-roast/ind
 assert.ok(!roastHtml.includes("A little heat. A lot of room to grow."), "tiktok-roast/index.html still contains the removed roaster note");
 assert.ok(roastHtml.includes('class="landing-header site-header"'), "tiktok-roast/index.html must use the standard Meadow navbar");
 assert.ok(!roastHtml.includes('class="roast-nav"'), "tiktok-roast/index.html must not use its old custom navbar");
-for (const navItem of ['href="/#platforms"', 'href="/pricing"', ">Sign in</button>", ">Start posting "]) assert.ok(roastHtml.includes(navItem), `tiktok-roast/index.html missing standard navbar item ${navItem}`);
+for (const navItem of ['href="/#platforms"', 'href="https://findmeadow.com/#ways-to-use">API/MCP</a>', ">Sign in</button>", ">Start posting "]) assert.ok(roastHtml.includes(navItem), `tiktok-roast/index.html missing standard navbar item ${navItem}`);
 for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
   const html = await readFile(`dist${route}/index.html`, "utf8");
   assert.match(html, /<title>Dashboard · Meadow<\/title>/);

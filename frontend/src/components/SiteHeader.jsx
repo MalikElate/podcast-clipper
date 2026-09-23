@@ -21,7 +21,7 @@ function HeaderAction({ children, className, onClick }) {
     : <a className={className} href={appHref("/dashboard")}>{children}</a>;
 }
 
-export default function SiteHeader({ className = "", current = "", homeHref = marketingHref("/"), onSignIn, onStartPosting }) {
+export default function SiteHeader({ className = "", homeHref = marketingHref("/"), onSignIn, onStartPosting }) {
   const [platformMenuOpen, setPlatformMenuOpen] = useState(false);
   const platformMenuRef = useRef(null);
   const signIn = onSignIn || onStartPosting;
@@ -72,7 +72,7 @@ export default function SiteHeader({ className = "", current = "", homeHref = ma
             </div>
           </div>
         </div>
-        <a href="/pricing" aria-current={current === "pricing" ? "page" : undefined}>Pricing</a>
+        <a href={marketingHref("/#ways-to-use")}>API/MCP</a>
       </nav>
       <div className="landing-actions">
         <HeaderAction className="btn-ghost" onClick={signIn}>Sign in</HeaderAction>
