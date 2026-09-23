@@ -170,3 +170,5 @@
 @media(max-width:900px){.bridge-type-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:480px){.bridge-type-grid{grid-template-columns:1fr}.bridge-type-card{min-height:0}}
 
 .bridge-badge.awaiting_publish{background:#322d1e;color:#ead7a6;border-color:#5a4e2a;text-transform:none}.bridge-calendar-event.awaiting_publish{border-color:#d9bd76;background:#322d1e}.bridge[data-theme=light] .bridge-badge.awaiting_publish{background:#fff7e4;color:#80672c;border-color:#ead9a4}.bridge[data-theme=light] .bridge-calendar-event.awaiting_publish{background:#fff7e4;border-color:#b79849}
+
+.bridge-destination-refresh{display:inline-flex;align-items:center;gap:6px;margin:0 13px 13px}

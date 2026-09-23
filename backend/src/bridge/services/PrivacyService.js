@@ -8,10 +8,12 @@ import { connectionDisclosure } from "../platforms/connectionPrivacy.js";
 export const POLICY_VERSION = "2026-09-16";
 const DAY = 86400000;
 const CONNECTION_BARRIER_TTL = 15 * 60000;
+const TIKTOK_EVENT_TTL = 3 * DAY + 5 * 60000;
 // Production may wake only once daily, so reserve a full wake interval before
 // the public seven-day deadline when ordinary lock-protected cleanup is stuck.
 const HARD_LOCAL_PURGE_AFTER = 6 * DAY;
 const HARD_PURGE_PLATFORMS = new Set(["youtube", "google_business", "tiktok", "twitch", "kick"]);
+const authorizationFamily = platform => ["youtube", "google_business"].includes(platform) ? "google" : platform;
 export const deletionMarker = uid => SecretVault.hash(`meadow-deletion:${uid}`);
 
 /** Durable erasure jobs. Failed external operations never restore access or data. */
@@ -21,13 +23,38 @@ export class PrivacyService {
     this.activeRequests = new Map();
   }
   blocked(uid) { return Boolean(this.store.get("privacyBlock", deletionMarker(uid))); }
-  connectionBarrier(uid, platform) {
+  connectionBarriers(uid, platform) {
     const keys = new Set([platform, ...(["youtube", "google_business"].includes(platform) ? ["google"] : [])]);
-    return Math.max(0, ...[...keys].map(key => this.store.get("connectionBarrier", SecretVault.hash(`${uid}:${key}`))).filter(record => record && (!record.expiresAt || record.expiresAt > this.clock())).map(record => record.createdAt || 0));
+    return [...keys].map(key => this.store.get("connectionBarrier", SecretVault.hash(`${uid}:${key}`))).filter(record => record && (!record.expiresAt || record.expiresAt > this.clock()));
+  }
+  connectionBarrierSnapshot(uid, platform) {
+    return Object.fromEntries(this.connectionBarriers(uid, platform).map(record => [record.id, record.version || record.createdAt]));
+  }
+  assertCurrentAuthorization(uid, platform, request) {
+    const barriers = this.connectionBarriers(uid, platform);
+    // Snapshot versions distinguish a new authorization from an old callback
+    // even when disconnect and reconnect happen in the same millisecond.
+    const current = request.authorizationBarrier ? barriers.every(record => request.authorizationBarrier[record.id] === (record.version || record.createdAt)) : barriers.every(record => (request.authorizationStartedAt || request.createdAt || 0) > record.createdAt);
+    invariant(current, "This authorization request predates connection removal. Connect again.", { status: 409 });
+  }
+  assertConnectionAvailable(uid, platform) {
+    if (!HARD_PURGE_PLATFORMS.has(platform)) return;
+    const sameFamily = item => authorizationFamily(item.platform) === authorizationFamily(platform);
+    const erasures = this.store.list("erasure", { ownerUid: uid, limit: null });
+    const awaitingRevocation = this.store.list("account", { ownerUid: uid, status: "deleting", limit: null }).filter(sameFamily).some(account => {
+      if (!account.encryptedCredentials) return false;
+      const jobs = erasures.filter(job => job.type === "owner" || job.accountIds?.includes(account.id));
+      return !jobs.length || jobs.some(job => job.alreadyRevoked !== true);
+    });
+    // OAuth has not identified the selected external account yet. Google and
+    // TikTok can revoke its entire grant, so do not overlap a new grant with an
+    // old remote revocation. Local cleanup after confirmed revocation is safe.
+    invariant(!awaitingRevocation, "Connection removal is still finishing. Try again shortly.", { status: 409, code: "connection_removal_pending" });
+    invariant(!this.store.list("revocation", { ownerUid: uid, status: "pending", limit: null }).some(sameFamily), "Authorization removal is still finishing. Try connecting again shortly.", { status: 409, code: "authorization_removal_pending" });
   }
   setConnectionBarrier(uid, key) {
     const now = this.clock();
-    this.store.put("connectionBarrier", { id: SecretVault.hash(`${uid}:${key}`), createdAt: now, expiresAt: now + CONNECTION_BARRIER_TTL });
+    this.store.put("connectionBarrier", { id: SecretVault.hash(`${uid}:${key}`), version: randomUUID(), createdAt: now, expiresAt: now + CONNECTION_BARRIER_TTL });
   }
   assertActive(uid) { invariant(!this.blocked(uid), "Account deletion has been requested. This workspace is closed.", { status: 410, code: "account_deleting" }); }
   status(uid) {
@@ -192,7 +219,7 @@ export class PrivacyService {
     const lockCredentials = operation => this.accounts ? this.accounts.withCredentialLock(initial, operation, { waitMs: 0 }) : this.locks.withLock(`credentials:${accountId}`, operation, { waitMs: 0 });
     await this.locks.withLock(`publishing:${initial.rateKey}`, () => lockCredentials(async () => {
       const account = this.store.get("account", accountId);
-      if (!account) return;
+      if (!account || account.status !== "deleting" || account.authorizationId !== initial.authorizationId) return;
       this.store.transaction(() => {
         if (!alreadyRevoked && account.encryptedCredentials && ["youtube", "google_business", "tiktok", "twitch", "kick"].includes(account.platform)) {
           // Retain only the encrypted token needed to revoke, for at most seven days.
@@ -287,7 +314,7 @@ export class PrivacyService {
     this.expireRevocationCredentials();
     this.metaPrivacy?.prune();
     this.store.pruneStates(this.clock());
-    for (const kind of ["connection", "blueskyState", "telegramLink", "revocation", "connectionBarrier"]) for (const record of this.store.list(kind, { limit: null })) {
+    for (const kind of ["connection", "blueskyState", "telegramLink", "revocation", "connectionBarrier", "tiktokRemovalEvent"]) for (const record of this.store.list(kind, { limit: null })) {
       if ((kind === "connectionBarrier" ? !record.expiresAt || record.expiresAt <= this.clock() : record.expiresAt <= this.clock()) && (kind !== "revocation" || record.status !== "pending")) this.store.remove(kind, record.id);
     }
     for (const account of this.store.list("account", { limit: null })) {
@@ -349,10 +376,20 @@ export class PrivacyService {
     let event; try { event = JSON.parse(rawBody); } catch { invariant(false, "Invalid webhook body."); }
     invariant(event.client_key === this.env.TIKTOK_CLIENT_KEY, "Unexpected TikTok client.", { status: 400 });
     if (event.event === "authorization.removed") {
-      invariant(event.user_openid && Number.isFinite(event.create_time), "Invalid authorization event.");
-      for (const account of this.store.list("account", { limit: null }).filter(item => item.platform === "tiktok" && item.remoteId === event.user_openid && Math.floor((item.authorizationGrantedAt || item.createdAt) / 1000) <= event.create_time)) {
-        if (!this.blocked(account.ownerUid)) this.requestConnection(account.ownerUid, account.projectId, account.id, { alreadyRevoked: true });
-      }
+      invariant(typeof event.user_openid === "string" && event.user_openid && Number.isSafeInteger(event.create_time), "Invalid authorization event.");
+      let content = event.content;
+      try { if (typeof content === "string") content = JSON.parse(content); } catch { /* Preserve malformed content in the fingerprint. */ }
+      // TikTok supplies no event ID and may retry for 72 hours. Keep only an
+      // opaque fingerprint, independent of the HTTP delivery signature, so an
+      // old same-second event cannot remove a newly authorized account.
+      const id = SecretVault.hash(JSON.stringify([event.client_key, event.event, event.user_openid, event.create_time, content?.reason ?? content ?? null]));
+      this.store.transaction(() => {
+        if (this.store.get("tiktokRemovalEvent", id)?.expiresAt > this.clock()) return;
+        for (const account of this.store.list("account", { limit: null }).filter(item => item.platform === "tiktok" && item.remoteId === event.user_openid && Math.floor((item.authorizationGrantedAt || item.createdAt) / 1000) <= event.create_time)) {
+          if (!this.blocked(account.ownerUid)) this.requestConnection(account.ownerUid, account.projectId, account.id, { alreadyRevoked: true });
+        }
+        this.store.put("tiktokRemovalEvent", { id, createdAt: this.clock(), expiresAt: this.clock() + TIKTOK_EVENT_TTL });
+      });
     }
     return { received: true };
   }

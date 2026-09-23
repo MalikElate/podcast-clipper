@@ -112,7 +112,11 @@ export class BridgeApplication {
       res.type("html").send(`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Data deletion · Meadow</title><main><h1>Meadow data deletion</h1><p>${result.status === "complete" ? "Your connected Meta account data has been deleted from Meadow. If Meadow held no matching data, no deletion was needed." : "Your request has been received. Publication from the affected connections is stopped and deletion is in progress."}</p><p>Confirmation: ${result.confirmationCode}</p><p>This request covers data received through the connected Meta account. To delete your entire Meadow account and uploaded media, use Settings → Privacy &amp; Account.</p><a href="/privacy/">Privacy policy</a></main></html>`);
     }));
     this.app.post("/api/stripe/webhook", express.raw({ type: "application/json", limit: "1mb" }), route(async (req, res) => res.json(await this.billing.webhook(req.body, req.headers["stripe-signature"]))));
-    this.app.post("/api/tiktok/webhook", express.raw({ type: "application/json", limit: "1mb" }), route((req, res) => res.json(this.privacy.tiktokWebhook(req.body, req.headers["tiktok-signature"]))));
+    this.app.post("/api/tiktok/webhook", express.raw({ type: "application/json", limit: "1mb" }), route(async (req, res) => {
+      const result = this.privacy.tiktokWebhook(req.body, req.headers["tiktok-signature"]);
+      await this.store.flush?.();
+      res.json(result);
+    }));
     this.app.post("/api/clerk/webhook", express.raw({ type: "application/json", limit: "1mb" }), route(async (req, res) => {
       invariant(env.CLERK_WEBHOOK_SIGNING_SECRET, "Account webhooks are not configured.", { status: 503 });
       let event; try { event = await verifyWebhook(req, { signingSecret: env.CLERK_WEBHOOK_SIGNING_SECRET }); } catch { invariant(false, "Invalid account webhook signature."); }
