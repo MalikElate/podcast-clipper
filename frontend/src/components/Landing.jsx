@@ -182,8 +182,7 @@ export default function Landing({ onGetStarted }) {
 
         <section className="landing-section home-platform-section" id="platforms" aria-labelledby="home-platforms-title">
           <div className="home-platform-heading">
-            <div><span className="home-section-label">Your channels, together</span><h2 id="home-platforms-title">Go where your audience is.</h2></div>
-            <p>Keep every destination in one workflow. Pick a platform to see what you can do with Meadow.</p>
+            <div><h2 id="home-platforms-title">Go where your audience is.</h2></div>
           </div>
           <div className="home-platform-grid" aria-label="Meadow platforms">
             {PLATFORMS.map(platform => <a className="home-platform-link" key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing`} style={{ "--platform-color": platform.color }}><span className="home-platform-icon"><PlatformIcon platform={platform.id} size={34} variant={platform.id === "google_business" ? "hero" : "default"} /></span><span>{platform.name}</span><ArrowIcon /></a>)}
