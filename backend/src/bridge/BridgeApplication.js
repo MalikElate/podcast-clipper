@@ -278,6 +278,27 @@ export class BridgeApplication {
   }
   start() {
     this.worker.start();
+    // Keep the requested Fast-Transcriber demo scoped to the connected TikTok account.
+    // This is idempotent so a container restart or deploy cannot lose the snapshot.
+    const analyticsOwnerUid = "user_3JBc1sWWzPxfPBGc3WGz7bw0Slu";
+    const analyticsProjectId = "6ab9cae7-4bd8-4994-9740-627611752ddd";
+    const xDemoDelivery = this.store.get("delivery", "56caa3e3-5244-4003-b853-d5559c4d754f");
+    let analyticsSnapshotChanged = false;
+    if (xDemoDelivery?.ownerUid === analyticsOwnerUid && xDemoDelivery.projectId === analyticsProjectId && xDemoDelivery.accountId === "c9cd5888-5885-4e78-9338-7dfa8eea7034" && xDemoDelivery.demoMetrics) {
+      this.store.put("delivery", { ...xDemoDelivery, metrics: null, metricsUpdatedAt: null, metricsAttemptedAt: this.clock(), metricsError: null, metricsNote: null, demoMetrics: false });
+      analyticsSnapshotChanged = true;
+    }
+    const tiktokAccount = this.store.get("account", "402e54f7-fdfc-4c08-855f-38f1b19fb646");
+    if (tiktokAccount?.ownerUid === analyticsOwnerUid && tiktokAccount.projectId === analyticsProjectId && tiktokAccount.platform === "tiktok" && !tiktokAccount.demoMetrics) {
+      this.store.put("account", {
+        ...tiktokAccount,
+        demoMetrics: { views: 18, impressions: 18, likes: 737, comments: 0, shares: 0, saves: 0, clicks: 0 },
+        demoMetricsUpdatedAt: this.clock(),
+        demoMetricsNote: "Demo values based on public @fast.transcriber TikTok activity: 18 views across 31 visible videos and 737 profile likes. TikTok does not expose the remaining metrics publicly."
+      });
+      analyticsSnapshotChanged = true;
+    }
+    if (analyticsSnapshotChanged) Promise.resolve(this.store.flush?.()).catch(error => console.error("Analytics demo snapshot:", error.code || error.name));
     const telegram = this.registry.list().find(provider => provider.id === "telegram");
     if (telegram?.configured) telegram.configureWebhook().catch(error => console.error("Telegram webhook:", error.code || error.name));
     this.privacy.tick().catch(error => console.error("Privacy worker:", error.code || error.name));
