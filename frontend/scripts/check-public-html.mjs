@@ -10,7 +10,10 @@ for (const [path, heading] of [["tiktok-roast/index.html", "TikTok <span>Niche o
   assert.ok(html.includes(heading), `${path} must contain its own content without JavaScript`);
   assert.ok(!html.includes("Loading Meadow"));
   assert.ok(!html.includes("BridgeApp-"), "Public HTML must not preload the authenticated workspace");
+  assert.ok(html.includes('<meta name="twitter:card" content="summary_large_image" />'), `${path} must request a large link preview card`);
+  assert.ok(html.includes('<meta property="og:image" content="https://findmeadow.com/meadow-og-v1.png" />'), `${path} must declare its link preview image`);
 }
+await readFile("dist/meadow-og-v1.png");
 
 const roastHtml = await readFile("dist/tiktok-roast/index.html", "utf8");
 assert.ok(!roastHtml.includes("Meadow is a social media scheduling tool, and I’m not sure what this has to do with our main product."), "tiktok-roast/index.html still contains removed intro copy");
@@ -42,6 +45,7 @@ for (const platform of PLATFORM_USE_CASES) {
   assert.ok(html.includes(`content="${platform.description}"`), `${platform.slug} must have a platform-specific description`);
   assert.ok(html.includes(platform.headline), `${platform.slug} must render its own heading without JavaScript`);
   assert.ok(landingHtml.includes(`href="/${platform.slug}"`), `${platform.slug} must be linked from the homepage`);
+  assert.ok(html.includes(`<meta property="og:url" content="https://findmeadow.com/${platform.slug}/" />`), `${platform.slug} must declare its own link preview URL`);
   if (platform.chatOnly) {
     assert.doesNotMatch(html, /coming[ -]soon/i);
     assert.ok(html.includes("depend on platform configuration"));
@@ -56,6 +60,7 @@ for (const page of GENERAL_PAGES) {
   assert.ok(html.includes("application/ld+json"), `${page.path} must include FAQ structured data`);
   assert.ok(!html.includes("BridgeApp-"), "Public HTML must not preload the authenticated workspace");
   assert.ok(landingHtml.includes(`href="${page.path}"`), `${page.path} must be linked from the homepage`);
+  assert.ok(html.includes(`<meta property="og:url" content="https://findmeadow.com${page.path}/" />`), `${page.path} must declare its own link preview URL`);
   assert.ok(html.includes('href="/telegram-publishing"'), `${page.path} must link to Telegram publishing`);
   assert.ok(html.includes("Can I publish to Telegram channels and groups?"), `${page.path} must explain Telegram setup`);
   for (const id of ["twitch", "kick"]) assert.ok(html.includes(`href="/${id}-publishing"`), `${page.path} must link to ${id}`);
