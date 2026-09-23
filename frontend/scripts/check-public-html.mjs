@@ -29,6 +29,8 @@ for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
   assert.match(html, /<title>Dashboard · Meadow<\/title>/);
 }
 const landingHtml = await readFile("dist/index.html", "utf8");
+assert.ok(landingHtml.includes("Make sure you show up for every audience."), "Homepage platform section must use the requested heading");
+assert.ok(!landingHtml.includes("Go where your audience is."), "Homepage platform section must not use the old heading");
 assert.ok(landingHtml.indexOf('class="home-hero-platforms"') < landingHtml.indexOf('Social publishing, all in one place'), "Homepage platform logos must appear above the headline");
 assert.ok(landingHtml.indexOf('Social publishing, all in one place') < landingHtml.indexOf('class="hero-demo"'), "Homepage demo must appear below the hero copy");
 assert.ok(landingHtml.indexOf('class="footer-brand-row"') < landingHtml.indexOf('class="footer-columns"'), "Footer brand must appear above its link columns");

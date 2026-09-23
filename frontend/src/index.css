@@ -2418,7 +2418,6 @@ input[type="range"]::-moz-range-thumb {
 .home-platform-link { display: flex; min-width: 0; min-height: 83px; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: #fcfdf8; color: #233247; font-size: 15px; font-weight: 650; text-decoration: none; transition: border-color .15s ease,background .15s ease; }
 .home-platform-link:hover, .home-platform-link:focus-visible { border-color: #a5b697; background: #edf2e7; }
 .home-platform-link:focus-visible { outline: 2px solid #8ea3d8; outline-offset: 3px; }
-.home-platform-link > svg { width: 14px; flex: 0 0 14px; margin-left: auto; color: #9299a3; }
 .home-platform-icon { display: grid; width: 36px; height: 36px; flex: 0 0 36px; place-items: center; color: var(--platform-color); }
 .home-platform-icon .social-brand-icon { width: 31px !important; height: 31px !important; }
 .home-platform-link .social-brand-icon[data-platform="x"], .home-platform-link .social-brand-icon[data-platform="threads"] { color: #233247 !important; }
