@@ -247,7 +247,7 @@ export default function Landing({ onGetStarted }) {
         </section>
       </main>
 
-      <SiteFooter onGetStarted={onGetStarted} showDirectoryBadge />
+      <SiteFooter onGetStarted={onGetStarted} />
     </div>
   );
 }
