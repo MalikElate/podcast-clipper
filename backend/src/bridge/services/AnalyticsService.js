@@ -66,7 +66,9 @@ export class AnalyticsService {
     const deliveries = posts.flatMap(post => post.deliveries).filter(delivery => delivery.status === "published");
     const accounts = this.accounts.list(uid, projectId).map(account => {
       const accountPosts = posts.filter(post => post.deliveries.some(delivery => delivery.accountId === account.id)).map(post => ({ id: post.id, title: post.title || post.caption || post.media[0]?.filename || "Untitled post", createdAt: post.createdAt, delivery: post.deliveries.find(delivery => delivery.accountId === account.id), totals: this.aggregate(post.deliveries.filter(delivery => delivery.accountId === account.id && delivery.status === "published").map(delivery => delivery.metrics || {}), { deriveEngagement: account.platform !== "youtube" }) }));
-      return { ...account, posts: accountPosts, totals: this.aggregate(deliveries.filter(delivery => delivery.accountId === account.id && account.platform !== "youtube").map(delivery => delivery.metrics || {})) };
+      const accountDeliveries = deliveries.filter(delivery => delivery.accountId === account.id && account.platform !== "youtube");
+      const accountMetrics = accountDeliveries.length ? accountDeliveries.map(delivery => delivery.metrics || {}) : (account.demoMetrics ? [account.demoMetrics] : []);
+      return { ...account, posts: accountPosts, totals: this.aggregate(accountMetrics), ...(account.demoMetrics ? { demoMetricsNote: account.demoMetricsNote || null } : {}) };
     });
     return { posts, accounts, totals: this.aggregate(deliveries.filter(delivery => delivery.platform !== "youtube").map(delivery => delivery.metrics || {})), publishedCount: deliveries.length, postCount: posts.length,
       engagementDefinition: "Likes + comments + shares + saves, where reported. Views are separate. Combined totals exclude YouTube; YouTube metrics are shown per video. Pinterest metrics are fetched when you refresh and are not saved." };

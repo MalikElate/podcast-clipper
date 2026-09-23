@@ -27,8 +27,8 @@ function ComparisonChart({ rows, metric }) {
 
 export function AccountAnalyticsCard({ account, catalog = [], timeZone, selected, onCompare, compareDisabled, onOpen }) {
   const deliveries = account.posts.map(post => post.delivery).filter(delivery => delivery && published(delivery));
-  const updatedAt = Math.max(0, ...deliveries.map(delivery => delivery.metricsUpdatedAt || 0));
-  const notes = [...new Set(deliveries.map(delivery => delivery.metricsNote).filter(Boolean))];
+  const updatedAt = Math.max(account.demoMetricsUpdatedAt || 0, ...deliveries.map(delivery => delivery.metricsUpdatedAt || 0));
+  const notes = [...new Set([account.demoMetricsNote, ...deliveries.map(delivery => delivery.metricsNote)].filter(Boolean))];
   const errors = [...new Set(deliveries.map(delivery => delivery.metricsError).filter(Boolean))];
   const perVideo = account.platform === "youtube";
   const hasMetrics = metrics.some(metric => Number.isFinite(account.totals.values?.[metric]));
@@ -36,10 +36,10 @@ export function AccountAnalyticsCard({ account, catalog = [], timeZone, selected
     <div className="bridge-account-analytics-heading"><AccountIdentity account={account} catalog={catalog}/><label className="bridge-account-compare"><input type="checkbox" aria-label={`Compare ${accountLabel(account, catalog)}`} checked={selected} disabled={compareDisabled || perVideo} onChange={event => onCompare(event.target.checked)}/><span>Compare</span></label></div>
     <div className="bridge-account-analytics-status"><span>{deliveries.length} published {deliveries.length === 1 ? "post" : "posts"}</span>{account.status !== "connected" && <Badge status={account.status}/>}</div>
     {perVideo ? <div className="bridge-account-metric-notice"><Icon name="analytics" size={24}/><strong>Metrics available per video</strong><p>Open this account’s published videos to see their individual views and interactions.</p></div> : <dl className="bridge-account-metrics">{metrics.map(metric => <div key={metric}><dt>{labels[metric]}</dt><dd><MetricValue totals={account.totals} metric={metric}/></dd></div>)}</dl>}
-    {!deliveries.length ? <p className="bridge-account-metric-note">No posts published through Meadow yet.</p> : !perVideo && !hasMetrics && <p className="bridge-account-metric-note">Metrics are not available yet. Refresh to check what this platform reports.</p>}
+    {!deliveries.length && !account.demoMetrics ? <p className="bridge-account-metric-note">No posts published through Meadow yet.</p> : !deliveries.length && account.demoMetrics ? null : !perVideo && !hasMetrics && <p className="bridge-account-metric-note">Metrics are not available yet. Refresh to check what this platform reports.</p>}
     {notes.map(note => <p className="bridge-account-metric-note" key={note}>{note}</p>)}
     {errors.length > 0 && <details className="bridge-account-metric-errors"><summary>Some post metrics could not be refreshed</summary>{errors.map(error => <p className="bridge-validation-error" key={error}>{error}</p>)}</details>}
-    <div className="bridge-account-analytics-footer"><small>{updatedAt ? `Latest post update: ${dateTime(updatedAt, timeZone)}` : "No metrics received yet"}</small><button className="bridge-text-button" type="button" onClick={onOpen} disabled={!deliveries.length}>{perVideo ? "View video analytics" : "View posts"}<Icon name="arrow" size={16}/></button></div>
+    <div className="bridge-account-analytics-footer"><small>{updatedAt ? `${account.demoMetrics ? "Latest profile snapshot" : "Latest post update"}: ${dateTime(updatedAt, timeZone)}` : "No metrics received yet"}</small><button className="bridge-text-button" type="button" onClick={onOpen} disabled={!deliveries.length}>{perVideo ? "View video analytics" : "View posts"}<Icon name="arrow" size={16}/></button></div>
   </article>;
 }
 
