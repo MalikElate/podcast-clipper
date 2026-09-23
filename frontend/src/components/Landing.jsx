@@ -143,9 +143,6 @@ function ScenarioVisual({ goal }) {
 function GoalScenarios({ onGetStarted }) {
   return (
     <section className="landing-section goals-section scheduling-use-case" id="workflows" aria-labelledby="goals-title">
-      <div className="scheduling-use-case-visual">
-        <SchedulingDemo />
-      </div>
       <div className="scheduling-use-case-copy">
         <h2 id="goals-title">Plan, repurpose, publish everywhere. <span className="goal-once-highlight">Once!</span></h2>
         <p>Turn one idea into channel-ready posts, tailor each version for its destination, and schedule every connected platform from one Meadow campaign.</p>
@@ -153,6 +150,9 @@ function GoalScenarios({ onGetStarted }) {
           <button type="button" className="scheduling-use-case-primary" onClick={onGetStarted}>Start scheduling <ArrowIcon /></button>
           <a className="scheduling-use-case-secondary" href="#ways-to-use">See how it works</a>
         </div>
+      </div>
+      <div className="scheduling-use-case-visual">
+        <SchedulingDemo />
       </div>
     </section>
   );
