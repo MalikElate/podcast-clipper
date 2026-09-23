@@ -8,7 +8,7 @@ import { GENERAL_PAGES } from "../src/marketing/generalPages.js";
 const server = await createServer({ server: { middlewareMode: true }, appType: "custom" });
 const pages = [
   { path: "tiktok-roast", kind: "tiktok-roast", title: "TikTok Niche or Not — Free Caption Review · Meadow", description: "Review public TikTok captions, get practical fixes, then use Meadow to schedule and cross-post what you create next." },
-  { path: "", kind: null, title: "Meadow — Social publishing, your way", description: "Create directly in Meadow, publish through an AI agent, or connect an automated workflow across your social channels." },
+  { path: "", kind: null, title: "Meadow — Plan once, publish everywhere", description: "Connect your channels, create once, and schedule the right version of every post from one Meadow workspace." },
   { path: "404", kind: "not-found", title: "Page not found · Meadow", description: "The page could not be found. Head back to Meadow to keep your publishing work in one place." },
   { path: "pricing", kind: "pricing", title: "Pricing · Meadow", description: "Compare Meadow plans for creating, scheduling, and publishing across your social channels." },
   { path: "terms", kind: "terms", title: "Terms of Service · Meadow", description: "Read the terms for using Meadow's social publishing and scheduling service." },

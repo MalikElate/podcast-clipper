@@ -132,9 +132,7 @@ function OpeningMeadow() {
 
 export function PublicLanding({ onGetStarted }) {
   return (
-    <div className="app">
-      <div className="app-glow app-glow-a" />
-      <div className="app-glow app-glow-b" />
+    <div className="app marketing-home-app">
       <div className="centered-shell landing-shell">
         <Landing onGetStarted={onGetStarted} />
       </div>

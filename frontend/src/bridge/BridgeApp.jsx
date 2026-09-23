@@ -4,7 +4,7 @@ import Auth from "../components/Auth.jsx";
 import { MEADOW_LOGO_URL } from "../components/BrandLogo.jsx";
 import { api, localPreview } from "./BridgeApi.js";
 import { Icon, BridgeMark } from "./Icons.jsx";
-import { Alert, useProjectResource } from "./ui.jsx";
+import { Alert, Modal, useProjectResource } from "./ui.jsx";
 import Composer from "./Composer.jsx";
 import Accounts from "./Accounts.jsx";
 import ClippingStudioComingSoon from "./ClippingStudioComingSoon.jsx";
@@ -16,6 +16,7 @@ import ApiKeys from "./ApiKeys.jsx";
 import Billing from "./Billing.jsx";
 import { DeletionReceipt, readDeletionReceipt } from "./PrivacyAccount.jsx";
 import { dashboardPath, dashboardView, dashboardSearch } from "./dashboardRoutes.js";
+import { firstConnectionWelcomeKey, shouldShowFirstConnectionWelcome } from "./firstConnectionWelcome.js";
 import "./bridge.css";
 
 export const modules = [
@@ -170,7 +171,7 @@ function Workspace({ user, signOut }) {
     </aside>
     <main className="bridge-main"><header className="bridge-topbar"><button className="bridge-icon-button bridge-menu-toggle" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Icon name="menu"/></button></header>
       <div className="bridge-content"><Alert message={error}/><Alert message={notice} success/><div className="bridge-page-heading"><h1>{activeModule?.title || activeModule?.name}</h1></div>
-        {!config ? <div className="bridge-panel bridge-empty"><p>{error ? "Meadow could not load. Check your connection and refresh this page." : ""}</p></div> : isConfigurationView ? <ConfigurationWorkspace billingSearch={billingSearch} user={user} project={project} config={config} view={view} onSignOut={handleSignOut} signingOut={signingOut} onProjectUpdated={updated => setProjects(current => current.map(item => item.id === updated.id ? updated : item))}/> : !project ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Meadow is getting ready</h2><p>Your publishing account is not available yet.</p></div> : <ProjectWorkspace key={project.id} project={project} config={config} view={view} navigate={navigate} compose={compose} draftId={draftId} onComposeDirty={setComposerDirty} onComposeBusy={setComposerBusy} scheduledDate={scheduledDate} clearScheduledDate={() => setScheduledDate("")} draftVersion={draftVersion} connectionId={connectionId} clearConnection={() => setConnectionId("")} notify={setNotice}/>}
+        {!config ? <div className="bridge-panel bridge-empty"><p>{error ? "Meadow could not load. Check your connection and refresh this page." : ""}</p></div> : isConfigurationView ? <ConfigurationWorkspace billingSearch={billingSearch} user={user} project={project} config={config} view={view} onSignOut={handleSignOut} signingOut={signingOut} onProjectUpdated={updated => setProjects(current => current.map(item => item.id === updated.id ? updated : item))}/> : !project ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Meadow is getting ready</h2><p>Your publishing account is not available yet.</p></div> : <ProjectWorkspace key={project.id} userId={user?.id} project={project} config={config} view={view} navigate={navigate} compose={compose} draftId={draftId} onComposeDirty={setComposerDirty} onComposeBusy={setComposerBusy} scheduledDate={scheduledDate} clearScheduledDate={() => setScheduledDate("")} draftVersion={draftVersion} connectionId={connectionId} clearConnection={() => setConnectionId("")} notify={setNotice}/>}
       </div>
     </main>
   </div>;
@@ -182,10 +183,23 @@ function ConfigurationWorkspace({ billingSearch, user, project, config, view, on
     {view === "billing" && <Billing key={billingSearch} returnSearch={billingSearch} localPreview={config.localPreview}/>}
   </>;
 }
-function ProjectWorkspace({ project, config, view, navigate, compose, draftId, onComposeDirty, onComposeBusy, scheduledDate, clearScheduledDate, draftVersion, connectionId, clearConnection, notify }) {
+function ProjectWorkspace({ userId, project, config, view, navigate, compose, draftId, onComposeDirty, onComposeBusy, scheduledDate, clearScheduledDate, draftVersion, connectionId, clearConnection, notify }) {
   const accountResource = useProjectResource(project.id, "/accounts", { accounts: null }, { interval: 30000, revision: view, refreshOnFocus: true });
   const [removingAccounts, setRemovingAccounts] = useState([]);
   const accountsReady = Array.isArray(accountResource.data.accounts);
+  const welcomeKey = firstConnectionWelcomeKey(userId);
+  const [welcomeDismissed, setWelcomeDismissed] = useState(() => {
+    try { return window.localStorage.getItem(welcomeKey) === "seen"; }
+    catch { return false; }
+  });
+  const showWelcome = shouldShowFirstConnectionWelcome({ userId, preview: localPreview, dismissed: welcomeDismissed, accounts: accountResource.data.accounts, error: accountResource.error, connectionId });
+  function dismissWelcome() {
+    try { window.localStorage.setItem(welcomeKey, "seen"); } catch { /* Keep the dismissal in memory if storage is unavailable. */ }
+    setWelcomeDismissed(true);
+  }
+  function connectFirstAccount() {
+    if (navigate("accounts")) dismissWelcome();
+  }
   useEffect(() => {
     if (!accountsReady) return;
     setRemovingAccounts(current => current.filter(id => accountResource.data.accounts.some(account => account.id === id && !["disconnected", "deleting"].includes(account.status))));
@@ -228,5 +242,9 @@ function ProjectWorkspace({ project, config, view, navigate, compose, draftId, o
     {view === "calendar" && <PostsCalendar {...common} onCreate={compose}/>}
     {["posts", "scheduled", "posted", "drafts", "failed"].includes(view) && <PostsQueue {...common} section={view} onCreate={() => compose()} onEditDraft={post => compose("", post.id)} onUpload={upload}/>}
     {view === "analytics" && <Analytics {...common}/>}
+    {showWelcome && <Modal title="Welcome to Meadow ✨" className="bridge-welcome-modal" onClose={dismissWelcome}>
+      <p>Let&apos;s get your publishing workspace ready. Connect your first social account, then you can create, schedule, and publish from one place.</p>
+      <div className="bridge-welcome-actions"><button type="button" className="bridge-button" onClick={connectFirstAccount}>Connect your first account <Icon name="arrow" size={17}/></button><button type="button" className="bridge-welcome-later" onClick={dismissWelcome}>Maybe later</button></div>
+    </Modal>}
   </>;
 }

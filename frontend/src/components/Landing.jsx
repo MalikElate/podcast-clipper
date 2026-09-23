@@ -14,26 +14,6 @@ const PLATFORMS = [
   ...sortPlatforms(PLATFORM_USE_CASES.filter(platform => !platform.chatOnly)),
   ...sortPlatforms(PLATFORM_USE_CASES.filter(platform => platform.chatOnly)),
 ];
-const SHOWCASE_SWAPS = { twitch: "youtube", youtube: "twitch", facebook: "kick", kick: "facebook" };
-const SHOWCASE_PLATFORMS = PLATFORMS.map(platform =>
-  PLATFORMS.find(item => item.id === (SHOWCASE_SWAPS[platform.id] || platform.id))
-);
-
-const PLATFORM_ORBIT_MOTION = [
-  [22, 16, "-5deg"],
-  [-16, 22, "3deg"],
-  [20, -18, "5deg"],
-  [-24, 14, "-2deg"],
-  [18, -22, "4deg"],
-  [-18, 20, "3deg"],
-  [24, -16, "-4deg"],
-  [-22, -18, "5deg"],
-  [16, 24, "-6deg"],
-  [-20, 18, "6deg"],
-  [18, -20, "-3deg"],
-  [-16, 18, "4deg"],
-  [20, -16, "-4deg"],
-];
 
 const GOALS = [
   {
@@ -112,19 +92,6 @@ function PlatformMark({ platform, className = "", variant = "default" }) {
   );
 }
 
-function HeroPlatformRail() {
-  return (
-    <div className="hero-platform-rail" aria-label="Social publishing destinations">
-      {PLATFORMS.map((platform) => (
-        <span className="hero-platform-item" key={platform.id} title={platform.name} style={{ "--platform-color": platform.color }}>
-          <PlatformIcon platform={platform.id} size={24} variant="hero" />
-          <span className="sr-only">{platform.name}</span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
 function N8nAutomationBoard() {
   return (
     <div className="usage-n8n-board" role="img" aria-label="An n8n automation workflow that prepares content, sends it through the Meadow API, validates the schedule, and publishes to connected channels">
@@ -148,24 +115,6 @@ function N8nAutomationBoard() {
       <div className="n8n-run-status"><span /> Last run completed <strong>5/5</strong></div>
     </div>
   );
-}
-
-function movePlatformOrbit(event) {
-  const bounds = event.currentTarget.getBoundingClientRect();
-  const x = Math.max(-1, Math.min(1, ((event.clientX - bounds.left) / bounds.width) * 2 - 1));
-  const y = Math.max(-1, Math.min(1, ((event.clientY - bounds.top) / bounds.height) * 2 - 1));
-  const scale = bounds.width <= 620 ? 0.45 : 1;
-  event.currentTarget.querySelectorAll(".orbit-platform-logo").forEach((logo) => {
-    logo.style.setProperty("--shift-x", `${x * Number(logo.dataset.motionX) * scale}px`);
-    logo.style.setProperty("--shift-y", `${y * Number(logo.dataset.motionY) * scale}px`);
-  });
-}
-
-function resetPlatformOrbit(event) {
-  event.currentTarget.querySelectorAll(".orbit-platform-logo").forEach((logo) => {
-    logo.style.setProperty("--shift-x", "0px");
-    logo.style.setProperty("--shift-y", "0px");
-  });
 }
 
 function ScenarioVisual({ goal }) {
@@ -216,31 +165,25 @@ export default function Landing({ onGetStarted }) {
       <SiteHeader homeHref="#top" onSignIn={onGetStarted} onStartPosting={onGetStarted} />
 
       <main>
-        <section className="landing-section platform-section platform-showcase-section" id="platforms">
-          <div className="platform-showcase" onPointerDown={movePlatformOrbit} onPointerMove={movePlatformOrbit} onPointerLeave={resetPlatformOrbit} onPointerCancel={resetPlatformOrbit} onPointerUp={resetPlatformOrbit}>
-            <div className="platform-showcase-center">
-              <h2><span>Plan once. Publish across</span>{" "}<span>the platforms that matter.</span></h2>
-              <p>Bring every destination into one consistent Meadow workflow.</p>
-              <a className="platform-showcase-button" href={appHref("/dashboard")}>Try for free <ArrowIcon /></a>
-            </div>
-            <div className="platform-orbit" aria-label="Social publishing platforms">
-              {SHOWCASE_PLATFORMS.map((platform, index) => (
-                <a className={`orbit-platform-logo orbit-card-${index + 1}`} data-platform={platform.id} data-motion-x={PLATFORM_ORBIT_MOTION[index][0]} data-motion-y={PLATFORM_ORBIT_MOTION[index][1]} key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing`} title={platform.name} style={{ "--platform-color": platform.color, "--logo-tilt": PLATFORM_ORBIT_MOTION[index][2] }}>
-                  <span className="orbit-platform-logo-inner"><PlatformIcon platform={platform.id} size={96} variant={platform.id === "google_business" ? "hero" : "default"} /></span>
-                </a>
-              ))}
-            </div>
-          </div>
-        </section>
-
         <section className="landing-hero landing-hero-v2">
           <div className="hero-copy">
-            <h1 className="landing-title"><span data-rise style={{ "--d": "70ms" }}>Publish your way.</span><span data-rise style={{ "--d": "150ms" }}>Reach every channel.</span></h1>
-            <p className="landing-subtitle" data-rise style={{ "--d": "250ms" }}>Create directly in Meadow, work through an AI agent, or connect your own automation. Every path leads to one clear publishing workspace.</p>
-            <div className="hero-actions hero-actions-v2" data-rise style={{ "--d": "340ms" }}><button className="btn-primary landing-cta" onClick={onGetStarted}>Get started <ArrowIcon /></button><a className="hero-text-link" href="#ways-to-use">See ways to use Meadow</a></div>
-            <HeroPlatformRail />
+            <span className="home-hero-kicker">Social publishing, all in one place</span>
+            <h1 className="landing-title">One place to plan. Every place to publish.</h1>
+            <p className="landing-subtitle">Connect your channels, create once, and schedule the right version of every post—without juggling tabs or losing track of what went live.</p>
+            <div className="hero-actions hero-actions-v2"><button className="btn-primary landing-cta" onClick={onGetStarted}>Try for free <ArrowIcon /></button><a className="hero-text-link" href="#workflows">See how it works</a></div>
+            <p className="home-hero-note">Start with 5 connections on the free plan.</p>
           </div>
           <HeroDemo />
+        </section>
+
+        <section className="landing-section home-platform-section" id="platforms" aria-labelledby="home-platforms-title">
+          <div className="home-platform-heading">
+            <div><span className="home-section-label">Your channels, together</span><h2 id="home-platforms-title">Go where your audience is.</h2></div>
+            <p>Keep every destination in one workflow. Pick a platform to see what you can do with Meadow.</p>
+          </div>
+          <div className="home-platform-grid" aria-label="Meadow platforms">
+            {PLATFORMS.map(platform => <a className="home-platform-link" key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing`} style={{ "--platform-color": platform.color }}><span className="home-platform-icon"><PlatformIcon platform={platform.id} size={34} variant={platform.id === "google_business" ? "hero" : "default"} /></span><span>{platform.name}</span><ArrowIcon /></a>)}
+          </div>
         </section>
 
         <GoalScenarios onGetStarted={onGetStarted} />

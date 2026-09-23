@@ -26,5 +26,5 @@ export function render(kind, platformId) {
 
   return renderToString(kind
     ? kind === "pricing" ? <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><Pricing /></div></div> : kind === "not-found" ? <NotFound /> : <LegalPage kind={kind} />
-    : <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><Landing /></div></div>);
+    : <div className="app marketing-home-app"><div className="centered-shell landing-shell"><Landing /></div></div>);
 }
