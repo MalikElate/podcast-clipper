@@ -1,5 +1,6 @@
 import { ProviderError } from "../core/errors.js";
 import { assertXResponse } from "./xErrors.js";
+import { assertTikTokResponse } from "./tiktokErrors.js";
 
 const authorizationError = (message, authFailure, details = null) => Object.assign(new ProviderError(message, { reconnect: true, code: "reconnect_required", details }), { authFailure });
 const invalidAccessTokenCodes = new Set(["invalid_token", "access_token_invalid", "access_token_expired", "token_expired"]);
@@ -43,6 +44,7 @@ export class HttpTransport {
     const oauthCode = typeof data?.error === "string" ? data.error : data?.error?.code;
     const graphHost = ["graph.facebook.com", "graph.instagram.com", "graph.threads.net"].includes(parsed.hostname);
     const invalidAccessToken = invalidAccessTokenCodes.has(oauthCode) || graphHost && Number(data?.error?.code) === 190;
+    if (parsed.hostname === "open.tiktokapis.com" && !tokenEndpoint) assertTikTokResponse(data, { status: response.status, ok: response.ok });
     if (!response.ok || tokenEndpoint && oauthCode && oauthCode !== "ok") {
       if (parsed.hostname === "api.x.com" && response.status === 402) throw new ProviderError("X requires API credits before it will return analytics.", { code: "x_credits_required" });
       if (parsed.hostname === "api.x.com" && !tokenEndpoint && response.status !== 401) assertXResponse(data);

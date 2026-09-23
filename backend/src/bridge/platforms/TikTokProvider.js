@@ -13,6 +13,9 @@ function permissions(credentials = {}) {
 }
 
 function inboxError(error) {
+  // The HTTP adapter already provides safe, specific TikTok diagnostics.
+  // Keep its reference so the saved delivery explains why TikTok rejected it.
+  if (error.details?.provider === "tiktok") return error;
   const code = error.details?.providerCode;
   if (code === "scope_not_authorized") return new ProviderError(uploadPermissionMessage, { reconnect: true, code: "reconnect_required" });
   if (code === "spam_risk_too_many_pending_share") return new ProviderError("TikTok allows at most five pending uploads within 24 hours. Finish existing uploads from your TikTok inbox before sending more.", { retryable: true, code: "rate_limited", details: { providerCode: code } });

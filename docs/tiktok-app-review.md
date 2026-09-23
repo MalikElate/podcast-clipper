@@ -18,6 +18,7 @@ This revision adds inbox delivery. Existing users reconnect to authorize video.u
 - For a first review, record using the TikTok Sandbox configuration and a permitted test account. Deploy the implemented flow to the environment being demonstrated before recording.
 - Meadow's public website is `https://findmeadow.com/`; its authenticated workspace is `https://app.findmeadow.com/dashboard`. Explain this domain transition in the review notes. Check the registered website, Login Kit redirect URI and the verified media-serving domain or URL prefix against the actual deployment. A registered website address alone does not verify media URLs or OAuth callbacks.
 - Reconnect accounts authorized before inbox upload was added and approve `video.upload`. An existing token does not gain the new permission automatically.
+- For unaudited Direct Post testing, the TikTok test account itself must be private and the post visibility must be **Only me** (`SELF_ONLY`). Choosing **Everyone**, or choosing **Only me** on a public account, does not satisfy this restriction. The creator-info response can still list other visibility options; it is not proof that the app has passed its audit.
 - Prepare your own short video and a small photo carousel. Keep an existing public video on the authorized account for the analytics demonstration; private Sandbox posts and unfinished inbox uploads cannot demonstrate public-video metrics.
 
 ## Demo checklist
@@ -31,10 +32,15 @@ This revision adds inbox delivery. Existing users reconnect to authorize video.u
 
 All selected products and scopes must be covered across the submitted recordings; a separate recording for every scope is unnecessary. The phone handoff should be visible, not just narrated. `awaiting_publish` confirms transfer, not final publication: Meadow does not mark the inbox item published when the user later completes it in TikTok. No publishing metrics or public post link are inferred from an inbox handoff.
 
+## When a TikTok request is rejected
+
+Check TikTok's specific error code before reconnecting or retrying. `unaudited_client_can_only_post_to_private_accounts` means the private-account/Only-me audit restriction above. `url_ownership_unverified` means the media-serving domain or URL prefix needs verification under the app configuration being used. `privacy_level_option_mismatch` means the audience must be selected again from refreshed creator options. `scope_not_authorized` means the required scope was not granted; check the app's enabled scopes and reconnect. An HTTP 403 alone does not distinguish these conditions.
+
 ## References
 
 - [App Review Guidelines](https://developers.tiktok.com/docs/en/app-review-guidelines)
 - [Upload video reference](https://developers.tiktok.com/docs/en/content-posting-api-reference-upload-video)
 - [Photo Direct Post and Upload reference](https://developers.tiktok.com/docs/en/content-posting-api-reference-photo-post)
 - [Direct Post guide](https://developers.tiktok.com/docs/en/content-posting-api-get-started)
+- [Content sharing guidelines and unaudited-client restrictions](https://developers.tiktok.com/docs/en/content-sharing-guidelines)
 - [Display API overview](https://developers.tiktok.com/docs/en/display-api-overview)
