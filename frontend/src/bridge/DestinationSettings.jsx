@@ -7,6 +7,9 @@ export function DestinationSettings({ account, settings = {}, onChange, hasVideo
   const creator = account.options?.creator;
   const inbox = settings.deliveryMode === "inbox";
   const permissions = account.options?.tiktokPermissions;
+  const privateOnly = account.options?.tiktokDirectPostPrivateOnly === true;
+  const privacyOptions = (creator?.privacyOptions || []).filter(value => !privateOnly || value === "SELF_ONLY");
+  const restrictedAudience = privateOnly && settings.privacy && settings.privacy !== "SELF_ONLY";
   return <div className="bridge-destination-settings">
     {["twitch", "kick"].includes(account.platform) && <>
       <p className="bridge-small">Posts go to your channel’s chat as your account. Each message allows 500 characters. Links are welcome; media uploads are unavailable.</p>
@@ -38,7 +41,8 @@ export function DestinationSettings({ account, settings = {}, onChange, hasVideo
       </> : <>
       {permissions?.canPublish === false && <p className="bridge-notice" role="status">Reconnect this TikTok account from Connections and allow direct publishing.</p>}
       {creator && <div className="bridge-creator-info">{creator.avatar && <img src={creator.avatar} alt=""/>}<span>Posting to <strong>{creator.nickname}</strong><small>@{creator.username} · Videos up to {creator.maxVideoSeconds}s</small></span></div>}
-      <Field label="Who can see this post?" hint="TikTok requires an audience choice for each post."><select value={settings.privacy || ""} onChange={event => update("privacy", event.target.value)}><option value="">Choose an audience</option>{(creator?.privacyOptions || []).map(value => <option key={value} value={value} disabled={settings.brandedContent && value === "SELF_ONLY"}>{privacyNames[value] || value}</option>)}</select></Field>
+      {privateOnly && <p className="bridge-notice" role="status">TikTok direct posts are limited to Only me during testing. Choose Only me for each post.{restrictedAudience && " The previous audience is no longer available."}</p>}
+      <Field label="Who can see this post?" hint="TikTok requires an audience choice for each post."><select value={restrictedAudience ? "" : settings.privacy || ""} onChange={event => update("privacy", event.target.value)}><option value="">Choose an audience</option>{privacyOptions.map(value => <option key={value} value={value} disabled={settings.brandedContent && value === "SELF_ONLY"}>{privacyNames[value] || value}</option>)}</select></Field>
       <div className="bridge-check-grid"><Check checked={settings.allowComments === true} disabled={creator?.commentsDisabled || !creator} onChange={event => update("allowComments", event.target.checked)}>Allow comments</Check>{hasVideo && <><Check checked={settings.allowDuet === true} disabled={creator?.duetDisabled || !creator} onChange={event => update("allowDuet", event.target.checked)}>Allow Duet</Check><Check checked={settings.allowStitch === true} disabled={creator?.stitchDisabled || !creator} onChange={event => update("allowStitch", event.target.checked)}>Allow Stitch</Check></>}</div>
       {hasImages && <Check checked={settings.autoMusic === true} onChange={event => update("autoMusic", event.target.checked)}>Let TikTok add recommended music</Check>}
       <Check checked={settings.ownBrand === true} onChange={event => update("ownBrand", event.target.checked)}>Promotes my own brand</Check>

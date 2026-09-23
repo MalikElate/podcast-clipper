@@ -31,8 +31,16 @@ const pages = [
   })),
 ];
 
+const SITE_ORIGIN = "https://findmeadow.com";
+
 function escapeAttribute(value) {
   return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
+}
+
+// Assets serve /pricing/index.html at /pricing/, so shared links resolve without a redirect.
+function canonicalUrl(path) {
+  if (!path) return `${SITE_ORIGIN}/`;
+  return path === "404" ? `${SITE_ORIGIN}/404` : `${SITE_ORIGIN}/${path}/`;
 }
 
 try {
@@ -42,7 +50,10 @@ try {
     const description = escapeAttribute(page.description);
     const html = template.replace('<div id="root"></div>', () => `<div id="root">${render(page.kind, page.platformId)}</div>`)
       .replace(/<title>.*?<\/title>/, () => `<title>${page.title}</title>`)
-      .replace(/<meta name="description" content="[^"]*"\s*\/>/, () => `<meta name="description" content="${description}" />`);
+      .replace(/<meta name="description" content="[^"]*"\s*\/>/, () => `<meta name="description" content="${description}" />`)
+      .replace(/<meta property="og:title" content="[^"]*"\s*\/>/, () => `<meta property="og:title" content="${escapeAttribute(page.title)}" />`)
+      .replace(/<meta property="og:description" content="[^"]*"\s*\/>/, () => `<meta property="og:description" content="${description}" />`)
+      .replace(/<meta property="og:url" content="[^"]*"\s*\/>/, () => `<meta property="og:url" content="${canonicalUrl(page.path)}" />`);
     const directory = page.path && page.path !== "404" ? `dist/${page.path}` : "dist";
     await mkdir(directory, { recursive: true });
     await writeFile(page.path === "404" ? "dist/404.html" : `${directory}/index.html`, html);

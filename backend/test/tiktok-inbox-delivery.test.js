@@ -16,7 +16,7 @@ function setup(t) {
   const env = { BRIDGE_DATA_DIR: dir, BRIDGE_ENCRYPTION_KEY: randomBytes(32).toString("base64"), BRIDGE_MEDIA_SIGNING_KEY: "test", BRIDGE_PUBLIC_URL: "https://meadow.example", BRIDGE_APP_URL: "https://meadow.example", TIKTOK_CLIENT_KEY: "test", TIKTOK_CLIENT_SECRET: "test" };
   const provider = new TikTokProvider({ env, clock: () => now, transport: { request: async (url, options) => {
     calls.push({ url, options });
-    if (url.includes("creator_info/query")) return { data: { creator_nickname: "Demo", creator_username: "demo", privacy_level_options: ["SELF_ONLY"], max_video_post_duration_sec: 600 } };
+    if (url.includes("creator_info/query")) return { data: { creator_nickname: "Demo", creator_username: "demo", privacy_level_options: ["PUBLIC_TO_EVERYONE", "SELF_ONLY"], max_video_post_duration_sec: 600 } };
     if (url.includes("/init/")) {
       const id = `transfer-${++nextId}`;
       modes.set(id, url.includes("/inbox/") || options.json.post_mode === "MEDIA_UPLOAD" ? "inbox" : "direct");
@@ -39,7 +39,7 @@ function setup(t) {
   const submit = input => app.posts.submit("alice", project.id, { requestId: randomBytes(16).toString("hex"), items: [input || item()] });
   const finish = async () => { await app.worker.tick(); now += 31000; await app.worker.tick(); };
   t.after(() => { app.close(); fs.rmSync(dir, { recursive: true, force: true }); });
-  return { app, project, calls, account, item, submit, finish, advance: ms => { now += ms; }, now: () => now };
+  return { app, env, project, calls, account, item, submit, finish, advance: ms => { now += ms; }, now: () => now };
 }
 
 test("TikTok inbox handoff is durable, terminal, and never counted as a published post", async t => {
@@ -76,6 +76,32 @@ test("accepted TikTok uploads can finish polling after cached permissions change
   h.app.store.put("account", { ...account, options: { ...account.options, tiktokPermissions: { canPublish: true, canUpload: false } } });
   h.advance(31000); await h.app.worker.tick();
   assert.equal(h.app.posts.get("alice", h.project.id, post.id).status, "awaiting_publish");
+  assert.equal(h.calls.filter(call => call.url.includes("/init/")).length, 1);
+});
+
+test("enabling private-only blocks an old queued public post before TikTok receives it", async t => {
+  const h = setup(t);
+  const { posts: [post] } = await h.submit(h.item({ overrides: { tiktok: { settings: { privacy: "PUBLIC_TO_EVERYONE", consent: true } } } }));
+  h.env.TIKTOK_DIRECT_POST_PRIVATE_ONLY = "true";
+  await h.app.worker.tick();
+  const result = h.app.posts.get("alice", h.project.id, post.id);
+  assert.equal(result.deliveries[0].status, "failed");
+  assert.match(result.deliveries[0].error, /limited to Only me/);
+  assert.ok(!h.calls.some(call => call.url.includes("/init/")));
+});
+
+test("enabling private-only still reconciles a direct post TikTok already accepted", async t => {
+  const h = setup(t);
+  const { posts: [post] } = await h.submit(h.item({ overrides: { tiktok: { settings: { privacy: "PUBLIC_TO_EVERYONE", consent: true } } } }));
+  await h.app.worker.tick();
+  assert.equal(h.app.posts.get("alice", h.project.id, post.id).status, "publishing");
+  h.env.TIKTOK_DIRECT_POST_PRIVATE_ONLY = "true";
+  const account = h.app.store.get("account", "tiktok");
+  h.app.store.put("account", { ...account, options: { ...account.options, creator: { ...account.options.creator, privacyOptions: ["SELF_ONLY"] } } });
+  h.advance(31000); await h.app.worker.tick();
+  const result = h.app.posts.get("alice", h.project.id, post.id);
+  assert.equal(result.status, "published");
+  assert.equal(result.deliveries[0].contentSnapshot.settings.privacy, "PUBLIC_TO_EVERYONE");
   assert.equal(h.calls.filter(call => call.url.includes("/init/")).length, 1);
 });
 

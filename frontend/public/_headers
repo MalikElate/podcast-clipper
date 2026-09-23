@@ -24,3 +24,6 @@
 
 /marketing/meadow-publishing-demo-v*
   Cache-Control: public, max-age=31536000, immutable
+
+/meadow-og-v*.png
+  Cache-Control: public, max-age=31536000, immutable
