@@ -4,7 +4,7 @@ import { DASHBOARD_PATHS } from "../src/bridge/dashboardRoutes.js";
 import { PLATFORM_USE_CASES } from "../src/platformUseCases.js";
 import { GENERAL_PAGES } from "../src/marketing/generalPages.js";
 
-for (const [path, heading] of [["tiktok-roast/index.html", "TikTok <span>Niche or Not"], ["index.html", "Social publishing, all in one place"], ["404.html", ">404<"], ["pricing/index.html", "Choose the space your publishing needs"], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
+for (const [path, heading] of [["tiktok-roast/index.html", "TikTok <span>Niche or Not"], ["index.html", "Post to every platform from one dashboard"], ["404.html", ">404<"], ["pricing/index.html", "Choose the space your publishing needs"], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
   const html = await readFile(`dist/${path}`, "utf8");
   assert.match(html, /<h1/);
   assert.ok(html.includes(heading), `${path} must contain its own content without JavaScript`);
@@ -31,8 +31,8 @@ for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
 const landingHtml = await readFile("dist/index.html", "utf8");
 assert.ok(landingHtml.includes("Make sure you show up for every audience."), "Homepage platform section must use the requested heading");
 assert.ok(!landingHtml.includes("Go where your audience is."), "Homepage platform section must not use the old heading");
-assert.ok(landingHtml.indexOf('class="home-hero-platforms"') < landingHtml.indexOf('Social publishing, all in one place'), "Homepage platform logos must appear above the headline");
-assert.ok(landingHtml.indexOf('Social publishing, all in one place') < landingHtml.indexOf('class="hero-demo"'), "Homepage demo must appear below the hero copy");
+assert.ok(landingHtml.indexOf('class="home-hero-platforms"') < landingHtml.indexOf('Post to every platform from one dashboard'), "Homepage platform logos must appear above the headline");
+assert.ok(landingHtml.indexOf('Post to every platform from one dashboard') < landingHtml.indexOf('class="hero-demo"'), "Homepage demo must appear below the hero copy");
 assert.ok(landingHtml.indexOf('class="footer-brand-row"') < landingHtml.indexOf('class="footer-columns"'), "Footer brand must appear above its link columns");
 for (const removed of ["footer-network-row", "footer-disclaimer", "footer-legal-row", "footer-help-link", "footer-locale"]) {
   assert.ok(!landingHtml.includes(`class="${removed}"`), `Footer must not render ${removed}`);
