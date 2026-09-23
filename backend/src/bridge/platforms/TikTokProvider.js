@@ -4,6 +4,7 @@ import { invariant, ProviderError } from "../core/errors.js";
 
 const uploadPermissionMessage = "Reconnect TikTok and allow video uploads to send content to your TikTok inbox.";
 const publishPermissionMessage = "Reconnect TikTok and allow direct publishing to publish from Meadow.";
+const privateOnlyMessage = "TikTok direct posts are limited to Only me until Meadow is approved. Choose Only me and make sure your TikTok account is private.";
 
 function permissions(credentials = {}) {
   const scopes = new Set((Array.isArray(credentials.scope) ? credentials.scope.join(",") : String(credentials.scope ?? "")).split(/[\s,]+/).filter(Boolean));
@@ -23,6 +24,7 @@ function inboxError(error) {
 export class TikTokProvider extends PlatformProvider {
   availableAccountViews({ credentials }) { return tiktokAccountAnalytics(this, credentials); }
   constructor(deps) { super("tiktok", deps); }
+  get directPostPrivateOnly() { return this.env.TIKTOK_DIRECT_POST_PRIVATE_ONLY === "true"; }
   async revoke(credentials) {
     await this.http.request("https://open.tiktokapis.com/v2/oauth/revoke/", {
       method: "POST", form: { client_key: this.oauth.clientId, client_secret: this.oauth.clientSecret, token: credentials.accessToken }, safeToRetry: true,
@@ -38,14 +40,15 @@ export class TikTokProvider extends PlatformProvider {
     return [{ remoteId: user.open_id, label: user.display_name, avatar: user.avatar_url }];
   }
   async options(account, credentials) {
-    const tiktokPermissions = permissions(credentials), base = { ...await super.options(), tiktokPermissions };
+    const tiktokPermissions = permissions(credentials), base = { ...await super.options(), tiktokPermissions, tiktokDirectPostPrivateOnly: this.directPostPrivateOnly };
     // Upload-only grants cannot call creator_info; the user chooses privacy and
     // interaction settings later in TikTok's editing flow.
     if (!tiktokPermissions.canPublish) return base;
     const result = await this.http.request("https://open.tiktokapis.com/v2/post/publish/creator_info/query/", { token: credentials.accessToken, method: "POST", json: {}, safeToRetry: true });
     const creator = result.data;
     invariant(creator?.privacy_level_options, "TikTok did not return the creator's publishing options.");
-    return { ...base, creator: { nickname: creator.creator_nickname, username: creator.creator_username, avatar: creator.creator_avatar_url, privacyOptions: creator.privacy_level_options, commentsDisabled: creator.comment_disabled, duetDisabled: creator.duet_disabled, stitchDisabled: creator.stitch_disabled, maxVideoSeconds: creator.max_video_post_duration_sec } };
+    const privacyOptions = this.directPostPrivateOnly ? creator.privacy_level_options.filter(value => value === "SELF_ONLY") : creator.privacy_level_options;
+    return { ...base, creator: { nickname: creator.creator_nickname, username: creator.creator_username, avatar: creator.creator_avatar_url, privacyOptions, commentsDisabled: creator.comment_disabled, duetDisabled: creator.duet_disabled, stitchDisabled: creator.stitch_disabled, maxVideoSeconds: creator.max_video_post_duration_sec } };
   }
   validate(content) {
     const errors = super.validate(content), s = content.settings || {}, creator = content.accountOptions?.creator;
@@ -59,7 +62,8 @@ export class TikTokProvider extends PlatformProvider {
       return errors;
     }
     if (granted?.canPublish === false) errors.push(publishPermissionMessage);
-    if (!creator?.privacyOptions?.length) errors.push("TikTok's audience options could not be loaded. Refresh the page and try again.");
+    if (this.directPostPrivateOnly && s.privacy !== "SELF_ONLY") errors.push(privateOnlyMessage);
+    else if (!creator?.privacyOptions?.length) errors.push("TikTok's audience options could not be loaded. Refresh the page and try again.");
     else if (!s.privacy) errors.push("Choose who can see this TikTok post.");
     else if (!creator.privacyOptions.includes(s.privacy)) errors.push("This audience is no longer available. Choose who can see this TikTok post again.");
     if (s.consent !== true) errors.push("Accept TikTok's Music Usage Confirmation before posting.");
@@ -74,6 +78,9 @@ export class TikTokProvider extends PlatformProvider {
     invariant(["direct", "inbox"].includes(deliveryMode), "Choose whether to publish directly or finish editing in TikTok.");
     const granted = permissions(ctx.credentials);
     if (inbox ? !granted.canUpload : !granted.canPublish) throw new ProviderError(inbox ? uploadPermissionMessage : publishPermissionMessage, { reconnect: true, code: "reconnect_required" });
+    // Enforce the deployment restriction even for stale queued settings or a
+    // caller that bypasses preview validation. Never rewrite an audience choice.
+    invariant(inbox || !this.directPostPrivateOnly || s.privacy === "SELF_ONLY", privateOnlyMessage, { code: "tiktok_private_only" });
     if (inbox) this.assertValid(ctx.content);
     const photos = ctx.content.media[0].kind === "image";
     const urls = [];

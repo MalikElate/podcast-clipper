@@ -71,6 +71,7 @@ test("TikTok inbox publish enforces real credentials and consent before sending 
 
 test("TikTok video upload only sends media, persists mode and ID, and resumes without a second upload", async () => {
   const { provider, ctx, calls, checkpoints } = setup();
+  provider.env.TIKTOK_DIRECT_POST_PRIVATE_ONLY = "true";
   ctx.content.settings = { ...ctx.content.settings, privacy: "PUBLIC_TO_EVERYONE", brandedContent: true, consent: false };
   const result = await provider.publish(ctx);
   assert.equal(result.status, "processing");
@@ -84,6 +85,7 @@ test("TikTok video upload only sends media, persists mode and ID, and resumes wi
 
 test("TikTok photo uploads use MEDIA_UPLOAD and include title/caption without Direct Post controls", async () => {
   const { provider, ctx, calls } = setup();
+  provider.env.TIKTOK_DIRECT_POST_PRIVATE_ONLY = "true";
   ctx.content.media = [photo, { ...photo, id: "photo-2" }];
   await provider.publish(ctx);
   assert.equal(calls[0].url, "https://open.tiktokapis.com/v2/post/publish/content/init/");
@@ -154,4 +156,64 @@ test("TikTok Direct Post still enforces its own controls and retains published s
   assert.equal(calls[0].options.json.post_info.privacy_level, "SELF_ONLY");
   const result = await provider.poll(ctx);
   assert.equal(result.status, "published"); assert.equal(result.externalId, "123");
+});
+
+test("TikTok private-only policy offers only creator-supported Only me and can be lifted after approval", async () => {
+  let privacy = ["PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "SELF_ONLY"];
+  const { provider } = setup(() => ({ data: { ...creator, privacy_level_options: privacy } }));
+  provider.env.TIKTOK_DIRECT_POST_PRIVATE_ONLY = "true";
+  const options = await provider.options({}, { scope: "video.publish" });
+  assert.equal(options.tiktokDirectPostPrivateOnly, true);
+  assert.deepEqual(options.creator.privacyOptions, ["SELF_ONLY"]);
+  privacy = ["PUBLIC_TO_EVERYONE"];
+  assert.deepEqual((await provider.options({}, { scope: "video.publish" })).creator.privacyOptions, []);
+  provider.env.TIKTOK_DIRECT_POST_PRIVATE_ONLY = "false";
+  const unrestricted = await provider.options({}, { scope: "video.publish" });
+  assert.equal(unrestricted.tiktokDirectPostPrivateOnly, false);
+  assert.deepEqual(unrestricted.creator.privacyOptions, privacy);
+});
+
+test("TikTok private-only validation rejects stale public choices and still requires an explicit audience", () => {
+  const { provider, ctx } = setup();
+  provider.env.TIKTOK_DIRECT_POST_PRIVATE_ONLY = "true";
+  ctx.content.accountOptions = { creator: { privacyOptions: ["PUBLIC_TO_EVERYONE", "SELF_ONLY"], maxVideoSeconds: 60 } };
+  for (const privacy of [undefined, "PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS"]) {
+    ctx.content.settings = { privacy, consent: true };
+    assert.match(provider.validate(ctx.content).join(" "), /limited to Only me/);
+  }
+  ctx.content.settings = { privacy: "SELF_ONLY", consent: true };
+  assert.deepEqual(provider.validate(ctx.content), []);
+  ctx.content.settings.brandedContent = true;
+  assert.match(provider.validate(ctx.content).join(" "), /Branded content cannot/);
+});
+
+test("TikTok blocks non-private direct requests before preparing media for both videos and photos", async () => {
+  for (const item of [video, photo]) {
+    const { provider, ctx, calls } = setup();
+    provider.env.TIKTOK_DIRECT_POST_PRIVATE_ONLY = "true";
+    ctx.credentials.scope = "video.publish";
+    ctx.content.media = [item];
+    let prepared = 0;
+    ctx.media.prepare = async (media, variant) => { prepared++; return { ...media, variant }; };
+    for (const privacy of [undefined, "PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS"]) {
+      ctx.content.settings = { privacy, consent: true };
+      await assert.rejects(provider.publish(ctx), error => error.code === "tiktok_private_only");
+      assert.equal(ctx.content.settings.privacy, privacy);
+    }
+    assert.equal(prepared, 0); assert.equal(calls.length, 0);
+    ctx.content.settings = { privacy: "SELF_ONLY", consent: true };
+    await provider.publish(ctx);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].options.json.post_info.privacy_level, "SELF_ONLY");
+    assert.ok(calls[0].url.endsWith(item.kind === "image" ? "content/init/" : "video/init/"));
+  }
+});
+
+test("TikTok allows the selected public audience after the private-only restriction is disabled", async () => {
+  const { provider, ctx, calls } = setup();
+  provider.env.TIKTOK_DIRECT_POST_PRIVATE_ONLY = "false";
+  ctx.credentials.scope = "video.publish";
+  ctx.content.settings = { privacy: "PUBLIC_TO_EVERYONE", consent: true };
+  await provider.publish(ctx);
+  assert.equal(calls[0].options.json.post_info.privacy_level, "PUBLIC_TO_EVERYONE");
 });

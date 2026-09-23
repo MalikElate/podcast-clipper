@@ -31,6 +31,25 @@ test("TikTok settings render only the consent and controls required by each deli
     assert.match(publish, /Choose an audience|Allow Duet/);
     assert.match(publish, /Music Usage Confirmation/);
     assert.doesNotMatch(publish, /I agree to send this media/);
+
+    const privateAccount = { ...account, options: { ...account.options, tiktokDirectPostPrivateOnly: true, creator: { ...account.options.creator, privacyOptions: ["PUBLIC_TO_EVERYONE", "SELF_ONLY"] } } };
+    const privateEmpty = render({}, { account: privateAccount });
+    assert.match(privateEmpty, /limited to Only me during testing/);
+    assert.match(privateEmpty, /<option value="" selected="">Choose an audience<\/option>/);
+    assert.match(privateEmpty, /<option value="SELF_ONLY">Only me<\/option>/);
+    assert.doesNotMatch(privateEmpty, /PUBLIC_TO_EVERYONE|Everyone/);
+    const staleAudience = render({ privacy: "PUBLIC_TO_EVERYONE" }, { account: privateAccount });
+    assert.match(staleAudience, /previous audience is no longer available/);
+    assert.match(staleAudience, /<option value="" selected="">Choose an audience<\/option>/);
+    assert.doesNotMatch(staleAudience, /<option value="SELF_ONLY" selected/);
+    const privateSelected = render({ privacy: "SELF_ONLY" }, { account: privateAccount });
+    assert.match(privateSelected, /<option value="SELF_ONLY" selected="">Only me<\/option>/);
+    const restrictedUpload = render({ deliveryMode: "inbox" }, { account: privateAccount });
+    assert.doesNotMatch(restrictedUpload, /limited to Only me|Choose an audience/);
+    const approvedAccount = { ...privateAccount, options: { ...privateAccount.options, tiktokDirectPostPrivateOnly: false } };
+    const approvedAudience = render({ privacy: "PUBLIC_TO_EVERYONE" }, { account: approvedAccount });
+    assert.match(approvedAudience, /<option value="PUBLIC_TO_EVERYONE" selected="">Everyone<\/option>/);
+    assert.doesNotMatch(approvedAudience, /limited to Only me/);
   } finally {
     await server.close();
   }

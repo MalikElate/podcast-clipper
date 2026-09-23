@@ -47,6 +47,7 @@
     "BRIDGE_PUBLIC_URL": "https://findmeadow.com",
     "BRIDGE_MAX_UPLOAD_MB": "1024",
     "BRIDGE_PUBLISHING_ENABLED": "true",
+    "TIKTOK_DIRECT_POST_PRIVATE_ONLY": "true",
     "TELEGRAM_BOT_USERNAME": "FindMeadowAppBot"
   },
   "routes": [

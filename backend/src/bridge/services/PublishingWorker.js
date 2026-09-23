@@ -73,9 +73,9 @@ export class PublishingWorker {
         if (!post) throw new BridgeError("The post is no longer available.");
         const content = (polling || delivery.progress?.chat) && delivery.contentSnapshot ? { ...delivery.contentSnapshot, accountOptions: account.options || {}, media: delivery.contentSnapshot.mediaIds.map(id => this.store.get("media", id)).filter(Boolean), thumbnail: delivery.contentSnapshot.thumbnailMediaId ? this.store.get("media", delivery.contentSnapshot.thumbnailMediaId) : null } : this.posts.content(post, account);
         if (content.media.length !== post.mediaIds.length) throw new BridgeError("A media item is no longer available.");
-        // A TikTok inbox upload has already been accepted at this point. Query
-        // its outcome even if the connection's current upload options changed.
-        if (!(polling && account.platform === "tiktok" && content.settings.deliveryMode === "inbox" && delivery.progress?.publishId)) provider.assertValid(content);
+        // TikTok has already accepted this upload/post. Finish checking its
+        // outcome even if permissions or the direct-post privacy policy changed.
+        if (!(polling && account.platform === "tiktok" && delivery.progress?.publishId)) provider.assertValid(content);
         delivery = this.store.transaction(() => {
           const current = this.store.get("delivery", id);
           if (!(isPendingDelivery(current) || current.status === "processing")) return null;
