@@ -3,6 +3,7 @@ import { SiClaude, SiCursor } from "react-icons/si";
 import { PlatformIcon } from "../bridge/ui.jsx";
 import HeroDemo from "./HeroDemo.jsx";
 import SchedulingDemo from "./SchedulingDemo.jsx";
+import AgentPublishingDemo from "./AgentPublishingDemo.jsx";
 import { sortPlatforms } from "../bridge/platforms.js";
 import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
@@ -192,6 +193,20 @@ export default function Landing({ onGetStarted }) {
         </section>
 
         <GoalScenarios onGetStarted={onGetStarted} />
+
+        <section className="landing-section scheduling-use-case agent-publishing-section" id="publish-with-an-agent" aria-labelledby="agent-publishing-title">
+          <div className="scheduling-use-case-visual">
+            <AgentPublishingDemo />
+          </div>
+          <div className="scheduling-use-case-copy">
+            <h2 id="agent-publishing-title">Make sure you show up for <span className="agent-audience-highlight">every audience.</span></h2>
+            <p>Tell your AI assistant what you want to share. Let it prepare posts for your connected channels, review the details, and give the go-ahead. Meadow takes care of publishing.</p>
+            <div className="scheduling-use-case-actions">
+              <button type="button" className="scheduling-use-case-primary" onClick={onGetStarted}>Start publishing <ArrowIcon /></button>
+              <a className="scheduling-use-case-secondary" href="#ways-to-use">Explore AI publishing <ArrowIcon /></a>
+            </div>
+          </div>
+        </section>
 
         <section className="landing-section audience-section usage-section" id="ways-to-use" aria-labelledby="usage-title">
           <div className="audience-heading">
