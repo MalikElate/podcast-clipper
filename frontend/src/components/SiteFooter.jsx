@@ -55,7 +55,7 @@ function HelpLinks() {
 }
 
 /** The one footer shared by every public page. */
-export default function SiteFooter({ onGetStarted }) {
+export default function SiteFooter({ onGetStarted, showDirectoryBadge = false }) {
   return (
     <footer className="landing-footer site-footer">
       <div className="site-footer-inner">
@@ -78,6 +78,24 @@ export default function SiteFooter({ onGetStarted }) {
           <MobileFooterGroup title="Platforms"><PlatformLinks /></MobileFooterGroup>
           <MobileFooterGroup title="Help and company"><HelpLinks /></MobileFooterGroup>
         </nav>
+
+        {showDirectoryBadge ? (
+          <div className="footer-directory-badge-row">
+            <a
+              className="footer-directory-badge"
+              href="https://nicklaunches.com/products/meadow/?utm_source=findmeadow.com&utm_medium=badge&utm_campaign=featured"
+              target="_blank"
+              rel="noopener"
+            >
+              <img
+                src="https://nicklaunches.com/badges/featured.png"
+                alt="Meadow on Nick Launches"
+                width="244"
+                height="56"
+              />
+            </a>
+          </div>
+        ) : null}
 
         <div className="footer-meta-row">
           <span className="footer-copyright">© {new Date().getFullYear()} Meadow</span>

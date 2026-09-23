@@ -2374,6 +2374,9 @@ input[type="range"]::-moz-range-thumb {
 .footer-legal-brand .brand { justify-content: flex-start; gap: 8px; }
 .footer-legal-brand .brand-logo-image { width: 29px; height: 29px; }
 .footer-legal-brand .brand-name { font-size: 24px; }
+.footer-directory-badge-row { display: flex; justify-content: center; padding: 0 0 32px; }
+.footer-directory-badge { display: inline-flex; max-width: 100%; }
+.footer-directory-badge img { display: block; width: min(244px,100%); height: auto; }
 .footer-meta-row { display: flex; align-items: center; justify-content: center; padding-top: 38px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 17px; text-align: center; }
 
 @media (max-width: 900px) {
@@ -2393,6 +2396,7 @@ input[type="range"]::-moz-range-thumb {
   .footer-mobile-group summary span::after { transform: rotate(90deg); }
   .footer-mobile-group[open] summary span::after { transform: rotate(0); }
   .footer-mobile-group > div { display: flex; padding: 0 0 24px; flex-direction: column; align-items: flex-start; gap: 15px; }
+  .footer-directory-badge-row { padding: 28px 0; }
   .footer-meta-row { justify-content: center; padding-top: 32px; }
   .footer-copyright { font-size: 15px; }
 }
