@@ -196,7 +196,6 @@ export default function Landing({ onGetStarted }) {
         <section className="landing-section audience-section usage-section" id="ways-to-use" aria-labelledby="usage-title">
           <div className="audience-heading">
             <h2 id="usage-title">However you work, publish with Meadow.</h2>
-            <p>Draft, preview, and schedule in Meadow. Connect Claude, Codex, or Cursor through MCP to prepare posts for your review, or use the API from your own tools. Your connected accounts and delivery status stay in one workspace.</p>
           </div>
           <div className="usage-grid">
             <article className="usage-card usage-creator">
