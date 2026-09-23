@@ -269,6 +269,20 @@ test("analytics preserve unavailable metrics and expose coverage when aggregatin
   const normalized = h.app.analytics.normalize({ likes: "3", views: null, shares: -1, impressions: undefined }); assert.equal(normalized.likes, 3); assert.equal(normalized.views, null); assert.equal(normalized.shares, null);
 });
 
+test("analytics refreshes retain one daily snapshot for comparison charts", async t => {
+  const h = setup(t), { posts: [post] } = await h.submit([h.post("History")]); await h.app.worker.tick();
+  let likes = 3; h.provider.metrics = async () => ({ values: { likes, comments: 1, views: likes * 10 } });
+  await h.app.analytics.refresh("alice", h.project.id);
+  let delivery = h.app.store.get("delivery", post.deliveries[0].id);
+  assert.equal(delivery.metricsHistory.length, 1); assert.equal(delivery.metricsHistory[0].values.likes, 3);
+  h.advance(24 * 3600000); likes = 7; await h.app.analytics.refresh("alice", h.project.id);
+  delivery = h.app.store.get("delivery", post.deliveries[0].id);
+  assert.equal(delivery.metricsHistory.length, 2); assert.deepEqual(delivery.metricsHistory.map(entry => entry.values.likes), [3, 7]);
+  h.advance(61000); likes = 9; await h.app.analytics.refresh("alice", h.project.id);
+  delivery = h.app.store.get("delivery", post.deliveries[0].id);
+  assert.equal(delivery.metricsHistory.length, 2); assert.deepEqual(delivery.metricsHistory.map(entry => entry.values.likes), [3, 9]);
+});
+
 test("schedules respect timezones, reject nonexistent DST times, and use the first of repeated hours", () => {
   const service = new ScheduleService({ clock: () => Date.parse("2026-01-01") }), local = { localDateTime: "2026-11-01T01:30", timeZone: "America/New_York" };
   assert.equal(service.resolve(local).requestedAt, Date.parse("2026-11-01T05:30:00Z"));

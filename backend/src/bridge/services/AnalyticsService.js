@@ -11,7 +11,7 @@ export class AnalyticsService {
     const xDemoDelivery = this.store.get("delivery", "56caa3e3-5244-4003-b853-d5559c4d754f");
     let changed = false;
     if (xAccount && xDemoDelivery?.projectId === projectId && xDemoDelivery.accountId === xAccount.id && xDemoDelivery.demoMetrics) {
-      this.store.put("delivery", { ...xDemoDelivery, metrics: null, metricsUpdatedAt: null, metricsAttemptedAt: this.clock(), metricsError: null, metricsNote: null, demoMetrics: false });
+      this.store.put("delivery", { ...xDemoDelivery, metrics: null, metricsHistory: [], metricsUpdatedAt: null, metricsAttemptedAt: this.clock(), metricsError: null, metricsNote: null, demoMetrics: false });
       changed = true;
     }
     const tiktokAccount = accounts.find(account => account.platform === "tiktok" && account.label === "Fast-Transcriber.com");
@@ -29,6 +29,21 @@ export class AnalyticsService {
 
   normalize(values = {}) {
     return Object.fromEntries(metrics.map(key => [key, values[key] !== null && values[key] !== undefined && Number.isFinite(Number(values[key])) && Number(values[key]) >= 0 ? Number(values[key]) : null]));
+  }
+  metricHistory(delivery, values, at) {
+    const snapshots = Array.isArray(delivery.metricsHistory) ? delivery.metricsHistory : [];
+    const candidates = [...snapshots];
+    if (delivery.metrics && delivery.metricsUpdatedAt) candidates.push({ at: delivery.metricsUpdatedAt, values: this.normalize(delivery.metrics) });
+    if (Object.values(values).some(Number.isFinite)) candidates.push({ at, values });
+    const byDay = new Map();
+    for (const snapshot of candidates) {
+      const timestamp = Number(snapshot?.at);
+      if (!Number.isFinite(timestamp) || !snapshot?.values) continue;
+      const day = new Date(timestamp).toISOString().slice(0, 10);
+      const normalized = { at: timestamp, values: this.normalize(snapshot.values) };
+      if (!byDay.has(day) || byDay.get(day).at <= timestamp) byDay.set(day, normalized);
+    }
+    return [...byDay.values()].sort((a, b) => a.at - b.at).slice(-180);
   }
   aggregate(rows, { deriveEngagement = true } = {}) {
     const coverage = {}, values = {};
@@ -52,9 +67,10 @@ export class AnalyticsService {
       const current = this.store.get("delivery", delivery.id);
       const latestAccount = this.store.get("account", account.id);
       if (!current || latestAccount?.status !== "connected" || latestAccount.authorizationId !== account.authorizationId) return;
-      const patch = { metrics: this.normalize(result.values), metricsUpdatedAt: this.clock(), metricsAttemptedAt: this.clock(), metricsError: null, metricsNote: result.unavailableReason || result.note || null };
+      const now = this.clock(), values = this.normalize(result.values);
+      const patch = { metrics: values, metricsHistory: this.metricHistory(current, values, now), metricsUpdatedAt: now, metricsAttemptedAt: now, metricsError: null, metricsNote: result.unavailableReason || result.note || null };
       if (account.platform === "pinterest") return patch;
-      this.store.put("delivery", { ...current, ...patch, ...(result.removed ? { externalId: null, url: null, progress: {}, contentSnapshot: null, metrics: null } : {}) });
+      this.store.put("delivery", { ...current, ...patch, ...(result.removed ? { externalId: null, url: null, progress: {}, contentSnapshot: null, metrics: null, metricsHistory: [] } : {}) });
     } catch (error) {
       const current = this.store.get("delivery", delivery.id);
       const latestAccount = this.store.get("account", account.id);

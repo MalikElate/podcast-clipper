@@ -328,7 +328,7 @@ test("Pinterest board validation and metrics work without persisting API profile
   h.app.registry.providers.set("pinterest", provider);
   h.app.store.put("account", { ...account, options: { boards: [{ id: "old", name: "Old board" }] } });
   h.post("pin-post", [account]);
-  h.app.store.put("delivery", { ...h.app.store.get("delivery", "pin-post:pin"), status: "published", externalId: "pin-id", metrics: { saves: 99 }, metricsUpdatedAt: h.now() });
+  h.app.store.put("delivery", { ...h.app.store.get("delivery", "pin-post:pin"), status: "published", externalId: "pin-id", metrics: { saves: 99 }, metricsHistory: [{ at: h.now(), values: { saves: 99 } }], metricsUpdatedAt: h.now() });
   h.app.privacy.prune();
   assert.equal(h.app.store.get("account", "pin").label, "Pinterest account");
   assert.equal(h.app.store.get("account", "pin").options, null);
@@ -341,17 +341,18 @@ test("Pinterest board validation and metrics work without persisting API profile
   const result = await h.app.analytics.refresh("alice", h.project.id);
   assert.equal(result.posts[0].deliveries[0].metrics.saves, 12);
   assert.equal(h.app.store.get("delivery", "pin-post:pin").metrics, null);
+  assert.deepEqual(h.app.store.get("delivery", "pin-post:pin").metricsHistory, []);
   assert.equal(h.app.analytics.report("alice", h.project.id).posts[0].deliveries[0].metrics, null);
 });
 
 test("YouTube data expires after thirty days and a missing video removes its stored API identifiers and metrics", async t => {
   const h = fixture(t), account = h.account("yt", "youtube"); h.post("yt-post", [account]);
   let delivery = h.app.store.get("delivery", "yt-post:yt");
-  h.app.store.put("delivery", { ...delivery, status: "published", externalId: "removed-video", metrics: { views: 100 }, metricsUpdatedAt: h.now(), progress: { videoId: "removed-video" } });
+  h.app.store.put("delivery", { ...delivery, status: "published", externalId: "removed-video", metrics: { views: 100 }, metricsHistory: [{ at: h.now(), values: { views: 100 } }], metricsUpdatedAt: h.now(), progress: { videoId: "removed-video" } });
   h.providers.youtube.metrics = async () => ({ values: {}, removed: true });
   await h.app.analytics.syncDelivery(h.app.store.get("delivery", delivery.id));
   delivery = h.app.store.get("delivery", delivery.id);
-  assert.equal(delivery.externalId, null); assert.equal(delivery.metrics, null); assert.deepEqual(delivery.progress, {});
+  assert.equal(delivery.externalId, null); assert.equal(delivery.metrics, null); assert.deepEqual(delivery.metricsHistory, []); assert.deepEqual(delivery.progress, {});
   h.advance(30 * DAY + 1); await h.app.privacy.tick(); await h.app.privacy.tick();
   const retained = h.app.store.get("account", "yt");
   assert.equal(retained.status, "connected"); assert.ok(retained.encryptedCredentials);

@@ -29,7 +29,7 @@ test("account analytics attribute measured and unavailable values to their socia
     server: { middlewareMode: true, hmr: false, ws: false }, appType: "custom", optimizeDeps: { noDiscovery: true, include: [] },
   });
   try {
-    const { AccountAnalyticsCard } = await server.ssrLoadModule("/src/bridge/Analytics.jsx");
+    const { AccountAnalyticsCard, aggregateDeliveryHistory, buildComparisonSeries } = await server.ssrLoadModule("/src/bridge/Analytics.jsx");
     const props = account => ({ account, catalog, timeZone: "UTC", selected: false, compareDisabled: false, onCompare() {}, onOpen() {} });
     const render = account => visibleText(renderToStaticMarkup(createElement(AccountAnalyticsCard, props(account))));
 
@@ -86,6 +86,18 @@ test("account analytics attribute measured and unavailable values to their socia
       assert.match(text, /Metrics available per video/);
       assert.match(text, /View video analytics/);
       assert.doesNotMatch(text, /7,?777|8,?888|9,?999/);
+    });
+
+    await t.test("comparison series combine delivery snapshots and carry totals across chart buckets", () => {
+      const first = Date.parse("2026-09-20T10:00:00Z"), second = Date.parse("2026-09-21T10:00:00Z");
+      const history = aggregateDeliveryHistory([
+        { platform: "instagram", metricsHistory: [{ at: first, values: { views: 10, likes: 1 } }, { at: second, values: { views: 15, likes: 2 } }] },
+        { platform: "tiktok", metricsHistory: [{ at: second, values: { views: 7, likes: 3 } }] },
+      ]);
+      assert.deepEqual(history.map(point => point.values.views), [10, 22]);
+      assert.deepEqual(history.map(point => point.values.engagement), [1, 5]);
+      const chart = buildComparisonSeries([{ id: "combined", label: "Combined", history }], "views", "day", "all", second);
+      assert.deepEqual(chart.series[0].points.map(point => point.value), [10, 22]);
     });
   } finally {
     await server.close();
