@@ -171,7 +171,7 @@ export default function Landing({ onGetStarted }) {
               <div className="home-hero-platforms" aria-label="Supported social platforms">
                 {PLATFORMS.map(platform => <PlatformMark platform={platform} size={32} variant={platform.id === "google_business" ? "hero" : "default"} key={platform.id} />)}
               </div>
-              <h1 className="landing-title">Just show up for every audience.</h1>
+              <h1 className="landing-title">Make sure you just show up for every audience</h1>
               <p className="landing-subtitle">Plan, tailor, and schedule posts across your social accounts from one Meadow dashboard.</p>
               <div className="hero-actions hero-actions-v2"><button className="btn-primary landing-cta" onClick={onGetStarted}>Try for free <ArrowIcon /></button></div>
               <a className="home-hero-agent-link" href="#ways-to-use">Publishing with an AI agent? Explore API/MCP <ArrowIcon /></a>
@@ -184,7 +184,7 @@ export default function Landing({ onGetStarted }) {
 
         <section className="landing-section home-platform-section" id="platforms" aria-labelledby="home-platforms-title">
           <div className="home-platform-heading">
-            <div><h2 id="home-platforms-title">Make sure you show up for every audience.</h2></div>
+            <div><h2 id="home-platforms-title">Show up for every audience.</h2></div>
           </div>
           <div className="home-platform-grid" aria-label="Meadow platforms">
             {PLATFORMS.map(platform => <a className="home-platform-link" key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing`} style={{ "--platform-color": platform.color }}><span className="home-platform-icon"><PlatformIcon platform={platform.id} size={34} variant={platform.id === "google_business" ? "hero" : "default"} /></span><span>{platform.name}</span></a>)}
