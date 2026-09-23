@@ -278,23 +278,6 @@ export class BridgeApplication {
   }
   start() {
     this.worker.start();
-    // One-time correction for the scoped analytics demo: keep it on the TikTok account,
-    // and clear the earlier X-account seed without touching any other destinations.
-    const xDemoDeliveryId = "56caa3e3-5244-4003-b853-d5559c4d754f";
-    const xDemoDelivery = this.store.get("delivery", xDemoDeliveryId);
-    if (xDemoDelivery?.demoMetrics && xDemoDelivery.accountId === "c9cd5888-5885-4e78-9338-7dfa8eea7034") {
-      this.store.put("delivery", { ...xDemoDelivery, metrics: null, metricsUpdatedAt: null, metricsAttemptedAt: this.clock(), metricsError: null, metricsNote: null, demoMetrics: false });
-    }
-    const tiktokAccountId = "402e54f7-fdfc-4c08-855f-38f1b19fb646";
-    const tiktokAccount = this.store.get("account", tiktokAccountId);
-    if (tiktokAccount?.platform === "tiktok" && !tiktokAccount.demoMetrics) {
-      this.store.put("account", {
-        ...tiktokAccount,
-        demoMetrics: { views: 18, impressions: 18, likes: 737, comments: 0, shares: 0, saves: 0, clicks: 0 },
-        demoMetricsUpdatedAt: this.clock(),
-        demoMetricsNote: "Demo values based on public @fast.transcriber TikTok activity: 18 views across 31 visible videos and 737 profile likes. TikTok does not expose the remaining metrics publicly."
-      });
-    }
     const telegram = this.registry.list().find(provider => provider.id === "telegram");
     if (telegram?.configured) telegram.configureWebhook().catch(error => console.error("Telegram webhook:", error.code || error.name));
     this.privacy.tick().catch(error => console.error("Privacy worker:", error.code || error.name));
