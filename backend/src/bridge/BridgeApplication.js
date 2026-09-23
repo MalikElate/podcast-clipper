@@ -278,13 +278,6 @@ export class BridgeApplication {
   }
   start() {
     this.worker.start();
-    this.analytics.seedDemoDelivery({
-      ownerUid: "user_3JBc1sWWzPxfPBGc3WGz7bw0Slu",
-      accountId: "c9cd5888-5885-4e78-9338-7dfa8eea7034",
-      deliveryId: "56caa3e3-5244-4003-b853-d5559c4d754f",
-      values: { views: 1, impressions: 1, likes: 0, comments: 1, shares: 0, saves: 0, clicks: 0 },
-      note: "Demo values based on public @fasttranscriber activity."
-    });
     const telegram = this.registry.list().find(provider => provider.id === "telegram");
     if (telegram?.configured) telegram.configureWebhook().catch(error => console.error("Telegram webhook:", error.code || error.name));
     this.privacy.tick().catch(error => console.error("Privacy worker:", error.code || error.name));

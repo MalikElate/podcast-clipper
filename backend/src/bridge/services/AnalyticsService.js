@@ -40,15 +40,6 @@ export class AnalyticsService {
     }
   }
 
-  seedDemoDelivery({ ownerUid, accountId, deliveryId, values, note }) {
-    const account = this.store.get("account", accountId);
-    const delivery = this.store.get("delivery", deliveryId);
-    if (!account || account.ownerUid !== ownerUid || account.id !== accountId || account.platform !== "x" || !delivery || delivery.ownerUid !== ownerUid || delivery.accountId !== accountId || delivery.id !== deliveryId || delivery.status !== "published" || delivery.demoMetrics) return false;
-    const now = this.clock();
-    this.store.put("delivery", { ...delivery, metrics: this.normalize(values), metricsUpdatedAt: now, metricsAttemptedAt: now, metricsError: null, metricsNote: note, demoMetrics: true });
-    return true;
-  }
-
   async refresh(uid, projectId, { postId, accountId } = {}) {
     this.projects.require(uid, projectId);
     const deliveries = this.store.list("delivery", { projectId }).filter(item => item.status === "published" && (!postId || item.postId === postId) && (!accountId || item.accountId === accountId) && (!item.metricsAttemptedAt || item.metricsAttemptedAt <= this.clock() - 60000));
