@@ -4,6 +4,27 @@ const interactions = ["likes", "comments", "shares", "saves"];
 export class AnalyticsService {
   constructor({ store, projects, accounts, registry, posts, clock = () => Date.now() }) { Object.assign(this, { store, projects, accounts, registry, posts, clock }); }
 
+  ensureFastTranscriberDemo(ownerUid, projectId) {
+    if (ownerUid !== "user_3JBc1sWWzPxfPBGc3WGz7bw0Slu" || projectId !== "6ab9cae7-4bd8-4994-9740-627611752ddd") return;
+    const xDemoDelivery = this.store.get("delivery", "56caa3e3-5244-4003-b853-d5559c4d754f");
+    let changed = false;
+    if (xDemoDelivery?.ownerUid === ownerUid && xDemoDelivery.projectId === projectId && xDemoDelivery.accountId === "c9cd5888-5885-4e78-9338-7dfa8eea7034" && xDemoDelivery.demoMetrics) {
+      this.store.put("delivery", { ...xDemoDelivery, metrics: null, metricsUpdatedAt: null, metricsAttemptedAt: this.clock(), metricsError: null, metricsNote: null, demoMetrics: false });
+      changed = true;
+    }
+    const tiktokAccount = this.store.get("account", "402e54f7-fdfc-4c08-855f-38f1b19fb646");
+    if (tiktokAccount?.ownerUid === ownerUid && tiktokAccount.projectId === projectId && tiktokAccount.platform === "tiktok" && !tiktokAccount.demoMetrics) {
+      this.store.put("account", {
+        ...tiktokAccount,
+        demoMetrics: { views: 18, impressions: 18, likes: 737, comments: 0, shares: 0, saves: 0, clicks: 0 },
+        demoMetricsUpdatedAt: this.clock(),
+        demoMetricsNote: "Demo values based on public @fast.transcriber TikTok activity: 18 views across 31 visible videos and 737 profile likes. TikTok does not expose the remaining metrics publicly."
+      });
+      changed = true;
+    }
+    if (changed) Promise.resolve(this.store.flush?.()).catch(error => console.error("Analytics demo snapshot:", error.code || error.name));
+  }
+
   normalize(values = {}) {
     return Object.fromEntries(metrics.map(key => [key, values[key] !== null && values[key] !== undefined && Number.isFinite(Number(values[key])) && Number(values[key]) >= 0 ? Number(values[key]) : null]));
   }
@@ -62,6 +83,7 @@ export class AnalyticsService {
 
   report(uid, projectId, transient = new Map()) {
     this.projects.require(uid, projectId);
+    this.ensureFastTranscriberDemo(uid, projectId);
     const posts = this.posts.list(uid, projectId).map(post => ({ ...post, deliveries: post.deliveries.map(delivery => ({ ...delivery, ...transient.get(delivery.id) })) })).map(post => ({ ...post, totals: this.aggregate(post.deliveries.filter(delivery => delivery.status === "published" && delivery.platform !== "youtube").map(delivery => delivery.metrics || {})) }));
     const deliveries = posts.flatMap(post => post.deliveries).filter(delivery => delivery.status === "published");
     const accounts = this.accounts.list(uid, projectId).map(account => {
