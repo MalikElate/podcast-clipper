@@ -2505,3 +2505,46 @@ input[type="range"]::-moz-range-thumb {
   .site-header .landing-actions .btn-ghost { padding-inline: 4px; font-size: 13px; }
   .site-header .landing-actions .btn-small-primary { padding-inline: 8px; font-size: 13px; }
 }
+
+/* Homepage hero: a clear, centered publishing pitch above the product demo. */
+.landing-v2 .home-centered-hero {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0;
+  padding: clamp(70px, 7vw, 104px) 0 96px;
+  text-align: center;
+}
+.landing-v2 .home-centered-hero .hero-copy { width: 100%; max-width: 980px; align-items: center; margin: 0 auto; }
+.home-hero-platforms { display: flex; max-width: 780px; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 16px; margin: 0 auto 35px; }
+.home-hero-platforms .landing-platform-mark { width: 37px; height: 37px; }
+.home-hero-platforms .social-brand-icon[data-platform="x"],
+.home-hero-platforms .social-brand-icon[data-platform="threads"] { color: #f4f6f7 !important; }
+.landing-v2 .home-centered-hero .landing-title { max-width: 900px; margin: 0; font-size: clamp(54px, 5.7vw, 78px); line-height: 1.04; letter-spacing: -.055em; }
+.landing-v2 .home-centered-hero .landing-subtitle { max-width: 740px; margin: 24px auto 0; font-size: clamp(19px, 1.8vw, 23px); line-height: 1.5; }
+.landing-v2 .home-centered-hero .hero-actions-v2 { display: flex; justify-content: center; margin-top: 32px; }
+.landing-v2 .home-centered-hero .landing-cta { min-width: 242px; min-height: 60px; padding: 16px 30px; border-radius: 999px; background: #72c991; color: #193829; font-size: 18px; font-weight: 750; box-shadow: none; }
+.landing-v2 .home-centered-hero .landing-cta:hover { background: #89d9a5; }
+.home-hero-agent-link { display: inline-flex; max-width: 100%; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 31px; color: #c5cad1; font-size: 15px; line-height: 1.5; text-align: center; text-decoration: none; }
+.home-hero-agent-link:hover { color: #fff; text-decoration: underline; text-underline-offset: 4px; }
+.home-hero-agent-link svg { width: 14px; height: 14px; }
+.home-hero-agent-logos { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 14px; }
+.home-hero-agent-logos span { display: grid; width: 20px; height: 20px; place-items: center; }
+.home-hero-agent-logos svg { width: 20px; height: 20px; }
+.home-hero-agent-logos .is-claude { color: #df8e6e; }
+.home-hero-agent-logos .is-codex { color: #62caa7; }
+.home-hero-agent-logos .is-cursor { color: #f4f6f7; }
+.landing-v2 .home-centered-hero .home-hero-note { margin: 24px 0 0; font-size: 14px; }
+.landing-v2 .home-centered-hero .hero-demo { width: min(100%, 1020px); margin: 52px auto 0; border-radius: 16px; }
+
+@media (max-width: 720px) {
+  .landing-v2 .home-centered-hero { padding: 54px 0 72px; }
+  .home-hero-platforms { max-width: 390px; gap: 9px 12px; margin-bottom: 28px; }
+  .home-hero-platforms .landing-platform-mark { width: 30px; height: 30px; }
+  .home-hero-platforms .social-brand-icon { width: 28px !important; height: 28px !important; }
+  .landing-v2 .home-centered-hero .landing-title { max-width: 650px; font-size: clamp(42px, 10vw, 58px); line-height: 1.07; }
+  .landing-v2 .home-centered-hero .landing-subtitle { margin-top: 20px; font-size: 18px; }
+  .landing-v2 .home-centered-hero .hero-actions-v2 { margin-top: 27px; }
+  .landing-v2 .home-centered-hero .landing-cta { width: min(100%, 280px); }
+  .landing-v2 .home-centered-hero .hero-demo { margin-top: 42px; }
+}

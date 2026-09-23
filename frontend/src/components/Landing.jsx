@@ -84,10 +84,10 @@ const AGENT_LOGOS = [
   { name: "Cursor", Icon: SiCursor, className: "is-cursor" },
 ];
 
-function PlatformMark({ platform, className = "", variant = "default" }) {
+function PlatformMark({ platform, className = "", variant = "default", size }) {
   return (
     <span className={`landing-platform-mark ${className}`} style={{ "--platform-color": platform.color }} role="img" aria-label={platform.name} title={platform.name}>
-      <PlatformIcon platform={platform.id} size={variant === "hero" ? 32 : 24} variant={variant} />
+      <PlatformIcon platform={platform.id} size={size ?? (variant === "hero" ? 32 : 24)} variant={variant} />
     </span>
   );
 }
@@ -165,13 +165,17 @@ export default function Landing({ onGetStarted }) {
       <SiteHeader homeHref="#top" onSignIn={onGetStarted} onStartPosting={onGetStarted} />
 
       <main>
-        <section className="landing-hero landing-hero-v2">
+        <section className="landing-hero landing-hero-v2 home-centered-hero">
           <div className="hero-copy">
-            <span className="home-hero-kicker">Social publishing, all in one place</span>
-            <h1 className="landing-title">One place to plan. Every place to publish.</h1>
-            <p className="landing-subtitle">Connect your channels, create once, and schedule the right version of every post—without juggling tabs or losing track of what went live.</p>
-            <div className="hero-actions hero-actions-v2"><button className="btn-primary landing-cta" onClick={onGetStarted}>Try for free <ArrowIcon /></button><a className="hero-text-link" href="#workflows">See how it works</a></div>
-            <p className="home-hero-note">Start with 5 connections on the free plan.</p>
+            <div className="home-hero-platforms" aria-label="Supported social platforms">
+              {PLATFORMS.map(platform => <PlatformMark platform={platform} size={32} variant={platform.id === "google_business" ? "hero" : "default"} key={platform.id} />)}
+            </div>
+            <h1 className="landing-title">Social publishing, all in one place</h1>
+            <p className="landing-subtitle">Plan, tailor, and schedule posts across your social accounts from one Meadow dashboard.</p>
+            <div className="hero-actions hero-actions-v2"><button className="btn-primary landing-cta" onClick={onGetStarted}>Try for free <ArrowIcon /></button></div>
+            <a className="home-hero-agent-link" href="#ways-to-use">Publishing with an AI agent? Explore API/MCP <ArrowIcon /></a>
+            <div className="home-hero-agent-logos" aria-hidden="true">{AGENT_LOGOS.map(agent => <span className={agent.className} key={agent.name}><agent.Icon /></span>)}</div>
+            <p className="home-hero-note">Free plan includes 5 connections.</p>
           </div>
           <HeroDemo />
         </section>
