@@ -170,19 +170,19 @@ export class FacebookProvider extends GraphProvider {
   constructor(deps) { super("facebook", deps); }
   get version() { return this.env.META_GRAPH_VERSION || "v24.0"; }
   get graphBase() { return `https://graph.facebook.com/${this.version}`; }
-  get oauth() { return { authorize: `https://www.facebook.com/${this.version}/dialog/oauth`, token: `${this.graphBase}/oauth/access_token`, clientId: this.env.FACEBOOK_CLIENT_ID, clientSecret: this.env.FACEBOOK_CLIENT_SECRET, scopes: ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "read_insights"], scopeSeparator: ",", extra: this.env.FACEBOOK_LOGIN_CONFIG_ID ? { config_id: this.env.FACEBOOK_LOGIN_CONFIG_ID } : {} }; }
+  get oauth() { return { authorize: `https://www.facebook.com/${this.version}/dialog/oauth`, token: `${this.graphBase}/oauth/access_token`, clientId: this.env.FACEBOOK_CLIENT_ID, clientSecret: this.env.FACEBOOK_CLIENT_SECRET, scopes: ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "read_insights"], scopeSeparator: ",", extra: this.env.FACEBOOK_LOGIN_CONFIG_ID ? { config_id: this.env.FACEBOOK_LOGIN_CONFIG_ID } : {}, tokenDiagnosticStage: "authorization_code_exchange" }; }
   async exchange(input) {
     const short = await super.exchange(input);
-    const result = await this.http.request(`${this.graphBase}/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(this.oauth.clientId)}&client_secret=${encodeURIComponent(this.oauth.clientSecret)}&fb_exchange_token=${encodeURIComponent(short.accessToken)}`);
+    const result = await this.http.request(`${this.graphBase}/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(this.oauth.clientId)}&client_secret=${encodeURIComponent(this.oauth.clientSecret)}&fb_exchange_token=${encodeURIComponent(short.accessToken)}`, { diagnosticStage: "long_lived_token_exchange" });
     return this.normalizeToken(result);
   }
   async accounts(credentials) {
-    const profile = await this.graph("me?fields=id", credentials);
+    const profile = await this.graph("me?fields=id", credentials, { diagnosticStage: "profile_lookup" });
     invariant(profile.id, "Facebook did not identify the authorizing user.");
     let after = "";
     const candidates = [];
     do {
-      const result = await this.graph(`me/accounts?fields=id,name,access_token,picture&limit=100${after ? `&after=${encodeURIComponent(after)}` : ""}`, credentials);
+      const result = await this.graph(`me/accounts?fields=id,name,access_token,picture&limit=100${after ? `&after=${encodeURIComponent(after)}` : ""}`, credentials, { diagnosticStage: "page_lookup" });
       for (const page of result.data || []) candidates.push({ remoteId: String(page.id), label: page.name, avatar: page.picture?.data?.url, profileUrl: `https://www.facebook.com/${page.id}`, credentials: { accessToken: page.access_token, expiresAt: null, metaUserIds: [String(profile.id)] } });
       after = result.paging?.next ? result.paging.cursors?.after : "";
     } while (after && candidates.length < 100);

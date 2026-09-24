@@ -36,9 +36,9 @@ export class PlatformProvider {
   }
 
   async exchange({ code, verifier }) {
-    const { token, clientId, clientSecret, basicAuth, clientIdParam = "client_id", pkce, tokenExtra = {} } = this.oauth;
+    const { token, clientId, clientSecret, basicAuth, clientIdParam = "client_id", pkce, tokenExtra = {}, tokenDiagnosticStage } = this.oauth;
     const form = { grant_type: "authorization_code", code, redirect_uri: this.redirectUri, [clientIdParam]: clientId, ...(basicAuth ? {} : { client_secret: clientSecret }), ...(pkce ? { code_verifier: verifier } : {}), ...tokenExtra };
-    const data = await this.http.request(token, { method: "POST", form, headers: basicAuth ? { Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}` } : {}, safeToRetry: true });
+    const data = await this.http.request(token, { method: "POST", form, headers: basicAuth ? { Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}` } : {}, safeToRetry: true, diagnosticStage: tokenDiagnosticStage });
     return this.normalizeToken(data);
   }
 
