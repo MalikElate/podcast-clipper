@@ -21,6 +21,7 @@ The previous publishing app was associated with the **FindMeadow.com** business 
 | Contact email | `62maneh@gmail.com` |
 | Business portfolio | None selected during creation |
 | Facebook callback | `https://findmeadow.com/oauth/facebook/callback` |
+| Facebook Login configuration | `1758250408777427` (`Meadow Facebook Pages`) |
 | Instagram callback | `https://findmeadow.com/oauth/instagram/callback` |
 | Active versioned Cloudflare secrets | `FACEBOOK_CLIENT_ID_V2`, `FACEBOOK_CLIENT_SECRET_V2` |
 | Reserved Instagram secret names | `INSTAGRAM_CLIENT_ID_V2`, `INSTAGRAM_CLIENT_SECRET_V2` |

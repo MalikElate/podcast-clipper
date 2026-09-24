@@ -39,7 +39,7 @@ test("every direct OAuth adapter sends account connections to its native authori
     [XProvider, "X", "https://x.com/i/oauth2/authorize"],
   ];
   for (const [Provider, prefix, endpoint] of cases) {
-    const provider = new Provider({ publicUrl: "https://bridge.example", env: { [`${prefix}_CLIENT_ID`]: "fixture-app", [`${prefix}_CLIENT_KEY`]: "fixture-app", [`${prefix}_CLIENT_SECRET`]: "private-fixture-secret", META_GRAPH_VERSION: "v26.0" } });
+    const provider = new Provider({ publicUrl: "https://bridge.example", env: { [`${prefix}_CLIENT_ID`]: "fixture-app", [`${prefix}_CLIENT_KEY`]: "fixture-app", [`${prefix}_CLIENT_SECRET`]: "private-fixture-secret", META_GRAPH_VERSION: "v26.0", FACEBOOK_LOGIN_CONFIG_ID: "facebook-login-config" } });
     const url = new URL(await provider.authorizationUrl({ state: "fresh-csrf-state", verifier: "private-pkce-verifier" }));
     assert.equal(url.origin + url.pathname, endpoint);
     assert.equal(url.searchParams.get("state"), "fresh-csrf-state");
@@ -54,6 +54,7 @@ test("every direct OAuth adapter sends account connections to its native authori
       assert.equal(url.searchParams.get("enable_fb_login"), "false");
       assert.equal(url.searchParams.has("force_authentication"), false);
     }
+    if (provider.id === "facebook") assert.equal(url.searchParams.get("config_id"), "facebook-login-config");
   }
 });
 

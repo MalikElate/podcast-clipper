@@ -6,6 +6,7 @@
 - Saved and verified the new app's domain `findmeadow.com`, contact email `62maneh@gmail.com`, website, public privacy/terms links, deletion-instructions link, and **Business and pages** category. The Meta dashboard confirmed **Changes saved**.
 - The new app's Facebook permissions `pages_show_list`, `pages_manage_posts`, `pages_read_engagement`, and `read_insights` all show **Ready for testing**. Adding `pages_read_engagement` also added it to the Instagram use case, as Meta's confirmation dialog stated.
 - Saved the Facebook OAuth redirect, deauthorization callback, and data-deletion callback in the new app. Meta confirmed **Changes saved**.
+- Created the **Meadow Facebook Pages** Facebook Login for Business configuration with ID `1758250408777427`, using a user access token and the four Page permissions. Meadow must include this value as the OAuth `config_id`; omitting it caused Meta to reject the connection callback with HTTP 400.
 - Saved the new Facebook app ID and secret in Cloudflare as encrypted `FACEBOOK_CLIENT_ID_V2` and `FACEBOOK_CLIENT_SECRET_V2`. The previous Facebook, Instagram, and Threads app IDs and their encrypted Cloudflare secret locations are retained in `docs/meta-credentials-history.md`; plaintext secrets are intentionally excluded.
 - Instagram product credentials and callbacks for the new app remain pending until Meta's Instagram API setup loads and exposes the product-specific values. The Worker supports versioned Instagram credentials when they are later added, but it currently falls back to the retained originals.
 
