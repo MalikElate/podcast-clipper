@@ -146,7 +146,7 @@ export class PodcastClipperBackend extends Container {
   }
 
   onStart() {
-    console.log("Meadow backend container started.");
+    console.log(`Meadow backend container started. Bluesky OAuth ${this.envVars.BLUESKY_PRIVATE_KEY ? "configured" : "not configured"}.`);
   }
 
   onStop() {
