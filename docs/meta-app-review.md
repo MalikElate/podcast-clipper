@@ -1,6 +1,15 @@
 # Meta publishing setup and review
 
-## Verified status — September 15, 2026
+## Verified status — September 24, 2026
+
+- A new **Meadow** app was created under the replacement Meta developer account: app ID `1105923055425142`. It includes the Instagram business content and Facebook Page management use cases. No business portfolio was connected because the account had reached Meta's business-creation limit and the visible portfolios were unrelated to Meadow.
+- Saved and verified the new app's domain `findmeadow.com`, contact email `62maneh@gmail.com`, website, public privacy/terms links, deletion-instructions link, and **Business and pages** category. The Meta dashboard confirmed **Changes saved**.
+- The new app's Facebook permissions `pages_show_list`, `pages_manage_posts`, `pages_read_engagement`, and `read_insights` all show **Ready for testing**. Adding `pages_read_engagement` also added it to the Instagram use case, as Meta's confirmation dialog stated.
+- Saved the Facebook OAuth redirect, deauthorization callback, and data-deletion callback in the new app. Meta confirmed **Changes saved**.
+- Saved the new Facebook app ID and secret in Cloudflare as encrypted `FACEBOOK_CLIENT_ID_V2` and `FACEBOOK_CLIENT_SECRET_V2`. The previous Facebook, Instagram, and Threads app IDs and their encrypted Cloudflare secret locations are retained in `docs/meta-credentials-history.md`; plaintext secrets are intentionally excluded.
+- Instagram product credentials and callbacks for the new app remain pending until Meta's Instagram API setup loads and exposes the product-specific values. The Worker supports versioned Instagram credentials when they are later added, but it currently falls back to the retained originals.
+
+### Previous publishing setup retained for reference
 
 - Meadow's production Clerk configuration enables Facebook sign-in. This is separate from the social publishing connection.
 - Facebook Pages, Instagram Login, and Threads publishing adapters exist in `backend/src/bridge/platforms/MetaProviders.js`, and their environment variables are forwarded by the Cloudflare Worker.
@@ -26,7 +35,7 @@
 
 ## Next setup steps
 
-1. Complete Instagram's open Meta password confirmation, retrieve its product secret securely, and save `INSTAGRAM_CLIENT_SECRET`. A running container needs a restart or rollout to receive changed environment values; verify each configured callback rejects an unsigned request instead of returning an unconfigured error.
+1. Complete the new app's Instagram API setup, register its callbacks, retrieve its product credentials securely, and save them as `INSTAGRAM_CLIENT_ID_V2` and `INSTAGRAM_CLIENT_SECRET_V2`. A running container needs a restart or rollout to receive changed environment values; verify each configured callback rejects an unsigned request instead of returning an unconfigured error.
 2. Complete business verification using the owner's actual registered legal details, then access verification. Keep the app display name Meadow regardless of the legal entity name.
 3. Test the signed callbacks with the actual Meta product and eligible development accounts. Keep Meta platforms disabled for customers until review and acceptance are complete.
 4. Upload the icon after extension file upload is enabled, and check the real Instagram consent screen. A direct preview reached Instagram sign-in, so the customer-facing label is still unverified.
@@ -54,8 +63,8 @@ The public privacy policy contains disconnection and account-deletion instructio
 
 | Integration | Cloudflare secret names | OAuth permissions |
 | --- | --- | --- |
-| Facebook Pages | `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET` | `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `read_insights` |
-| Instagram with Instagram Login | `INSTAGRAM_CLIENT_ID`, `INSTAGRAM_CLIENT_SECRET` | `instagram_business_basic`, `instagram_business_content_publish`, `instagram_business_manage_insights` |
+| Facebook Pages | `FACEBOOK_CLIENT_ID_V2`, `FACEBOOK_CLIENT_SECRET_V2` (preferred); original names retained as fallback | `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `read_insights` |
+| Instagram with Instagram Login | `INSTAGRAM_CLIENT_ID_V2`, `INSTAGRAM_CLIENT_SECRET_V2` (preferred); original names retained as fallback | `instagram_business_basic`, `instagram_business_content_publish`, `instagram_business_manage_insights` |
 | Threads | `THREADS_CLIENT_ID`, `THREADS_CLIENT_SECRET` | `threads_basic`, `threads_content_publish`, `threads_manage_insights` |
 
 Obtain each integration's credentials from its actual product setup. Instagram Login credentials must not be assumed to equal the parent Facebook app credentials. Store secrets in Cloudflare's production secrets, never in source control, review recordings, or frontend `VITE_*` variables. Verify runtime configuration after applying them.
