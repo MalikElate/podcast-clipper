@@ -4,6 +4,10 @@ Meadow needs a persistent Node server with FFmpeg and a writable SQLite/media di
 
 The Docker and Compose files support self-hosting. Production uses `findmeadow.com` for the public site and `app.findmeadow.com` for the authenticated product, and is managed by Cloudflare Workers Builds: only pushes to `main` trigger a build and deployment, and preview builds are disabled. Normal releases deploy through `main`. The one-time preservation procedure below requires a Worker-only Wrangler deployment before replacing a legacy container.
 
+## Concurrent changes
+
+Normal code changes must arrive through a pull request into `main`. The required `Tests and build` check validates frontend tests, backend tests, and the production frontend/prerender build. Branch protection requires the PR to be up to date with main so concurrent changes are validated together. Each task uses its own worktree; after another PR merges, integrate main and rerun checks before merging. Do not bypass this process with a direct push or a production Wrangler deployment from an older checkout. Follow [AGENTS.md](../AGENTS.md) for the parallel-task workflow.
+
 ## Prepare configuration
 
 1. Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env`.
