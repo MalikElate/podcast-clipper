@@ -1,4 +1,5 @@
 import { Agent, RichText } from "@atproto/api";
+import { TID } from "@atproto/common-web";
 import { NodeOAuthClient, OAuthResponseError, TokenInvalidError, TokenRefreshError, TokenRevokedError } from "@atproto/oauth-client-node";
 import { JoseKey } from "@atproto/jwk-jose";
 import { PlatformProvider } from "./PlatformProvider.js";
@@ -88,8 +89,11 @@ export class BlueskyProvider extends PlatformProvider {
     }
     const rt = new RichText({ text: ctx.content.caption });
     await rt.detectFacets(agent);
-    // A deterministic record key makes retries of this destination idempotent.
-    const rkey = `bridge-${ctx.delivery.id}`, record = { $type: "app.bsky.feed.post", text: rt.text, facets: rt.facets, createdAt: new Date(ctx.delivery.createdAt).toISOString(), ...(images.length ? { embed: video ? { $type: "app.bsky.embed.video", video: images[0].image, alt: images[0].alt, aspectRatio: images[0].aspectRatio } : { $type: "app.bsky.embed.images", images } } : {}) };
+    // Feed posts require a TID record key. Save it before publishing so an
+    // automatic retry reuses the same key and cannot create a duplicate post.
+    const rkey = ctx.progress.blueskyRkey || TID.nextStr();
+    if (!ctx.progress.blueskyRkey) await ctx.checkpoint({ blueskyRkey: rkey });
+    const record = { $type: "app.bsky.feed.post", text: rt.text, facets: rt.facets, createdAt: new Date(ctx.delivery.createdAt).toISOString(), ...(images.length ? { embed: video ? { $type: "app.bsky.embed.video", video: images[0].image, alt: images[0].alt, aspectRatio: images[0].aspectRatio } : { $type: "app.bsky.embed.images", images } } : {}) };
     try {
       const { data } = await agent.com.atproto.repo.putRecord({ repo: ctx.credentials.did, collection: "app.bsky.feed.post", rkey, record, validate: true });
       return { status: "published", externalId: data.uri, url: `https://bsky.app/profile/${ctx.credentials.did}/post/${rkey}` };

@@ -414,3 +414,19 @@ test("Bluesky upload rate limits use reset metadata and invalid publication resp
   assert.equal(provider.sdkError({ status: 2 }, true).uncertain, true);
   assert.equal(provider.sdkError({ status: 1 }, false).retryable, true);
 });
+
+test("Bluesky publishes with a durable TID record key", async () => {
+  const provider = new BlueskyProvider(), requests = [];
+  provider.agent = async () => ({ com: { atproto: { repo: { putRecord: async request => {
+    requests.push(request);
+    return { data: { uri: `at://${request.repo}/${request.collection}/${request.rkey}` } };
+  } } } } });
+  const ctx = context();
+  ctx.credentials = { did: "did:plc:creator" };
+  const first = await provider.publish(ctx), second = await provider.publish(ctx);
+  assert.match(requests[0].rkey, /^[234567abcdefghijkmnopqrstuvwxyz]{13}$/);
+  assert.equal(ctx.progress.blueskyRkey, requests[0].rkey);
+  assert.equal(requests[1].rkey, requests[0].rkey, "a retry must reuse the checkpointed key");
+  assert.equal(first.url, `https://bsky.app/profile/did:plc:creator/post/${requests[0].rkey}`);
+  assert.equal(second.externalId, first.externalId);
+});
