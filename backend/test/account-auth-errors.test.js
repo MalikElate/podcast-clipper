@@ -49,6 +49,16 @@ test("user API 401 and explicit invalid access-token responses identify renewabl
   }
 });
 
+test("Meta failures retain only safe connection diagnostics", async () => {
+  const http = transport(400, { error: { code: 100, error_subcode: 1349126, message: "Invalid private-code and secret" } });
+  await assert.rejects(http.request("https://graph.facebook.com/v26.0/oauth/access_token", { method: "POST", form: { code: "private-code" }, diagnosticStage: "authorization_code_exchange" }), error => {
+    assert.deepEqual(error.details, { provider: "meta", httpStatus: 400, providerCode: 100, providerSubcode: 1349126, connectionStage: "authorization_code_exchange" });
+    assert.ok(!JSON.stringify(error).includes("private-code"));
+    assert.ok(!JSON.stringify(error).includes("secret"));
+    return true;
+  });
+});
+
 test("invalid OAuth grants are distinguished from renewable access tokens", async () => {
   for (const url of tokenEndpoints) {
     for (const status of [400, 401, 200]) {

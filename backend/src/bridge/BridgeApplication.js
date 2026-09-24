@@ -206,7 +206,18 @@ export class BridgeApplication {
         const result = await this.accounts.callback(req.params.platform, new URL(req.originalUrl, this.publicUrl).searchParams);
         target.searchParams.set("project", result.projectId);
         if (result.connectionId) target.searchParams.set("connection", result.connectionId);
-      } catch (error) { target.searchParams.set("connectionError", error instanceof BridgeError ? error.message : "The account could not be connected. Please try again."); }
+      } catch (error) {
+        const details = error instanceof BridgeError && error.details && typeof error.details === "object" ? error.details : {};
+        console.error("Account connection failed:", JSON.stringify({
+          platform: req.params.platform,
+          code: error instanceof BridgeError ? error.code : "internal_error",
+          ...(typeof details.connectionStage === "string" ? { stage: details.connectionStage } : {}),
+          ...(Number.isInteger(details.httpStatus) ? { httpStatus: details.httpStatus } : {}),
+          ...(["string", "number"].includes(typeof details.providerCode) ? { providerCode: details.providerCode } : {}),
+          ...(Number.isInteger(details.providerSubcode) ? { providerSubcode: details.providerSubcode } : {}),
+        }));
+        target.searchParams.set("connectionError", error instanceof BridgeError ? error.message : "The account could not be connected. Please try again.");
+      }
       res.setHeader("Cache-Control", "no-store"); res.redirect(303, target.toString());
     }));
     app.get("/media/:id/:variant", route(async (req, res) => {

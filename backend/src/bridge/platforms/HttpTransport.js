@@ -8,7 +8,7 @@ const invalidAccessTokenCodes = new Set(["invalid_token", "access_token_invalid"
 export class HttpTransport {
   constructor({ fetcher = fetch, clock = () => Date.now() } = {}) { this.fetcher = fetcher; this.clock = clock; }
 
-  async request(url, { method = "GET", token, json, form, body, headers = {}, safeToRetry = method === "GET", timeoutMs = 60000, raw = false, acceptStatuses = [], ...options } = {}) {
+  async request(url, { method = "GET", token, json, form, body, headers = {}, safeToRetry = method === "GET", timeoutMs = 60000, raw = false, acceptStatuses = [], diagnosticStage, ...options } = {}) {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:") throw new ProviderError("The platform returned an insecure endpoint.");
     const requestHeaders = { ...headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
@@ -43,6 +43,13 @@ export class HttpTransport {
     const providerCode = data?.error?.code || data?.errors?.[0]?.reason || data?.error;
     const oauthCode = typeof data?.error === "string" ? data.error : data?.error?.code;
     const graphHost = ["graph.facebook.com", "graph.instagram.com", "graph.threads.net"].includes(parsed.hostname);
+    const graphDetails = graphHost ? {
+      provider: "meta",
+      httpStatus: response.status,
+      ...(typeof providerCode === "string" || typeof providerCode === "number" ? { providerCode } : {}),
+      ...(typeof data?.error?.error_subcode === "number" ? { providerSubcode: data.error.error_subcode } : {}),
+      ...(diagnosticStage ? { connectionStage: diagnosticStage } : {}),
+    } : null;
     const invalidAccessToken = invalidAccessTokenCodes.has(oauthCode) || graphHost && Number(data?.error?.code) === 190;
     if (parsed.hostname === "open.tiktokapis.com" && !tokenEndpoint) assertTikTokResponse(data, { status: response.status, ok: response.ok });
     if (!response.ok || tokenEndpoint && oauthCode && oauthCode !== "ok") {
@@ -81,16 +88,16 @@ export class HttpTransport {
         }
         throw new ProviderError(`Pinterest rejected the request. Check the selected board, media, and app access.${reference}`, { code: "provider_rejected", details });
       }
-      if (tokenEndpoint && oauthCode === "invalid_grant") throw authorizationError("The platform rejected this account's authorization. Reconnect the account in Meadow to continue publishing.", "grant", { providerCode: oauthCode });
+      if (tokenEndpoint && oauthCode === "invalid_grant") throw authorizationError("The platform rejected this account's authorization. Reconnect the account in Meadow to continue publishing.", "grant", graphDetails || { providerCode: oauthCode });
       if (tokenEndpoint && (["invalid_client", "unauthorized_client"].includes(oauthCode) || response.status === 401 && !invalidAccessToken)) {
-        throw new ProviderError("The platform rejected Meadow's app authorization. Meadow's administrator must check the app credentials.", { code: "provider_app_credentials", details: { httpStatus: response.status, ...(["invalid_client", "unauthorized_client"].includes(oauthCode) ? { providerCode: oauthCode } : {}) } });
+        throw new ProviderError("The platform rejected Meadow's app authorization. Meadow's administrator must check the app credentials.", { code: "provider_app_credentials", details: graphDetails || { httpStatus: response.status, ...(["invalid_client", "unauthorized_client"].includes(oauthCode) ? { providerCode: oauthCode } : {}) } });
       }
       if (response.status === 401) throw authorizationError("Reconnect this social account to renew its permissions.", "access_token");
       const rateLimited = graphHost && [4, 17, 32, 341, 613, 80001, 80002, 80004, 80006].includes(Number(data?.error?.code)) || /quotaExceeded|dailyLimitExceeded|rate.limit|too_many|spam_risk_too_many_posts|publishing.limit|request.limit/i.test(JSON.stringify(data?.error || data?.errors || {}));
-      if (!rateLimited && invalidAccessToken) throw authorizationError("The platform rejected this account's access token. Meadow needs to renew its authorization.", "access_token", typeof providerCode === "string" || typeof providerCode === "number" ? { providerCode } : null);
+      if (!rateLimited && invalidAccessToken) throw authorizationError("The platform rejected this account's access token. Meadow needs to renew its authorization.", "access_token", graphDetails || (typeof providerCode === "string" || typeof providerCode === "number" ? { providerCode } : null));
       throw new ProviderError(rateLimited ? "The platform's allowance has been reached. This delivery is queued." : `The platform rejected the request (HTTP ${response.status}). Check the account permissions and post settings.`, {
         code: rateLimited ? "rate_limited" : "provider_rejected", retryable: rateLimited,
-        details: typeof providerCode === "string" || typeof providerCode === "number" ? { providerCode } : null,
+        details: graphDetails || (typeof providerCode === "string" || typeof providerCode === "number" ? { providerCode } : null),
       });
     }
     // TikTok reports many failures in successful HTTP responses.

@@ -58,6 +58,19 @@ test("every direct OAuth adapter sends account connections to its native authori
   }
 });
 
+test("Facebook labels each connection request without exposing credentials", async () => {
+  const http = transport((url, options, call) => {
+    if (call === 1) return { access_token: "short-token", expires_in: 3600 };
+    if (call === 2) return { access_token: "long-token", expires_in: 3600 };
+    if (call === 3) return { id: "meta-user" };
+    return { data: [{ id: "page", name: "Page", access_token: "page-token" }] };
+  });
+  const provider = new FacebookProvider({ publicUrl: "https://bridge.example", env: { FACEBOOK_CLIENT_ID: "app", FACEBOOK_CLIENT_SECRET: "secret" }, transport: http });
+  const credentials = await provider.exchange({ code: "authorization-code" });
+  await provider.accounts(credentials);
+  assert.deepEqual(http.calls.map(call => call.options.diagnosticStage), ["authorization_code_exchange", "long_lived_token_exchange", "profile_lookup", "page_lookup"]);
+});
+
 test("Google Business can reuse the existing YouTube OAuth client", async () => {
   const provider = new GoogleBusinessProvider({
     publicUrl: "https://bridge.example",
