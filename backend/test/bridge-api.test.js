@@ -5,7 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
-import { BridgeApplication } from "../src/bridge/BridgeApplication.js";
+import { BridgeApplication, connectionErrorMessage } from "../src/bridge/BridgeApplication.js";
+import { ProviderError } from "../src/bridge/core/errors.js";
 import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 import { SecretVault } from "../src/bridge/core/SecretVault.js";
 import { CONNECTION_PRIVACY_VERSION } from "../src/bridge/platforms/connectionPrivacy.js";
@@ -26,6 +27,16 @@ async function setup(t, { localPreview = false, auth = true, stripe, envOverride
 }
 const pdf = Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF");
 function fileForm(bytes = pdf, name = "document.pdf", type = "application/pdf") { const form = new FormData(); form.set("file", new Blob([bytes], { type }), name); return form; }
+
+test("Facebook connection failures explain the safe failing stage and Meta reference", () => {
+  const error = new ProviderError("private provider response", { details: { provider: "meta", connectionStage: "authorization_code_exchange", httpStatus: 400, providerCode: 100, providerSubcode: 1349126 } });
+  const message = connectionErrorMessage("facebook", error);
+  assert.match(message, /exchanging the Facebook login code/);
+  assert.match(message, /HTTP 400, Meta code 100, subcode 1349126/);
+  assert.match(message, /app ID and secret belong to the same app/);
+  assert.ok(!message.includes("private provider response"));
+  assert.equal(connectionErrorMessage("threads", error), "private provider response");
+});
 
 test("all project routes require authentication and reject another owner's project", async t => {
   const h = await setup(t);

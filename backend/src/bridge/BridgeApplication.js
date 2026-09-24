@@ -49,6 +49,29 @@ import { registerMeadowMcpRoutes } from "./mcp/MeadowMcpServer.js";
 const backendDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 export const route = fn => (req, res, next) => Promise.resolve().then(() => fn(req, res)).catch(next).finally(() => req.privacyRelease?.());
 
+const facebookConnectionStages = {
+  authorization_code_exchange: "exchanging the Facebook login code",
+  long_lived_token_exchange: "extending the Facebook access token",
+  profile_lookup: "reading the authorizing Facebook profile",
+  page_lookup: "reading the Facebook Pages available to this account",
+};
+
+export function connectionErrorMessage(platform, error) {
+  if (!(error instanceof BridgeError)) return "The account could not be connected. Please try again.";
+  const details = error.details && typeof error.details === "object" ? error.details : {};
+  const stage = platform === "facebook" && details.provider === "meta" ? facebookConnectionStages[details.connectionStage] : null;
+  if (!stage) return error.message;
+  const reference = [
+    Number.isInteger(details.httpStatus) ? `HTTP ${details.httpStatus}` : null,
+    Number.isInteger(details.providerCode) ? `Meta code ${details.providerCode}` : null,
+    Number.isInteger(details.providerSubcode) ? `subcode ${details.providerSubcode}` : null,
+  ].filter(Boolean).join(", ");
+  const suffix = ["authorization_code_exchange", "long_lived_token_exchange"].includes(details.connectionStage)
+    ? "Meadow's administrator must verify that the Facebook app ID and secret belong to the same app as the Login for Business configuration and OAuth redirect URL."
+    : "Check that this Facebook account has access to a Page and that the Login for Business configuration grants the requested Page permissions.";
+  return `Facebook rejected Meadow while ${stage}${reference ? ` (${reference})` : ""}. ${suffix}`;
+}
+
 /** Composition root. Services, repository, adapters and authentication are replaceable. */
 export class BridgeApplication {
   constructor({ env = process.env, store, durability, registry, storage, authMiddleware, stripe, deleteIdentity, deleteAnalytics, clock = () => Date.now() } = {}) {
@@ -216,7 +239,7 @@ export class BridgeApplication {
           ...(["string", "number"].includes(typeof details.providerCode) ? { providerCode: details.providerCode } : {}),
           ...(Number.isInteger(details.providerSubcode) ? { providerSubcode: details.providerSubcode } : {}),
         }));
-        target.searchParams.set("connectionError", error instanceof BridgeError ? error.message : "The account could not be connected. Please try again.");
+        target.searchParams.set("connectionError", connectionErrorMessage(req.params.platform, error));
       }
       res.setHeader("Cache-Control", "no-store"); res.redirect(303, target.toString());
     }));
