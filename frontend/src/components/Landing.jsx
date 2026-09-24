@@ -188,7 +188,16 @@ export default function Landing({ onGetStarted }) {
             <div><h2 id="home-platforms-title">Show up for every audience.</h2></div>
           </div>
           <div className="home-platform-grid" aria-label="Meadow platforms">
-            {PLATFORMS.map(platform => <a className="home-platform-link" key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing`} style={{ "--platform-color": platform.color }}><span className="home-platform-icon"><PlatformIcon platform={platform.id} size={34} variant={platform.id === "google_business" ? "hero" : "default"} /></span><span>{platform.name}</span></a>)}
+            {PLATFORMS.map(platform => (
+              <a className="home-platform-link" key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing`} style={{ "--platform-color": platform.color }}>
+                <span className="home-platform-icon"><PlatformIcon platform={platform.id} size={40} variant={platform.id === "google_business" ? "hero" : "default"} /></span>
+                <span>{platform.name}</span>
+              </a>
+            ))}
+            <div className="home-platform-coming-soon">
+              <span className="home-platform-coming-soon-mark" aria-hidden="true">+</span>
+              <span>More coming soon</span>
+            </div>
           </div>
         </section>
 
