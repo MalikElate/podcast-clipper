@@ -183,6 +183,5 @@ export default function Analytics({ project, catalog }) {
         })}{mode === "post" && <tr className="bridge-total-row"><td/><td>Combined total (excludes YouTube)</td><td>{postRows.length}</td><MetricCells totals={post.totals}/><td/></tr>}</tbody></table></div>
       </> : <Empty icon="analytics" title={loading ? "Loading analytics…" : mode === "accounts" ? "Connect a social account" : "Your results start with a post"}>{mode === "accounts" ? "Your connected accounts and their reported post metrics will appear here." : "Once your content is published, you’ll be able to compare its performance here."}</Empty>}
     </div>
-    <div className="bridge-analytics-notes"><p>{data.engagementDefinition || "Engagement = likes + comments + shares + saves, where reported. Views are separate."}</p><p>— means unavailable or not yet reported. * marks a partial total. Reporting availability and timing vary by platform; refreshes may take a moment. Historical lines begin when Meadow records its first analytics snapshot. These totals do not deduplicate people across accounts.</p></div>
   </>;
 }
