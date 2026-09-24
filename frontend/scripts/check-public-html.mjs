@@ -23,12 +23,14 @@ assert.ok(!roastHtml.includes("Meadow, with the gloves off."), "tiktok-roast/ind
 assert.ok(!roastHtml.includes("A little heat. A lot of room to grow."), "tiktok-roast/index.html still contains the removed roaster note");
 assert.ok(roastHtml.includes('class="landing-header site-header"'), "tiktok-roast/index.html must use the standard Meadow navbar");
 assert.ok(!roastHtml.includes('class="roast-nav"'), "tiktok-roast/index.html must not use its old custom navbar");
-for (const navItem of ['href="/#platforms"', 'href="https://findmeadow.com/#ways-to-use">API/MCP</a>', ">Sign in</button>", ">Start posting "]) assert.ok(roastHtml.includes(navItem), `tiktok-roast/index.html missing standard navbar item ${navItem}`);
+for (const navItem of ['href="https://findmeadow.com/#platforms">Platforms</a>', 'href="https://findmeadow.com/#ways-to-use">API/MCP</a>', ">Sign in</button>", ">Start posting "]) assert.ok(roastHtml.includes(navItem), `tiktok-roast/index.html missing standard navbar item ${navItem}`);
 for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
   const html = await readFile(`dist${route}/index.html`, "utf8");
   assert.match(html, /<title>Dashboard · Meadow<\/title>/);
 }
 const landingHtml = await readFile("dist/index.html", "utf8");
+assert.ok(landingHtml.includes('href="https://findmeadow.com/#platforms">Platforms</a>'), "Homepage navbar must jump to the platform section");
+assert.ok(!landingHtml.includes('platform-mega-menu'), "Homepage navbar must not render the old platform dropdown");
 assert.ok(landingHtml.includes("Show up for every audience."), "Homepage platform section must use the requested heading");
 assert.ok(!landingHtml.includes("Go where your audience is."), "Homepage platform section must not use the old heading");
 assert.ok(landingHtml.indexOf('class="home-hero-platforms"') < landingHtml.indexOf('Post to every platform from one dashboard'), "Homepage platform logos must appear above the headline");
