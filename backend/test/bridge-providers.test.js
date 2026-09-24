@@ -394,8 +394,9 @@ test("Google Business reports unavailable post metrics without calling the retir
 test("Bluesky OAuth metadata and encrypted session storage use the official client", async t => {
   const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256", privateKeyEncoding: { type: "pkcs8", format: "pem" }, publicKeyEncoding: { type: "spki", format: "pem" } });
   const store = new SqliteStore(); t.after(() => store.close());
-  const provider = new BlueskyProvider({ env: { BLUESKY_PRIVATE_KEY: `  ${privateKey.replaceAll("\n", "\\n")}  `, BRIDGE_APP_URL: "https://bridge.example" }, publicUrl: "https://bridge.example", store, vault: new SecretVault(randomBytes(32).toString("base64")), locks: new LockService(store) });
+  const provider = new BlueskyProvider({ env: { BLUESKY_PRIVATE_KEY: `  ${privateKey.replaceAll("\n", "\\n")}  `, BRIDGE_APP_URL: "https://app.bridge.example" }, publicUrl: "https://bridge.example", store, vault: new SecretVault(randomBytes(32).toString("base64")), locks: new LockService(store) });
   const client = await provider.client(); assert.equal(client.clientMetadata.token_endpoint_auth_method, "private_key_jwt"); assert.equal(client.jwks.keys.length, 1); assert.ok(!client.jwks.keys[0].d);
+  assert.equal(client.clientMetadata.client_uri, "https://bridge.example");
   assert.equal(client.clientMetadata.policy_uri, "https://bridge.example/privacy");
   assert.equal(client.clientMetadata.tos_uri, "https://bridge.example/terms");
   const authorizations = [];
