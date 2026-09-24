@@ -8,7 +8,8 @@ import { SecretVault } from "../core/SecretVault.js";
 /** The official OAuth client owns DPoP, token refresh and identity discovery. */
 export class BlueskyProvider extends PlatformProvider {
   constructor(deps) { super("bluesky", deps); this.clientPromise = null; }
-  get configured() { return Boolean(this.env.BLUESKY_PRIVATE_KEY && this.publicUrl?.startsWith("https://") && this.vault?.configured); }
+  get privateKey() { return this.env.BLUESKY_PRIVATE_KEY?.replaceAll("\\n", "\n").trim(); }
+  get configured() { return Boolean(this.privateKey && this.publicUrl?.startsWith("https://") && this.vault?.configured); }
   encryptedStore(kind) {
     return {
       get: async key => { const row = this.store.get(kind, SecretVault.hash(key)); return row && (!row.expiresAt || row.expiresAt > Date.now()) ? this.vault.decrypt(row.encrypted, `${kind}:${key}`) : undefined; },
@@ -28,7 +29,7 @@ export class BlueskyProvider extends PlatformProvider {
     invariant(this.configured, "Bluesky connections are not configured on this server.", { status: 503 });
     if (!this.clientPromise) this.clientPromise = (async () => new NodeOAuthClient({
       clientMetadata: { client_id: `${this.publicUrl}/oauth/bluesky/client-metadata.json`, client_name: "Meadow", client_uri: this.env.BRIDGE_APP_URL || this.publicUrl, policy_uri: new URL("/privacy", this.env.BRIDGE_APP_URL || this.publicUrl).href, tos_uri: new URL("/terms", this.env.BRIDGE_APP_URL || this.publicUrl).href, redirect_uris: [this.redirectUri], grant_types: ["authorization_code", "refresh_token"], response_types: ["code"], scope: "atproto transition:generic", application_type: "web", token_endpoint_auth_method: "private_key_jwt", token_endpoint_auth_signing_alg: "ES256", dpop_bound_access_tokens: true, jwks_uri: `${this.publicUrl}/oauth/bluesky/jwks.json` },
-      keyset: [await JoseKey.fromImportable(this.env.BLUESKY_PRIVATE_KEY.replaceAll("\\n", "\n"), "bridge-1")],
+      keyset: [await JoseKey.fromImportable(this.privateKey, "bridge-1")],
       stateStore: this.encryptedStore("blueskyState"), sessionStore: this.encryptedStore("blueskySession"),
       requestLock: (key, fn) => this.locks.withLock(`bluesky:${key}`, fn),
     }))().catch(error => { this.clientPromise = null; throw error; });
