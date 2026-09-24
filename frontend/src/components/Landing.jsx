@@ -195,7 +195,6 @@ export default function Landing({ onGetStarted }) {
               </a>
             ))}
             <div className="home-platform-coming-soon">
-              <span className="home-platform-coming-soon-mark" aria-hidden="true">+</span>
               <span>More coming soon</span>
             </div>
           </div>
