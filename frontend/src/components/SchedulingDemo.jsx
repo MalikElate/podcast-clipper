@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-const ASSET = "/marketing/meadow-scheduling-demo-v1";
+const ASSET = "/marketing/meadow-crosspost-demo-v1";
 
 export default function SchedulingDemo() {
   const videoRef = useRef(null);
@@ -55,7 +55,7 @@ export default function SchedulingDemo() {
         playsInline
         preload="metadata"
         poster={`${ASSET}.webp`}
-        aria-label="Meadow calendar scheduling walkthrough"
+        aria-label="Meadow cross-platform posting walkthrough"
         aria-describedby="scheduling-demo-description"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
@@ -63,13 +63,13 @@ export default function SchedulingDemo() {
       >
         <source src={`${ASSET}.webm`} type="video/webm" />
         <source src={`${ASSET}.mp4`} type="video/mp4" />
-        <p>Schedule a campaign through Meadow&apos;s publishing calendar.</p>
+        <p>Post once to every connected platform with Meadow.</p>
       </video>
-      {!failed && <button type="button" className="scheduling-demo-toggle" onClick={togglePlayback} aria-label={playing ? "Pause scheduling demo" : "Play scheduling demo"}>
+      {!failed && <button type="button" className="scheduling-demo-toggle" onClick={togglePlayback} aria-label={playing ? "Pause cross-posting demo" : "Play cross-posting demo"}>
         {playing ? <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10" stroke="currentColor" strokeWidth="2.5" /></svg> : <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 2 9 6-9 6z" fill="currentColor" /></svg>}
       </button>}
-      {failed && <a className="scheduling-demo-download" href={`${ASSET}.mp4`}>Watch scheduling demo</a>}
-      <p id="scheduling-demo-description" className="sr-only">A silent Meadow walkthrough opens the publishing calendar, selects September 24, creates a launch post for Instagram, TikTok, and LinkedIn, schedules it for 9:30 AM, reviews all three destinations, and confirms the campaign on the calendar. The interface shown uses illustrative sample content.</p>
+      {failed && <a className="scheduling-demo-download" href={`${ASSET}.mp4`}>Watch cross-posting demo</a>}
+      <p id="scheduling-demo-description" className="sr-only">A silent Meadow walkthrough writes one launch post, clicks Post everywhere, and shows it published to Instagram, TikTok, LinkedIn, YouTube, Facebook, and X at once. The interface shown uses illustrative sample content.</p>
     </figure>
   );
 }
