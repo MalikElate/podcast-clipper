@@ -59,3 +59,25 @@ test("LinkedIn organization images retain versioned processing checks", async ()
   assert.equal((await provider.poll(ctx)).status, "processing");
   assert.equal(http.calls.length, 1);
 });
+
+test("LinkedIn post rejections keep LinkedIn's status and code but not its message", async () => {
+  const reject = body => new HttpTransport({ fetcher: async () => Response.json(body, { status: body.status }) });
+  const post = http => new LinkedInProvider({ transport: http }).publish(context([]));
+
+  await assert.rejects(post(reject({ status: 422, serviceErrorCode: 100, message: "Content is a duplicate of urn:li:share:9 Caption" })), error => {
+    assert.equal(error.code, "linkedin_duplicate");
+    assert.deepEqual(error.details, { provider: "linkedin", httpStatus: 422, serviceErrorCode: 100 });
+    assert.ok(!error.message.includes("Caption"));
+    return true;
+  });
+  await assert.rejects(post(reject({ status: 403, serviceErrorCode: 100, code: "ACCESS_DENIED", message: "Not enough permissions" })), error => {
+    assert.equal(error.code, "reconnect_required");
+    assert.match(error.message, /LinkedIn HTTP 403, code 100/);
+    return true;
+  });
+  await assert.rejects(post(reject({ status: 400, code: "INVALID_REQUEST", message: "bad field" })), error => {
+    assert.equal(error.code, "provider_rejected");
+    assert.equal(error.details.providerCode, "INVALID_REQUEST");
+    return true;
+  });
+});
