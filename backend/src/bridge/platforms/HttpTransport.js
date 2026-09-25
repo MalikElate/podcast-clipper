@@ -1,6 +1,7 @@
 import { ProviderError } from "../core/errors.js";
 import { assertXResponse } from "./xErrors.js";
 import { assertTikTokResponse } from "./tiktokErrors.js";
+import { assertLinkedInResponse } from "./linkedinErrors.js";
 
 const authorizationError = (message, authFailure, details = null) => Object.assign(new ProviderError(message, { reconnect: true, code: "reconnect_required", details }), { authFailure });
 const invalidAccessTokenCodes = new Set(["invalid_token", "access_token_invalid", "access_token_expired", "token_expired"]);
@@ -55,6 +56,7 @@ export class HttpTransport {
     if (!response.ok || tokenEndpoint && oauthCode && oauthCode !== "ok") {
       if (parsed.hostname === "api.x.com" && response.status === 402) throw new ProviderError("X requires API credits before it will return analytics.", { code: "x_credits_required" });
       if (parsed.hostname === "api.x.com" && !tokenEndpoint && response.status !== 401) assertXResponse(data);
+      if (parsed.hostname === "api.linkedin.com" && response.status !== 401) assertLinkedInResponse(data, { status: response.status });
       if (googleTokenEndpoint) {
         // Token revocation is an account issue; invalid app credentials are not.
         // Use fixed messages so Google's response cannot expose request data.
