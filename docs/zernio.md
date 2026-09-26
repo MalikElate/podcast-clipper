@@ -10,6 +10,10 @@ Meadow uses [Zernio](https://docs.zernio.com) to connect and publish to platform
 - Posts are created with an `Idempotency-Key` per delivery, scheduled 30 seconds ahead, and polled until Zernio reports `published` or `failed`. Disconnecting an account in Meadow also disconnects it in Zernio.
 - Post metrics and account views aren't available for Zernio connections yet.
 
+## Status — September 26, 2026
+
+`ZERNIO_API_KEY` is installed as a production secret with `wrangler secret put`. `ZERNIO_PLATFORMS` is unset, so all six platforms connect through Zernio. The backend container reads its environment when it starts, so a secret change takes effect only after the next normal rollout from `main`.
+
 ## Configuration
 
 | Name | Where | Value |
