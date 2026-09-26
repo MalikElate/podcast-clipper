@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { DASHBOARD_PATHS } from "../src/bridge/dashboardRoutes.js";
 import { PLATFORM_USE_CASES } from "../src/platformUseCases.js";
 import { GENERAL_PAGES } from "../src/marketing/generalPages.js";
+import { FREE_TOOL_PAGES, FREE_TOOLS, MEDIA_GUIDES } from "../src/tools/freeToolsCatalog.js";
 
 for (const [path, heading] of [["tiktok-roast/index.html", "TikTok <span>Niche or Not"], ["index.html", "Post to every platform from one dashboard"], ["404.html", ">404<"], ["pricing/index.html", "Choose the space your publishing needs"], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
   const html = await readFile(`dist/${path}`, "utf8");
@@ -102,4 +103,19 @@ for (const page of GENERAL_PAGES) {
   assert.ok(!html.includes('class="upcoming-platforms"'));
   for (const name of ["Twitch", "Kick"]) assert.ok(html.includes(`aria-label="${name}"`), `${page.path} must include ${name} in its logo sections`);
 }
-console.log("All public pages and dashboard routes have deployable HTML entry points.");
+const toolsHubHtml = await readFile("dist/free-tools/index.html", "utf8");
+assert.ok(landingHtml.includes('href="/free-tools/"'), "Homepage must link to the free tools hub");
+for (const page of FREE_TOOL_PAGES) {
+  const html = await readFile(`dist${page.path}/index.html`, "utf8");
+  assert.ok(html.includes(`<title>${page.title}</title>`), `${page.path} must have its own title`);
+  assert.equal((html.match(/<h1[ >]/g) || []).length, 1, `${page.path} must have one main heading`);
+  assert.ok(html.includes(page.name), `${page.path} must render its own content without JavaScript`);
+  assert.ok(html.includes(`<link rel="canonical" href="https://findmeadow.com${page.path}/" />`), `${page.path} must declare its canonical URL`);
+  assert.ok(sitemapUrls.includes(`https://findmeadow.com${page.path}/`), `${page.path} must be in the sitemap`);
+  assert.ok(!html.includes('name="robots"'), `${page.path} must be indexable`);
+  const schemas = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(match => JSON.parse(match[1]));
+  assert.ok(schemas.some(schema => schema['@graph']?.some(item => item['@type'] === 'BreadcrumbList')), `${page.path} must contain valid structured data`);
+  assert.ok(!html.includes('BridgeApp-'), `${page.path} must not preload the dashboard`);
+}
+for (const page of [...FREE_TOOLS, ...MEDIA_GUIDES]) assert.ok(toolsHubHtml.includes(`href="${page.path}/"`), `Hub must link to ${page.path}`);
+console.log("All public pages, free tools, guides, and dashboard routes have deployable HTML entry points.");
