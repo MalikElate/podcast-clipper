@@ -20,7 +20,8 @@ test('AI uses the shared budget and accepts only complete, structured suggestion
   assert.equal((await generateIdeas(parseGeneration(data), aiEnv)).source, 'ai');
   assert.equal(key, 'daily'); assert.equal(calls, 1);
   aiEnv.ROAST_BUDGET.getByName = () => ({ take: async () => false });
-  assert.equal((await generateIdeas(parseGeneration(data), aiEnv)).source, 'template'); assert.equal(calls, 1);
+  const limited = await generateIdeas(parseGeneration(data), aiEnv);
+  assert.equal(limited.source, 'template'); assert.equal(limited.reason, 'daily_limit'); assert.equal(calls, 1);
   aiEnv.ROAST_BUDGET.getByName = () => ({ take: async () => true });
   aiEnv.ROAST_AI.run = async () => ({ response: 'not json' });
   assert.equal((await generateIdeas(parseGeneration(data), aiEnv)).source, 'template');
@@ -34,20 +35,23 @@ test('missing budget or budget failure never spends on AI', async () => {
   await generateIdeas(parseGeneration(data), { ROAST_AI: ai, ROAST_BUDGET: { getByName: () => ({ take: async () => { throw new Error(); } }) } });
   assert.equal(calls, 0);
 });
-test('generation sends the named JSON schema required by the live provider', async () => {
-  let request;
+test('generation uses a supported Workers binding model and bounded JSON schema', async () => {
+  let request, model;
   const aiEnv = {
     ROAST_BUDGET: { getByName: () => ({ take: async () => true }) },
-    ROAST_AI: { run: async (_model, input) => {
+    ROAST_AI: { run: async (selectedModel, input) => {
+      model = selectedModel;
       request = input;
       return { response: JSON.stringify({ items: ['One week of posts, one planning session.', 'Build a content plan you can stick to.', 'A practical way to plan your next week.'] }) };
     } },
   };
   const result = await generateIdeas(parseGeneration(data), aiEnv);
+  assert.equal(model, '@cf/meta/llama-3.3-70b-instruct-fp8-fast');
   assert.equal(request.response_format.type, 'json_schema');
-  assert.equal(request.response_format.json_schema.name, 'social_ideas');
-  assert.equal(request.response_format.json_schema.schema.type, 'object');
-  assert.deepEqual(request.response_format.json_schema.schema.required, ['items']);
+  assert.equal(request.response_format.json_schema.type, 'object');
+  assert.deepEqual(request.response_format.json_schema.required, ['items']);
+  assert.equal(request.response_format.json_schema.properties.items.minItems, 3);
+  assert.equal(request.response_format.json_schema.properties.items.maxItems, 3);
   assert.equal(result.source, 'ai');
 });
 test('handle evidence requires an exact structured profile identity', () => {
