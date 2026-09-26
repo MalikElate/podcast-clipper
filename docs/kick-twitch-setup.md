@@ -40,7 +40,7 @@ Disconnect removes connection data and queues token revocation. Credentials held
 
 ## Activation status and acceptance
 
-Code is implemented; production credentials and live posting remain unverified. Both developer tabs are waiting for owner sign-in. Do not advertise the integrations as connected until registration and the checks below succeed.
+Code is implemented. The Kick app **Meadow** (client ID `01M3EDB599WSFD0DZ7Y6HE5HCH`, owner account FindMeadow) is registered, and `KICK_CLIENT_ID` / `KICK_CLIENT_SECRET` are installed as production secrets (Sep 26, 2026). The Twitch app **Find Meadow** (client ID `eqy1uo55l6mfurwpbtsk2lhss5klxo`, owner account findmeadow; the name "Meadow" was taken) is registered as a confidential Website Integration, and `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` are installed as production secrets. Live posting on both remains unverified. The backend container reads secrets at startup, so a secret change takes effect only after the next rollout from `main`. Do not advertise the integrations as connected until registration and the checks below succeed.
 
 1. Register both apps and configure secrets with the callbacks above.
 2. Connect each channel from Meadow and verify the channel name and encrypted token storage.
