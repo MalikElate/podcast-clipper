@@ -1,4 +1,5 @@
 import { handleTikTokRoast } from "./roast/handler.js";
+import { handleFreeTools } from "./freeTools.js";
 export { RoastBudget } from "./roast/budget.js";
 import { Container } from "@cloudflare/containers";
 import { env } from "cloudflare:workers";
@@ -215,6 +216,7 @@ export default {
   async fetch(request, workerEnv, ctx) {
     const url = new URL(request.url);
     if (url.pathname === "/api/tools/tiktok-roast") return handleTikTokRoast(request, workerEnv, ctx);
+    if (url.pathname.startsWith("/api/free-tools/")) return handleFreeTools(request, workerEnv, ctx);
     const appRedirect = appDomainRedirect(url);
     if (appRedirect) return Response.redirect(appRedirect, 308);
     if (url.pathname === "/runtime-config.js") {

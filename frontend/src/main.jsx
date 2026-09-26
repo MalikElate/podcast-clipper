@@ -8,6 +8,7 @@ import "./meadow.css";
 import "./borderless.css";
 import "./platformUseCases.css";
 import "./marketingPages.css";
+import "./tools/freeTools.css";
 import { initProductAnalytics } from "./productAnalytics.js";
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || globalThis.__MEADOW_CONFIG__?.clerkPublishableKey;

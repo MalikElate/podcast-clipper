@@ -14,7 +14,9 @@ import { api, localPreview } from "./bridge/BridgeApi.js";
 import { isDashboardPath } from "./bridge/dashboardRoutes.js";
 import { appHref, isLocalMarketingPreview, siteSurface } from "./siteUrls.js";
 import { getPlatformUseCaseBySlug } from "./platformUseCases.js";
+import { findFreeToolPage } from "./tools/freeToolsCatalog.js";
 const BridgeApp = lazy(() => import("./bridge/BridgeApp.jsx"));
+const FreeToolsPage = lazy(() => import("./tools/FreeToolsPage.jsx"));
 
 export default function App() {
   const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -26,6 +28,8 @@ export default function App() {
     return <LegalPage kind={isPrivacyPage ? "privacy" : "terms"} />;
   }
   if (pathname === "/tiktok-roast") return <TikTokRoast />;
+  const freeToolPage = findFreeToolPage(pathname);
+  if (freeToolPage) return <Suspense fallback={<OpeningMeadow />}><FreeToolsPage page={freeToolPage} /></Suspense>;
   if (pathname === "/pricing") return <PricingSurface marketing={surface === "marketing"} />;
   const platformPage = surface === "app" ? undefined : getPlatformUseCaseBySlug(pathname.slice(1));
   if (platformPage) return <PublicPlatformLanding platform={platformPage} onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;

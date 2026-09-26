@@ -21,6 +21,7 @@ export default function SiteHeader({ className = "", homeHref = marketingHref("/
       <nav className="landing-nav" aria-label="Main navigation">
         <a href={marketingHref("/#platforms")}>Platforms</a>
         <a href={marketingHref("/#ways-to-use")}>API/MCP</a>
+        <a href={marketingHref("/free-tools/")}>Free tools</a>
       </nav>
       <div className="landing-actions">
         <HeaderAction className="btn-ghost" onClick={signIn}>Sign in</HeaderAction>
