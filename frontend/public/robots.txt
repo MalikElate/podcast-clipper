@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# The workspace shell carries its own noindex, so crawling stays allowed and the directive is read.
+
+Sitemap: https://findmeadow.com/sitemap.xml
