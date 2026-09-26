@@ -3,10 +3,12 @@ import { createServer } from "vite";
 import { DASHBOARD_PATHS } from "../src/bridge/dashboardRoutes.js";
 import { PLATFORM_USE_CASES } from "../src/platformUseCases.js";
 import { GENERAL_PAGES } from "../src/marketing/generalPages.js";
+import { FREE_TOOL_PAGES } from "../src/tools/freeToolsCatalog.js";
 
 // Build public HTML once; no auth, API calls, or container startup at request time.
 const server = await createServer({ server: { middlewareMode: true }, appType: "custom" });
 const pages = [
+  ...FREE_TOOL_PAGES.map(page => ({ path: page.path.slice(1), kind: "free-tool", platformId: page.path, title: page.title, description: page.description })),
   { path: "tiktok-roast", kind: "tiktok-roast", title: "TikTok Niche or Not — Free Caption Review · Meadow", description: "Review public TikTok captions, get practical fixes, then use Meadow to schedule and cross-post what you create next." },
   { path: "", kind: null, title: "Meadow — Plan once, publish everywhere", description: "Connect your channels, create once, and schedule the right version of every post from one Meadow workspace." },
   { path: "404", kind: "not-found", title: "Page not found · Meadow", description: "The page could not be found. Head back to Meadow to keep your publishing work in one place." },

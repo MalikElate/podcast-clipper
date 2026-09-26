@@ -9,8 +9,15 @@ import TikTokRoast from "./tools/TikTokRoast.jsx";
 import NotFound from "./components/NotFound.jsx";
 import { findMarketingPage } from "./marketing/generalPages.js";
 import { getPlatformUseCaseById } from "./platformUseCases.js";
+import FreeToolsPage from "./tools/FreeToolsPage.jsx";
+import { findFreeToolPage } from "./tools/freeToolsCatalog.js";
 
 export function render(kind, platformId) {
+  if (kind === "free-tool") {
+    const page = findFreeToolPage(platformId);
+    if (!page) throw new Error(`Unknown free tool: ${platformId}`);
+    return renderToString(<FreeToolsPage page={page} />);
+  }
   if (kind === "tiktok-roast") return renderToString(<TikTokRoast />);
   if (kind === "marketing") {
     const page = findMarketingPage(platformId);
