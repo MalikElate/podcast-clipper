@@ -12,8 +12,30 @@ for (const [path, heading] of [["tiktok-roast/index.html", "TikTok <span>Niche o
   assert.ok(!html.includes("BridgeApp-"), "Public HTML must not preload the authenticated workspace");
   assert.ok(html.includes('<meta name="twitter:card" content="summary_large_image" />'), `${path} must request a large link preview card`);
   assert.ok(html.includes('<meta property="og:image" content="https://findmeadow.com/meadow-og-v1.png" />'), `${path} must declare its link preview image`);
+  assert.match(html, /<link rel="canonical" href="https:\/\/findmeadow\.com\/[^"]*" \/>/, `${path} must name the findmeadow.com address to index`);
+  assert.ok(!html.includes('<meta name="robots"'), `${path} must stay indexable`);
 }
 await readFile("dist/meadow-og-v1.png");
+
+// Duplicated legal routes point at one address so search engines do not split them.
+for (const [duplicate, canonical] of [["terms-of-service", "terms"], ["privacy-policy", "privacy"]]) {
+  const html = await readFile(`dist/${duplicate}/index.html`, "utf8");
+  assert.ok(html.includes(`<link rel="canonical" href="https://findmeadow.com/${canonical}/" />`), `/${duplicate}/ must defer to /${canonical}/`);
+  assert.ok(html.includes(`<meta property="og:url" content="https://findmeadow.com/${canonical}/" />`), `/${duplicate}/ must share the canonical preview URL`);
+}
+
+const robotsTxt = await readFile("dist/robots.txt", "utf8");
+assert.match(robotsTxt, /^User-agent: \*$/m, "robots.txt must carry a directive, not only comments");
+assert.match(robotsTxt, /^Sitemap: https:\/\/findmeadow\.com\/sitemap\.xml$/m, "robots.txt must point at the sitemap");
+
+const sitemap = await readFile("dist/sitemap.xml", "utf8");
+const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+assert.ok(sitemapUrls.includes("https://findmeadow.com/"), "The sitemap must list the homepage");
+assert.equal(new Set(sitemapUrls).size, sitemapUrls.length, "The sitemap must not repeat an address");
+for (const excluded of ["/404", "/terms-of-service/", "/privacy-policy/"]) {
+  assert.ok(!sitemapUrls.includes(`https://findmeadow.com${excluded}`), `The sitemap must leave out ${excluded}`);
+}
+for (const url of sitemapUrls) assert.match(url, /^https:\/\/findmeadow\.com\//, `Sitemap entry ${url} must use the canonical host`);
 
 const roastHtml = await readFile("dist/tiktok-roast/index.html", "utf8");
 assert.ok(!roastHtml.includes("Meadow is a social media scheduling tool, and I’m not sure what this has to do with our main product."), "tiktok-roast/index.html still contains removed intro copy");
@@ -27,6 +49,8 @@ for (const navItem of ['href="https://findmeadow.com/#platforms">Platforms</a>',
 for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
   const html = await readFile(`dist${route}/index.html`, "utf8");
   assert.match(html, /<title>Dashboard · Meadow<\/title>/);
+  assert.ok(html.includes('<meta name="robots" content="noindex, follow" />'), `${route} must stay out of search results`);
+  assert.ok(!html.includes('<link rel="canonical"'), `${route} must not claim a canonical address`);
 }
 const landingHtml = await readFile("dist/index.html", "utf8");
 assert.ok(landingHtml.includes('href="https://findmeadow.com/#platforms">Platforms</a>'), "Homepage navbar must jump to the platform section");
@@ -53,6 +77,8 @@ for (const platform of PLATFORM_USE_CASES) {
   assert.ok(html.includes(platform.headline), `${platform.slug} must render its own heading without JavaScript`);
   assert.ok(landingHtml.includes(`href="/${platform.slug}"`), `${platform.slug} must be linked from the homepage`);
   assert.ok(html.includes(`<meta property="og:url" content="https://findmeadow.com/${platform.slug}/" />`), `${platform.slug} must declare its own link preview URL`);
+  assert.ok(html.includes(`<link rel="canonical" href="https://findmeadow.com/${platform.slug}/" />`), `${platform.slug} must name its own canonical address`);
+  assert.ok(sitemapUrls.includes(`https://findmeadow.com/${platform.slug}/`), `${platform.slug} must appear in the sitemap`);
   if (platform.chatOnly) {
     assert.doesNotMatch(html, /coming[ -]soon/i);
     assert.ok(html.includes("depend on platform configuration"));
@@ -68,6 +94,8 @@ for (const page of GENERAL_PAGES) {
   assert.ok(!html.includes("BridgeApp-"), "Public HTML must not preload the authenticated workspace");
   assert.ok(landingHtml.includes(`href="${page.path}"`), `${page.path} must be linked from the homepage`);
   assert.ok(html.includes(`<meta property="og:url" content="https://findmeadow.com${page.path}/" />`), `${page.path} must declare its own link preview URL`);
+  assert.ok(html.includes(`<link rel="canonical" href="https://findmeadow.com${page.path}/" />`), `${page.path} must name its own canonical address`);
+  assert.ok(sitemapUrls.includes(`https://findmeadow.com${page.path}/`), `${page.path} must appear in the sitemap`);
   assert.ok(html.includes('href="/telegram-publishing"'), `${page.path} must link to Telegram publishing`);
   assert.ok(html.includes("Can I publish to Telegram channels and groups?"), `${page.path} must explain Telegram setup`);
   for (const id of ["twitch", "kick"]) assert.ok(html.includes(`href="/${id}-publishing"`), `${page.path} must link to ${id}`);
