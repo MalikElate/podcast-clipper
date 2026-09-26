@@ -56,6 +56,7 @@ export class TikTokProvider extends PlatformProvider {
   validate(content) {
     const errors = super.validate(content), s = content.settings || {}, creator = content.accountOptions?.creator;
     const mode = s.deliveryMode ?? "direct", granted = content.accountOptions?.tiktokPermissions;
+    const privateOnly = content.accountOptions?.tiktokDirectPostPrivateOnly ?? this.directPostPrivateOnly;
     if (!["direct", "inbox"].includes(mode)) errors.push("Choose whether to publish directly or finish editing in TikTok.");
     if (content.media[0]?.kind === "image" && (content.title || "").length > 90) errors.push("TikTok photo titles can contain up to 90 characters.");
     if (mode === "inbox") {
@@ -65,7 +66,7 @@ export class TikTokProvider extends PlatformProvider {
       return errors;
     }
     if (granted?.canPublish === false) errors.push(publishPermissionMessage);
-    if (this.directPostPrivateOnly && s.privacy !== "SELF_ONLY") errors.push(privateOnlyMessage);
+    if (privateOnly && s.privacy !== "SELF_ONLY") errors.push(privateOnlyMessage);
     else if (!creator?.privacyOptions?.length) errors.push("TikTok's audience options could not be loaded. Refresh the page and try again.");
     else if (!s.privacy) errors.push("Choose who can see this TikTok post.");
     else if (!creator.privacyOptions.includes(s.privacy)) errors.push("This audience is no longer available. Choose who can see this TikTok post again.");

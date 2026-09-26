@@ -43,7 +43,7 @@ export class AccountService {
     const state = randomBytes(32).toString("base64url");
     const verifier = randomBytes(48).toString("base64url");
     this.store.saveState(SecretVault.hash(state), { uid, projectId, platform, verifier, privacyConsent, authorizationBarrier: this.privacy?.connectionBarrierSnapshot(uid, platform), createdAt: this.clock() }, this.clock() + 10 * 60000);
-    return { url: await provider.authorizationUrl({ state, verifier, handle }) };
+    return { url: await provider.authorizationUrl({ state, verifier, handle, uid, projectId }) };
   }
 
   async telegramWebhook(update) {
@@ -137,7 +137,7 @@ export class AccountService {
         this.privacy?.requireConnectionConsent(platform, saved.privacyConsent);
       }
       await this.store.flush?.();
-      const result = await provider.finishAuthorization(params);
+      const result = await provider.finishAuthorization(params, saved);
       saved ||= this.store.consumeState(SecretVault.hash(result.state || ""), this.clock());
       credentials = result.credentials;
       candidates = result.candidates;
