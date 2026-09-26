@@ -34,6 +34,22 @@ test('missing budget or budget failure never spends on AI', async () => {
   await generateIdeas(parseGeneration(data), { ROAST_AI: ai, ROAST_BUDGET: { getByName: () => ({ take: async () => { throw new Error(); } }) } });
   assert.equal(calls, 0);
 });
+test('generation sends the named JSON schema required by the live provider', async () => {
+  let request;
+  const aiEnv = {
+    ROAST_BUDGET: { getByName: () => ({ take: async () => true }) },
+    ROAST_AI: { run: async (_model, input) => {
+      request = input;
+      return { response: JSON.stringify({ items: ['One week of posts, one planning session.', 'Build a content plan you can stick to.', 'A practical way to plan your next week.'] }) };
+    } },
+  };
+  const result = await generateIdeas(parseGeneration(data), aiEnv);
+  assert.equal(request.response_format.type, 'json_schema');
+  assert.equal(request.response_format.json_schema.name, 'social_ideas');
+  assert.equal(request.response_format.json_schema.schema.type, 'object');
+  assert.deepEqual(request.response_format.json_schema.schema.required, ['items']);
+  assert.equal(result.source, 'ai');
+});
 test('handle evidence requires an exact structured profile identity', () => {
   const tiktok = '<script id="__FRONTITY_CONNECT_STATE__">{"source":{"data":{"profile":{"userInfo":{"uniqueId":"brand","id":"1234"}}}}}</script>';
   assert.equal(hasProfileEvidence(tiktok, 'tiktok', 'brand'), true);
