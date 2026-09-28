@@ -118,6 +118,83 @@ test("authorization, provider, server and network failures never replay a write"
   }
 });
 
+test("a read recovers from one dropped connection", async () => {
+  let requests = 0, tokenRequests = 0;
+  const api = new BridgeApi({
+    getToken: async () => { tokenRequests++; return "token"; },
+    fetcher: async () => {
+      requests++;
+      if (requests === 1) throw new TypeError("Failed to fetch");
+      return Response.json({ accounts: [{ id: "connected-account" }] });
+    },
+  });
+  assert.deepEqual(await api.project("project", "/accounts"), { accounts: [{ id: "connected-account" }] });
+  assert.equal(requests, 2);
+  assert.equal(tokenRequests, 1);
+});
+
+test("a recurring network failure stops after one read retry with an actionable error", async () => {
+  let requests = 0, lastFailure;
+  const api = new BridgeApi({ getToken: async () => "token", fetcher: async () => {
+    requests++;
+    lastFailure = new TypeError("Failed to fetch");
+    throw lastFailure;
+  } });
+  await assert.rejects(api.project("project", "/accounts"), error => {
+    assert.equal(error.code, "network_error");
+    assert.match(error.message, /check your internet connection and try again/i);
+    assert.equal(error.cause, lastFailure);
+    return true;
+  });
+  assert.equal(requests, 2);
+});
+
+test("cancellation after a dropped connection prevents the read retry", async () => {
+  const controller = new AbortController();
+  let requests = 0;
+  const api = new BridgeApi({ getToken: async () => "token", fetcher: async () => {
+    requests++;
+    controller.abort();
+    throw new TypeError("Failed to fetch");
+  } });
+  await assert.rejects(api.getProjects(controller.signal), error => error === controller.signal.reason && error.name === "AbortError");
+  assert.equal(requests, 1);
+});
+
+test("fetch cancellation stays an AbortError without retrying", async () => {
+  const cancellation = new DOMException("Request cancelled", "AbortError");
+  let requests = 0;
+  const api = new BridgeApi({ getToken: async () => "token", fetcher: async () => { requests++; throw cancellation; } });
+  await assert.rejects(api.getProjects(), error => error === cancellation);
+  assert.equal(requests, 1);
+});
+
+test("provider authorization errors do not retry reads", async () => {
+  let requests = 0;
+  const api = new BridgeApi({ getToken: async () => "token", fetcher: async () => {
+    requests++;
+    return Response.json({ error: "Provider access denied", code: "provider_auth" }, { status: 403 });
+  } });
+  await assert.rejects(api.project("project", "/accounts/account/options"), error => error.status === 403 && error.code === "provider_auth" && error.message === "Provider access denied");
+  assert.equal(requests, 1);
+});
+
+test("token-provider network failures are actionable without sending an API request", async () => {
+  const failure = new TypeError("Failed to fetch");
+  let tokenRequests = 0;
+  const api = new BridgeApi({ getToken: async () => { tokenRequests++; throw failure; }, fetcher: async () => assert.fail("No API request without a token") });
+  await assert.rejects(api.getProjects(), error => error.code === "network_error" && error.cause === failure && /check your internet connection and try again/i.test(error.message));
+  assert.equal(tokenRequests, 1);
+});
+
+test("multipart requests never replay after a dropped connection", async () => {
+  let requests = 0;
+  const failure = new TypeError("Failed to fetch");
+  const api = new BridgeApi({ getToken: async () => "token", fetcher: async () => { requests++; throw failure; } });
+  await assert.rejects(api.project("project", "/media", { method: "POST", body: new FormData() }), error => error.code === "network_error" && error.cause === failure);
+  assert.equal(requests, 1);
+});
+
 test("cancelling a request during token refresh prevents the retry", async () => {
   const controller = new AbortController();
   let requests = 0;
