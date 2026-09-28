@@ -29,8 +29,42 @@ const provider = (Base, transport) => new (withZernio(Base))({ env, transport, s
 
 test("Zernio routing is enabled only with an API key and for supported platforms", () => {
   assert.deepEqual([...zernioPlatforms({})], []);
-  assert.deepEqual([...zernioPlatforms({ ZERNIO_API_KEY: "sk" })], ["tiktok", "snapchat", "facebook", "instagram", "threads", "pinterest"]);
+  assert.deepEqual([...zernioPlatforms({ ZERNIO_API_KEY: "sk" })], ["snapchat", "facebook", "instagram", "threads", "pinterest"]);
   assert.deepEqual([...zernioPlatforms({ ZERNIO_API_KEY: "sk", ZERNIO_PLATFORMS: "tiktok, youtube,pinterest" })], ["tiktok", "pinterest"]);
+});
+
+test("Default TikTok connections use Meadow's native OAuth even with Zernio configured", async () => {
+  const liveEnv = { ZERNIO_API_KEY: "sk_test", TIKTOK_CLIENT_KEY: "meadow-client", TIKTOK_CLIENT_SECRET: "meadow-secret" };
+  const calls = [];
+  const transport = new HttpTransport({ fetcher: async (url, options) => {
+    calls.push(url);
+    assert.equal(new URL(url).origin, "https://open.tiktokapis.com");
+    if (url.endsWith("/oauth/token/")) {
+      const form = new URLSearchParams(options.body);
+      assert.equal(form.get("client_key"), "meadow-client");
+      assert.equal(form.get("code"), "authorized-code");
+      assert.equal(form.get("redirect_uri"), "https://findmeadow.com/oauth/tiktok/callback");
+      return Response.json({ access_token: "native-token", refresh_token: "native-refresh", open_id: "native-id", scope: "user.info.basic,video.publish,video.upload,video.list", expires_in: 86400 });
+    }
+    assert.equal(options.headers.Authorization, "Bearer native-token");
+    assert.equal(new URL(url).pathname, "/v2/user/info/");
+    return Response.json({ data: { user: { open_id: "native-id", display_name: "Creator" } } });
+  } });
+  const tiktok = new (withZernio(TikTokProvider))({ env: liveEnv, transport, publicUrl: "https://findmeadow.com", zernioConnections: zernioPlatforms(liveEnv).has("tiktok") });
+  const authorize = new URL(await tiktok.authorizationUrl({ state: "state1" }));
+  assert.equal(authorize.origin, "https://www.tiktok.com");
+  assert.equal(authorize.pathname, "/v2/auth/authorize/");
+  assert.equal(authorize.searchParams.get("client_key"), "meadow-client");
+  assert.equal(authorize.searchParams.get("state"), "state1");
+  assert.equal(authorize.searchParams.get("scope"), "user.info.basic,video.publish,video.upload,video.list");
+  const result = await tiktok.finishAuthorization(new URLSearchParams("state=state1&code=authorized-code"), {});
+  assert.equal(result.credentials.accessToken, "native-token");
+  assert.equal(result.credentials.zernioAccountId, undefined);
+  assert.equal(result.candidates[0].remoteId, "native-id");
+  assert.equal(calls.length, 2);
+  const missingCredentials = new (withZernio(TikTokProvider))({ env: { ZERNIO_API_KEY: "sk_test" }, zernioConnections: false });
+  assert.equal(missingCredentials.configured, false);
+  await assert.rejects(missingCredentials.authorizationUrl({ state: "state2" }), error => error.code === "platform_unconfigured");
 });
 
 test("Zernio connections use one profile per workspace and verify the returned account", async () => {

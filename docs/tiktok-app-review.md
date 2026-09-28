@@ -1,5 +1,11 @@
 # TikTok app review
 
+## Production status — September 28, 2026
+
+The TikTok developer portal now shows Meadow **Live** in production, with Login Kit, Content Posting API Direct Post, and `user.info.basic`, `video.publish`, `video.upload`, and `video.list` enabled. The registered callback is `https://findmeadow.com/oauth/tiktok/callback`. New Meadow connections use native TikTok OAuth instead of Zernio; existing native connections are preserved.
+
+The portal still offers **Apply** for the separate Direct Post audit. Keep `TIKTOK_DIRECT_POST_PRIVATE_ONLY=true` until that audit is approved. The app's live status is not evidence that public Direct Post restrictions were lifted. The review material below remains useful for subsequent revisions and the separate audit.
+
 ## Review explanation
 
 Paste the following text into the product/scope explanation field (982 characters, including line breaks). It describes the implemented integration; it does not claim a review recording or production approval already exists.
