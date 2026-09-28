@@ -366,15 +366,19 @@ export class PrivacyService {
     for (const session of this.store.list("blueskySession", { limit: null })) if (!referenced.has(session.id)) this.store.remove("blueskySession", session.id);
   }
   tiktokWebhook(rawBody, signature) {
-    invariant(this.env.TIKTOK_CLIENT_SECRET, "TikTok webhooks are not configured.", { status: 503 });
+    const clients = [[this.env.TIKTOK_CLIENT_KEY, this.env.TIKTOK_CLIENT_SECRET], [this.env.TIKTOK_CLIENT_KEY_V2, this.env.TIKTOK_CLIENT_SECRET_V2]].filter(([key, secret]) => key && secret);
+    invariant(clients.length, "TikTok webhooks are not configured.", { status: 503 });
     invariant(Buffer.isBuffer(rawBody), "Invalid webhook body.", { status: 400 });
     const fields = String(signature || "").split(",").map(value => value.trim().split("="));
     const timestamp = fields.find(([key]) => key === "t")?.[1];
     const signatures = fields.filter(([key]) => key === "s").map(([, value]) => value);
-    const expected = createHmac("sha256", this.env.TIKTOK_CLIENT_SECRET).update(`${timestamp}.`).update(rawBody).digest();
-    invariant(/^\d+$/.test(timestamp || "") && Math.abs(this.clock() - Number(timestamp) * 1000) <= 5 * 60000 && signatures.some(value => { const actual = Buffer.from(value || "", "hex"); return actual.length === expected.length && timingSafeEqual(actual, expected); }), "Invalid TikTok webhook signature.", { status: 400 });
+    const verifiedClients = clients.filter(([, secret]) => {
+      const expected = createHmac("sha256", secret).update(`${timestamp}.`).update(rawBody).digest();
+      return signatures.some(value => { const actual = Buffer.from(value || "", "hex"); return actual.length === expected.length && timingSafeEqual(actual, expected); });
+    });
+    invariant(/^\d+$/.test(timestamp || "") && Math.abs(this.clock() - Number(timestamp) * 1000) <= 5 * 60000 && verifiedClients.length, "Invalid TikTok webhook signature.", { status: 400 });
     let event; try { event = JSON.parse(rawBody); } catch { invariant(false, "Invalid webhook body."); }
-    invariant(event.client_key === this.env.TIKTOK_CLIENT_KEY, "Unexpected TikTok client.", { status: 400 });
+    invariant(verifiedClients.some(([key]) => key === event.client_key), "Unexpected TikTok client.", { status: 400 });
     if (event.event === "authorization.removed") {
       invariant(typeof event.user_openid === "string" && event.user_openid && Number.isSafeInteger(event.create_time), "Invalid authorization event.");
       let content = event.content;
@@ -386,7 +390,10 @@ export class PrivacyService {
       this.store.transaction(() => {
         if (this.store.get("tiktokRemovalEvent", id)?.expiresAt > this.clock()) return;
         for (const account of this.store.list("account", { limit: null }).filter(item => item.platform === "tiktok" && item.remoteId === event.user_openid && Math.floor((item.authorizationGrantedAt || item.createdAt) / 1000) <= event.create_time)) {
-          if (!this.blocked(account.ownerUid)) this.requestConnection(account.ownerUid, account.projectId, account.id, { alreadyRevoked: true });
+          if (!account.encryptedCredentials) continue;
+          const credentials = this.vault.decrypt(account.encryptedCredentials, `account:${account.id}`);
+          if ((credentials.tiktokClientKey || this.env.TIKTOK_CLIENT_KEY) !== event.client_key) continue;
+          if (!this.blocked(account.ownerUid)) this.requestConnection(account.ownerUid, account.projectId, account.id, { alreadyRevoked: true, matchAuthorizationOnly: true });
         }
         this.store.put("tiktokRemovalEvent", { id, createdAt: this.clock(), expiresAt: this.clock() + TIKTOK_EVENT_TTL });
       });

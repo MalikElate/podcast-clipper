@@ -28,13 +28,35 @@ export class TikTokProvider extends PlatformProvider {
   availableAccountViews({ credentials }) { return tiktokAccountAnalytics(this, credentials); }
   constructor(deps) { super("tiktok", deps); }
   get directPostPrivateOnly() { return this.env.TIKTOK_DIRECT_POST_PRIVATE_ONLY === "true"; }
+  // Production and Sandbox grants belong to different TikTok clients. Keep
+  // the original credentials for renewal/revocation of pre-rollout grants.
+  credentialOAuth(credentials) {
+    const clientId = credentials.tiktokClientKey || this.env.TIKTOK_CLIENT_KEY;
+    const oauth = this.oauth;
+    if (clientId && clientId === oauth.clientId && oauth.clientSecret) return oauth;
+    if (clientId && clientId === this.env.TIKTOK_CLIENT_KEY && this.env.TIKTOK_CLIENT_SECRET) return { ...oauth, clientId, clientSecret: this.env.TIKTOK_CLIENT_SECRET };
+    throw new ProviderError("Reconnect TikTok to renew access through Meadow's current app.", { reconnect: true, code: "reconnect_required" });
+  }
+  normalizeToken(data, previous = {}) {
+    return { ...super.normalizeToken(data, previous), tiktokClientKey: previous.tiktokClientKey || this.oauth.clientId };
+  }
+  async refresh(credentials) {
+    if (!credentials.refreshToken) return credentials;
+    const oauth = this.credentialOAuth(credentials);
+    const data = await this.http.request(oauth.token, { method: "POST", form: { grant_type: "refresh_token", refresh_token: credentials.refreshToken, client_key: oauth.clientId, client_secret: oauth.clientSecret }, safeToRetry: true });
+    return this.normalizeToken(data, { ...credentials, tiktokClientKey: oauth.clientId });
+  }
   async revoke(credentials) {
+    const oauth = this.credentialOAuth(credentials);
     await this.http.request("https://open.tiktokapis.com/v2/oauth/revoke/", {
-      method: "POST", form: { client_key: this.oauth.clientId, client_secret: this.oauth.clientSecret, token: credentials.accessToken }, safeToRetry: true,
+      method: "POST", form: { client_key: oauth.clientId, client_secret: oauth.clientSecret, token: credentials.accessToken }, safeToRetry: true,
     });
     return { remoteRevocation: true };
   }
-  get oauth() { return { authorize: "https://www.tiktok.com/v2/auth/authorize/", token: "https://open.tiktokapis.com/v2/oauth/token/", clientId: this.env.TIKTOK_CLIENT_KEY, clientSecret: this.env.TIKTOK_CLIENT_SECRET, clientIdParam: "client_key", scopes: ["user.info.basic", "video.publish", "video.upload", "video.list"], scopeSeparator: ",", extra: { disable_auto_auth: "1" } }; }
+  get oauth() {
+    const v2 = Boolean(this.env.TIKTOK_CLIENT_KEY_V2 || this.env.TIKTOK_CLIENT_SECRET_V2);
+    return { authorize: "https://www.tiktok.com/v2/auth/authorize/", token: "https://open.tiktokapis.com/v2/oauth/token/", clientId: v2 ? this.env.TIKTOK_CLIENT_KEY_V2 : this.env.TIKTOK_CLIENT_KEY, clientSecret: v2 ? this.env.TIKTOK_CLIENT_SECRET_V2 : this.env.TIKTOK_CLIENT_SECRET, clientIdParam: "client_key", scopes: ["user.info.basic", "video.publish", "video.upload", "video.list"], scopeSeparator: ",", extra: { disable_auto_auth: "1" } };
+  }
   request(endpoint, credentials, json) { return this.http.request(`https://open.tiktokapis.com/v2/${endpoint}`, { token: credentials.accessToken, ...(json ? { method: "POST", json } : {}) }); }
   async accounts(credentials) {
     const result = await this.request("user/info/?fields=open_id,display_name,avatar_url", credentials);

@@ -12,7 +12,7 @@ Meadow uses [Zernio](https://docs.zernio.com) for new connections to Snapchat, F
 
 ## Status — September 28, 2026
 
-`ZERNIO_API_KEY` remains installed as a production secret for the five platforms above. `wrangler.jsonc` explicitly sets `ZERNIO_PLATFORMS=snapchat,facebook,instagram,threads,pinterest`; the backend default matches. TikTok's existing `TIKTOK_CLIENT_KEY` and `TIKTOK_CLIENT_SECRET` drive Login Kit and the native Content Posting API adapter. The backend container reads its environment when it starts, so configuration changes take effect through the next normal rollout from `main`.
+`ZERNIO_API_KEY` remains installed as a production secret for the five platforms above. `wrangler.jsonc` explicitly sets `ZERNIO_PLATFORMS=snapchat,facebook,instagram,threads,pinterest`; the backend default matches. TikTok's approved production credentials are `TIKTOK_CLIENT_KEY_V2` and `TIKTOK_CLIENT_SECRET_V2`; retain the original pair for historical Sandbox grants. See [TikTok app review](tiktok-app-review.md) for the transition. The backend container reads its environment when it starts, so configuration changes take effect through the next normal rollout from `main`.
 
 The TikTok developer portal shows Meadow live in production as of September 28, with Login Kit, Direct Post, and the four requested scopes enabled. Its separate Direct Post audit still offers **Apply**, so `TIKTOK_DIRECT_POST_PRIVATE_ONLY=true` remains in place. App approval alone does not lift TikTok's unaudited-client restrictions.
 
