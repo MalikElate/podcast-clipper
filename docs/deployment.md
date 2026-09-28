@@ -24,6 +24,14 @@ Checkout returns to `/dashboard/billing` with a Stripe session ID. Meadow verifi
 
 Concurrent checkout requests reuse the same unpaid session; choosing another plan expires the previous session. The checkout request and its idempotency key are durably stored before contacting Stripe, allowing a lost response to be recovered after restart. If an unresolved attempt is over 23 hours old, checkout stops with `checkout_pending`. An operator must inspect Stripe's request logs using the stored key and reconcile any matching session/subscription before clearing that attempt; never blindly retry it with a new key. Account deletion also recovers outstanding attempts before expiring checkout and canceling subscriptions.
 
+## Meta Pixel
+
+The shared HTML head loads `frontend/src/metaPixel.js` with public Pixel ID `1591452026328293`. It records `PageView` on production Meadow hosts, including client-side route changes, and stays off in development and local previews. It honors the existing analytics preference, Do Not Track, and Global Privacy Control. Automatic form capture and advanced matching are disabled; no signup or purchase conversions are inferred from page views.
+
+The wrapper skips URLs carrying draft IDs, OAuth parameters, checkout session IDs, and unknown parameters. Campaign parameters remain available for ad attribution. A script-only integration lets the privacy preference govern all events, including when the visitor changes it during a visit. There is no unconditional noscript tracking image.
+
+After deployment, use Meta Events Manager's Test Events or Meta Pixel Helper on the public site to confirm the pixel and PageView. Avoid sending fake conversions to the live pixel.
+
 ## Trybe purchase attribution
 
 Set `TRYBE_ORDERS_API_KEY` to the private `sk_` Orders API key from Trybe → Integrations → Universal Pixel, and set `TRYBE_STORE_ID` to that pixel's store ID. The read-only Brand API `tk_live_` key cannot submit orders. The public pixel configuration lives in `frontend/public/trybe-pixel.js`; its store ID must match the backend. `track.findmeadow.com` is a DNS-only CNAME to `proxy.jointrybe.com`, verified in Trybe before enabling the script.
