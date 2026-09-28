@@ -4,23 +4,40 @@ import { uploadWithProgress } from "./uploadTransport.js";
 import { captureRequestSuccess } from "../productAnalytics.js";
 export const localPreview = Boolean(import.meta.env?.DEV && import.meta.env?.VITE_BRIDGE_LOCAL_PREVIEW === "true");
 const sessionError = () => Object.assign(new Error("Your Meadow sign-in could not be verified. Please sign in again to continue."), { code: "authentication_required", status: 401 });
+const networkError = cause => Object.assign(new Error("Meadow could not reach the server. Check your internet connection and try again.", { cause }), { code: "network_error" });
 export class BridgeApi {
   constructor({ getToken = getAuthToken, fetcher = (...args) => fetch(...args), uploader = uploadWithProgress, preview = localPreview, track = captureRequestSuccess } = {}) {
     Object.assign(this, { getToken, fetcher, uploader, preview, track });
   }
   async headers(json = true, refresh = false) {
-    let token = this.preview ? null : await this.getToken({ skipCache: refresh });
-    if (!this.preview && !token && !refresh) token = await this.getToken({ skipCache: true });
+    let token;
+    try {
+      token = this.preview ? null : await this.getToken({ skipCache: refresh });
+      if (!this.preview && !token && !refresh) token = await this.getToken({ skipCache: true });
+    } catch (error) { if (error.name === "TypeError") throw networkError(error); throw error; }
     if (!this.preview && !token) throw sessionError();
     return { ...(json ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(this.preview ? { "X-Bridge-Preview": "1" } : {}) };
   }
   async request(path, { method = "GET", body, signal } = {}) {
     const form = body instanceof FormData;
+    let retriedNetwork = false;
     const send = async refresh => {
       signal?.throwIfAborted();
       const headers = await this.headers(!form, refresh);
       signal?.throwIfAborted();
-      const res = await this.fetcher(`/api/bridge${path}`, { method, headers, body: body === undefined ? undefined : form ? body : JSON.stringify(body), signal });
+      const options = { method, headers, body: body === undefined ? undefined : form ? body : JSON.stringify(body), signal };
+      let res;
+      for (;;) {
+        try { res = await this.fetcher(`/api/bridge${path}`, options); break; }
+        catch (error) {
+          signal?.throwIfAborted();
+          if (error.name !== "TypeError") throw error;
+          // Read requests may recover from one dropped connection. A write
+          // may already have reached the server, so it must never be replayed.
+          if (method === "GET" && !form && body === undefined && !retriedNetwork) { retriedNetwork = true; continue; }
+          throw networkError(error);
+        }
+      }
       return { res, data: await res.json().catch(() => ({})) };
     };
     let { res, data } = await send(form);

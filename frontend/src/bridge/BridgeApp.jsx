@@ -207,7 +207,8 @@ function ProjectWorkspace({ userId, project, config, view, navigate, compose, dr
   function accountRemovalChanged(id, removing) {
     setRemovingAccounts(current => removing ? [...new Set([...current, id])] : current.filter(value => value !== id));
   }
-  const mediaResource = useProjectResource(project.id, "/media", { media: [] });
+  const needsMedia = view === "compose" || ["posts", "scheduled", "posted", "drafts", "failed"].includes(view);
+  const mediaResource = useProjectResource(project.id, "/media", { media: [] }, { enabled: needsMedia, refreshOnFocus: true });
   const catalog = config.platforms || [];
   const media = mediaResource.data.media;
   const [uploadError, setUploadError] = useState("");
@@ -235,7 +236,8 @@ function ProjectWorkspace({ userId, project, config, view, navigate, compose, dr
   }
   const common = { project, config, catalog, media, accountsReady, accounts: (accountResource.data.accounts || []).map(account => removingAccounts.includes(account.id) ? { ...account, status: "deleting" } : account) };
   const draftLoading = Boolean(draftId && (draftState.id !== draftId || draftState.loading));
-  return <><Alert message={accountResource.error || mediaResource.error || uploadError}/>
+  return <><Alert message={accountResource.error ? `Could not load your social accounts. ${accountResource.error}` : needsMedia ? mediaResource.error || uploadError : ""}/>
+    {accountResource.error && <div className="bridge-intro-row"><button type="button" className="bridge-button secondary small" disabled={accountResource.loading} onClick={accountResource.reload}>Retry connections</button></div>}
     {view === "compose" && (draftLoading ? <div className="bridge-panel bridge-empty"><p>Loading your draft…</p></div> : draftState.error ? <div className="bridge-panel bridge-empty"><Alert message={draftState.error}/><button className="bridge-button secondary" onClick={() => navigate("drafts", { force: true })}>Back to drafts</button></div> : <Composer key={`${draftVersion}:${draftId}:${draftState.post?.revision || 0}`} {...common} draft={draftState.post} scheduledDate={scheduledDate} onDraftStarted={clearScheduledDate} onDirtyChange={onComposeDirty} onBusyChange={onComposeBusy} onAccounts={() => navigate("accounts")} onUpload={upload} onDiscard={() => navigate(draftId ? "drafts" : "posts", { force: true })} onDraftSaved={() => { navigate("drafts", { force: true }); notify("Draft saved."); }} onSubmitted={result => { navigate("posts", { force: true }); notify(`${result.posts.length} ${result.posts.length === 1 ? "post" : "posts"} added to your delivery queue.`); }}/>) }
     {view === "accounts" && <Accounts {...common} connectionId={connectionId} clearConnection={clearConnection} onChanged={accountResource.reload} onRemovalChange={accountRemovalChanged}/>}
     {view === "clips" && <ClippingStudioComingSoon/>}

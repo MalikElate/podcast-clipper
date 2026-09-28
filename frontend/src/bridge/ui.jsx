@@ -118,10 +118,11 @@ export function Modal({ title, children, onClose, wide = false, busy = false, cl
   }, []);
   return <div className="bridge-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget && !busy) onClose(); }}><section ref={ref} tabIndex={-1} className={`bridge-modal ${wide ? "wide" : ""} ${className}`.trim()} role="dialog" aria-modal="true" aria-labelledby={id}><button className="bridge-modal-close bridge-icon-button" onClick={onClose} disabled={busy} aria-label="Close dialog"><Icon name="close"/></button><h2 id={id}>{title}</h2>{children}</section></div>;
 }
-export function useProjectResource(projectId, endpoint, initial, { interval = 0, revision = 0, refreshOnFocus = false } = {}) {
+export function useProjectResource(projectId, endpoint, initial, { interval = 0, revision = 0, refreshOnFocus = false, enabled = true } = {}) {
   const [data, setData] = useState(initial), [error, setError] = useState(""), [loading, setLoading] = useState(true), [version, setVersion] = useState(0);
   const reload = useCallback(() => setVersion(value => value + 1), []);
   useEffect(() => {
+    if (!enabled) { setLoading(false); return; }
     const controller = new AbortController(); let fetching = false;
     setLoading(true); setError("");
     async function fetchData() {
@@ -135,7 +136,7 @@ export function useProjectResource(projectId, endpoint, initial, { interval = 0,
     fetchData(); const timer = interval ? setInterval(refreshVisible, interval) : null;
     if (refreshOnFocus) { window.addEventListener("focus", refreshVisible); document.addEventListener("visibilitychange", refreshVisible); }
     return () => { controller.abort(); clearInterval(timer); window.removeEventListener("focus", refreshVisible); document.removeEventListener("visibilitychange", refreshVisible); };
-  }, [projectId, endpoint, interval, revision, version, refreshOnFocus]);
+  }, [projectId, endpoint, interval, revision, version, refreshOnFocus, enabled]);
   return { data, setData, error, loading, reload };
 }
 export function MediaThumb({ media, playable = false }) {
