@@ -13,6 +13,7 @@ test("OAuth refresh retains omitted account metadata and uses each rotated refre
   let time = now;
   const calls = [];
   const provider = new TikTokProvider({
+    env: { TIKTOK_CLIENT_KEY: "client", TIKTOK_CLIENT_SECRET: "secret" },
     clock: () => time,
     transport: { request: async (url, options) => {
       calls.push(options.form);
@@ -71,7 +72,7 @@ test("missing or unusable refresh lifetime never discards a known authorization 
 });
 
 test("returned OAuth scope and account identifiers replace previous values", async () => {
-  const provider = new TikTokProvider({ transport: { request: async () => ({ access_token: "access", scope: "user.info.basic", open_id: "new-id" }) } });
+  const provider = new TikTokProvider({ env: { TIKTOK_CLIENT_KEY: "client", TIKTOK_CLIENT_SECRET: "secret" }, transport: { request: async () => ({ access_token: "access", scope: "user.info.basic", open_id: "new-id" }) } });
   const credentials = await provider.refresh({ refreshToken: "refresh", scope: "old-scope", rawAccountId: "old-id" });
   assert.equal(credentials.scope, "user.info.basic");
   assert.equal(credentials.rawAccountId, "new-id");

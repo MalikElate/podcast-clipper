@@ -6,6 +6,10 @@ The TikTok developer portal now shows Meadow **Live** in production, with Login 
 
 The portal still offers **Apply** for the separate Direct Post audit. Keep `TIKTOK_DIRECT_POST_PRIVATE_ONLY=true` until that audit is approved. The app's live status is not evidence that public Direct Post restrictions were lifted. The review material below remains useful for subsequent revisions and the separate audit.
 
+Live authorization verification found that the original `TIKTOK_CLIENT_KEY` / `TIKTOK_CLIENT_SECRET` pair belongs to Meadow Sandbox. The approved production pair is installed separately as `TIKTOK_CLIENT_KEY_V2` / `TIKTOK_CLIENT_SECRET_V2`. New authorizations prefer the complete V2 pair and stamp the client key into encrypted account credentials. Renewal and revocation use the pair that issued each grant; historical untagged grants continue using the original Sandbox pair. Do not overwrite the original pair while those grants remain connected.
+
+An existing Sandbox account must authorize **Meadow** again through **Connect TikTok** to use production. TikTok's production open ID may differ, so Meadow does not silently merge accounts, move scheduled posts, or revoke the old grant. Verify the authorization screen says **Meadow**, without **(Sandbox)**, before continuing.
+
 ## Review explanation
 
 Paste the following text into the product/scope explanation field (982 characters, including line breaks). It describes the implemented integration; it does not claim a review recording or production approval already exists.
