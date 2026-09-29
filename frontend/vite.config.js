@@ -1,6 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
-import { clerkScriptUrls } from "./src/clerkScripts.js";
+import { clerkAuthPreloadScript, clerkScriptUrls } from "./src/clerkScripts.js";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
@@ -17,6 +17,9 @@ export default defineConfig(({ mode }) => {
       const clerkScripts = env.VITE_BRIDGE_LOCAL_PREVIEW === "true" ? null : clerkScriptUrls(env.VITE_CLERK_PUBLISHABLE_KEY);
       if (clerkScripts) {
         for (const href of [clerkScripts.clerkJS, clerkScripts.clerkUI]) tags.push({ tag: "link", attrs: { rel: "preload", as: "script", href, crossorigin: "anonymous" }, injectTo: "head" });
+        // UI chunks use plain script tags, unlike the two loaders above. Omit
+        // crossorigin so Clerk reuses these downloads when it mounts the form.
+        tags.push({ tag: "script", children: clerkAuthPreloadScript(env.VITE_CLERK_PUBLISHABLE_KEY), injectTo: "head-prepend" });
       }
 
       return tags;
