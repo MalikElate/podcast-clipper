@@ -37,9 +37,10 @@ for (const excluded of ["/404", "/start/", "/terms-of-service/", "/privacy-polic
   assert.ok(!sitemapUrls.includes(`https://findmeadow.com${excluded}`), `The sitemap must leave out ${excluded}`);
 }
 const funnelHtml = await readFile("dist/start/index.html", "utf8");
-assert.ok(funnelHtml.includes("Your post is ready. Meadow handles the publishing."), "The ad funnel must render its promise without JavaScript");
-assert.ok(funnelHtml.includes("Start posting free"), "The ad funnel must present a free-signup action");
-assert.ok(funnelHtml.includes("Five connected social accounts"), "The ad funnel must explain the free offer");
+assert.ok(funnelHtml.includes("Create once."), "The ad funnel must render its promise without JavaScript");
+assert.ok(funnelHtml.includes("Publish everywhere."), "The ad funnel must render its cross-platform outcome without JavaScript");
+assert.ok(funnelHtml.includes("Start Posting for Free"), "The ad funnel must present a free-signup action");
+assert.ok(funnelHtml.includes("Start with 5 social accounts"), "The ad funnel must explain the free offer");
 assert.ok(funnelHtml.includes('href="https://app.findmeadow.com/sign-up"'), "The ad funnel must link directly to account creation");
 assert.ok(funnelHtml.includes('<meta name="robots" content="noindex, follow" />'), "The paid landing page must stay out of the sitemap and search results");
 assert.ok(!funnelHtml.includes('<link rel="canonical"'), "The paid landing page must not claim an indexed canonical URL");
