@@ -6,13 +6,16 @@ import LegalPage from "./components/LegalPage.jsx";
 import Pricing from "./components/Pricing.jsx";
 import PlatformUseCasePage from "./components/PlatformUseCasePage.jsx";
 import MarketingPage from "./components/MarketingPage.jsx";
+import AdSignupFunnel from "./components/AdSignupFunnel.jsx";
 import { findMarketingPage } from "./marketing/generalPages.js";
 import TikTokRoast from "./tools/TikTokRoast.jsx";
 import NotFound from "./components/NotFound.jsx";
 import { PAID_PLANS as PLANS } from "./pricing.js";
 import { api, localPreview } from "./bridge/BridgeApi.js";
 import { isDashboardPath } from "./bridge/dashboardRoutes.js";
-import { appHref, isLocalMarketingPreview, siteSurface } from "./siteUrls.js";
+import { appHref, isLocalMarketingPreview, marketingHref, siteSurface } from "./siteUrls.js";
+import { captureMetaRegistration } from "./metaPixel.js";
+import { captureProductEvent } from "./productAnalytics.js";
 import { getPlatformUseCaseBySlug } from "./platformUseCases.js";
 import { findFreeToolPage } from "./tools/freeToolsCatalog.js";
 const BridgeApp = lazy(() => import("./bridge/BridgeApp.jsx"));
@@ -27,6 +30,15 @@ export default function App() {
   if (isTermsPage || isPrivacyPage) {
     return <LegalPage kind={isPrivacyPage ? "privacy" : "terms"} />;
   }
+  if (pathname === "/start") {
+    if (surface === "app") return <DomainRedirect href={marketingHref(`${window.location.pathname}${window.location.search}`)} />;
+    return <PublicAdFunnel />;
+  }
+  if (pathname === "/sign-up") {
+    if (surface === "marketing") return <DomainRedirect href={appHref(`${window.location.pathname}${window.location.search}`)} />;
+    return <SignupSurface />;
+  }
+  if (pathname === "/sign-up/complete") return <SignupComplete />;
   if (pathname === "/tiktok-roast") return <TikTokRoast />;
   const freeToolPage = findFreeToolPage(pathname);
   if (freeToolPage) return <Suspense fallback={<OpeningMeadow />}><FreeToolsPage page={freeToolPage} /></Suspense>;
@@ -44,6 +56,35 @@ export default function App() {
 
 function DomainRedirect({ href }) {
   useEffect(() => { window.location.replace(href); }, [href]);
+  return <OpeningMeadow />;
+}
+
+function SignupSurface() {
+  const { user, loading } = useAuth();
+  useEffect(() => {
+    if (user || loading || localPreview) return;
+    try { sessionStorage.setItem("meadow.signup.pending", "1"); } catch { /* Sign-up still works without storage. */ }
+  }, [user, loading]);
+
+  if (loading && !localPreview) return <OpeningMeadow />;
+  if (user || localPreview) return <DomainRedirect href="/dashboard" />;
+  return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth mode="sign-up" redirectUrl="/sign-up/complete" /></div></div>;
+}
+
+function SignupComplete() {
+  const { user, loading } = useAuth();
+  useEffect(() => {
+    if (loading) return;
+    if (!user) { window.location.replace("/sign-up"); return; }
+    let pending = false;
+    try { pending = sessionStorage.getItem("meadow.signup.pending") === "1"; sessionStorage.removeItem("meadow.signup.pending"); } catch { /* No conversion marker available. */ }
+    const justCreated = Number.isFinite(user.createdAt) && Date.now() - user.createdAt < 10 * 60 * 1000;
+    if (pending && justCreated) {
+      captureMetaRegistration();
+      captureProductEvent("meadow_signup_completed");
+    }
+    window.location.replace("/dashboard");
+  }, [user, loading]);
   return <OpeningMeadow />;
 }
 
@@ -142,6 +183,10 @@ export function PublicLanding({ onGetStarted }) {
       </div>
     </div>
   );
+}
+
+function PublicAdFunnel() {
+  return <div className="app ad-funnel-app"><div className="centered-shell landing-shell"><AdSignupFunnel /></div></div>;
 }
 
 function PublicMarketingPage({ page, onGetStarted }) {

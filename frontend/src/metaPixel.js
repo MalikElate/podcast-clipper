@@ -88,4 +88,12 @@ export function initMetaPixel({ win = globalThis.window, doc = globalThis.docume
   return win.__meadowMetaPixel;
 }
 
+export function captureMetaRegistration(win = globalThis.window) {
+  try {
+    if (!win?.fbq || !analyticsEnabled() || !pixelPage(win.location.href)) return false;
+    win.fbq("trackSingle", META_PIXEL_ID, "CompleteRegistration");
+    return true;
+  } catch { return false; }
+}
+
 initMetaPixel({ preview: import.meta.env?.DEV || import.meta.env?.VITE_BRIDGE_LOCAL_PREVIEW === "true" });

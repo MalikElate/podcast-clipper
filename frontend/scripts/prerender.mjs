@@ -11,6 +11,7 @@ const pages = [
   ...FREE_TOOL_PAGES.map(page => ({ path: page.path.slice(1), kind: "free-tool", platformId: page.path, title: page.title, description: page.description })),
   { path: "tiktok-roast", kind: "tiktok-roast", title: "TikTok Niche or Not — Free Caption Review · Meadow", description: "Review public TikTok captions, get practical fixes, then use Meadow to schedule and cross-post what you create next." },
   { path: "", kind: null, title: "Meadow — Plan once, publish everywhere", description: "Connect your channels, create once, and schedule the right version of every post from one Meadow workspace." },
+  { path: "start", kind: "ad-funnel", title: "Start Posting Free · Meadow", description: "Create in Meadow or prepare drafts from Claude. Schedule posts to your connected social accounts, track every delivery, and start free with no credit card.", noindex: true },
   { path: "404", kind: "not-found", title: "Page not found · Meadow", description: "The page could not be found. Head back to Meadow to keep your publishing work in one place." },
   { path: "pricing", kind: "pricing", title: "Pricing · Meadow", description: "Compare Meadow plans for creating, scheduling, and publishing across your social channels." },
   { path: "terms", kind: "terms", title: "Terms of Service · Meadow", description: "Read the terms for using Meadow's social publishing and scheduling service." },
@@ -67,12 +68,12 @@ try {
       .replace(/<meta property="og:title" content="[^"]*"\s*\/>/, () => `<meta property="og:title" content="${escapeAttribute(page.title)}" />`)
       .replace(/<meta property="og:description" content="[^"]*"\s*\/>/, () => `<meta property="og:description" content="${description}" />`)
       .replace(/<meta property="og:url" content="[^"]*"\s*\/>/, () => `<meta property="og:url" content="${canonicalTarget(page)}" />`)
-      .replace(/<link rel="canonical" href="[^"]*"\s*\/>/, () => `<link rel="canonical" href="${canonicalTarget(page)}" />`);
+      .replace(/<link rel="canonical" href="[^"]*"\s*\/>/, () => page.noindex ? '<meta name="robots" content="noindex, follow" />' : `<link rel="canonical" href="${canonicalTarget(page)}" />`);
     const directory = page.path && page.path !== "404" ? `dist/${page.path}` : "dist";
     await mkdir(directory, { recursive: true });
     await writeFile(page.path === "404" ? "dist/404.html" : `${directory}/index.html`, html);
   }
-  await writeFile("dist/sitemap.xml", sitemapXml(pages.filter((page) => page.path !== "404" && !page.canonical)));
+  await writeFile("dist/sitemap.xml", sitemapXml(pages.filter((page) => page.path !== "404" && !page.canonical && !page.noindex)));
   // The workspace needs a sign-in to show anything, so its shell is kept out of search results.
   const dashboardHtml = template.replace(/<title>.*?<\/title>/, "<title>Dashboard · Meadow</title>")
     .replace(/<link rel="canonical" href="[^"]*"\s*\/>/, '<meta name="robots" content="noindex, follow" />');
@@ -80,6 +81,12 @@ try {
     const directory = `dist${route}`;
     await mkdir(directory, { recursive: true });
     await writeFile(`${directory}/index.html`, dashboardHtml);
+  }
+  for (const [route, title] of [["/sign-up", "Create your free account · Meadow"], ["/sign-up/complete", "Opening Meadow…"]]) {
+    const directory = `dist${route}`;
+    const authHtml = dashboardHtml.replace("<title>Dashboard · Meadow</title>", `<title>${title}</title>`);
+    await mkdir(directory, { recursive: true });
+    await writeFile(`${directory}/index.html`, authHtml);
   }
 } finally {
   await server.close();

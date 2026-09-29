@@ -41,6 +41,7 @@ function ClerkAuthProvider({ children }) {
       uid: clerkUser.id,
       email: clerkUser.primaryEmailAddress?.emailAddress || "",
       imageUrl: clerkUser.imageUrl,
+      createdAt: clerkUser.createdAt?.getTime?.(),
     };
   }, [clerkUser, isLoaded, authLoaded]);
 

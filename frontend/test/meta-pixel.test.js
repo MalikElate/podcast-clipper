@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { initMetaPixel, META_PIXEL_ID, pixelPage } from "../src/metaPixel.js";
+import { captureMetaRegistration, initMetaPixel, META_PIXEL_ID, pixelPage } from "../src/metaPixel.js";
 import { FREE_TOOL_PAGES } from "../src/tools/freeToolsCatalog.js";
 
 function browser(href = "https://findmeadow.com/", { enabled = true, referrer = "", preview = false } = {}) {
@@ -94,4 +94,11 @@ test("a blocked or throwing pixel cannot break navigation", () => {
   b.win.fbq.callMethod = () => { throw new Error("Tracking blocked"); };
   assert.equal(b.win.history.pushState({}, "", "/pricing"), "navigation-result");
   assert.equal(b.win.location.pathname, "/pricing");
+});
+
+test("a completed free registration records one standard conversion without account data", () => {
+  const b = browser("https://app.findmeadow.com/sign-up/complete");
+  assert.equal(captureMetaRegistration(b.win), true);
+  assert.deepEqual(b.events().at(-1), ["trackSingle", META_PIXEL_ID, "CompleteRegistration"]);
+  assert.equal(captureMetaRegistration({ location: new URL("https://example.com/sign-up/complete") }), false);
 });

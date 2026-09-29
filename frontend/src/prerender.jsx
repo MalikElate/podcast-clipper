@@ -5,6 +5,7 @@ import LegalPage from "./components/LegalPage.jsx";
 import Pricing from "./components/Pricing.jsx";
 import PlatformUseCasePage from "./components/PlatformUseCasePage.jsx";
 import MarketingPage from "./components/MarketingPage.jsx";
+import AdSignupFunnel from "./components/AdSignupFunnel.jsx";
 import TikTokRoast from "./tools/TikTokRoast.jsx";
 import NotFound from "./components/NotFound.jsx";
 import { findMarketingPage } from "./marketing/generalPages.js";
@@ -13,6 +14,7 @@ import FreeToolsPage from "./tools/FreeToolsPage.jsx";
 import { findFreeToolPage } from "./tools/freeToolsCatalog.js";
 
 export function render(kind, platformId) {
+  if (kind === "ad-funnel") return renderToString(<div className="app ad-funnel-app"><div className="centered-shell landing-shell"><AdSignupFunnel /></div></div>);
   if (kind === "free-tool") {
     const page = findFreeToolPage(platformId);
     if (!page) throw new Error(`Unknown free tool: ${platformId}`);

@@ -33,8 +33,20 @@ const sitemap = await readFile("dist/sitemap.xml", "utf8");
 const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
 assert.ok(sitemapUrls.includes("https://findmeadow.com/"), "The sitemap must list the homepage");
 assert.equal(new Set(sitemapUrls).size, sitemapUrls.length, "The sitemap must not repeat an address");
-for (const excluded of ["/404", "/terms-of-service/", "/privacy-policy/"]) {
+for (const excluded of ["/404", "/start/", "/terms-of-service/", "/privacy-policy/"]) {
   assert.ok(!sitemapUrls.includes(`https://findmeadow.com${excluded}`), `The sitemap must leave out ${excluded}`);
+}
+const funnelHtml = await readFile("dist/start/index.html", "utf8");
+assert.ok(funnelHtml.includes("Your post is ready. Meadow handles the publishing."), "The ad funnel must render its promise without JavaScript");
+assert.ok(funnelHtml.includes("Start posting free"), "The ad funnel must present a free-signup action");
+assert.ok(funnelHtml.includes("Five connected social accounts"), "The ad funnel must explain the free offer");
+assert.ok(funnelHtml.includes('href="https://app.findmeadow.com/sign-up"'), "The ad funnel must link directly to account creation");
+assert.ok(funnelHtml.includes('<meta name="robots" content="noindex, follow" />'), "The paid landing page must stay out of the sitemap and search results");
+assert.ok(!funnelHtml.includes('<link rel="canonical"'), "The paid landing page must not claim an indexed canonical URL");
+for (const path of ["sign-up/index.html", "sign-up/complete/index.html"]) {
+  const html = await readFile(`dist/${path}`, "utf8");
+  assert.ok(html.includes('<meta name="robots" content="noindex, follow" />'), `${path} must stay out of search results`);
+  assert.ok(!html.includes('<link rel="canonical"'), `${path} must not claim a canonical address`);
 }
 for (const url of sitemapUrls) assert.match(url, /^https:\/\/findmeadow\.com\//, `Sitemap entry ${url} must use the canonical host`);
 

@@ -8,6 +8,7 @@ import "./meadow.css";
 import "./borderless.css";
 import "./platformUseCases.css";
 import "./marketingPages.css";
+import "./adSignupFunnel.css";
 import "./tools/freeTools.css";
 import { initProductAnalytics } from "./productAnalytics.js";
 
