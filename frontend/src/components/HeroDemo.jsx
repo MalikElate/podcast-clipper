@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from "react";
 
 const ASSET = "/marketing/meadow-publishing-demo-v2";
 
-export default function HeroDemo() {
+export default function HeroDemo({ recording }) {
+  const asset = recording?.asset || ASSET;
+  const width = recording?.width || 1280;
+  const height = recording?.height || 650;
   const videoRef = useRef(null);
   const wantsPlayback = useRef(true);
   const visible = useRef(true);
@@ -10,6 +13,8 @@ export default function HeroDemo() {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
+    // Narrated recordings use native controls and start only when requested.
+    if (recording) return;
     const video = videoRef.current;
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
     const sync = () => {
@@ -35,7 +40,7 @@ export default function HeroDemo() {
       document.removeEventListener("visibilitychange", sync);
       video.pause();
     };
-  }, []);
+  }, [recording]);
 
   function togglePlayback() {
     const video = videoRef.current;
@@ -49,28 +54,30 @@ export default function HeroDemo() {
       <video
         ref={videoRef}
         className="hero-demo-video"
-        width="1280"
-        height="650"
-        muted
-        loop
+        width={width}
+        height={height}
+        style={{ aspectRatio: `${width} / ${height}` }}
+        muted={!recording}
+        loop={!recording}
+        controls={Boolean(recording)}
         playsInline
         preload="metadata"
-        poster={`${ASSET}.webp`}
+        poster={`${asset}.webp`}
         aria-label="Meadow publishing walkthrough"
         aria-describedby="hero-demo-description"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onError={() => { setPlaying(false); setFailed(true); }}
       >
-        <source src={`${ASSET}.webm`} type="video/webm" />
-        <source src={`${ASSET}.mp4`} type="video/mp4" />
+        {!recording && <source src={`${asset}.webm`} type="video/webm" />}
+        <source src={`${asset}.mp4`} type="video/mp4" />
         <p>Create, preview, and publish directly in Meadow or through a connected chatbot.</p>
       </video>
-      {!failed && <button type="button" className="hero-demo-toggle" onClick={togglePlayback} aria-label={playing ? "Pause Meadow demo" : "Play Meadow demo"}>
+      {!recording && !failed && <button type="button" className="hero-demo-toggle" onClick={togglePlayback} aria-label={playing ? "Pause Meadow demo" : "Play Meadow demo"}>
         {playing ? <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10" stroke="currentColor" strokeWidth="2.5" /></svg> : <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 2 9 6-9 6z" fill="currentColor" /></svg>}
       </button>}
-      {failed && <a className="hero-demo-download" href={`${ASSET}.mp4`}>Watch demo</a>}
-      <p id="hero-demo-description" className="sr-only">An illustrative walkthrough with sample content: create and preview a studio launch post in Meadow, click Publish now, and see LinkedIn, Threads, and Bluesky marked Published. Then ask a custom chatbot connected to the Meadow publishing API to post the studio launch, review its preview, confirm publication, and see all three channels marked Published. The video has no audio.</p>
+      {failed && <a className="hero-demo-download" href={`${asset}.mp4`}>Watch demo</a>}
+      <p id="hero-demo-description" className="sr-only">{recording?.description || "An illustrative walkthrough with sample content: create and preview a studio launch post in Meadow, click Publish now, and see LinkedIn, Threads, and Bluesky marked Published. Then ask a custom chatbot connected to the Meadow publishing API to post the studio launch, review its preview, confirm publication, and see all three channels marked Published. The video has no audio."}</p>
     </figure>
   );
 }

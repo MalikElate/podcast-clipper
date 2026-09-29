@@ -11,6 +11,13 @@ import SiteFooter from "./SiteFooter.jsx";
 import SiteHeader from "./SiteHeader.jsx";
 import { appHref } from "../siteUrls.js";
 
+const HOMEPAGE_RECORDING = {
+  asset: "/marketing/meadow-landing-demo-20260929",
+  width: 1776,
+  height: 1080,
+  description: "A narrated tour of Meadow, showing the homepage, social account connections, and the post composer with its supported content formats. Use the player controls to play, pause, seek, or adjust the sound.",
+};
+
 const PLATFORMS = [
   ...sortPlatforms(PLATFORM_USE_CASES.filter(platform => !platform.chatOnly)),
   ...sortPlatforms(PLATFORM_USE_CASES.filter(platform => platform.chatOnly)),
@@ -179,7 +186,7 @@ export default function Landing({ onGetStarted }) {
               <div className="home-hero-agent-logos" aria-hidden="true">{AGENT_LOGOS.map(agent => <span className={agent.className} key={agent.name}><agent.Icon /></span>)}</div>
             </div>
           </div>
-          <div className="home-hero-demo-stage"><HeroDemo /></div>
+        <div className="home-hero-demo-stage"><HeroDemo recording={HOMEPAGE_RECORDING} /></div>
         </section>
 
         <section className="landing-section home-platform-section" id="platforms" aria-labelledby="home-platforms-title">
