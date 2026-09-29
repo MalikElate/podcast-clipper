@@ -12,10 +12,10 @@ import SiteHeader from "./SiteHeader.jsx";
 import { appHref } from "../siteUrls.js";
 
 const HOMEPAGE_RECORDING = {
-  asset: "/marketing/meadow-landing-demo-20260929",
+  asset: "/marketing/meadow-landing-demo-titled-20260929",
   width: 1776,
   height: 1080,
-  description: "A narrated tour of Meadow, showing the homepage, social account connections, and the post composer with its supported content formats. Use the player controls to play, pause, seek, or adjust the sound.",
+  description: "How to use Meadow: a narrated tour showing the homepage, social account connections, and the post composer with its supported content formats. Use the player controls to play, pause, seek, or adjust the sound.",
 };
 
 const PLATFORMS = [
