@@ -5,7 +5,7 @@ Meadow uses [Zernio](https://docs.zernio.com) for new connections to Snapchat, F
 ## How it works
 
 - `backend/src/bridge/platforms/ZernioProvider.js` wraps each native adapter. With `ZERNIO_API_KEY` set, **new** connections for the platforms in `ZERNIO_PLATFORMS` go through Zernio's hosted connect flow. Users still sign in once, on the platform's own consent screen.
-- Each Meadow workspace gets one Zernio profile (`meadow-<projectId>`), saved in the `zernioProfile` store record. Zernio returns to `https://findmeadow.com/oauth/<platform>/callback`. Meadow then confirms that the returned account belongs to that workspace's profile.
+- New workspaces reuse their Meadow owner's existing Zernio profile, so the same social account retains its provider ID across those workspaces. Profile resolution is serialized per owner. The first profile is named `meadow-<projectId>`; historical workspace bindings are retained. Zernio returns to `https://findmeadow.com/oauth/<platform>/callback`. Meadow confirms that the returned account belongs to the workspace's saved profile and applies the [owner-scoped duplicate check](account-connections.md).
 - Zernio accounts store `{ zernioAccountId, zernioProfileId }` as credentials. Accounts connected natively before the switch keep their tokens and keep publishing through the native adapter.
 - Posts are created with an `Idempotency-Key` per delivery, scheduled 30 seconds ahead, and polled until Zernio reports `published` or `failed`. Disconnecting an account in Meadow also disconnects it in Zernio.
 - Post metrics and account views aren't available for Zernio connections yet.

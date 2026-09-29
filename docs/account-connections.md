@@ -1,0 +1,13 @@
+# Connection uniqueness
+
+Meadow checks connection identity within the signed-in owner's accounts, across all their workspaces. Reauthorizing the same platform account in its existing workspace updates its credentials and profile in place. Its Meadow account ID, creation date, posts, and delivery history are retained. A second workspace owned by that user receives `account_already_connected`; the account is not copied or moved. A different Meadow user can independently connect the same channel.
+
+The check runs inside the SQLite write transaction used to attach accounts, including automatic OAuth callbacks, account selection, and Telegram connections. Simultaneous callbacks are serialized and repeated candidates produce one result. A conflicting multi-account selection is rolled back in full. Accounts awaiting reconnection still count as attached; disconnected and deleting records do not get reused or block a fresh attachment after the existing privacy safeguards permit it.
+
+Platform account IDs, not display names, determine identity. Native TikTok also supplies a private `identityKey` based on its [union ID](https://developers.tiktok.com/docs/en/tiktok-api-v2-get-user-info), which is shared across apps belonging to the same developer. This prevents new Sandbox/production duplicates despite their different open IDs. Historical native TikTok identities are verified with the provider before attaching a different open ID; failure to verify asks the user to reconnect the existing account instead of guessing. A different app grant does not silently overwrite another grant's credentials.
+
+New Zernio workspace bindings reuse the same owner's existing provider profile under a per-owner lock. This keeps account IDs stable instead of creating another provider identity for a new workspace. Different Meadow owners retain separate Zernio profiles.
+
+This is a prevention rule, not a destructive data migration. Existing duplicate records and their history are preserved, including historical Zernio workspace bindings. Identifiers from unrelated developers, including Zernio and Meadow's own apps, cannot be equated using a TikTok union ID. Zernio connections continue to use the Zernio account ID; no accounts are merged on a matching display name or mutable username.
+
+Regression coverage: `backend/test/account-uniqueness.test.js` exercises real SQLite transactions, ownership boundaries, simultaneous callbacks, batch rollback, reconnect history, and historical TikTok identity verification. `backend/test/tiktok-identity.test.js` checks provider identity mapping and missing identity rejection.

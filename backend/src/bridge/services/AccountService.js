@@ -5,13 +5,15 @@ import { SecretVault } from "../core/SecretVault.js";
 const DAY = 86400000;
 const authorizationFamily = platform => ["youtube", "google_business"].includes(platform) ? "google" : platform;
 const sameTokens = (left, right) => left.accessToken === right.accessToken && left.refreshToken === right.refreshToken && left.did === right.did;
+const isAttached = account => !["deleting", "disconnected"].includes(account.status);
+const sameIdentity = (account, candidate) => account.remoteId === candidate.remoteId || Boolean(account.identityKey && account.identityKey === candidate.identityKey);
 
 export class AccountService {
   constructor({ store, projects, registry, vault, locks, clock = () => Date.now(), localPreview = false }) {
     Object.assign(this, { store, projects, registry, vault, locks, clock, localPreview });
   }
   toPublic(account) {
-    const { encryptedCredentials, authorizationId, authorizationGrantedAt, authorizationStartedAt, maintenanceDueAt, maintenanceAttempts, ...visible } = account;
+    const { encryptedCredentials, identityKey, authorizationId, authorizationGrantedAt, authorizationStartedAt, maintenanceDueAt, maintenanceAttempts, ...visible } = account;
     return visible;
   }
   list(uid, projectId) { this.projects.require(uid, projectId); return this.store.list("account", { projectId }).filter(account => !["disconnected", "deleting"].includes(account.status)).map(account => this.toPublic(account)); }
@@ -152,12 +154,13 @@ export class AccountService {
       candidates = await provider.accounts(credentials);
     }
     invariant(saved && saved.platform === platform, "This connection request has expired. Start again.");
+    invariant(Array.isArray(candidates) && candidates.length, "No eligible accounts were returned. Check your account type and permissions.");
+    await this.prepareIdentities(saved.uid, platform, candidates);
     invariant((saved.createdAt || 0) + 10 * 60000 > this.clock(), "This connection request has expired. Start again.");
     this.projects.require(saved.uid, saved.projectId);
     this.privacy?.requireConnectionConsent(platform, saved.privacyConsent);
     this.privacy?.assertCurrentAuthorization(saved.uid, platform, saved);
     this.privacy?.assertConnectionAvailable(saved.uid, platform);
-    invariant(Array.isArray(candidates) && candidates.length, "No eligible accounts were returned. Check your account type and permissions.");
     this.metaPrivacy?.assertAuthorization(platform, candidates, saved.createdAt || 0);
     const id = randomUUID();
     this.store.put("connection", { id, ownerUid: saved.uid, projectId: saved.projectId, platform, privacyConsent: saved.privacyConsent || null, authorizationBarrier: saved.authorizationBarrier, authorizationStartedAt: saved.createdAt, createdAt: this.clock(), expiresAt: this.clock() + 10 * 60000,
@@ -180,7 +183,31 @@ export class AccountService {
       this.projects.require(uid, projectId);
       return { platform: connection.platform, candidates: profiles.map(({ credentials, ...profile }) => profile).filter(item => candidates.some(candidate => candidate.remoteId === item.remoteId)) };
     }
-    return { platform: connection.platform, candidates: candidates.map(({ credentials, ...candidate }) => candidate) };
+    return { platform: connection.platform, candidates: candidates.map(({ credentials, identityKey, ...candidate }) => candidate) };
+  }
+
+  async prepareIdentities(uid, platform, candidates) {
+    // Older grants predate stable cross-app identities. Resolve those from the
+    // provider before deciding whether a new app-specific ID is a new account.
+    if (!candidates.some(candidate => candidate.identityKey)) return;
+    const legacy = this.store.list("account", { ownerUid: uid, limit: null }).filter(account => account.platform === platform && isAttached(account) && !account.identityKey && !candidates.some(candidate => candidate.remoteId === account.remoteId));
+    for (const account of legacy) {
+      const credentials = this.vault.decrypt(account.encryptedCredentials, `account:${account.id}`);
+      // Zernio IDs belong to a different developer; native union IDs cannot
+      // identify those grants. Never merge unrelated provider namespaces.
+      if (credentials.zernioAccountId) continue;
+      let profile;
+      try {
+        const profiles = await this.withCredentials(account, tokens => this.registry.get(platform).accounts(tokens));
+        profile = profiles.find(item => item.remoteId === account.remoteId);
+      } catch {
+        invariant(false, "Reconnect your existing account before adding another one so Meadow can check for duplicates.", { status: 409, code: "account_identity_unavailable" });
+      }
+      const current = this.store.get("account", account.id);
+      if (!current || !isAttached(current)) continue;
+      invariant(current.authorizationId === account.authorizationId && profile?.identityKey, "Reconnect your existing account before adding another one so Meadow can check for duplicates.", { status: 409, code: "account_identity_unavailable" });
+      this.store.put("account", { ...current, identityKey: profile.identityKey });
+    }
   }
 
   attach(uid, projectId, connectionId, selectedIds) {
@@ -195,11 +222,17 @@ export class AccountService {
     this.metaPrivacy?.assertAuthorization(connection.platform, candidates, connection.authorizationStartedAt || connection.createdAt);
     return this.store.transaction(() => {
       const accounts = [];
-      for (const candidate of candidates.filter(candidate => selectedIds.includes(candidate.remoteId))) {
+      // The transaction serializes simultaneous callbacks and selections. The
+      // owner boundary is intentional: another Meadow user may use this channel.
+      const selected = [...new Map(candidates.filter(candidate => selectedIds.includes(candidate.remoteId)).map(candidate => [candidate.remoteId, candidate])).values()];
+      for (const candidate of selected) {
         // A removal job owns the old record until it has purged its data. A
         // fresh authorization gets a new ID so that cleanup cannot erase it or
         // resume deliveries the user explicitly cancelled by disconnecting.
-        const existing = this.store.list("account", { projectId }).find(account => account.platform === connection.platform && account.remoteId === candidate.remoteId && !["deleting", "disconnected"].includes(account.status));
+        const matches = this.store.list("account", { ownerUid: uid, limit: null }).filter(account => account.platform === connection.platform && isAttached(account) && sameIdentity(account, candidate));
+        invariant(!matches.some(account => account.projectId !== projectId), "This account is already connected in another workspace on your Meadow account. Use its existing connection.", { status: 409, code: "account_already_connected" });
+        const existing = matches.find(account => account.remoteId === candidate.remoteId) || matches[0];
+        invariant(!existing || existing.remoteId === candidate.remoteId, "This account is already connected through another integration. Use its existing connection.", { status: 409, code: "account_already_connected" });
         const id = existing?.id || randomUUID();
         const { credentials, ...profile } = candidate;
         const account = this.store.put("account", { ...existing, ...profile, id, ownerUid: uid, projectId, platform: connection.platform, status: "connected", rateKey: `${connection.platform}:${candidate.remoteId}`,

@@ -59,10 +59,12 @@ export class TikTokProvider extends PlatformProvider {
   }
   request(endpoint, credentials, json) { return this.http.request(`https://open.tiktokapis.com/v2/${endpoint}`, { token: credentials.accessToken, ...(json ? { method: "POST", json } : {}) }); }
   async accounts(credentials) {
-    const result = await this.request("user/info/?fields=open_id,display_name,avatar_url", credentials);
+    const result = await this.request("user/info/?fields=open_id,union_id,display_name,avatar_url", credentials);
     const user = result.data?.user;
-    invariant(user?.open_id, "TikTok did not return an eligible creator account.");
-    return [{ remoteId: user.open_id, label: user.display_name, avatar: user.avatar_url }];
+    invariant(user?.open_id && user?.union_id, "TikTok did not return a verified creator identity. Try connecting again.");
+    // open_id is app-specific; union_id identifies the same person across
+    // Meadow's Sandbox and production apps without guessing from a display name.
+    return [{ remoteId: user.open_id, identityKey: `tiktok:union:${user.union_id}`, label: user.display_name, avatar: user.avatar_url }];
   }
   async options(account, credentials) {
     const tiktokPermissions = permissions(credentials), base = { ...await super.options(), tiktokPermissions, tiktokDirectPostPrivateOnly: this.directPostPrivateOnly };
