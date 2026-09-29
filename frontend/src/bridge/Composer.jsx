@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./BridgeApi.js";
 import { Icon } from "./Icons.jsx";
-import { Alert, Badge, Check, dateTime, Field, MediaThumb, Modal, PlatformBadge } from "./ui.jsx";
+import { Alert, Check, Field, MediaThumb, Modal, PlatformBadge } from "./ui.jsx";
 import { DestinationSettings } from "./DestinationSettings.jsx";
 import UploadProgress from "./UploadProgress.jsx";
 import { ACCEPT_BY_TYPE, detectFormat, FORMAT_LABELS, formatVariants, MAX_MEDIA_BY_TYPE, POST_TYPES, supportsPostType } from "./platforms.js";
@@ -10,67 +10,10 @@ import EmojiPicker from "./EmojiPicker.jsx";
 import { dashboardPath } from "./dashboardRoutes.js";
 import { useAccountOptions } from "./useAccountOptions.js";
 import { deliveryMix, isDeliveryComplete, isTikTokInbox, submissionLabel } from "./deliveryPresentation.js";
+import { submitComposerPosts } from "./composerSubmission.js";
 
 
 export const makePost = (project, mediaIds = [], accountIds = [], scheduledDate = "") => ({ key: crypto.randomUUID(), caption: "", title: "", mediaIds, accountIds, format: "auto", overrides: {}, schedule: { mode: scheduledDate ? "scheduled" : "now", timeZone: project.timeZone, localDateTime: scheduledDate ? `${scheduledDate}T09:00` : "" } });
-
-const tiktokPrivacyNames = { PUBLIC_TO_EVERYONE: "Everyone", MUTUAL_FOLLOW_FRIENDS: "Friends", FOLLOWER_OF_CREATOR: "Followers", SELF_ONLY: "Only me" };
-
-function ReviewSetting({ label, children, wide = false }) {
-  return <div className={`bridge-preview-setting${wide ? " wide" : ""}`}><span>{label}</span><strong>{children}</strong></div>;
-}
-
-export function TikTokReviewSummary({ settings = {}, caption = "", title = "", hasVideo = false, hasImages = false }) {
-  const inbox = settings.deliveryMode === "inbox";
-  if (inbox) return <div className="bridge-preview-settings" aria-label="TikTok transfer settings">
-    <ReviewSetting label="Delivery">Send to TikTok to finish editing</ReviewSetting>
-    <ReviewSetting label="Upload consent">{settings.uploadConsent === true ? "Confirmed" : "Not confirmed"}</ReviewSetting>
-    {hasImages && <ReviewSetting label="Photo title" wide>{title || "No title"}</ReviewSetting>}
-    {hasImages && <ReviewSetting label="Caption" wide>{caption || "No caption"}</ReviewSetting>}
-  </div>;
-  return <div className="bridge-preview-settings" aria-label="TikTok Direct Post settings">
-    <ReviewSetting label="Delivery">Publish directly from Meadow</ReviewSetting>
-    <ReviewSetting label="Audience">{tiktokPrivacyNames[settings.privacy] || "Not selected"}</ReviewSetting>
-    <ReviewSetting label="Comments">{settings.allowComments === true ? "Allowed" : "Off"}</ReviewSetting>
-    {hasVideo && <ReviewSetting label="Duet">{settings.allowDuet === true ? "Allowed" : "Off"}</ReviewSetting>}
-    {hasVideo && <ReviewSetting label="Stitch">{settings.allowStitch === true ? "Allowed" : "Off"}</ReviewSetting>}
-    {hasImages && <ReviewSetting label="Recommended music">{settings.autoMusic === true ? "On" : "Off"}</ReviewSetting>}
-    <ReviewSetting label="Own-brand promotion">{settings.ownBrand === true ? "Disclosed" : "Off"}</ReviewSetting>
-    <ReviewSetting label="Paid partnership">{settings.brandedContent === true ? "Disclosed" : "Off"}</ReviewSetting>
-    <ReviewSetting label="AI-generated content">{settings.aiGenerated === true ? "Disclosed" : "Off"}</ReviewSetting>
-    <ReviewSetting label="Music Usage Confirmation" wide>{settings.consent === true ? "Accepted" : "Not accepted"}</ReviewSetting>
-    {hasImages && <ReviewSetting label="Photo title" wide>{title || "No title"}</ReviewSetting>}
-    <ReviewSetting label="Caption" wide>{caption || "No caption"}</ReviewSetting>
-  </div>;
-}
-
-function ReviewMedia({ item, media }) {
-  const chosen = item.mediaIds.map(id => media.find(entry => entry.id === id)).filter(Boolean);
-  if (!chosen.length) return null;
-  return <div className="bridge-preview-media" aria-label={`${chosen.length} selected media ${chosen.length === 1 ? "item" : "items"}`}>{chosen.map(entry => <div className="bridge-preview-media-item" key={entry.id}><MediaThumb media={entry} playable/></div>)}</div>;
-}
-
-function ReviewDestination({ destination, item, catalog, timeZone, hasVideo, hasImages }) {
-  const override = item.overrides[destination.accountId] || {};
-  const status = destination.errors.length ? "failed" : destination.delayed ? "scheduled" : "queued";
-  const statusText = destination.errors.length ? "Needs changes" : destination.delayed ? "Auto queued" : "Ready";
-  return <div className="bridge-preview-destination">
-    <PlatformBadge platform={destination.platform} catalog={catalog}/>
-    <div className="bridge-preview-destination-body">
-      <div className="bridge-preview-destination-heading"><div><strong>{destination.accountName}</strong><span>{isTikTokInbox(destination) ? "Transfer to TikTok · " : ""}{dateTime(destination.dueAt, timeZone)}{destination.estimated ? " · estimate" : ""}</span></div><Badge status={status}>{statusText}</Badge></div>
-      {isTikTokInbox(destination) && <small>Finish editing and publish in TikTok</small>}
-      {destination.platform === "tiktok" && <TikTokReviewSummary settings={override.settings} caption={override.caption ?? item.caption} title={override.title ?? item.title} hasVideo={hasVideo} hasImages={hasImages}/>}
-      {destination.reason && <small>{destination.reason}</small>}
-      {destination.errors.map((message, index) => <p className="bridge-validation-error" key={index}>{message}</p>)}
-    </div>
-  </div>;
-}
-
-function ReviewPost({ row, item, media, catalog, timeZone }) {
-  const chosen = item.mediaIds.map(id => media.find(entry => entry.id === id)).filter(Boolean);
-  const hasVideo = chosen.some(entry => entry.kind === "video"), hasImages = chosen.some(entry => entry.kind === "image");
-  return <div className="bridge-preview-post"><h3>Post {row.index + 1} <span>{row.title || row.caption.slice(0, 80) || "Media post"}</span></h3><ReviewMedia item={item} media={media}/>{row.destinations.map(destination => <ReviewDestination key={destination.id} destination={destination} item={item} catalog={catalog} timeZone={timeZone} hasVideo={hasVideo} hasImages={hasImages}/>)}</div>;
-}
 
 export function draftPost(draft, project) {
   return {
@@ -244,10 +187,11 @@ export function PostEditor({ post, onChange, accounts, accountsReady = true, med
 
 export default function Composer({ project, accounts: initialAccounts, accountsReady = true, media, catalog, config, draft = null, onAccounts, onSubmitted, onDraftSaved, onDiscard, onDirtyChange, onBusyChange, scheduledDate = "", onDraftStarted, onUpload }) {
   const [items, setItems] = useState(() => [draft ? draftPost(draft, project) : makePost(project, [], [], scheduledDate)]);
-  const [active, setActive] = useState(0), [preview, setPreview] = useState(null), [previewIntent, setPreviewIntent] = useState("publish"), [error, setError] = useState(""), [busy, setBusy] = useState(false), [uploading, setUploading] = useState(false);
+  const [active, setActive] = useState(0), [error, setError] = useState(""), [busyAction, setBusyAction] = useState(""), [uploading, setUploading] = useState(false);
   const [dirty, setDirty] = useState(false), [discardOpen, setDiscardOpen] = useState(false);
   const requestId = useRef(crypto.randomUUID()), fileInput = useRef(null), alive = useRef(true);
   const [uploadProgress, setUploadProgress] = useState(null);
+  const busy = Boolean(busyAction);
   const selectedAccountIds = [...new Set(items.flatMap(item => item.accountIds))].sort().join(",");
   const accounts = useAccountOptions(project.id, initialAccounts, selectedAccountIds.split(","));
   const hasDraftContent = items.length > 0 && items.every(hasPostContent);
@@ -262,31 +206,26 @@ export default function Composer({ project, accounts: initialAccounts, accountsR
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
-  function changeItems(next) { setItems(next); setDirty(true); setPreview(null); setError(""); requestId.current = crypto.randomUUID(); }
-  async function review(nextItems, intent) {
-    const previewRequestId = crypto.randomUUID();
-    setBusy(true); setError(""); setPreviewIntent(intent); setItems(nextItems); requestId.current = previewRequestId;
+  function changeItems(next) { setItems(next); setDirty(true); setError(""); requestId.current = crypto.randomUUID(); }
+  async function submit(nextItems) {
+    setBusyAction("submit"); setError("");
+    setItems(nextItems);
     if (JSON.stringify(nextItems) !== JSON.stringify(items)) setDirty(true);
-    try { const result = await api.project(project.id, "/posts/preview", { method: "POST", body: { items: nextItems } }); if (alive.current && requestId.current === previewRequestId) setPreview(result); }
-    catch (error) { if (alive.current && requestId.current === previewRequestId) setError(error.message); } finally { if (alive.current) setBusy(false); }
-  }
-  async function submit() {
-    setBusy(true); setError("");
     try {
-      const result = await api.project(project.id, "/posts", { method: "POST", body: { items, requestId: requestId.current, ...(draft ? { draftId: draft.id, revision: draft.revision } : {}) } });
+      const result = await submitComposerPosts({ projectId: project.id, items: nextItems, requestId: requestId.current, draft });
       if (alive.current) { setDirty(false); onSubmitted(result); }
     }
-    catch (error) { if (alive.current) setError(error.message); } finally { if (alive.current) setBusy(false); }
+    catch (error) { if (alive.current) setError(error.message); } finally { if (alive.current) setBusyAction(""); }
   }
   async function saveDraft() {
     if (!hasDraftContent) { setError("Add text, a title, or media before saving a draft."); return; }
-    setBusy(true); setError("");
+    setBusyAction("save"); setError("");
     try {
       const result = draft
         ? await api.project(project.id, `/posts/${encodeURIComponent(draft.id)}`, { method: "PATCH", body: { ...items[0], revision: draft.revision } })
         : await api.project(project.id, "/posts/drafts", { method: "POST", body: { items, requestId: requestId.current } });
       if (alive.current) { setDirty(false); onDraftSaved?.(result.post || result.posts?.[0]); }
-    } catch (error) { if (alive.current) setError(error.message); } finally { if (alive.current) setBusy(false); }
+    } catch (error) { if (alive.current) setError(error.message); } finally { if (alive.current) setBusyAction(""); }
   }
   function requestDiscard() {
     if (!dirty) { onDiscard?.(); return; }
@@ -318,13 +257,12 @@ export default function Composer({ project, accounts: initialAccounts, accountsR
   const toggleScheduled = on => setSchedule(on ? { mode: "scheduled", timeZone: project.timeZone, localDateTime: schedule.localDateTime || nextMorning(project.timeZone) } : { mode: "now" });
   const selectedDestinations = items.flatMap(item => item.accountIds.map(id => ({ platform: accounts.find(account => account.id === id)?.platform, settings: item.overrides[id]?.settings })));
   const selectedMix = deliveryMix(selectedDestinations);
-  const previewDestinations = preview?.rows.flatMap(row => row.destinations) || [];
-  const previewMix = deliveryMix(previewDestinations);
-  const hasYouTubePreview = previewDestinations.some(destination => destination.platform === "youtube");
+  const hasYouTube = selectedDestinations.some(destination => destination.platform === "youtube");
   const userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent;
   const mobileUpload = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobile/i.test(userAgent) || /Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1;
   const youtubeTermsUrl = mobileUpload ? "http://m.youtube.com/terms" : "https://www.youtube.com/t/terms";
-  const finalActionLabel = submissionLabel(previewDestinations, { scheduled: previewIntent !== "publish", count: items.length, youtube: hasYouTubePreview });
+  const actionLabel = submissionLabel(selectedDestinations, { scheduled, count: items.length, youtube: hasYouTube });
+  const busyLabel = scheduled ? "Scheduling…" : selectedMix.onlyInbox ? "Sending…" : selectedMix.hasInbox ? "Submitting…" : "Publishing…";
   const discardDialog = discardOpen && <Modal title={draft ? "Discard changes?" : "Discard this post?"} onClose={() => setDiscardOpen(false)} busy={busy}><p>{draft ? "Your last saved draft will stay in Drafts. Changes made since then will be lost." : "This unsaved post will be removed. Media you uploaded will remain available in your media library."}</p><div className="bridge-modal-actions"><button className="bridge-button secondary" onClick={() => setDiscardOpen(false)}>Keep editing</button><button className="bridge-button danger" onClick={discard}>{draft ? "Discard changes" : "Discard post"}</button></div></Modal>;
   if (!typeChosen) return <>
     <div className="bridge-intro-row"><p>What would you like to post? You'll only see the accounts that support it.</p><div className="bridge-inline-actions"><button className="bridge-button secondary" onClick={requestDiscard}>{draft ? "Discard changes" : "Discard"}</button><button className="bridge-button secondary" onClick={onAccounts}><Icon name="accounts" size={16}/> Accounts</button></div></div>
@@ -337,11 +275,11 @@ export default function Composer({ project, accounts: initialAccounts, accountsR
     <Alert message={error}/>
     <input type="file" ref={fileInput} hidden multiple={postType === "carousel"} accept={ACCEPT_BY_TYPE[postType]} onChange={event => { uploadMedia(event.target.files); event.target.value = ""; }}/>
     <fieldset className="bridge-composer-workspace" disabled={busy}>
-      <div className={`bridge-panel bridge-schedule-bar ${scheduled ? "on" : ""}`}><label className="bridge-switch"><input type="checkbox" role="switch" checked={scheduled} onChange={event => toggleScheduled(event.target.checked)}/><span className="bridge-switch-track" aria-hidden="true"/><span><strong>Schedule for later</strong><small>{scheduled ? "Choose a general time below, or a custom time on any account." : selectedMix.onlyInbox ? "Off: media is sent to TikTok as soon as you confirm." : selectedMix.hasInbox ? "Off: publishing and TikTok transfers start as soon as you confirm." : "Off: posts publish as soon as you confirm."}</small></span></label>{scheduled && <div className="bridge-schedule-bar-fields"><div className="bridge-general-time"><strong>General time</strong><small>{selectedMix.hasInbox ? "TikTok transfers start at this time; you finish publishing in TikTok. Other destinations publish at their chosen time." : "Every selected account posts at this time unless you give it a custom time."} Times use your current time zone ({project.timeZone}).</small><ScheduleDateTime value={schedule.localDateTime} onChange={localDateTime => localDateTime && setSchedule({ localDateTime })}/></div></div>}</div>
+      <div className={`bridge-panel bridge-schedule-bar ${scheduled ? "on" : ""}`}><label className="bridge-switch"><input type="checkbox" role="switch" checked={scheduled} onChange={event => toggleScheduled(event.target.checked)}/><span className="bridge-switch-track" aria-hidden="true"/><span><strong>Schedule for later</strong><small>{scheduled ? "Choose a general time below, or a custom time on any account." : selectedMix.onlyInbox ? "Off: media is sent when you click Send to TikTok." : selectedMix.hasInbox ? "Off: publishing and TikTok transfers start when you click Publish & send to TikTok." : "Off: posts start publishing when you click Publish now."}</small></span></label>{scheduled && <div className="bridge-schedule-bar-fields"><div className="bridge-general-time"><strong>General time</strong><small>{selectedMix.hasInbox ? "TikTok transfers start at this time; you finish publishing in TikTok. Other destinations publish at their chosen time." : "Every selected account posts at this time unless you give it a custom time."} Times use your current time zone ({project.timeZone}).</small><ScheduleDateTime value={schedule.localDateTime} onChange={localDateTime => localDateTime && setSchedule({ localDateTime })}/></div></div>}</div>
       <div className="bridge-panel"><PostEditor post={items[active]} onChange={updatePost => changeItems(current => current.map((item, i) => i === active ? updatePost(item) : item))} accounts={accounts} accountsReady={accountsReady} media={media} catalog={catalog} uploading={uploading} uploadProgress={uploadProgress} onPickMedia={() => fileInput.current?.click()}/></div>
     </fieldset>
-    <div className="bridge-composer-footer"><div><strong>{draft ? "Editing saved draft" : "1 post in this draft"}</strong><span id={!hasDraftContent ? "bridge-empty-draft-help" : undefined}>{!hasDraftContent ? "Add text, a title, or media before saving." : selectedMix.hasInbox ? "TikTok transfers still need you to finish publishing in the TikTok app" : scheduled ? "Each destination publishes at its own time" : "Each destination can use its own format and settings"}</span></div><div className="bridge-inline-actions"><button className="bridge-button secondary" disabled={busy || uploading} onClick={requestDiscard}>{draft ? "Discard changes" : "Discard"}</button><button className="bridge-button secondary" disabled={busy || uploading || !dirty || !hasDraftContent} aria-describedby={!hasDraftContent ? "bridge-empty-draft-help" : undefined} onClick={saveDraft}><Icon name="drafts" size={17}/>{busy ? "Saving…" : "Save draft in Meadow"}</button>{scheduled ? <button className="bridge-button" disabled={busy || uploading || !schedule.localDateTime} onClick={() => review(items, "schedule")}><Icon name="clock" size={17}/>{busy ? "Checking…" : "Review schedule"}<Icon name="arrow" size={17}/></button> : <button className="bridge-button" disabled={busy || uploading} onClick={() => review(items.map(item => ({ ...item, schedule: { ...item.schedule, mode: "now", localDateTime: "" } })), "publish")}>{busy ? "Checking…" : selectedMix.onlyInbox ? "Review TikTok transfer" : selectedMix.hasInbox ? "Review publishing & transfer" : "Review & publish"}<Icon name="arrow" size={17}/></button>}</div></div>
-    {preview && <Modal title={previewIntent === "publish" ? previewMix.onlyInbox ? "Review TikTok transfer" : previewMix.hasInbox ? "Review publishing and transfer" : "Review and publish" : "Review schedule"} wide busy={busy} onClose={() => setPreview(null)}><p className="bridge-small">Times are shown in {project.timeZone}. Allowances are checked again before every delivery.</p>{previewMix.hasInbox && <p className="bridge-notice">{previewIntent === "publish" ? "The selected TikTok media will be sent to your TikTok inbox." : "The scheduled TikTok time is the transfer time, not the publication time."} Open the TikTok inbox notification to finish editing and post. Video captions are added in TikTok; photo captions are sent with the images.</p>}<Alert message={error}/>{preview.delayed > 0 && <div className="bridge-notice">{preview.delayed} deliveries will wait for their account’s next available allowance.</div>}<div className="bridge-preview-list">{preview.rows.map(row => <ReviewPost key={row.index} row={row} item={items[row.index]} media={media} catalog={catalog} timeZone={project.timeZone}/>)}</div>{hasYouTubePreview && <p className="bridge-small">By clicking 'upload,' you certify that the content you are uploading complies with the YouTube Terms of Service (including the YouTube Community Guidelines) at <a href={youtubeTermsUrl} target="_blank" rel="noreferrer">{youtubeTermsUrl}</a>. Please be sure not to violate others' copyright or privacy rights.</p>}<div className="bridge-modal-actions"><button className="bridge-button secondary" disabled={busy} onClick={() => setPreview(null)}>Keep editing</button><button className="bridge-button" disabled={!preview.valid || busy || !config.features?.publishing} onClick={submit}>{busy ? previewIntent === "publish" ? previewMix.onlyInbox ? "Sending…" : previewMix.hasInbox ? "Submitting…" : "Publishing…" : "Scheduling…" : finalActionLabel}</button></div></Modal>}
+    {hasYouTube && <p className="bridge-small">By clicking {actionLabel}, you certify that the content you are uploading complies with the YouTube Terms of Service (including the YouTube Community Guidelines) at <a href={youtubeTermsUrl} target="_blank" rel="noreferrer">{youtubeTermsUrl}</a>. Please be sure not to violate others' copyright or privacy rights.</p>}
+    <div className="bridge-composer-footer"><div><strong>{draft ? "Editing saved draft" : "1 post in this draft"}</strong><span id={!hasDraftContent ? "bridge-empty-draft-help" : undefined}>{!hasDraftContent ? "Add text, a title, or media before saving." : selectedMix.hasInbox ? "TikTok transfers still need you to finish publishing in the TikTok app" : scheduled ? "Each destination publishes at its own time" : "Each destination can use its own format and settings"}</span></div><div className="bridge-inline-actions"><button className="bridge-button secondary" disabled={busy || uploading} onClick={requestDiscard}>{draft ? "Discard changes" : "Discard"}</button><button className="bridge-button secondary" disabled={busy || uploading || !dirty || !hasDraftContent} aria-describedby={!hasDraftContent ? "bridge-empty-draft-help" : undefined} onClick={saveDraft}><Icon name="drafts" size={17}/>{busyAction === "save" ? "Saving…" : "Save draft in Meadow"}</button><button className="bridge-button" disabled={busy || uploading || scheduled && !schedule.localDateTime || !config.features?.publishing} onClick={() => submit(scheduled ? items : items.map(item => ({ ...item, schedule: { ...item.schedule, mode: "now", localDateTime: "" } })))}>{scheduled && <Icon name="clock" size={17}/>} {busyAction === "submit" ? busyLabel : actionLabel}</button></div></div>
     {discardDialog}
   </>;
 }
