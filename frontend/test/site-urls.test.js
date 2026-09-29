@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { APP_ORIGIN, MARKETING_ORIGIN, appHref, isLocalMarketingPreview, marketingHref, siteSurface } from "../src/siteUrls.js";
+import { APP_ORIGIN, MARKETING_ORIGIN, appHref, isLocalMarketingPreview, marketingHref, signupHref, siteSurface } from "../src/siteUrls.js";
 
 const location = (hostname, origin = `https://${hostname}`) => ({ hostname, origin });
 
@@ -10,6 +10,15 @@ test("production hosts resolve to distinct marketing and application surfaces", 
   assert.equal(siteSurface(location("app.findmeadow.com")), "app");
   assert.equal(appHref("/dashboard/connections", location("findmeadow.com")), `${APP_ORIGIN}/dashboard/connections`);
   assert.equal(marketingHref("/#pricing", location("app.findmeadow.com")), `${MARKETING_ORIGIN}/#pricing`);
+});
+
+test("the free signup link preserves only advertising attribution", () => {
+  const campaign = {
+    ...location("findmeadow.com"),
+    search: "?utm_source=facebook&utm_campaign=launch&utm_content=claude&fbclid=abc123&email=private%40example.com&code=secret",
+  };
+  assert.equal(signupHref(campaign), `${APP_ORIGIN}/sign-up?fbclid=abc123&utm_source=facebook&utm_campaign=launch&utm_content=claude`);
+  assert.equal(signupHref(location("findmeadow.com")), `${APP_ORIGIN}/sign-up`);
 });
 
 test("development keeps the combined local surface", () => {

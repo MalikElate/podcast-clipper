@@ -2,6 +2,7 @@ export const MARKETING_ORIGIN = "https://findmeadow.com";
 export const APP_ORIGIN = "https://app.findmeadow.com";
 
 const MARKETING_HOSTS = new Set(["findmeadow.com", "www.findmeadow.com"]);
+const CAMPAIGN_PARAMETERS = ["fbclid", "gclid", "msclkid", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "utm_id"];
 
 function runtimeLocation(locationLike) {
   return locationLike || globalThis.location || null;
@@ -29,6 +30,17 @@ function localOrigin(locationLike) {
 export function appHref(path = "/dashboard", locationLike) {
   const origin = siteSurface(locationLike) === "integrated" ? localOrigin(locationLike) || APP_ORIGIN : APP_ORIGIN;
   return new URL(path, `${origin}/`).href;
+}
+
+export function signupHref(locationLike) {
+  const location = runtimeLocation(locationLike);
+  const url = new URL(appHref("/sign-up", locationLike));
+  const source = new URLSearchParams(location?.search || "");
+  for (const name of CAMPAIGN_PARAMETERS) {
+    const value = source.get(name);
+    if (value) url.searchParams.set(name, value.slice(0, 500));
+  }
+  return url.href;
 }
 
 export function marketingHref(path = "/", locationLike) {

@@ -27,6 +27,8 @@ test("callback secrets, post IDs, raw content, and old person properties cannot 
   assert.equal(analyticsPath("/dashboard/posts/a-private-id"), "/dashboard/other");
   assert.equal(analyticsPath("/dashboard/posts/scheduled/"), "/dashboard/posts/scheduled");
   assert.equal(analyticsPath("/linkedin-scheduling"), "/other");
+  assert.equal(analyticsPath("/start"), "/start");
+  assert.equal(analyticsPath("/sign-up/complete"), "/sign-up/complete");
   assert.equal(cleanAnalyticsUrl("https://attacker.example/private"), undefined);
   assert.equal(cleanAnalyticsUrl("https://name:secret@findmeadow.com/privacy?secret=yes"), "https://findmeadow.com/privacy");
   for (const event of ["$identify", "$snapshot", "$autocapture", "$exception"]) assert.equal(sanitizeAnalyticsEvent({ event, properties: {} }), null);
