@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { ClerkProvider } from "@clerk/react";
 import App from "./App.jsx";
 import { AuthProvider } from "./AuthContext.jsx";
+import { clerkScriptUrls } from "./clerkScripts.js";
 import "./index.css";
 import "./meadow.css";
 import "./borderless.css";
@@ -19,6 +20,11 @@ if (!clerkPublishableKey && !localPreview) {
   throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY.");
 }
 
+// The same pinned URLs are preloaded from index.html (see vite.config.js), so both scripts download
+// alongside the app bundle instead of one after the other.
+const clerkScripts = clerkScriptUrls(clerkPublishableKey);
+const clerkScriptProps = clerkScripts ? { __internal_clerkJSUrl: clerkScripts.clerkJS, __internal_clerkUIUrl: clerkScripts.clerkUI } : {};
+
 function Application() {
   return <AuthProvider><App /></AuthProvider>;
 }
@@ -27,6 +33,6 @@ void initProductAnalytics();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    {localPreview ? <Application /> : <ClerkProvider publishableKey={clerkPublishableKey}><Application /></ClerkProvider>}
+    {localPreview ? <Application /> : <ClerkProvider publishableKey={clerkPublishableKey} {...clerkScriptProps}><Application /></ClerkProvider>}
   </React.StrictMode>
 );
