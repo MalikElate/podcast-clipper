@@ -20,3 +20,10 @@ export function retryConfirmation(delivery) {
   if (["twitch", "kick"].includes(delivery.platform)) return `I checked the channel: message ${(delivery.chatMessagesSent || 0) + 1} was not sent. Previously confirmed messages will be kept.`;
   return "I checked the social account and this post was not published.";
 }
+
+export function tiktokProcessingMessage(delivery) {
+  if (delivery?.platform !== "tiktok" || isTikTokInbox(delivery)) return null;
+  if (delivery.status === "publishing") return { line: "Sending this post to TikTok", detail: "Meadow is securely transferring the selected media and settings." };
+  if (delivery.status === "processing") return { line: "TikTok is processing this post", detail: "Meadow is checking TikTok for the final publishing result. No action is needed." };
+  return null;
+}
