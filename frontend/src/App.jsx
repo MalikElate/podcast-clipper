@@ -18,7 +18,8 @@ import { captureMetaRegistration } from "./metaPixel.js";
 import { captureProductEvent } from "./productAnalytics.js";
 import { getPlatformUseCaseBySlug } from "./platformUseCases.js";
 import { findFreeToolPage } from "./tools/freeToolsCatalog.js";
-const BridgeApp = lazy(() => import("./bridge/BridgeApp.jsx"));
+const loadBridgeApp = () => import("./bridge/BridgeApp.jsx");
+const BridgeApp = lazy(loadBridgeApp);
 const FreeToolsPage = lazy(() => import("./tools/FreeToolsPage.jsx"));
 
 export default function App() {
@@ -151,6 +152,8 @@ function AppSurface({ appOnly = false }) {
   const { user, loading } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
   const dashboardPath = isDashboardPath(window.location.pathname);
+  // Download the workspace while Clerk restores the session, rather than after it.
+  useEffect(() => { if (dashboardPath || appOnly) void loadBridgeApp(); }, [dashboardPath, appOnly]);
 
   if (loading && !localPreview) return <OpeningMeadow />;
 
@@ -171,8 +174,9 @@ function AppSurface({ appOnly = false }) {
   return <PublicLanding onGetStarted={() => setShowAuth(true)} />;
 }
 
+// A blank page in the app background while sign-in state or code loads, so nothing flashes before the real screen.
 function OpeningMeadow() {
-  return <div className="app"><main className="centered-shell"><p role="status">Opening Meadow…</p></main></div>;
+  return <div className="app" aria-busy="true" />;
 }
 
 export function PublicLanding({ onGetStarted }) {

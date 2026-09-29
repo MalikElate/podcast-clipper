@@ -6,7 +6,7 @@ import { env } from "cloudflare:workers";
 import { timingSafeEqual } from "node:crypto";
 import { DurableState } from "./durableState.js";
 import { migrationScript } from "./migrationScript.js";
-import { appDomainRedirect } from "./domainRouting.js";
+import { appDomainRedirect, dashboardShellUrl } from "./domainRouting.js";
 export { ContainerProxy } from "@cloudflare/containers";
 
 const definedEnv = values => Object.fromEntries(
@@ -237,6 +237,8 @@ export default {
       const backend = workerEnv.BACKEND.getByName("primary");
       return backend.fetch(request);
     }
+    const dashboardShell = dashboardShellUrl(url);
+    if (dashboardShell) return workerEnv.ASSETS.fetch(new Request(dashboardShell, request));
 
     return workerEnv.ASSETS.fetch(request);
   },
