@@ -54,3 +54,24 @@ test("TikTok settings render only the consent and controls required by each deli
     await server.close();
   }
 });
+
+test("TikTok review makes every Direct Post choice visible before publishing", async () => {
+  const server = await createServer({
+    root: fileURLToPath(new URL("..", import.meta.url)), configFile: false, plugins: [react()],
+    server: { middlewareMode: true, hmr: false, ws: false }, appType: "custom", optimizeDeps: { noDiscovery: true, include: [] },
+  });
+  try {
+    const { TikTokReviewSummary } = await server.ssrLoadModule("/src/bridge/Composer.jsx");
+    const html = renderToStaticMarkup(createElement(TikTokReviewSummary, {
+      settings: { privacy: "SELF_ONLY", allowComments: true, allowDuet: false, allowStitch: true, ownBrand: true, brandedContent: false, aiGenerated: false, consent: true },
+      caption: "Quiet moments in motion.", hasVideo: true,
+    }));
+    for (const text of ["Publish directly from Meadow", "Only me", "Comments", "Allowed", "Duet", "Off", "Stitch", "Own-brand promotion", "Disclosed", "Paid partnership", "AI-generated content", "Music Usage Confirmation", "Accepted", "Quiet moments in motion."]) assert.match(html, new RegExp(text));
+    assert.match(renderToStaticMarkup(createElement(TikTokReviewSummary, { settings: {}, hasVideo: true })), /Not selected|Not accepted/);
+    const photo = renderToStaticMarkup(createElement(TikTokReviewSummary, { settings: { privacy: "SELF_ONLY", autoMusic: true, consent: true }, title: "Morning light", caption: "A photo post", hasImages: true }));
+    assert.match(photo, /Recommended music|Morning light|A photo post/);
+    assert.doesNotMatch(photo, /Duet|Stitch/);
+  } finally {
+    await server.close();
+  }
+});

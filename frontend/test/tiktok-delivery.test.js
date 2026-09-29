@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canCancelRemaining, deliveryMix, isDeliveryComplete, isTikTokInbox, retryConfirmation, submissionLabel } from "../src/bridge/deliveryPresentation.js";
+import { canCancelRemaining, deliveryMix, isDeliveryComplete, isTikTokInbox, retryConfirmation, submissionLabel, tiktokProcessingMessage } from "../src/bridge/deliveryPresentation.js";
 
 const inbox = { platform: "tiktok", deliveryMode: "inbox" };
 const direct = { platform: "tiktok", deliveryMode: "direct" };
@@ -31,4 +31,12 @@ test("uncertain TikTok transfer retries require checking receipt, not publicatio
   assert.match(retryConfirmation(inbox), /inbox.*not received.*duplicate/);
   assert.doesNotMatch(retryConfirmation(inbox), /not published/);
   assert.match(retryConfirmation(direct), /not published/);
+});
+
+test("direct TikTok deliveries explain active publishing states", () => {
+  assert.match(tiktokProcessingMessage({ ...direct, status: "publishing" }).line, /Sending this post/);
+  assert.match(tiktokProcessingMessage({ ...direct, status: "processing" }).line, /TikTok is processing/);
+  assert.match(tiktokProcessingMessage({ ...direct, status: "processing" }).detail, /No action is needed/);
+  assert.equal(tiktokProcessingMessage({ ...inbox, status: "processing" }), null);
+  assert.equal(tiktokProcessingMessage({ ...direct, status: "published" }), null);
 });
