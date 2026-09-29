@@ -10,7 +10,7 @@ const video = { id: "video1", filename: "clip.mp4", kind: "video", mime: "video/
 
 function memoryStore() {
   const data = new Map();
-  return { get: (kind, id) => data.get(`${kind}:${id}`) || null, put: (kind, record) => (data.set(`${kind}:${record.id}`, record), record) };
+  return { get: (kind, id) => data.get(`${kind}:${id}`) || null, put: (kind, record) => (data.set(`${kind}:${record.id}`, record), record), list: (kind, filters = {}) => [...data.entries()].filter(([key, value]) => key.startsWith(`${kind}:`) && (!filters.ownerUid || value.ownerUid === filters.ownerUid)).map(([, value]) => value) };
 }
 function zernioApi(routes) {
   const calls = [];
@@ -48,7 +48,7 @@ test("Default TikTok connections use Meadow's native OAuth even with Zernio conf
     }
     assert.equal(options.headers.Authorization, "Bearer native-token");
     assert.equal(new URL(url).pathname, "/v2/user/info/");
-    return Response.json({ data: { user: { open_id: "native-id", display_name: "Creator" } } });
+    return Response.json({ data: { user: { open_id: "native-id", union_id: "native-union", display_name: "Creator" } } });
   } });
   const tiktok = new (withZernio(TikTokProvider))({ env: liveEnv, transport, publicUrl: "https://findmeadow.com", zernioConnections: zernioPlatforms(liveEnv).has("tiktok") });
   const authorize = new URL(await tiktok.authorizationUrl({ state: "state1" }));
@@ -67,7 +67,7 @@ test("Default TikTok connections use Meadow's native OAuth even with Zernio conf
   await assert.rejects(missingCredentials.authorizationUrl({ state: "state2" }), error => error.code === "platform_unconfigured");
 });
 
-test("Zernio connections use one profile per workspace and verify the returned account", async () => {
+test("Zernio connections reuse an owner's profile and verify the returned account", async () => {
   const { calls, transport } = zernioApi({
     "GET profiles": () => [200, { profiles: [] }],
     "POST profiles": () => [201, { profile: { _id: "profile1", name: "meadow-project1" } }],
@@ -88,6 +88,21 @@ test("Zernio connections use one profile per workspace and verify the returned a
 
   await assert.rejects(tiktok.finishAuthorization(new URLSearchParams("state=abc&accountId=someone-else"), { projectId: "project1" }), /no longer connected/);
   await assert.rejects(tiktok.finishAuthorization(new URLSearchParams("state=abc&error=oauth_denied&platform=tiktok"), { projectId: "project1" }), /not authorized/);
+  const before = calls.length;
+  assert.equal(await tiktok.zernioProfile("user1", "project2"), "profile1");
+  assert.equal(calls.length, before, "another workspace must not create another provider identity for this user");
+  assert.equal(tiktok.store.get("zernioProfile", "project2").ownerUid, "user1");
+});
+
+test("Zernio never shares an owner's provider profile with a different Meadow user", async () => {
+  const { calls, transport } = zernioApi({
+    "GET profiles": () => [200, { profiles: [] }],
+    "POST profiles": () => [201, { profile: { _id: "bob-profile" } }],
+  });
+  const tiktok = provider(TikTokProvider, transport);
+  tiktok.store.put("zernioProfile", { id: "alice-project", ownerUid: "alice", profileId: "alice-profile" });
+  assert.equal(await tiktok.zernioProfile("bob", "bob-project"), "bob-profile");
+  assert.equal(calls.length, 2);
 });
 
 test("Zernio TikTok posts are submitted once and polled until published", async () => {

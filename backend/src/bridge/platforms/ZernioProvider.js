@@ -62,8 +62,21 @@ export function withZernio(Base) {
     }
 
     async zernioProfile(uid, projectId) {
+      // Reuse one provider profile per Meadow owner for new workspaces. Creating
+      // another profile can give the same social account a different Zernio ID.
+      const resolve = () => this.resolveZernioProfile(uid, projectId);
+      return this.locks ? this.locks.withLock(`zernio-profile:${uid}`, resolve) : resolve();
+    }
+
+    async resolveZernioProfile(uid, projectId) {
       const saved = this.store.get("zernioProfile", projectId);
       if (saved?.profileId) return saved.profileId;
+      const shared = this.store.list("zernioProfile", { ownerUid: uid, limit: null }).find(item => item.profileId);
+      if (shared) {
+        this.store.put("zernioProfile", { id: projectId, projectId, ownerUid: uid, profileId: shared.profileId, createdAt: this.clock() });
+        await this.store.flush?.();
+        return shared.profileId;
+      }
       const name = `meadow-${projectId}`;
       const find = async () => refId((await this.zernio("profiles")).profiles?.find(profile => profile.name === name)?._id);
       let profileId = await find();
