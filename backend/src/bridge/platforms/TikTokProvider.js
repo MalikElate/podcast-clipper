@@ -1,10 +1,11 @@
 import { PlatformProvider } from "./PlatformProvider.js";
 import { tiktokAccountAnalytics } from "./accountAnalytics.js";
+import { tiktokStatusFailure } from "./tiktokErrors.js";
 import { invariant, ProviderError } from "../core/errors.js";
 
 const uploadPermissionMessage = "Reconnect TikTok and allow video uploads to send content to your TikTok inbox.";
 const publishPermissionMessage = "Reconnect TikTok and allow direct publishing to publish from Meadow.";
-const privateOnlyMessage = "TikTok direct posts are limited to Only me until Meadow is approved. Choose Only me and make sure your TikTok account is private.";
+const privateOnlyMessage = "Until TikTok approves Meadow's Direct Post audit, this TikTok account must be private and the post must use Only me.";
 
 function permissions(credentials = {}) {
   const scopes = new Set((Array.isArray(credentials.scope) ? credentials.scope.join(",") : String(credentials.scope ?? "")).split(/[\s,]+/).filter(Boolean));
@@ -135,12 +136,7 @@ export class TikTokProvider extends PlatformProvider {
     const result = await this.http.request("https://open.tiktokapis.com/v2/post/publish/status/fetch/", { method: "POST", token: ctx.credentials.accessToken, json: { publish_id: ctx.progress.publishId }, safeToRetry: true });
     const data = result.data || {};
     if (data.status === "FAILED") {
-      if (inbox) {
-        if (data.fail_reason === "spam_risk_too_many_pending_share") throw new ProviderError("TikTok allows at most five pending uploads within 24 hours. Finish existing uploads from your TikTok inbox before sending more.", { retryable: true, restartPublishing: true, code: "rate_limited" });
-        throw new ProviderError("TikTok could not deliver this content to your inbox. Check the media and your TikTok account.", { code: "provider_rejected" });
-      }
-      const limited = /too_many_posts|rate_limit/.test(data.fail_reason || "");
-      throw new ProviderError(limited ? "TikTok has reached its publishing allowance." : "TikTok could not publish this content. Check its settings and media.", { retryable: limited, restartPublishing: limited, code: limited ? "rate_limited" : "provider_rejected" });
+      throw tiktokStatusFailure(data.fail_reason, { inbox });
     }
     if (inbox && ["SEND_TO_USER_INBOX", "PUBLISH_COMPLETE"].includes(data.status)) {
       // A successful transfer is a handoff, not a Meadow-published post. Stop

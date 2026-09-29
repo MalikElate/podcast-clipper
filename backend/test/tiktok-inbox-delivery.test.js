@@ -86,7 +86,7 @@ test("enabling private-only blocks an old queued public post before TikTok recei
   await h.app.worker.tick();
   const result = h.app.posts.get("alice", h.project.id, post.id);
   assert.equal(result.deliveries[0].status, "failed");
-  assert.match(result.deliveries[0].error, /limited to Only me/);
+  assert.match(result.deliveries[0].error, /Direct Post audit.*account must be private.*Only me/);
   assert.ok(!h.calls.some(call => call.url.includes("/init/")));
 });
 
