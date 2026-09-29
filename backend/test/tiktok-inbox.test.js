@@ -117,6 +117,32 @@ test("TikTok keeps polling pending uploads and surfaces terminal media failures"
   await assert.rejects(provider.poll(ctx), error => error.code === "provider_rejected" && !error.retryable && !error.restartPublishing);
 });
 
+test("TikTok preserves safe actionable Direct Post failure reasons from status polling", async () => {
+  for (const [reason, expected] of [
+    ["unaudited_client_can_only_post_to_private_accounts", /Direct Post audit.*account private.*Only me/],
+    ["picture_size_check_failed", /dimensions/],
+    ["spam_risk_text", /caption or title/],
+  ]) {
+    const { provider, ctx } = setup(() => ({ data: { status: "FAILED", fail_reason: reason } }));
+    ctx.progress = { publishId: "direct-id", deliveryMode: "direct" };
+    await assert.rejects(provider.poll(ctx), error => {
+      assert.equal(error.code, "provider_rejected");
+      assert.equal(error.details.provider, "tiktok");
+      assert.equal(error.details.providerCode, reason);
+      assert.match(error.message, expected);
+      return true;
+    });
+  }
+  const { provider, ctx } = setup(() => ({ data: { status: "FAILED", fail_reason: "private-secret" } }));
+  ctx.progress = { publishId: "direct-id", deliveryMode: "direct" };
+  await assert.rejects(provider.poll(ctx), error => {
+    assert.match(error.message, /could not publish/);
+    assert.deepEqual(error.details, { provider: "tiktok" });
+    assert.doesNotMatch(JSON.stringify(error), /private-secret/);
+    return true;
+  });
+});
+
 test("TikTok inbox pending-share limit is actionable and a rejected init can safely retry", async () => {
   const { provider, ctx } = setup();
   provider.http = new HttpTransport({ fetcher: async () => new Response(JSON.stringify({ error: { code: "spam_risk_too_many_pending_share" } }), { status: 403 }) });
@@ -179,7 +205,7 @@ test("TikTok private-only validation rejects stale public choices and still requ
   ctx.content.accountOptions = { creator: { privacyOptions: ["PUBLIC_TO_EVERYONE", "SELF_ONLY"], maxVideoSeconds: 60 } };
   for (const privacy of [undefined, "PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS"]) {
     ctx.content.settings = { privacy, consent: true };
-    assert.match(provider.validate(ctx.content).join(" "), /limited to Only me/);
+    assert.match(provider.validate(ctx.content).join(" "), /Direct Post audit.*account must be private.*Only me/);
   }
   ctx.content.settings = { privacy: "SELF_ONLY", consent: true };
   assert.deepEqual(provider.validate(ctx.content), []);
