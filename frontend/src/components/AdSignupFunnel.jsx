@@ -17,7 +17,6 @@ export default function AdSignupFunnel() {
           <h1 id="ad-funnel-title">
             <span>Create once.</span>
             <span>Publish everywhere.</span>
-            <span className="ad-funnel-highlight">All from Meadow.</span>
           </h1>
           <p className="ad-funnel-description">
             Create your post once. Tailor, schedule, and track it across your connected social accounts from one workspace.
