@@ -12,7 +12,7 @@ import "./marketingPages.css";
 import "./adSignupFunnel.css";
 import "./tools/freeTools.css";
 import { initProductAnalytics } from "./productAnalytics.js";
-import { initGoogleAnalytics } from "./googleAnalytics.js";
+import { initGoogleAnalytics, migrateLegacyGoogleAnalyticsPreference } from "./googleAnalytics.js";
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || globalThis.__MEADOW_CONFIG__?.clerkPublishableKey;
 const localPreview = import.meta.env.VITE_BRIDGE_LOCAL_PREVIEW === "true";
@@ -30,6 +30,7 @@ function Application() {
   return <AuthProvider><App /></AuthProvider>;
 }
 
+migrateLegacyGoogleAnalyticsPreference();
 void initProductAnalytics();
 initGoogleAnalytics({ preview: import.meta.env.DEV || localPreview });
 
