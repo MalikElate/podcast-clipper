@@ -18,7 +18,8 @@ export default function AnalyticsPreference() {
     update();
     window.addEventListener("meadow:analytics-preference", update);
     window.addEventListener("storage", update);
-    return () => { window.removeEventListener("meadow:analytics-preference", update); window.removeEventListener("storage", update); };
+    const timer = window.setInterval(update, 1000);
+    return () => { window.clearInterval(timer); window.removeEventListener("meadow:analytics-preference", update); window.removeEventListener("storage", update); };
   }, []);
 
   return <span className="analytics-preferences">

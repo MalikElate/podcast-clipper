@@ -18,7 +18,9 @@ export default function GoogleAnalyticsConsent() {
     update();
     window.addEventListener("meadow:analytics-preference", update);
     window.addEventListener("storage", update);
+    const timer = window.setInterval(update, 1000);
     return () => {
+      window.clearInterval(timer);
       window.removeEventListener("meadow:analytics-preference", update);
       window.removeEventListener("storage", update);
     };
