@@ -25,16 +25,16 @@ function zernioApi(routes) {
   } });
   return { calls, transport };
 }
-const provider = (Base, transport) => new (withZernio(Base))({ env, transport, store: memoryStore(), publicUrl: "https://findmeadow.com", clock: () => Date.parse("2026-09-25T12:00:00Z") });
+const provider = (Base, transport) => new (withZernio(Base))({ env, transport, store: memoryStore(), publicUrl: "https://findmeadow.com", clock: () => Date.parse("2026-09-25T12:00:00Z"), zernioConnections: zernioPlatforms(env).has(new Base({ env }).id) });
 
 test("Zernio routing is enabled only with an API key and for supported platforms", () => {
   assert.deepEqual([...zernioPlatforms({})], []);
-  assert.deepEqual([...zernioPlatforms({ ZERNIO_API_KEY: "sk" })], ["snapchat", "facebook", "instagram", "threads", "pinterest"]);
+  assert.deepEqual([...zernioPlatforms({ ZERNIO_API_KEY: "sk" })], ["tiktok", "snapchat", "facebook", "instagram", "threads", "pinterest"]);
   assert.deepEqual([...zernioPlatforms({ ZERNIO_API_KEY: "sk", ZERNIO_PLATFORMS: "tiktok, youtube,pinterest" })], ["tiktok", "pinterest"]);
 });
 
-test("Default TikTok connections use Meadow's native OAuth even with Zernio configured", async () => {
-  const liveEnv = { ZERNIO_API_KEY: "sk_test", TIKTOK_CLIENT_KEY: "meadow-client", TIKTOK_CLIENT_SECRET: "meadow-secret" };
+test("TikTok connections use native OAuth when explicitly excluded from Zernio routing", async () => {
+  const liveEnv = { ZERNIO_API_KEY: "sk_test", ZERNIO_PLATFORMS: "snapchat,facebook,instagram,threads,pinterest", TIKTOK_CLIENT_KEY: "meadow-client", TIKTOK_CLIENT_SECRET: "meadow-secret" };
   const calls = [];
   const transport = new HttpTransport({ fetcher: async (url, options) => {
     calls.push(url);
