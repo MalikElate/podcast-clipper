@@ -155,7 +155,9 @@ test("GA4 reports only static, safe URLs and omits private identifiers", () => {
     "https://evil.example/start",
   ]) assert.equal(googleAnalyticsPage(href), "", href);
   const privateReferrer = browser("https://findmeadow.com/start", { enabled: true, referrer: "https://example.com/oauth?code=private" });
-  assert.equal(privateReferrer.scripts.length, 0);
+  assert.equal(privateReferrer.scripts.length, 1);
+  assert.equal(privateReferrer.commands().find(command => command[0] === "config")[2].page_referrer, "https://example.com/");
+  assert.doesNotMatch(JSON.stringify(privateReferrer.commands()), /private|code=/);
 });
 
 test("navigation sends one safe pageview per page and revokes consent on private routes", () => {
@@ -237,6 +239,7 @@ test("signup callback is scrubbed before a new dashboard document loads", () => 
     assert.equal(cleanSignupCallbackReferrer(first.win), true);
   });
   assert.equal(first.win.location.href, "https://app.findmeadow.com/sign-up/complete");
+  assert.doesNotMatch(JSON.stringify(first.commands()), /private|__clerk_ticket|state=/);
   const second = browser("https://app.findmeadow.com/dashboard", {
     enabled: true, referrer: first.win.location.href,
     cookies: ["meadow_ga_analytics=on"], session,
@@ -244,6 +247,19 @@ test("signup callback is scrubbed before a new dashboard document loads", () => 
   assert.equal(second.scripts.length, 1);
   assert.equal(second.events().filter(command => command[1] === "sign_up").length, 1);
   assert.doesNotMatch(JSON.stringify(second.commands()), /private|__clerk_ticket/);
+});
+
+test("OAuth connection tracking resumes only after callback URL cleanup", () => {
+  const b = browser("https://app.findmeadow.com/dashboard/connections?connection=private", {
+    enabled: true, referrer: "https://accounts.google.com/oauth?code=private&state=private",
+    cookies: ["meadow_ga_analytics=on"],
+  });
+  assert.equal(b.scripts.length, 0);
+  b.win.history.replaceState({}, "", "/dashboard/connections");
+  assert.equal(b.scripts.length, 1);
+  withBrowserGlobals(b, () => captureGoogleRequestSuccess("/projects/project-123/connections/connection-456", "POST", {}, b.win));
+  assert.equal(b.events().filter(command => command[1] === "social_account_connected").length, 1);
+  assert.doesNotMatch(JSON.stringify(b.commands()), /private|code=|state=|project-123|connection-456/);
 });
 
 test("an already-open tab polls a withdrawn choice from another tab", () => {

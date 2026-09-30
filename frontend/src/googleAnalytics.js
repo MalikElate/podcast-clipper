@@ -73,13 +73,12 @@ export function initGoogleAnalytics({ win = globalThis.window, doc = globalThis.
   if (!doc || !googleAnalyticsAvailable({ win, preview }) || !/^G-[A-Z0-9]+$/.test(measurementId)) return;
   if (win.__meadowGoogleAnalytics) return win.__meadowGoogleAnalytics;
   let initialized = false, granted = false, lastPage = "";
-  const privateReferrer = /[?&#](?:code|state|token|access_token|id_token|session_id|draft|__clerk[^=]*)=/i.test(doc.referrer || "");
 
   function sync() {
     try {
       const page = googleAnalyticsPage(win.location.href);
       const consentGranted = enabled();
-      if (!consentGranted || !page || privateReferrer) {
+      if (!consentGranted || !page) {
         if (!consentGranted) {
           try { win.sessionStorage?.removeItem(signupMarker); } catch { /* Storage may be unavailable. */ }
         }
