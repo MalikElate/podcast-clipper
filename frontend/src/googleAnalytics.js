@@ -1,26 +1,21 @@
-import { analyticsEnabled, browserPrivacyOptOut } from "./productAnalytics.js";
+import { analyticsEnabled, browserPrivacyOptOut, setAnalyticsEnabled } from "./productAnalytics.js";
 import { pixelPage } from "./metaPixel.js";
 
 // A GA4 Measurement ID identifies a public web stream; it is not a secret.
 export const GOOGLE_ANALYTICS_ID = import.meta.env?.VITE_GA4_MEASUREMENT_ID || "G-VVMXZECLCS";
 const hosts = new Set(["findmeadow.com", "www.findmeadow.com", "app.findmeadow.com"]);
-const preferenceCookie = "meadow_ga_analytics";
+const legacyPreferenceCookie = "meadow_ga_analytics";
 const signupMarker = "meadow.ga4.signup.pending";
 const campaignKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_id"];
+let migratingLegacyPreference = false;
 
 export function googleAnalyticsAvailable({ win = globalThis.window, preview = import.meta.env?.DEV || import.meta.env?.VITE_BRIDGE_LOCAL_PREVIEW === "true" } = {}) {
   return Boolean(win && !preview && win.location?.protocol === "https:" && hosts.has(win.location.hostname));
 }
 
-export function googleAnalyticsChoice(doc = globalThis.document) {
-  try {
-    const value = doc?.cookie.split(";").map(part => part.trim()).find(part => part.startsWith(`${preferenceCookie}=`))?.slice(preferenceCookie.length + 1);
-    return value === "on" || value === "off" ? value : null;
-  } catch { return null; }
-}
-
 export function googleAnalyticsEnabled() {
-  return googleAnalyticsAvailable() && googleAnalyticsChoice() === "on" && analyticsEnabled() && !browserPrivacyOptOut();
+  migrateLegacyGoogleAnalyticsPreference();
+  return googleAnalyticsAvailable() && analyticsEnabled() && !browserPrivacyOptOut();
 }
 
 function clearGoogleCookies(doc) {
@@ -35,16 +30,34 @@ function clearGoogleCookies(doc) {
   } catch { /* Cookie access may be unavailable. */ }
 }
 
-export function setGoogleAnalyticsConsent(allowed) {
+// Run before either analytics client starts. Retain earlier Google declines in
+// Meadow's shared preference, so removing the separate control never opts a
+// visitor back in. The shared control can subsequently enable analytics again.
+export function migrateLegacyGoogleAnalyticsPreference() {
+  if (migratingLegacyPreference || !googleAnalyticsAvailable()) return;
+  migratingLegacyPreference = true;
   try {
-    const domain = hosts.has(globalThis.location?.hostname) ? "; Domain=.findmeadow.com" : "";
-    globalThis.document.cookie = `${preferenceCookie}=${allowed ? "on" : "off"}; Max-Age=31536000; Path=/; SameSite=Lax; Secure${domain}`;
-    if (!allowed) {
-      clearGoogleCookies(globalThis.document);
-      globalThis.window?.sessionStorage?.removeItem(signupMarker);
+    const doc = globalThis.document;
+    const choices = doc.cookie.split(";").map(part => part.trim()).filter(part => part.startsWith(`${legacyPreferenceCookie}=`)).map(part => part.slice(legacyPreferenceCookie.length + 1));
+    if (!choices.some(choice => choice === "on" || choice === "off")) return;
+    if (choices.includes("off")) {
+      // This also keeps the current page opted out when storage is unavailable.
+      // It dispatches a preference event, so guard against recursive migration.
+      setAnalyticsEnabled(false);
+      clearGoogleCookies(doc);
+      try { globalThis.window?.sessionStorage?.removeItem(signupMarker); } catch { /* Storage may be unavailable. */ }
+      // Do not erase the old decline unless the cross-origin replacement was
+      // saved. The first matching cookie is the one analyticsEnabled reads.
+      const sharedChoice = doc.cookie.split(";").map(part => part.trim()).find(part => part.startsWith("meadow_analytics="));
+      if (sharedChoice !== "meadow_analytics=off") return;
     }
-  } catch { /* The preference still applies to the current page below. */ }
-  globalThis.window?.dispatchEvent(new Event("meadow:analytics-preference"));
+    // Legacy cookies may be host-only or shared across Meadow's subdomains.
+    // An old acceptance is only retired; it never overrides a global opt-out.
+    for (const domain of ["", "; Domain=.findmeadow.com"]) {
+      doc.cookie = `${legacyPreferenceCookie}=; Max-Age=0; Path=/; SameSite=Lax; Secure${domain}`;
+    }
+  } catch { /* Leave the legacy preference intact if cookies are unavailable. */ }
+  finally { migratingLegacyPreference = false; }
 }
 
 // Preserve campaign labels for acquisition reports, but never pass private
@@ -77,14 +90,14 @@ export function initGoogleAnalytics({ win = globalThis.window, doc = globalThis.
   function sync() {
     try {
       const page = googleAnalyticsPage(win.location.href);
-      const consentGranted = enabled();
-      if (!consentGranted || !page) {
-        if (!consentGranted) {
+      const usageEnabled = enabled();
+      if (!usageEnabled || !page) {
+        if (!usageEnabled) {
           try { win.sessionStorage?.removeItem(signupMarker); } catch { /* Storage may be unavailable. */ }
         }
         if (initialized && granted) {
-          // Denied consent alone may still send cookieless pings. Google's
-          // property-level opt-out stops future GA hits after withdrawal.
+          // Denied storage alone may still send cookieless pings. Google's
+          // property-level opt-out stops future GA hits when usage is disabled.
           win[`ga-disable-${measurementId}`] = true;
           win.gtag("consent", "update", { analytics_storage: "denied" });
           clearGoogleCookies(doc);
@@ -157,7 +170,7 @@ export function initGoogleAnalytics({ win = globalThis.window, doc = globalThis.
   doc.addEventListener("visibilitychange", () => { if (!doc.hidden) sync(); });
   // The preference cookie is shared across site and app origins, unlike
   // localStorage events. Poll while this document is open so another tab's
-  // withdrawal promptly disables a loaded GA tag here as well.
+  // usage opt-out promptly disables a loaded GA tag here as well.
   win.setInterval?.(sync, 1000);
   win.__meadowGoogleAnalytics = { sync };
   sync();
