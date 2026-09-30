@@ -12,6 +12,8 @@ import "./marketingPages.css";
 import "./adSignupFunnel.css";
 import "./tools/freeTools.css";
 import { initProductAnalytics } from "./productAnalytics.js";
+import { initGoogleAnalytics } from "./googleAnalytics.js";
+import GoogleAnalyticsConsent from "./components/GoogleAnalyticsConsent.jsx";
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || globalThis.__MEADOW_CONFIG__?.clerkPublishableKey;
 const localPreview = import.meta.env.VITE_BRIDGE_LOCAL_PREVIEW === "true";
@@ -26,10 +28,11 @@ const clerkScripts = clerkScriptUrls(clerkPublishableKey);
 const clerkScriptProps = clerkScripts ? { __internal_clerkJSUrl: clerkScripts.clerkJS, __internal_clerkUIUrl: clerkScripts.clerkUI } : {};
 
 function Application() {
-  return <AuthProvider><App /></AuthProvider>;
+  return <AuthProvider><App /><GoogleAnalyticsConsent /></AuthProvider>;
 }
 
 void initProductAnalytics();
+initGoogleAnalytics({ preview: import.meta.env.DEV || localPreview });
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

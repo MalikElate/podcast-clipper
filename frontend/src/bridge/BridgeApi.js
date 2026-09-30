@@ -2,6 +2,7 @@ import { getAuthToken } from "../authToken.js";
 import { normalizePlatformCollections } from "./platforms.js";
 import { uploadWithProgress } from "./uploadTransport.js";
 import { captureRequestSuccess } from "../productAnalytics.js";
+import { captureGoogleRequestSuccess } from "../googleAnalytics.js";
 export const localPreview = Boolean(import.meta.env?.DEV && import.meta.env?.VITE_BRIDGE_LOCAL_PREVIEW === "true");
 const sessionError = () => Object.assign(new Error("Your Meadow sign-in could not be verified. Please sign in again to continue."), { code: "authentication_required", status: 401 });
 const networkError = cause => Object.assign(new Error("Meadow could not reach the server. Check your internet connection and try again.", { cause }), { code: "network_error" });
@@ -52,7 +53,10 @@ export class BridgeApi {
       Object.assign(error, { code: data.code, details: data.details, status: res.status });
       throw error;
     }
-    if (!this.preview) { try { this.track(path, method); } catch { /* Tracking cannot fail a successful request. */ } }
+    if (!this.preview) {
+      try { this.track(path, method); } catch { /* Tracking cannot fail a successful request. */ }
+      captureGoogleRequestSuccess(path, method, body);
+    }
     return normalizePlatformCollections(data);
   }
   projectPath(projectId, path = "") { return `/projects/${encodeURIComponent(projectId)}${path}`; }

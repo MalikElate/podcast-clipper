@@ -16,6 +16,7 @@ import { isDashboardPath } from "./bridge/dashboardRoutes.js";
 import { appHref, isLocalMarketingPreview, marketingHref, siteSurface } from "./siteUrls.js";
 import { captureMetaRegistration } from "./metaPixel.js";
 import { captureProductEvent } from "./productAnalytics.js";
+import { cleanSignupCallbackReferrer, queueGoogleSignup } from "./googleAnalytics.js";
 import { getPlatformUseCaseBySlug } from "./platformUseCases.js";
 import { findFreeToolPage } from "./tools/freeToolsCatalog.js";
 const loadBridgeApp = () => import("./bridge/BridgeApp.jsx");
@@ -83,7 +84,11 @@ function SignupComplete() {
     if (pending && justCreated) {
       captureMetaRegistration();
       captureProductEvent("meadow_signup_completed");
+      queueGoogleSignup();
     }
+    // Remove Clerk callback parameters before the next document is loaded.
+    // The dashboard can then use this safe URL as its GA4 referrer.
+    cleanSignupCallbackReferrer();
     window.location.replace("/dashboard");
   }, [user, loading]);
   return <OpeningMeadow />;
