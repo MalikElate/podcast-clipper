@@ -52,7 +52,7 @@
     "BRIDGE_PUBLISHING_ENABLED": "true",
     "FACEBOOK_LOGIN_CONFIG_ID": "1758250408777427",
     "TIKTOK_DIRECT_POST_PRIVATE_ONLY": "true",
-    "ZERNIO_PLATFORMS": "snapchat,facebook,instagram,threads,pinterest",
+    "ZERNIO_PLATFORMS": "tiktok,snapchat,facebook,instagram,threads,pinterest",
     "TELEGRAM_BOT_USERNAME": "FindMeadowAppBot"
   },
   "routes": [

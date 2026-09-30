@@ -1,14 +1,14 @@
 # TikTok app review
 
-## Production status — September 28, 2026
+## Production status — September 30, 2026
 
-The TikTok developer portal now shows Meadow **Live** in production, with Login Kit, Content Posting API Direct Post, and `user.info.basic`, `video.publish`, `video.upload`, and `video.list` enabled. The registered callback is `https://findmeadow.com/oauth/tiktok/callback`. New Meadow connections use native TikTok OAuth instead of Zernio; existing native connections are preserved.
+The TikTok developer portal showed Meadow **Live** in production on September 28, with Login Kit, Content Posting API Direct Post, and `user.info.basic`, `video.publish`, `video.upload`, and `video.list` enabled. The registered callback is `https://findmeadow.com/oauth/tiktok/callback`. As of September 30, new connections use Zernio again while the separate Direct Post audit remains pending; existing native connections are preserved. See [Zernio publishing](zernio.md) for the current routing.
 
 The portal still offers **Apply** for the separate Direct Post audit. Keep `TIKTOK_DIRECT_POST_PRIVATE_ONLY=true` until that audit is approved. The app's live status is not evidence that public Direct Post restrictions were lifted. The review material below remains useful for subsequent revisions and the separate audit.
 
-Live authorization verification found that the original `TIKTOK_CLIENT_KEY` / `TIKTOK_CLIENT_SECRET` pair belongs to Meadow Sandbox. The approved production pair is installed separately as `TIKTOK_CLIENT_KEY_V2` / `TIKTOK_CLIENT_SECRET_V2`. New authorizations prefer the complete V2 pair and stamp the client key into encrypted account credentials. Renewal and revocation use the pair that issued each grant; historical untagged grants continue using the original Sandbox pair. Do not overwrite the original pair while those grants remain connected.
+Live authorization verification found that the original `TIKTOK_CLIENT_KEY` / `TIKTOK_CLIENT_SECRET` pair belongs to Meadow Sandbox. The approved production pair is installed separately as `TIKTOK_CLIENT_KEY_V2` / `TIKTOK_CLIENT_SECRET_V2`. Native authorizations prefer the complete V2 pair and stamp the client key into encrypted account credentials. Renewal and revocation use the pair that issued each grant; historical untagged grants continue using the original Sandbox pair. Do not overwrite the original pair while those grants remain connected.
 
-An existing Sandbox account must authorize **Meadow** again through **Connect TikTok** to use production. TikTok's production open ID may differ, so Meadow does not silently merge accounts, move scheduled posts, or revoke the old grant. Verify the authorization screen says **Meadow**, without **(Sandbox)**, before continuing.
+For future native-app testing, first explicitly exclude TikTok from `ZERNIO_PLATFORMS` in the test environment. An existing Sandbox account must authorize **Meadow** again to obtain a native production grant. TikTok's production open ID may differ, so Meadow does not silently merge accounts, move scheduled posts, or revoke the old grant. Verify the native authorization screen says **Meadow**, without **(Sandbox)**, before continuing. Production **Connect TikTok** currently routes through Zernio.
 
 ## Review explanation
 

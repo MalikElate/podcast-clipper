@@ -7,10 +7,10 @@ const API = "https://zernio.com/api/v1";
 const zernioIds = { tiktok: "tiktok", snapchat: "snapchat", facebook: "facebook", instagram: "instagram", threads: "threads", pinterest: "pinterest" };
 
 export const zernioSupported = new Set(Object.keys(zernioIds));
-// TikTok now uses Meadow's approved native app for new authorizations.
-const defaultConnections = ["snapchat", "facebook", "instagram", "threads", "pinterest"];
+// TikTok uses Zernio while Meadow's separate Direct Post audit is pending.
+const defaultConnections = ["tiktok", "snapchat", "facebook", "instagram", "threads", "pinterest"];
 
-/** Platforms whose new connections go through Zernio until Meadow's own app review is approved. */
+/** Platforms whose new connections go through Zernio. Existing grants keep their adapter. */
 export function zernioPlatforms(env = {}) {
   if (!env.ZERNIO_API_KEY) return new Set();
   const listed = (env.ZERNIO_PLATFORMS ?? defaultConnections.join(",")).split(/[\s,]+/).filter(Boolean);
