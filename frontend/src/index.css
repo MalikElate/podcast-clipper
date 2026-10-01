@@ -2414,7 +2414,7 @@ input[type="range"]::-moz-range-thumb {
 .landing-v2 .landing-cta-section { background: #e4ebd9; border-top: 1px solid #cbd8bd; color: var(--text); }
 .landing-v2 .landing-cta-section h2 { color: var(--text); }
 .landing-v2 .landing-cta-section p { color: var(--text-muted); }
-.landing-v2 .landing-cta-primary { border-color: #547af1; background: #547af1; color: #fff; }
+.landing-v2 .landing-cta-primary { border-color: #547af1; background: #547af1; color: #fff; box-shadow: none; }
 .landing-v2 .landing-cta-primary:hover { background: #4169e1; }
 .landing-v2 .landing-cta-secondary { border-color: #a5b697; color: var(--text); }
 .landing-v2 .landing-cta-secondary:hover { background: #fcfdf8; }
