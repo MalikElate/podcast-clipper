@@ -15,7 +15,13 @@
       "class_name": "PodcastClipperBackend",
       "image": "./backend/Dockerfile",
       "max_instances": 1,
-      "instance_type": "standard-2"
+      "instance_type": "standard-2",
+      "authorized_keys": [
+        {
+          "name": "meadow-connection-audit-20261001",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE+7iWC26iSjCGfTiZpsvwLCQHruKFpiMUudMYO+keOw"
+        }
+      ]
     }
   ],
   "ai": { "binding": "ROAST_AI" },
