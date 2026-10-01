@@ -62,7 +62,7 @@ function Workspace({ user, signOut }) {
   const [billingSearch, setBillingSearch] = useState(() => dashboardSearch(initial.current.view, initial.current.params));
   const [draftId, setDraftId] = useState(() => initial.current.view === "compose" ? initial.current.params.get("draft") || "" : "");
   const [projects, setProjects] = useState([]), [projectId, setProjectId] = useState(""), [config, setConfig] = useState(null), [error, setError] = useState(initial.current.params.get("connectionError") || ""), [notice, setNotice] = useState(""), [menuOpen, setMenuOpen] = useState(false), [connectionId, setConnectionId] = useState(initial.current.params.get("connection") || ""), [scheduledDate, setScheduledDate] = useState(""), [draftVersion, setDraftVersion] = useState(0);
-  const [postsOpen, setPostsOpen] = useState(postViewIds.has(initial.current.view));
+  const [postsOpen, setPostsOpen] = useState(false);
   const [configurationOpen, setConfigurationOpen] = useState(configurationViewIds.has(initial.current.view));
   const [signingOut, setSigningOut] = useState(false);
   const composeDirtyRef = useRef(false);
