@@ -4,8 +4,13 @@ import {
   buildSignupConsentMetadata,
   isSignupAction,
   PRIVACY_POLICY_VERSION,
+  SIGNUP_ACTION_SELECTOR,
   setSignupActionsConsentState,
 } from "./signupConsent.js";
+
+test("the consent gate covers Clerk's visible primary action", () => {
+  assert.match(SIGNUP_ACTION_SELECTOR, /\.cl-formButtonPrimary/);
+});
 
 test("signup actions stay disabled until privacy consent is accepted", () => {
   const clerkEnabledButton = { disabled: false, dataset: {} };
