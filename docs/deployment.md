@@ -54,7 +54,23 @@ Run `node --test test/trybe.test.js` in `backend` for signed webhook, currency, 
 
 Never copy runtime secrets into `VITE_*` variables. The Clerk publishable key and analytics project tokens are public frontend build inputs. Do not change the encryption key without migrating or re-encrypting stored credentials. Keep copies of signing and encryption keys separate from data backups.
 
-Workspace API keys are created from Configuration → API Keys. The full key is displayed once; store it in the client's secret manager and send it as `Authorization: Bearer br_live_…`. Revocation immediately stops new authenticated REST and MCP requests. The private MCP endpoint is `https://findmeadow.com/mcp`; see [MCP API](mcp-api.md). Public ChatGPT distribution still requires OAuth rather than a manually supplied API key.
+Workspace API keys are created from Configuration → API Keys. The full key is displayed once; store it in the client's secret manager and send it as `Authorization: Bearer br_live_…`. Revocation immediately stops new authenticated REST and MCP requests. The MCP endpoint is `https://findmeadow.com/mcp`; see [MCP API](mcp-api.md). Public ChatGPT connections use the OAuth configuration below rather than a manually supplied API key.
+
+### Configure MCP OAuth
+
+Production passes the public `CLERK_MCP_ISSUER=https://clerk.findmeadow.com` setting from the Worker into the backend. Self-hosted deployments may set their own Clerk HTTPS issuer origin; leaving it unset keeps the existing API-key-only mode. The Worker routes both protected-resource metadata paths to the backend instead of the static asset layer.
+
+In the Meadow production Clerk instance, configure OAuth applications:
+
+1. Keep **Require PKCE** enabled. Enable **Include Audience**, retain **JWT access tokens**, and keep the OAuth consent screen enabled.
+2. Define `meadow:read` for viewing owned projects, account metadata, saved posts, and cached analytics, and `meadow:draft` for saving new drafts. Assign only appropriate scopes to each OAuth client; defining or advertising a scope does not grant it.
+3. Prefer a pre-registered, allowlisted ChatGPT CIMD client. For Clerk issuers advertising `authorization_response_iss_parameter_supported: true`, OpenAI documents the stable client metadata URL `https://chatgpt.com/oauth/client.json` and callback `https://chatgpt.com/connector_platform_oauth_redirect`. Confirm the exact values shown in the OpenAI connection page. Enable CIMD discovery after configuring the client and permitted scopes; keep unknown clients and DCR disabled unless separately intended.
+4. Grant the ChatGPT client `meadow:read`, `meadow:draft`, and the OIDC/refresh scopes required for linking. Ensure any OIDC scopes advertised in issuer metadata are enabled for the client. Do not grant `private_metadata` or `public_metadata` for this integration. Default scopes, if used, must not silently add broader access.
+5. Test sign-in, consent, code exchange with `resource=https://findmeadow.com/mcp`, refresh, and an actual access JWT through an MCP client. Confirm `iss`, `aud`, expiry, token type, and granted Meadow scopes. Test denied consent, wrong resources, cross-owner project access, and read-only draft rejection. Do not publish live social content during these checks.
+
+OAuth setup and a healthy metadata endpoint are prerequisites, not proof of marketplace approval. OpenAI business verification, domain challenge, reviewer credentials, executed review cases, and the demo recording remain separate submission steps.
+
+References: [OpenAI authentication](https://developers.openai.com/plugins/build/auth), [Clerk MCP integration](https://clerk.com/docs/expressjs/guides/ai/mcp/build-mcp-server), and [Clerk OAuth configuration](https://clerk.com/docs/guides/configure/auth-strategies/oauth/how-clerk-implements-oauth).
 
 ## Build and run
 

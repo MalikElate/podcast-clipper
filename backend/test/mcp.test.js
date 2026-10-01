@@ -7,6 +7,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { BridgeApplication } from "../src/bridge/BridgeApplication.js";
 import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
+import { generateKeyPair, exportJWK, createLocalJWKSet, SignJWT } from "jose";
 
 function schemaPortabilityProblems(value, path = "$", problems = []) {
   if (!value || typeof value !== "object") return problems;
@@ -22,10 +23,11 @@ function schemaPortabilityProblems(value, path = "$", problems = []) {
   return problems;
 }
 
-async function setup(t) {
+async function setup(t, { oauthKeys } = {}) {
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "meadow-mcp-test-"));
   const application = new BridgeApplication({
     store: new SqliteStore(),
+    ...(oauthKeys ? { mcpOAuthKeyResolver: createLocalJWKSet({ keys: [oauthKeys.jwk] }) } : {}),
     env: {
       NODE_ENV: "test",
       BRIDGE_DATA_DIR: temporaryRoot,
@@ -33,10 +35,12 @@ async function setup(t) {
       BRIDGE_PUBLIC_URL: "http://localhost:8787",
       BRIDGE_MEDIA_SIGNING_KEY: "test-signing-key",
       BRIDGE_PUBLISHING_ENABLED: "false",
+      ...(oauthKeys ? { CLERK_MCP_ISSUER: "https://clerk.example.com" } : {}),
     },
   });
-  const project = application.projects.create("alice", { name: "MCP project", timeZone: "Africa/Douala" });
-  const { key } = application.apiKeys.create("alice", { name: "MCP test" });
+  const owner = oauthKeys ? "user_alice" : "alice";
+  const project = application.projects.create(owner, { name: "MCP project", timeZone: "Africa/Douala" });
+  const { key } = application.apiKeys.create(owner, { name: "MCP test" });
   const server = await new Promise((resolve, reject) => {
     const listener = application.app.listen(0, "127.0.0.1", () => resolve(listener));
     listener.on("error", reject);
@@ -84,6 +88,9 @@ test("MCP requires an API key and exposes Meadow's initial tool contract", async
   ]);
   assert.equal(listed.tools.find(tool => tool.name === "create_draft").annotations.idempotentHint, true);
   assert.equal(listed.tools.find(tool => tool.name === "get_analytics").annotations.readOnlyHint, true);
+  for (const tool of listed.tools) {
+    assert.deepEqual(tool._meta.securitySchemes, [{ type: "oauth2", scopes: tool.name === "create_draft" ? ["meadow:read", "meadow:draft"] : ["meadow:read"] }]);
+  }
   assert.deepEqual(listed.tools.flatMap(tool => [
     ...schemaPortabilityProblems(tool.inputSchema, `${tool.name}.inputSchema`),
     ...schemaPortabilityProblems(tool.outputSchema, `${tool.name}.outputSchema`),
@@ -146,4 +153,72 @@ test("MCP API keys cannot read another owner's project", async t => {
   const response = await h.client.callTool({ name: "list_posts", arguments: { projectId: other.id } });
   assert.equal(response.isError, true);
   assert.match(response.content[0].text, /project not found/i);
+});
+
+async function oauthSetup(t) {
+  const pair = await generateKeyPair("RS256");
+  const jwk = { ...await exportJWK(pair.publicKey), kid: "oauth-test", alg: "RS256" };
+  const h = await setup(t, { oauthKeys: { jwk } });
+  h.oauthToken = (scope = "meadow:read meadow:draft", claims = {}) => new SignJWT({ scope, client_id: "https://chatgpt.com/oauth/client.json", ...claims })
+    .setProtectedHeader({ alg: "RS256", typ: "at+jwt", kid: "oauth-test" })
+    .setIssuer("https://clerk.example.com").setSubject("user_alice")
+    .setAudience("http://localhost:8787/mcp").setIssuedAt().setExpirationTime("5m").sign(pair.privateKey);
+  h.oauthClient = async token => {
+    const client = new Client({ name: "oauth-test", version: "1.0.0" });
+    await client.connect(new StreamableHTTPClientTransport(h.endpoint, token ? { requestInit: { headers: { Authorization: `Bearer ${token}` } } } : {}));
+    t.after(() => client.close().catch(() => {}));
+    return client;
+  };
+  return h;
+}
+
+test("OAuth discovery is public but anonymous tools return a linking challenge without workspace data", async t => {
+  const h = await oauthSetup(t);
+  const url = new URL("/.well-known/oauth-protected-resource/mcp", h.endpoint);
+  const metadata = await fetch(url);
+  assert.equal(metadata.status, 200);
+  assert.equal((await metadata.json()).resource, "http://localhost:8787/mcp");
+  assert.equal((await fetch(new URL("/.well-known/oauth-protected-resource", h.endpoint))).status, 200);
+  const challenge = await fetch(h.endpoint);
+  assert.equal(challenge.status, 401);
+  assert.match(challenge.headers.get("www-authenticate"), /resource_metadata=/);
+  const anonymous = await h.oauthClient();
+  assert.equal((await anonymous.listTools()).tools.length, 7);
+  const result = await anonymous.callTool({ name: "list_projects", arguments: {} });
+  assert.equal(result.isError, true);
+  assert.equal(result.structuredContent, undefined);
+  assert.match(result._meta["mcp/www_authenticate"][0], /error_description=/);
+  assert.equal(h.application.store.list("post").length, 0);
+});
+
+test("OAuth read access cannot create drafts and full access keeps drafts isolated and idempotent", async t => {
+  const h = await oauthSetup(t);
+  const readClient = await h.oauthClient(await h.oauthToken("meadow:read"));
+  const listed = await readClient.callTool({ name: "list_projects", arguments: {} });
+  assert.equal(listed.structuredContent.projects[0].id, h.project.id);
+  const input = { projectId: h.project.id, requestId: "oauth-draft-test-123456", caption: "OAuth draft" };
+  const denied = await readClient.callTool({ name: "create_draft", arguments: input });
+  assert.equal(denied.isError, true);
+  assert.match(denied._meta["mcp/www_authenticate"][0], /insufficient_scope/);
+  assert.equal(h.application.store.list("post").length, 0);
+  const client = await h.oauthClient(await h.oauthToken());
+  const created = await client.callTool({ name: "create_draft", arguments: input });
+  assert.equal(created.structuredContent.post.status, "draft");
+  const repeated = await client.callTool({ name: "create_draft", arguments: input });
+  assert.equal(repeated.structuredContent.post.id, created.structuredContent.post.id);
+  assert.equal(repeated.structuredContent.duplicate, true);
+  assert.equal(h.application.store.list("delivery").length, 0);
+  const other = h.application.projects.create("user_bob", { name: "Private", timeZone: "UTC" });
+  const forbidden = await client.callTool({ name: "list_posts", arguments: { projectId: other.id } });
+  assert.equal(forbidden.isError, true);
+  assert.match(forbidden.content[0].text, /project not found/i);
+});
+
+test("OAuth rejects invalid credentials while existing API keys still work", async t => {
+  const h = await oauthSetup(t);
+  const response = await fetch(h.endpoint, { headers: { Authorization: "Bearer invalid-token" } });
+  assert.equal(response.status, 401);
+  assert.match(response.headers.get("www-authenticate"), /invalid_token/);
+  const profile = await h.client.callTool({ name: "get_profile", arguments: {} });
+  assert.equal(profile.structuredContent.id, "user_alice");
 });

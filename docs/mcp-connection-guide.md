@@ -1,6 +1,6 @@
 # Connect to Meadow MCP for testing
 
-Use this guide to test the current private MCP connection. It uses a temporary Meadow API key. Direct ChatGPT connection will use OAuth in a later release and will not require these manual steps.
+Use this guide to test the private MCP connection with a temporary Meadow API key. ChatGPT and compatible clients can use OAuth sign-in after the production Clerk client and scopes are configured; see [MCP OAuth deployment](deployment.md#configure-mcp-oauth). The manual key steps below remain available for private integration testing.
 
 ## 1. Create a temporary Meadow key
 

@@ -130,6 +130,8 @@ Exit criteria:
 
 ## Phase 5: OAuth and ChatGPT connection
 
+Implementation status (1 October 2026): resource metadata, Clerk OAuth access-JWT verification, and read/draft scope enforcement are implemented. Production provider configuration and live sign-in/consent/refresh/revocation acceptance must still be completed; this phase is not marked passed by code tests alone.
+
 **Goal:** replace manually copied API keys with a normal Meadow sign-in and consent flow.
 
 Test journeys:

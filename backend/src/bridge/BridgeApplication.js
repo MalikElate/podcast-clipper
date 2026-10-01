@@ -46,6 +46,7 @@ import { clerkMiddleware, clerkClient } from "@clerk/express";
 import { verifyWebhook } from "@clerk/express/webhooks";
 import { requireAuth } from "../lib/clerkAuth.js";
 import { registerMeadowMcpRoutes } from "./mcp/MeadowMcpServer.js";
+import { createMeadowMcpOAuth } from "./mcp/MeadowMcpOAuth.js";
 
 const backendDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 export const route = fn => (req, res, next) => Promise.resolve().then(() => fn(req, res)).catch(next).finally(() => req.privacyRelease?.());
@@ -75,12 +76,13 @@ export function connectionErrorMessage(platform, error) {
 
 /** Composition root. Services, repository, adapters and authentication are replaceable. */
 export class BridgeApplication {
-  constructor({ env = process.env, store, durability, registry, storage, authMiddleware, stripe, deleteIdentity, deleteAnalytics, clock = () => Date.now() } = {}) {
+  constructor({ env = process.env, store, durability, registry, storage, authMiddleware, mcpOAuthKeyResolver, stripe, deleteIdentity, deleteAnalytics, clock = () => Date.now() } = {}) {
     this.env = env; this.clock = clock;
     this.localPreview = env.BRIDGE_LOCAL_PREVIEW === "1" && env.NODE_ENV !== "production";
     this.dataDir = path.resolve(env.BRIDGE_DATA_DIR || path.join(backendDir, ".bridge"));
     this.publicUrl = (env.BRIDGE_PUBLIC_URL || "http://localhost:8787").replace(/\/$/, "");
     this.appUrl = (env.BRIDGE_APP_URL || "http://localhost:5173").replace(/\/$/, "");
+    this.mcpOAuth = createMeadowMcpOAuth({ issuer: env.CLERK_MCP_ISSUER, resource: new URL("/mcp", this.publicUrl).href, keyResolver: mcpOAuthKeyResolver });
     fs.mkdirSync(this.dataDir, { recursive: true, mode: 0o700 });
     this.store = store || new SqliteStore(path.join(this.dataDir, "bridge.sqlite"), { durability });
     this.apiKeys = new ApiKeyService(this.store, { clock });
@@ -154,7 +156,7 @@ export class BridgeApplication {
     }));
     const origins = new Set([new URL(this.appUrl).origin, new URL(this.publicUrl).origin]);
     if (this.localPreview) { origins.add("http://127.0.0.1:5173"); origins.add("http://localhost:5173"); }
-    this.app.use(cors({ origin: (origin, done) => done(null, !origin || origins.has(origin)), methods: ["GET", "POST", "PATCH", "DELETE"], allowedHeaders: ["Content-Type", "Authorization", "X-Bridge-Preview", "MCP-Protocol-Version", "MCP-Session-Id", "Last-Event-ID"] }));
+    this.app.use(cors({ origin: (origin, done) => done(null, !origin || origins.has(origin)), methods: ["GET", "POST", "PATCH", "DELETE"], allowedHeaders: ["Content-Type", "Authorization", "X-Bridge-Preview", "MCP-Protocol-Version", "MCP-Session-Id", "Last-Event-ID"], exposedHeaders: ["WWW-Authenticate"] }));
     this.app.use(express.json({ limit: "2mb" }));
     this.app.get("/health", (req, res) => res.json({ status: "ok", app: "Meadow" }));
     this.registerPublicRoutes();
