@@ -69,11 +69,12 @@ const PAGE_COPY = {
   privacy: {
     label: "Privacy policy",
     title: "Privacy Policy",
-    effectiveDate: "September 30, 2026",
+    effectiveDate: "October 1, 2026",
     intro: <>This policy explains the information Meadow receives, how we use it, how long we keep it, and how you can withdraw access or delete it. Google and YouTube data are covered in plain language in the <a href="#privacy-youtube">YouTube section</a>.</>,
     sections: [
       { heading: "1. Account and workspace information", paragraphs: [
         "Clerk handles sign-in and provides your user identifier and account details, such as your email address. We store the media, captions, settings, schedules, API-key records, and workspace information you give us to operate your account and carry out your publishing requests.",
+        "If you choose the optional marketing email checkbox when you sign up, Meadow may use your account email to send product news, offers, and promotions. This permission is not required to create or use an account. You can unsubscribe from a marketing email at any time; doing so does not affect essential account, security, billing, or service messages.",
         "We receive technical information needed to operate and protect the service, including request times, IP addresses processed by our infrastructure, and error information. We do not request or store your social-platform password. OAuth access and refresh tokens are encrypted in Meadow’s application database.",
       ] },
       { heading: "2. Connected platforms and purposes", paragraphs: [
