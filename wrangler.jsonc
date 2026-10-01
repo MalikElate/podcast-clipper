@@ -8,7 +8,7 @@
     "directory": "./frontend/dist",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/dashboard", "/dashboard/*", "/runtime-config.js", "/api/*", "/media/*", "/oauth/*", "/mcp", "/health"]
+    "run_worker_first": ["/dashboard", "/dashboard/*", "/runtime-config.js", "/api/*", "/media/*", "/oauth/*", "/mcp", "/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/*", "/health"]
   },
   "containers": [
     {
@@ -48,6 +48,7 @@
     "PORT": "8787",
     "BRIDGE_APP_URL": "https://app.findmeadow.com",
     "BRIDGE_PUBLIC_URL": "https://findmeadow.com",
+    "CLERK_MCP_ISSUER": "https://clerk.findmeadow.com",
     "BRIDGE_MAX_UPLOAD_MB": "1024",
     "BRIDGE_PUBLISHING_ENABLED": "true",
     "FACEBOOK_LOGIN_CONFIG_ID": "1758250408777427",

@@ -23,6 +23,7 @@ export class PodcastClipperBackend extends Container {
     PORT: "8787",
     CLERK_SECRET_KEY: env.CLERK_SECRET_KEY,
     CLERK_PUBLISHABLE_KEY: env.CLERK_PUBLISHABLE_KEY,
+    CLERK_MCP_ISSUER: env.CLERK_MCP_ISSUER,
     CLERK_WEBHOOK_SIGNING_SECRET: env.CLERK_WEBHOOK_SIGNING_SECRET,
     BRIDGE_POSTHOG_LEGACY_DATA: env.BRIDGE_POSTHOG_LEGACY_DATA,
     POSTHOG_PROJECT_ID: env.POSTHOG_PROJECT_ID,
@@ -232,7 +233,7 @@ export default {
         return Response.json(await workerEnv.BACKEND.getByName("primary").migration(action), { headers: { "Cache-Control": "no-store" } });
       } catch (error) { return Response.json({ error: error.message }, { status: 503, headers: { "Cache-Control": "no-store" } }); }
     }
-    const backendPath = url.pathname === "/mcp" || ["/api/", "/media/", "/oauth/"].some(prefix => url.pathname.startsWith(prefix));
+    const backendPath = ["/mcp", "/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"].includes(url.pathname) || ["/api/", "/media/", "/oauth/"].some(prefix => url.pathname.startsWith(prefix));
     if (backendPath || url.pathname === "/health") {
       const backend = workerEnv.BACKEND.getByName("primary");
       return backend.fetch(request);

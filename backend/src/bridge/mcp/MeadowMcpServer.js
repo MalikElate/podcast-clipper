@@ -1,9 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { rateLimit } from "express-rate-limit";
+import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import { z } from "zod";
 import { publicError } from "../core/errors.js";
 import { metrics } from "../services/AnalyticsService.js";
+import { meadowMcpScopes, meadowMcpMetadataPaths } from "./MeadowMcpOAuth.js";
 
 const readOnly = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 const additive = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false };
@@ -122,7 +124,7 @@ const analyticsTotalsView = totals => ({
   coverage: Object.fromEntries(metrics.map(metric => [metric, totals.coverage[metric]])),
 });
 
-export function createMeadowMcpServer(application, uid) {
+export function createMeadowMcpServer(application, uid, { authType = "api_key", scopes = [] } = {}) {
   const server = new McpServer(
     { name: "meadow", version: "0.1.0" },
     {
@@ -130,9 +132,32 @@ export function createMeadowMcpServer(application, uid) {
     },
   );
 
-  server.registerTool("get_profile", {
+  const toolDescriptors = [];
+  const registerTool = (name, config, handler) => {
+    const requiredScopes = name === "create_draft" ? [meadowMcpScopes.read, meadowMcpScopes.draft] : [meadowMcpScopes.read];
+    const securitySchemes = [{ type: "oauth2", scopes: requiredScopes }];
+    const metadata = { ...config._meta, securitySchemes };
+    toolDescriptors.push({
+      name, title: config.title, description: config.description,
+      inputSchema: z.toJSONSchema(z.object(config.inputSchema), { target: "draft-7", io: "input" }),
+      outputSchema: z.toJSONSchema(z.object(config.outputSchema), { target: "draft-7", io: "output" }),
+      annotations: config.annotations, securitySchemes, _meta: metadata,
+    });
+    return server.registerTool(name, {
+      ...config,
+      securitySchemes,
+      _meta: metadata,
+    }, async (...args) => {
+      if (application.mcpOAuth && (!uid || authType === "oauth_token" && !requiredScopes.every(scope => scopes.includes(scope)))) {
+        return application.mcpOAuth.toolError(requiredScopes, Boolean(uid));
+      }
+      return handler(...args);
+    });
+  };
+
+  registerTool("get_profile", {
     title: "Get Meadow profile",
-    description: "Return the Meadow profile represented by the current API key.",
+    description: "Return the authenticated Meadow profile.",
     inputSchema: {},
     outputSchema: {
       id: z.string(),
@@ -142,7 +167,7 @@ export function createMeadowMcpServer(application, uid) {
     _meta: { "openai/profile": true },
   }, run(application, () => ({ id: uid, nickname: "Meadow workspace" })));
 
-  server.registerTool("list_projects", {
+  registerTool("list_projects", {
     title: "List Meadow projects",
     description: "List the social publishing projects owned by the connected Meadow profile.",
     inputSchema: {},
@@ -152,7 +177,7 @@ export function createMeadowMcpServer(application, uid) {
     annotations: readOnly,
   }, run(application, () => ({ projects: application.projects.list(uid).map(projectView) })));
 
-  server.registerTool("list_accounts", {
+  registerTool("list_accounts", {
     title: "List connected social accounts",
     description: "List the social accounts connected to one Meadow project without refreshing remote provider data.",
     inputSchema: { projectId: z.string().min(1).describe("A project ID returned by list_projects") },
@@ -162,7 +187,7 @@ export function createMeadowMcpServer(application, uid) {
     annotations: readOnly,
   }, run(application, ({ projectId }) => ({ accounts: application.accounts.list(uid, projectId).map(accountView) })));
 
-  server.registerTool("list_posts", {
+  registerTool("list_posts", {
     title: "List Meadow posts",
     description: "List drafts, scheduled posts, and publishing history for one Meadow project. Results are newest first and paginated by offset.",
     inputSchema: {
@@ -186,7 +211,7 @@ export function createMeadowMcpServer(application, uid) {
     return { posts, total: matches.length, ...(nextOffset === undefined ? {} : { nextOffset }) };
   }));
 
-  server.registerTool("get_post", {
+  registerTool("get_post", {
     title: "Get a Meadow post",
     description: "Get one draft, scheduled post, or publishing-history item by ID.",
     inputSchema: {
@@ -197,7 +222,7 @@ export function createMeadowMcpServer(application, uid) {
     annotations: readOnly,
   }, run(application, ({ projectId, postId }) => ({ post: postView(application.posts.get(uid, projectId, postId)) })));
 
-  server.registerTool("create_draft", {
+  registerTool("create_draft", {
     title: "Create a Meadow draft",
     description: "Save a new, non-empty social post draft in a Meadow project. This does not publish or queue the post. Reuse the same requestId when retrying the same draft creation.",
     inputSchema: {
@@ -224,7 +249,7 @@ export function createMeadowMcpServer(application, uid) {
     return { post: postView(result.posts[0]), duplicate: Boolean(result.duplicate) };
   }, { flush: true }));
 
-  server.registerTool("get_analytics", {
+  registerTool("get_analytics", {
     title: "Get Meadow analytics",
     description: "Return cached analytics totals for one Meadow project. This does not contact social platforms or refresh their metrics.",
     inputSchema: { projectId: z.string().min(1).describe("A project ID returned by list_projects") },
@@ -249,6 +274,10 @@ export function createMeadowMcpServer(application, uid) {
     };
   }));
 
+  // The installed SDK serializes standard descriptor fields and _meta only.
+  // Keep its execution/validation, and include the OAuth declaration both at
+  // the descriptor root and in the compatibility mirror used by older hosts.
+  server.server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: toolDescriptors }));
   return server;
 }
 
@@ -259,19 +288,40 @@ const jsonRpcError = (res, status, code, message, headers = {}) => res.status(st
 });
 
 export function registerMeadowMcpRoutes(application) {
-  const authenticate = (req, res, next) => {
+  const oauth = application.mcpOAuth;
+  if (oauth) application.app.get(meadowMcpMetadataPaths, (req, res) => {
+    res.setHeader("Cache-Control", "public, max-age=300");
+    res.json(oauth.metadata);
+  });
+  const challenge = error => oauth ? oauth.challenge({ error }) : 'Bearer realm="Meadow MCP"';
+  const authenticate = async (req, res, next) => {
     res.setHeader("Cache-Control", "no-store");
     const key = application.apiKeys.token(req.headers.authorization);
-    if (!key) return jsonRpcError(res, 401, -32001, "A Meadow API key is required.", { "WWW-Authenticate": "Bearer realm=\"Meadow MCP\"" });
     try {
-      req.uid = application.apiKeys.authenticate(key);
-      req.authType = "api_key";
+      if (key) {
+        req.uid = application.apiKeys.authenticate(key);
+        req.authType = "api_key";
+      } else if (oauth) {
+        const token = /^Bearer ([^\s]+)$/i.exec(req.headers.authorization || "")?.[1];
+        if (!token) {
+          // Public protocol discovery contains only tool/schema descriptions.
+          // Every tool handler requires a verified identity before domain access.
+          if (!req.headers.authorization && req.method === "POST") return next();
+          return jsonRpcError(res, 401, -32001, "Sign in to Meadow to continue.", { "WWW-Authenticate": challenge() });
+        }
+        const verified = await oauth.verify(token);
+        req.uid = verified.uid;
+        req.mcpScopes = verified.scopes;
+        req.authType = "oauth_token";
+      } else {
+        return jsonRpcError(res, 401, -32001, "A Meadow API key is required.", { "WWW-Authenticate": challenge() });
+      }
       application.privacy.assertActive(req.uid);
       req.privacyRelease = application.privacy.track(req.uid, res);
       next();
     } catch (error) {
-      const visible = publicError(error);
-      return jsonRpcError(res, error.status || 401, -32001, visible.error, { "WWW-Authenticate": "Bearer realm=\"Meadow MCP\"" });
+      const visible = key ? publicError(error).error : "Sign in to Meadow again to continue.";
+      return jsonRpcError(res, error.status || 401, -32001, visible, { "WWW-Authenticate": challenge("invalid_token") });
     }
   };
 
@@ -280,12 +330,12 @@ export function registerMeadowMcpRoutes(application) {
     limit: 120,
     standardHeaders: "draft-7",
     legacyHeaders: false,
-    keyGenerator: req => req.uid,
+    keyGenerator: req => req.uid ? `user:${req.uid}` : `anonymous:${ipKeyGenerator(req.ip)}`,
     handler: (req, res) => jsonRpcError(res, 429, -32002, "Too many MCP requests. Please wait a moment."),
   });
 
   application.app.post("/mcp", authenticate, limiter, async (req, res) => {
-    const server = createMeadowMcpServer(application, req.uid);
+    const server = createMeadowMcpServer(application, req.uid, { authType: req.authType, scopes: req.mcpScopes });
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     try {
       await server.connect(transport);
