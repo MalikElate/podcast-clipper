@@ -68,3 +68,13 @@
   .footer-main { flex-direction: column; gap: 42px; }
   .footer-links { flex-wrap: wrap; gap: 36px 56px; }
 }
+
+.contact-hero { padding-block: clamp(54px,7vw,96px); }
+.contact-methods { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 18px; margin-top: 34px; }
+.contact-method { padding: 26px 28px; border: 1px solid var(--border); border-radius: 20px; background: rgba(255,255,255,.72); }
+.contact-method h2 { margin: 0 0 10px; font-size: 15px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+.contact-method p { margin: 0; font-size: 21px; font-weight: 650; }
+.contact-method p a { color: var(--text); text-decoration: none; }
+.contact-method p a:hover { text-decoration: underline; }
+.contact-method .contact-method-note { margin-top: 12px; color: var(--text-muted); font-size: 15px; font-weight: 400; line-height: 1.6; }
+.contact-entity { max-width: 760px; margin-top: 30px; color: var(--text-muted); font-size: 15px; line-height: 1.7; }
