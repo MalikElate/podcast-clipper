@@ -356,9 +356,9 @@ button:not(:where(.cl-rootBox *)) {
   line-height: 1.4;
 }
 
-.signup-consent-prompt {
+.signup-consent-error {
   margin: 5px 0 0;
-  color: var(--text-muted);
+  color: var(--danger);
   font-size: 12px;
   line-height: 1.4;
 }
