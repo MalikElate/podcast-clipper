@@ -1,0 +1,34 @@
+import { useEffect, useState } from "react";
+import { SiClaude, SiCursor, SiGooglegemini } from "react-icons/si";
+import { api } from "./BridgeApi.js";
+import { Icon } from "./Icons.jsx";
+import { AGENT_CLIENTS, agentInstructions } from "./agentSetup.js";
+import { Alert } from "./ui.jsx";
+
+export default function AgentSetup({ onCopy }) {
+  const [client, setClient] = useState("claude"), [configuration, setConfiguration] = useState(null), [error, setError] = useState("");
+  useEffect(() => {
+    const controller = new AbortController();
+    api.request("/agent-setup", { signal: controller.signal }).then(setConfiguration).catch(error => { if (error.name !== "AbortError") setError(error.message); });
+    return () => controller.abort();
+  }, []);
+  const selected = AGENT_CLIENTS.find(item => item.id === client), guide = agentInstructions(client, configuration || {});
+  const logos = { claude: SiClaude, cursor: SiCursor, gemini: SiGooglegemini };
+  return <section className="bridge-panel bridge-agent-guide">
+    <h2>Connect an AI agent</h2>
+    <p>Connect your preferred agent to read your workspace, check analytics, and create drafts for review in Meadow.</p>
+    <div className="bridge-agent-tabs" role="tablist" aria-label="Agent setup">
+      {AGENT_CLIENTS.map(item => { const Logo = logos[item.id]; return <button key={item.id} type="button" role="tab" id={`agent-tab-${item.id}`} aria-selected={client === item.id} aria-controls="agent-setup-panel" tabIndex={client === item.id ? 0 : -1} onClick={() => setClient(item.id)} onKeyDown={event => { const offset = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0; if (!offset && !["Home", "End"].includes(event.key)) return; event.preventDefault(); const index = event.key === "Home" ? 0 : event.key === "End" ? AGENT_CLIENTS.length - 1 : (AGENT_CLIENTS.findIndex(agent => agent.id === client) + offset + AGENT_CLIENTS.length) % AGENT_CLIENTS.length; setClient(AGENT_CLIENTS[index].id); document.getElementById(`agent-tab-${AGENT_CLIENTS[index].id}`)?.focus(); }}>{Logo && <Logo size={17} aria-hidden="true"/>}{item.name}</button>; })}
+    </div>
+    <div id="agent-setup-panel" role="tabpanel" aria-labelledby={`agent-tab-${client}`} tabIndex={0}>
+      <Alert message={error}/>
+      {!configuration ? <p className="bridge-small">{error ? "Setup details could not be loaded. Refresh this page to try again." : "Loading connection details…"}</p> : <>
+        <h3>{guide.title}</h3><p>{guide.text}</p>
+        <div className="bridge-agent-code"><pre><code>{guide.code}</code></pre><button type="button" className="bridge-button secondary small" onClick={() => onCopy(guide.code)}><Icon name="copy" size={15}/> Copy</button></div>
+        <p className="bridge-small">{guide.note}</p>
+        {selected.docs && <a className="bridge-agent-docs" href={selected.docs} target="_blank" rel="noreferrer">{selected.name} setup guide <Icon name="external" size={14}/></a>}
+      </>}
+    </div>
+    <p className="bridge-small bridge-agent-permissions">MCP provides seven tools for workspace information and drafts. Scheduling and publishing stay in Meadow or the REST API.</p>
+  </section>;
+}
