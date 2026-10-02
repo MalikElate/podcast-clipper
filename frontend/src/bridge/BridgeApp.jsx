@@ -62,8 +62,8 @@ function Workspace({ user, signOut }) {
   const [billingSearch, setBillingSearch] = useState(() => dashboardSearch(initial.current.view, initial.current.params));
   const [draftId, setDraftId] = useState(() => initial.current.view === "compose" ? initial.current.params.get("draft") || "" : "");
   const [projects, setProjects] = useState([]), [projectId, setProjectId] = useState(""), [config, setConfig] = useState(null), [error, setError] = useState(initial.current.params.get("connectionError") || ""), [notice, setNotice] = useState(""), [menuOpen, setMenuOpen] = useState(false), [connectionId, setConnectionId] = useState(initial.current.params.get("connection") || ""), [scheduledDate, setScheduledDate] = useState(""), [draftVersion, setDraftVersion] = useState(0);
-  const [postsOpen, setPostsOpen] = useState(false);
-  const [configurationOpen, setConfigurationOpen] = useState(configurationViewIds.has(initial.current.view));
+  const [postsOpen, setPostsOpen] = useState(true);
+  const [configurationOpen, setConfigurationOpen] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
   const composeDirtyRef = useRef(false);
   const composeBusyRef = useRef(false);
@@ -109,8 +109,8 @@ function Workspace({ user, signOut }) {
       if (next === "compose") composeUrlRef.current = canonicalUrl;
       setBillingSearch(search);
       setDraftId(next === "compose" ? new URLSearchParams(search).get("draft") || "" : "");
-      setPostsOpen(postViewIds.has(next));
-      setConfigurationOpen(configurationViewIds.has(next));
+      if (postViewIds.has(next)) setPostsOpen(true);
+      if (configurationViewIds.has(next)) setConfigurationOpen(true);
       setMenuOpen(false);
       setError("");
       setNotice("");
@@ -122,7 +122,7 @@ function Workspace({ user, signOut }) {
   useEffect(() => { document.title = `${activeModule?.title || activeModule?.name || "Dashboard"} · Meadow`; }, [activeModule]);
   function setComposerDirty(value) { composeDirtyRef.current = value; }
   function setComposerBusy(value) { composeBusyRef.current = value; }
-  function selectView(next) { setView(next); if (postViewIds.has(next)) { setPostsOpen(true); setConfigurationOpen(false); } else if (configurationViewIds.has(next)) { setConfigurationOpen(true); setPostsOpen(false); } else { setPostsOpen(false); setConfigurationOpen(false); } setMenuOpen(false); setError(""); setNotice(""); }
+  function selectView(next) { setView(next); if (postViewIds.has(next)) setPostsOpen(true); if (configurationViewIds.has(next)) setConfigurationOpen(true); setMenuOpen(false); setError(""); setNotice(""); }
   function canLeaveComposer() {
     if (view !== "compose") return true;
     if (composeBusyRef.current) { setError("Please wait for the current post action to finish."); return false; }
@@ -155,12 +155,12 @@ function Workspace({ user, signOut }) {
       <nav aria-label="Main navigation">
         <a className={`bridge-nav-item ${view === "compose" ? "active" : ""}`} href={dashboardPath("compose")} onClick={event => follow(event, "compose")} aria-current={view === "compose" ? "page" : undefined}><Icon name="compose"/><span>Create post</span></a>
         <div className={`bridge-nav-group ${isPostView ? "active" : ""}`}>
-          <button className="bridge-nav-parent" onClick={() => setPostsOpen(open => { if (!open) setConfigurationOpen(false); return !open; })} aria-expanded={postsOpen}><span>Posts</span><Icon name={postsOpen ? "up" : "chevron"} size={15}/></button>
+          <button className="bridge-nav-parent" onClick={() => setPostsOpen(open => !open)} aria-expanded={postsOpen}><span>Posts</span><Icon name={postsOpen ? "up" : "chevron"} size={15}/></button>
           {postsOpen && <div className="bridge-nav-sub">{postModules.map(item => <a key={item.id} className={view === item.id ? "active" : ""} href={dashboardPath(item.id)} onClick={event => follow(event, item.id)} aria-current={view === item.id ? "page" : undefined}><Icon name={item.icon} size={18}/><span>{item.name}</span></a>)}</div>}
         </div>
         {modules.filter(item => item.id !== "compose").map(item => <a key={item.id} className={`bridge-nav-item ${view === item.id ? "active" : ""}`} href={dashboardPath(item.id)} onClick={event => follow(event, item.id)} aria-current={view === item.id ? "page" : undefined}><Icon name={item.icon}/><span>{item.name}</span></a>)}
         <div className={`bridge-nav-group ${isConfigurationView ? "active" : ""}`}>
-          <button className="bridge-nav-parent" onClick={() => setConfigurationOpen(open => { if (!open) setPostsOpen(false); return !open; })} aria-expanded={configurationOpen}><span>Configuration</span><Icon name={configurationOpen ? "up" : "chevron"} size={15}/></button>
+          <button className="bridge-nav-parent" onClick={() => setConfigurationOpen(open => !open)} aria-expanded={configurationOpen}><span>Configuration</span><Icon name={configurationOpen ? "up" : "chevron"} size={15}/></button>
           {configurationOpen && <div className="bridge-nav-sub">{configurationModules.map(item => <a key={item.id} className={view === item.id ? "active" : ""} href={dashboardPath(item.id)} onClick={event => follow(event, item.id)} aria-current={view === item.id ? "page" : undefined}><Icon name={item.icon} size={18}/><span>{item.name}</span></a>)}</div>}
         </div>
       </nav>
