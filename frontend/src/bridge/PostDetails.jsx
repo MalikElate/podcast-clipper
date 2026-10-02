@@ -4,7 +4,7 @@ import { Alert, Badge, dateTime, MediaThumb, Modal, PlatformBadge } from "./ui.j
 import { canCancelRemaining, isTikTokInbox, tiktokProcessingMessage } from "./deliveryPresentation.js";
 import { failed, pending } from "./postListOrder.js";
 import { cardPostDate } from "./postListFilters.js";
-import { canDeletePost } from "./postBulkDelete.js";
+import { canDeletePost, deleteUnavailableReason } from "./postBulkDelete.js";
 
 const postTitle = post => post.title || (post.media?.length ? "Media post" : post.caption ? "Text post" : "Untitled post");
 const formatLabel = format => FORMAT_LABELS[format] || (format === "auto" ? "Automatic" : format || "Automatic");
@@ -30,13 +30,17 @@ function SettingValue({ name, value, media }) {
 
 export function CompactPostCard({ post, section, accountId, platform = "", project, onView, selectable = false, selected = false, selectionDisabled = false, onToggleSelect, onDelete }) {
   const postDate = cardPostDate(post, section, accountId, platform);
+  const deletable = canDeletePost(post);
+  const deleteReason = section === "failed" && !deletable ? deleteUnavailableReason(post) : "";
+  const deleteReasonId = `bridge-post-delete-reason-${post.id}`;
   return <article className="bridge-panel bridge-post-card bridge-post-compact">
     <div className="bridge-post-card-heading">
       {post.media[0] && <div className="bridge-post-thumbnail"><MediaThumb media={post.media[0]}/></div>}
       <div className="bridge-grow"><h3>{postTitle(post)}</h3><small>{postDate.label} {dateTime(postDate.time, project.timeZone)}</small></div>
       {selectable && <label className="bridge-post-card-select"><input type="checkbox" checked={selected} disabled={selectionDisabled} onChange={onToggleSelect} aria-label={`Select ${postTitle(post)} for bulk deletion`}/><span>Select</span></label>}
     </div>
-    <div className="bridge-post-compact-footer"><Badge status={post.status}/><div className="bridge-post-compact-actions">{section === "failed" && onDelete && <button className="bridge-button danger small" disabled={selectionDisabled} aria-label={`Delete failed post ${postTitle(post)}`} onClick={onDelete}>Delete</button>}<button className="bridge-button secondary small bridge-post-view" aria-label={`View details for ${postTitle(post)}`} onClick={onView}>View</button></div></div>
+    <div className="bridge-post-compact-footer"><Badge status={post.status}/><div className="bridge-post-compact-actions">{section === "failed" && <button className="bridge-button danger small" disabled={!deletable || selectionDisabled || !onDelete} aria-label={`Delete failed post ${postTitle(post)}`} aria-describedby={deleteReason ? deleteReasonId : undefined} onClick={onDelete}>Delete</button>}<button className="bridge-button secondary small bridge-post-view" aria-label={`View details for ${postTitle(post)}`} onClick={onView}>View</button></div></div>
+    {deleteReason && <small id={deleteReasonId} className="bridge-post-delete-reason">{deleteReason}</small>}
   </article>;
 }
 

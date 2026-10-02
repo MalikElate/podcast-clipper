@@ -9,6 +9,12 @@ export function canDeletePost(post) {
       && !sentToPlatform(delivery));
 }
 
+export function deleteUnavailableReason(post) {
+  if (post?.deliveries?.some(sentToPlatform)) return "Content was already sent to a platform, so this post stays in Meadow history.";
+  if (post?.deliveries?.some(delivery => ["publishing", "processing"].includes(delivery.status))) return "A delivery is in progress. Try again when it finishes.";
+  return "This post cannot be deleted right now.";
+}
+
 export function eligibleSelection(posts, selectedIds) {
   const selected = new Set(selectedIds || []);
   const seen = new Set();
