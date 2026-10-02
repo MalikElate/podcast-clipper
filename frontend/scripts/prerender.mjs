@@ -84,7 +84,7 @@ try {
     await mkdir(directory, { recursive: true });
     await writeFile(`${directory}/index.html`, dashboardHtml);
   }
-  for (const [route, title] of [["/sign-in", "Sign in · Meadow"], ["/sign-up", "Create your free account · Meadow"], ["/sign-up/complete", "Meadow"]]) {
+  for (const [route, title] of [["/sign-in", "Sign in · Meadow"], ["/sign-up", "Create your free account · Meadow"], ["/sign-up/complete", "Meadow"], ["/oauth-consent", "Authorize access · Meadow"]]) {
     const directory = `dist${route}`;
     const authHtml = dashboardHtml.replace("<title>Dashboard · Meadow</title>", `<title>${title}</title>`);
     await mkdir(directory, { recursive: true });

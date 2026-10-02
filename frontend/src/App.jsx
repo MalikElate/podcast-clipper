@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { OAuthConsent } from "@clerk/react";
 import { useAuth } from "./AuthContext.jsx";
 import Auth from "./components/Auth.jsx";
 import Landing from "./components/Landing.jsx";
@@ -45,6 +46,10 @@ export default function App() {
     if (surface === "marketing") return <DomainRedirect href={appHref(`${window.location.pathname}${window.location.search}`)} />;
     return <SigninSurface />;
   }
+  if (pathname === "/oauth-consent") {
+    if (surface === "marketing") return <DomainRedirect href={appHref(`${window.location.pathname}${window.location.search}`)} />;
+    return <OAuthConsentSurface />;
+  }
   if (pathname === "/sign-up/complete") return <SignupComplete />;
   if (pathname === "/tiktok-roast") return <TikTokRoast />;
   if (pathname === "/contact") return <PublicContactPage onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;
@@ -84,6 +89,17 @@ function SigninSurface() {
   if (loading && !localPreview) return <OpeningMeadow />;
   if (user || localPreview) return <DomainRedirect href="/dashboard" />;
   return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth /></div></div>;
+}
+
+function OAuthConsentSurface() {
+  const { user, loading } = useAuth();
+  if (localPreview) return <OpeningMeadow />;
+  if (loading) return <OpeningMeadow />;
+  if (!user) {
+    const redirectUrl = `${window.location.pathname}${window.location.search}`;
+    return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth redirectUrl={redirectUrl} /></div></div>;
+  }
+  return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><OAuthConsent /></div></div>;
 }
 
 function SignupComplete() {

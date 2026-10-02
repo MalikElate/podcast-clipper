@@ -45,11 +45,13 @@ assert.ok(funnelHtml.includes("Start with 5 social accounts"), "The ad funnel mu
 assert.ok(funnelHtml.includes('href="https://app.findmeadow.com/sign-up"'), "The ad funnel must link directly to account creation");
 assert.ok(funnelHtml.includes('<meta name="robots" content="noindex, follow" />'), "The paid landing page must stay out of the sitemap and search results");
 assert.ok(!funnelHtml.includes('<link rel="canonical"'), "The paid landing page must not claim an indexed canonical URL");
-for (const path of ["sign-in/index.html", "sign-up/index.html", "sign-up/complete/index.html"]) {
+for (const path of ["sign-in/index.html", "sign-up/index.html", "sign-up/complete/index.html", "oauth-consent/index.html"]) {
   const html = await readFile(`dist/${path}`, "utf8");
   assert.ok(html.includes('<meta name="robots" content="noindex, follow" />'), `${path} must stay out of search results`);
   assert.ok(!html.includes('<link rel="canonical"'), `${path} must not claim a canonical address`);
 }
+const oauthConsentHtml = await readFile("dist/oauth-consent/index.html", "utf8");
+assert.ok(oauthConsentHtml.includes('<meta name="referrer" content="strict-origin-when-cross-origin" />'), "The OAuth consent route must preserve its origin on Clerk submissions");
 for (const url of sitemapUrls) assert.match(url, /^https:\/\/findmeadow\.com\//, `Sitemap entry ${url} must use the canonical host`);
 
 // People must be able to reach a person, and search engines must see how.

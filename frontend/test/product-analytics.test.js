@@ -29,6 +29,7 @@ test("callback secrets, post IDs, raw content, and old person properties cannot 
   assert.equal(analyticsPath("/linkedin-scheduling"), "/other");
   assert.equal(analyticsPath("/start"), "/start");
   assert.equal(analyticsPath("/sign-in"), "/sign-in");
+  assert.equal(analyticsPath("/oauth-consent"), "/oauth-consent");
   assert.equal(analyticsPath("/sign-up/complete"), "/sign-up/complete");
   assert.equal(cleanAnalyticsUrl("https://attacker.example/private"), undefined);
   assert.equal(cleanAnalyticsUrl("https://name:secret@findmeadow.com/privacy?secret=yes"), "https://findmeadow.com/privacy");
