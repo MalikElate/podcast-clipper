@@ -9,7 +9,6 @@ import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
 import SiteHeader from "./SiteHeader.jsx";
-import { appHref } from "../siteUrls.js";
 
 const HOMEPAGE_RECORDING = {
   asset: "/marketing/meadow-landing-demo-caption-v4-20260929",
@@ -246,7 +245,6 @@ export default function Landing({ onGetStarted }) {
               <div className="usage-card-copy"><h3>For custom workflows</h3><p>Connect internal tools, scheduled jobs, or your own application to Meadow&apos;s publishing layer.</p><ul><li><CheckIcon />Use one consistent API</li><li><CheckIcon />Preview and validate destinations</li><li><CheckIcon />Track delivery programmatically</li></ul></div>
             </article>
           </div>
-          <a className="btn-primary usage-start" href={appHref("/dashboard")}>Open Meadow <ArrowIcon /></a>
         </section>
 
         <section className="landing-section home-pricing-section" id="pricing" aria-labelledby="home-pricing-title">
