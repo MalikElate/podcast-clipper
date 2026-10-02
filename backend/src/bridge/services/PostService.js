@@ -287,6 +287,8 @@ export class PostService {
       if (draftOnly) {
         invariant(original.status === "draft", "This draft has already been queued and cannot be deleted as a draft.", { status: 409, code: "draft_already_submitted" });
         invariant(Number.isInteger(revision) && revision === original.revision, "This draft changed in another window. Refresh it before deleting.", { status: 409, code: "revision_conflict" });
+      } else if (revision !== undefined) {
+        invariant(Number.isInteger(revision) && revision === original.revision, "This post changed in another window. Refresh it before deleting.", { status: 409, code: "revision_conflict" });
       }
       invariant(!original.deliveries.some(item => ["published", "awaiting_publish"].includes(item.status) || hasSentChat(item)), "Published posts and content sent to TikTok stay in your history. Manage content already sent to a social network on that network.", { status: 409 });
       const post = this.cancel(uid, projectId, id);
