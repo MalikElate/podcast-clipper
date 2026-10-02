@@ -19,6 +19,24 @@ export function zernioPlatforms(env = {}) {
 
 const viaZernio = credentials => Boolean(credentials?.zernioAccountId);
 const refId = value => value?._id ?? value;
+const metricKeys = ["views", "impressions", "likes", "comments", "shares", "saves", "clicks"];
+const safeUrl = value => { try { return new URL(value).protocol === "https:" ? value : null; } catch { return null; } };
+const numericMetrics = analytics => Object.fromEntries(metricKeys.map(key => {
+  const value = analytics?.[key];
+  return [key, ["number", "string"].includes(typeof value) && String(value).trim() && Number.isFinite(Number(value)) && Number(value) >= 0 ? Number(value) : null];
+}));
+
+function analyticsEntry(post, credentials, platform) {
+  // Never use the cross-platform roll-up: it can include other accounts.
+  return (post.platformAnalytics || post.platforms || []).find(entry => refId(entry.accountId) === credentials.zernioAccountId && entry.platform === platform);
+}
+
+function entryMetrics(entry, name) {
+  const values = numericMetrics(entry?.analytics);
+  const measured = Object.values(values).some(Number.isFinite);
+  const pending = entry?.syncStatus === "pending";
+  return { values, pending: pending || !measured, ...(pending ? { note: `${name} analytics are still syncing. Refresh again shortly.` } : !measured ? { unavailableReason: `${name} has not returned metrics for this post yet.` } : {}) };
+}
 
 function connectionError(params) {
   const code = params.get("error"), message = params.get("error_message");
@@ -45,18 +63,23 @@ export function withZernio(Base) {
       invariant(this.env.ZERNIO_API_KEY, `${this.capabilities.name} publishing is not configured on this server yet.`, { status: 503, code: "platform_unconfigured" });
       let response;
       try {
-        response = await this.http.request(`${API}/${path}`, { method, json, headers, token: this.env.ZERNIO_API_KEY, safeToRetry, raw: true, acceptStatuses: [400, 402, 403, 404, 409, 422], timeoutMs: 120000 });
+        response = await this.http.request(`${API}/${path}`, { method, json, headers, token: this.env.ZERNIO_API_KEY, safeToRetry, raw: true, acceptStatuses: [400, 402, 403, 404, 409, 422, ...(path.startsWith("analytics?") ? [424] : [])], timeoutMs: path.startsWith("analytics?") ? 30000 : 120000 });
       } catch (error) {
         // Zernio answers 401 only for Meadow's own API key, never for a user's account.
         if (error.authFailure) throw new ProviderError("Zernio rejected Meadow's API key. Meadow's administrator must check ZERNIO_API_KEY.", { code: "provider_app_credentials" });
         throw error;
       }
       const data = await response.json().catch(() => ({}));
-      if (response.ok) return data;
+      if (response.ok || path.startsWith("analytics?") && response.status === 424) return data;
       if (method === "DELETE" && response.status === 404) return null;
       const message = typeof data.error === "string" && data.error ? data.error.slice(0, 300) : `Zernio rejected the request (HTTP ${response.status}).`;
       const details = { provider: "zernio", httpStatus: response.status, ...(typeof data.code === "string" ? { providerCode: data.code } : {}) };
-      if (response.status === 403 && data.code === "ACCOUNT_DISCONNECTED") throw new ProviderError(`Reconnect this ${this.capabilities.name} account to continue publishing.`, { reconnect: true, code: "reconnect_required", details });
+      if (response.status === 403 && data.code === "ACCOUNT_DISCONNECTED") throw new ProviderError(`Reconnect this ${this.capabilities.name} account in Meadow.`, { reconnect: true, code: "reconnect_required", details });
+      if (path.startsWith("analytics?")) {
+        if (response.status === 402) throw new ProviderError("Analytics access is not enabled for Meadow's Zernio connection. Contact hello@findmeadow.com.", { code: "provider_permissions", details });
+        if (response.status === 404) throw new ProviderError("This post's analytics are not available in Zernio yet. Refresh again shortly.", { code: "analytics_pending", details });
+        throw new ProviderError(`${this.capabilities.name} analytics could not be loaded. Check this connection's analytics access in Meadow.`, { code: "provider_rejected", details });
+      }
       if (response.status === 409 && data.code === "idempotency_conflict") throw new ProviderError("The post is still being submitted. Meadow will check again.", { retryable: true, code: "provider_connection", details });
       throw new ProviderError(message, { code: "provider_rejected", details });
     }
@@ -202,7 +225,43 @@ export function withZernio(Base) {
 
     async metrics(args) {
       if (!viaZernio(args.credentials)) return super.metrics(args);
-      return { values: {}, unavailableReason: `Post metrics are not yet available for this ${this.capabilities.name} connection.` };
+      const { credentials, delivery } = args;
+      const postId = delivery.progress?.zernioPostId || delivery.externalId;
+      if (!postId) return { values: {}, pending: true, unavailableReason: "This post has no analytics identifier yet." };
+      try {
+        const result = await this.zernio(`analytics?${new URLSearchParams({ postId, accountId: credentials.zernioAccountId, platform: this.zernioPlatform, ...(credentials.zernioProfileId ? { profileId: credentials.zernioProfileId } : {}) })}`);
+        return entryMetrics(analyticsEntry(result, credentials, this.zernioPlatform), this.capabilities.name);
+      } catch (error) {
+        if (error.code === "analytics_pending") return { values: {}, pending: true, unavailableReason: error.message };
+        throw error;
+      }
+    }
+
+    async accountPostAnalytics({ credentials }) {
+      if (!viaZernio(credentials)) return null;
+      const toDate = new Date(this.clock()).toISOString().slice(0, 10), fromDate = new Date(this.clock() - 89 * 86400000).toISOString().slice(0, 10);
+      const posts = new Map();
+      let partial = false;
+      for (let page = 1; page <= 5; page++) {
+        const query = new URLSearchParams({ accountId: credentials.zernioAccountId, platform: this.zernioPlatform, ...(credentials.zernioProfileId ? { profileId: credentials.zernioProfileId } : {}), source: "all", fromDate, toDate, limit: "100", page: String(page) });
+        const result = await this.zernio(`analytics?${query}`);
+        if (result.hasAnalyticsAccess === false) throw new ProviderError("Analytics access is not enabled for Meadow's Zernio connection. Contact hello@findmeadow.com.", { code: "provider_permissions" });
+        invariant(Array.isArray(result.posts), "Zernio returned an incomplete analytics response. Refresh again shortly.", { status: 502 });
+        for (const post of result.posts) {
+          const entry = analyticsEntry(post, credentials, this.zernioPlatform);
+          if (!entry || entry.status !== "published") continue;
+          const id = entry.platformPostId || post._id;
+          if (typeof id !== "string" || !id) continue;
+          posts.set(id, { id, externalId: entry.platformPostId || post._id, zernioPostId: post.latePostId || post._id,
+            title: typeof post.content === "string" ? post.content.slice(0, 2000) : "Connected account post", publishedAt: Date.parse(post.publishedAt) || null,
+            url: safeUrl(entry.platformPostUrl || post.platformPostUrl), ...entryMetrics(entry, this.capabilities.name) });
+        }
+        const pages = Number(result.pagination?.pages);
+        invariant(Number.isSafeInteger(pages) && pages >= 0, "Zernio returned incomplete analytics pagination. Refresh again shortly.", { status: 502 });
+        if (page >= pages) break;
+        if (page === 5) partial = true;
+      }
+      return { posts: [...posts.values()], fromDate, toDate, partial, note: partial ? "Showing the latest 500 connected-account posts from the last 90 days. Totals cover the posts loaded." : posts.size ? "Includes connected-account posts from the last 90 days." : "No connected-account posts were returned for the last 90 days. Refresh again after Zernio finishes syncing this account." };
     }
   }
   // Account views are optional adapter features; only wrap the ones the platform has.

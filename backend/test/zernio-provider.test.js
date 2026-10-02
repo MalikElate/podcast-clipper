@@ -4,6 +4,7 @@ import { withZernio, zernioPlatforms } from "../src/bridge/platforms/ZernioProvi
 import { TikTokProvider } from "../src/bridge/platforms/TikTokProvider.js";
 import { PinterestProvider } from "../src/bridge/platforms/PinterestProvider.js";
 import { HttpTransport } from "../src/bridge/platforms/HttpTransport.js";
+import { PlatformProvider } from "../src/bridge/platforms/PlatformProvider.js";
 
 const env = { ZERNIO_API_KEY: "sk_test", TIKTOK_DIRECT_POST_PRIVATE_ONLY: "true" };
 const video = { id: "video1", filename: "clip.mp4", kind: "video", mime: "video/mp4", status: "ready", bytes: 500, durationSec: 30 };
@@ -26,6 +27,77 @@ function zernioApi(routes) {
   return { calls, transport };
 }
 const provider = (Base, transport) => new (withZernio(Base))({ env, transport, store: memoryStore(), publicUrl: "https://findmeadow.com", clock: () => Date.parse("2026-09-25T12:00:00Z"), zernioConnections: zernioPlatforms(env).has(new Base({ env }).id) });
+
+const analyticsCredentials = { zernioAccountId: "acct1", zernioProfileId: "profile1" };
+const singleQuery = "analytics?postId=post1&accountId=acct1&platform=tiktok&profileId=profile1";
+const accountQuery = "analytics?accountId=acct1&platform=tiktok&profileId=profile1&source=all&fromDate=2026-06-28&toDate=2026-09-25&limit=100&page=";
+const analyticsPost = (id = "native1", extra = {}) => ({ _id: `external-${id}`, latePostId: "post1", content: "Account post", publishedAt: "2026-09-24T12:00:00Z", platforms: [{ platform: "tiktok", accountId: "acct1", status: "published", platformPostId: id, syncStatus: "synced", analytics: { views: 42, likes: 0, comments: null }, platformPostUrl: `https://www.tiktok.com/@creator/video/${id}` }], ...extra });
+
+test("Zernio post analytics use the delivery's Zernio id and only its account's platform metrics", async () => {
+  const { calls, transport } = zernioApi({ [`GET ${singleQuery}`]: () => [200, { analytics: { views: 999999 }, platformAnalytics: [
+    { platform: "tiktok", accountId: "foreign", analytics: { views: 8888 } },
+    { platform: "instagram", accountId: "acct1", analytics: { views: 7777 } },
+    { platform: "tiktok", accountId: "acct1", syncStatus: "synced", analytics: { views: "42", likes: 0, comments: null, saves: -1, shares: false, clicks: "" } },
+  ] }] });
+  const result = await provider(TikTokProvider, transport).metrics({ credentials: analyticsCredentials, delivery: { externalId: "native1", progress: { zernioPostId: "post1" } } });
+  assert.equal(result.values.views, 42); assert.equal(result.values.likes, 0);
+  for (const key of ["comments", "saves", "shares", "clicks", "impressions"]) assert.equal(result.values[key], null);
+  assert.equal(calls.length, 1); assert.equal(result.pending, false);
+});
+
+test("Zernio metrics keep sync-pending, missing posts and failed publications unavailable", async () => {
+  for (const [status, body] of [[202, { syncStatus: "pending", platformAnalytics: [] }], [404, { error: "not found" }], [424, { status: "failed", platformAnalytics: [] }], [200, { analytics: { views: 999 }, platformAnalytics: [{ platform: "tiktok", accountId: "foreign", analytics: { views: 999 } }] }]]) {
+    const { transport } = zernioApi({ [`GET ${singleQuery}`]: () => [status, body] });
+    const result = await provider(TikTokProvider, transport).metrics({ credentials: analyticsCredentials, delivery: { progress: { zernioPostId: "post1" } } });
+    assert.equal(result.pending, true); assert.ok(result.unavailableReason || result.note);
+    assert.ok(!Object.values(result.values).some(Number.isFinite));
+  }
+});
+
+test("Zernio analytics access errors never disconnect an account or expose upstream request data", async () => {
+  for (const status of [401, 402, 403]) {
+    const { transport } = zernioApi({ [`GET ${singleQuery}`]: () => [status, { error: "private-api-key", code: status === 402 ? "analytics_addon_required" : "denied" }] });
+    await assert.rejects(provider(TikTokProvider, transport).metrics({ credentials: analyticsCredentials, delivery: { progress: { zernioPostId: "post1" } } }), error => !error.reconnect && !error.message.includes("private-api-key") && (status !== 402 || /Analytics access is not enabled/.test(error.message)));
+  }
+});
+
+test("Zernio account analytics page through owned published posts and exclude unrelated roll-ups", async () => {
+  const { calls, transport } = zernioApi({
+    [`GET ${accountQuery}1`]: () => [200, { hasAnalyticsAccess: true, posts: [analyticsPost(), analyticsPost("foreign", { platforms: [{ platform: "tiktok", accountId: "foreign", status: "published", analytics: { views: 9999 } }] })], pagination: { pages: 2 } }],
+    [`GET ${accountQuery}2`]: () => [200, { posts: [analyticsPost(), analyticsPost("native2"), analyticsPost("draft", { platforms: [{ platform: "tiktok", accountId: "acct1", status: "scheduled" }] })], pagination: { pages: 2 } }],
+  });
+  const result = await provider(TikTokProvider, transport).accountPostAnalytics({ credentials: analyticsCredentials });
+  assert.deepEqual(result.posts.map(post => post.id), ["native1", "native2"]);
+  assert.equal(result.posts[0].values.views, 42); assert.equal(result.posts[0].values.likes, 0);
+  assert.equal(result.partial, false); assert.equal(calls.length, 2);
+});
+
+test("Zernio account analytics bound pagination and explain partial totals", async () => {
+  const routes = Object.fromEntries(Array.from({ length: 5 }, (_, i) => [`GET ${accountQuery}${i + 1}`, () => [200, { posts: [analyticsPost(`native${i}`)], pagination: { pages: 9 } }]]));
+  const { calls, transport } = zernioApi(routes);
+  const result = await provider(TikTokProvider, transport).accountPostAnalytics({ credentials: analyticsCredentials });
+  assert.equal(result.partial, true); assert.equal(calls.length, 5); assert.match(result.note, /Totals cover the posts loaded/);
+});
+
+test("Zernio account analytics reject missing entitlements and incomplete pagination", async () => {
+  for (const body of [{ hasAnalyticsAccess: false, posts: [], pagination: { pages: 0 } }, { posts: [] }]) {
+    const { transport } = zernioApi({ [`GET ${accountQuery}1`]: () => [200, body] });
+    await assert.rejects(provider(TikTokProvider, transport).accountPostAnalytics({ credentials: analyticsCredentials }), /access is not enabled|incomplete analytics pagination/);
+  }
+});
+
+test("All Zernio platforms support post analytics while native grants retain their adapter", async () => {
+  for (const id of ["tiktok", "instagram", "facebook", "threads", "snapchat", "pinterest"]) {
+    class Native extends PlatformProvider { constructor(options) { super(id, options); } async metrics() { return { values: { likes: 7 } }; } }
+    const query = `analytics?postId=post1&accountId=acct1&platform=${id}&profileId=profile1`;
+    const { calls, transport } = zernioApi({ [`GET ${query}`]: () => [200, { platformAnalytics: [{ platform: id, accountId: "acct1", analytics: { likes: 2 } }] }] });
+    const adapter = provider(Native, transport);
+    assert.equal((await adapter.metrics({ credentials: analyticsCredentials, delivery: { externalId: "post1" } })).values.likes, 2);
+    assert.equal((await adapter.metrics({ credentials: { accessToken: "native" } })).values.likes, 7);
+    assert.equal(await adapter.accountPostAnalytics({ credentials: { accessToken: "native" } }), null);
+    assert.equal(calls.length, 1);
+  }
+});
 
 test("Zernio routing is enabled only with an API key and for supported platforms", () => {
   assert.deepEqual([...zernioPlatforms({})], []);

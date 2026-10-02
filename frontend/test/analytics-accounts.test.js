@@ -29,7 +29,7 @@ test("account analytics attribute measured and unavailable values to their socia
     server: { middlewareMode: true, hmr: false, ws: false }, appType: "custom", optimizeDeps: { noDiscovery: true, include: [] },
   });
   try {
-    const { AccountAnalyticsCard, aggregateDeliveryHistory, buildComparisonSeries } = await server.ssrLoadModule("/src/bridge/Analytics.jsx");
+    const { AccountAnalyticsCard, aggregateDeliveryHistory, buildComparisonSeries, analyticsAccountRow } = await server.ssrLoadModule("/src/bridge/Analytics.jsx");
     const props = account => ({ account, catalog, timeZone: "UTC", selected: false, compareDisabled: false, onCompare() {}, onOpen() {} });
     const render = account => visibleText(renderToStaticMarkup(createElement(AccountAnalyticsCard, props(account))));
 
@@ -98,6 +98,21 @@ test("account analytics attribute measured and unavailable values to their socia
       assert.deepEqual(history.map(point => point.values.engagement), [1, 5]);
       const chart = buildComparisonSeries([{ id: "combined", label: "Combined", history }], "views", "day", "all", second);
       assert.deepEqual(chart.series[0].points.map(point => point.value), [10, 22]);
+    });
+
+    await t.test("the active account table includes network access errors and deduplicated post notes", () => {
+      const account = accountFixture({ analyticsSource: "zernio", metricsNote: "Includes connected-account posts from the last 90 days.", metricsError: "Analytics access is not enabled.", posts: [
+        { delivery: { status: "published", metricsNote: "Still syncing.", metricsError: "Some metrics unavailable.", metricsUpdatedAt: updatedAt } },
+        { delivery: { status: "published", metricsNote: "Still syncing.", metricsUpdatedAt: updatedAt } },
+        { delivery: { status: "draft", metricsError: "Ignored draft error." } },
+      ] });
+      const row = analyticsAccountRow(account, catalog);
+      assert.equal(row.count, 2); assert.equal(row.lastUpdated, updatedAt);
+      assert.match(row.metricsNote, /Includes connected-account posts/);
+      assert.equal(row.metricsNote.match(/Still syncing/g).length, 1);
+      assert.match(row.metricsError, /Analytics access is not enabled/); assert.match(row.metricsError, /Some metrics unavailable/);
+      assert.doesNotMatch(row.metricsError, /draft/);
+      assert.match(render(account), /Analytics access is not enabled/);
     });
   } finally {
     await server.close();
