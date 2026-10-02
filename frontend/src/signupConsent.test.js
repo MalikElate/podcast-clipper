@@ -5,32 +5,52 @@ import {
   isSignupAction,
   PRIVACY_POLICY_VERSION,
   SIGNUP_ACTION_SELECTOR,
-  setSignupActionsConsentState,
+  preventSignupWithoutConsent,
 } from "./signupConsent.js";
 
 test("the consent gate covers Clerk's visible primary action", () => {
   assert.match(SIGNUP_ACTION_SELECTOR, /\.cl-formButtonPrimary/);
 });
 
-test("signup actions stay disabled until privacy consent is accepted", () => {
-  const clerkEnabledButton = { disabled: false, dataset: {} };
-  const clerkDisabledButton = { disabled: true, dataset: {} };
-  const root = {
-    querySelectorAll() {
-      return [clerkEnabledButton, clerkDisabledButton];
-    },
+function signupEvent({ type = "click", action = true } = {}) {
+  return {
+    type,
+    target: { closest: () => action ? {} : null },
+    defaultPrevented: false,
+    propagationStopped: false,
+    preventDefault() { this.defaultPrevented = true; },
+    stopPropagation() { this.propagationStopped = true; },
   };
+}
 
-  setSignupActionsConsentState(root, false);
-  assert.equal(clerkEnabledButton.disabled, true);
-  assert.equal(clerkEnabledButton.dataset.meadowConsentDisabled, "true");
-  assert.equal(clerkDisabledButton.disabled, true);
-  assert.equal(clerkDisabledButton.dataset.meadowConsentDisabled, undefined);
+test("clicking a signup action without consent stops OAuth or signup from starting", () => {
+  const event = signupEvent();
+  assert.equal(preventSignupWithoutConsent(event, false), true);
+  assert.equal(event.defaultPrevented, true);
+  assert.equal(event.propagationStopped, true);
+});
 
-  setSignupActionsConsentState(root, true);
-  assert.equal(clerkEnabledButton.disabled, false);
-  assert.equal(clerkEnabledButton.dataset.meadowConsentDisabled, undefined);
-  assert.equal(clerkDisabledButton.disabled, true);
+test("submitting the form without consent is blocked, including keyboard submission", () => {
+  const event = signupEvent({ type: "submit", action: false });
+  assert.equal(preventSignupWithoutConsent(event, false), true);
+  assert.equal(event.defaultPrevented, true);
+  assert.equal(event.propagationStopped, true);
+});
+
+test("signup actions and form submission proceed when privacy consent is accepted", () => {
+  for (const type of ["click", "submit"]) {
+    const event = signupEvent({ type });
+    assert.equal(preventSignupWithoutConsent(event, true), false);
+    assert.equal(event.defaultPrevented, false);
+    assert.equal(event.propagationStopped, false);
+  }
+});
+
+test("other form controls remain usable without privacy consent", () => {
+  const event = signupEvent({ action: false });
+  assert.equal(preventSignupWithoutConsent(event, false), false);
+  assert.equal(event.defaultPrevented, false);
+  assert.equal(event.propagationStopped, false);
 });
 
 test("signup action detection tolerates non-element event targets", () => {

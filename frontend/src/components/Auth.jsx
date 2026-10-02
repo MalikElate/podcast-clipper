@@ -3,8 +3,7 @@ import { createPortal } from "react-dom";
 import { SignIn, SignUp } from "@clerk/react";
 import {
   buildSignupConsentMetadata,
-  isSignupAction,
-  setSignupActionsConsentState,
+  preventSignupWithoutConsent,
 } from "../signupConsent.js";
 
 function SignupAuth({ redirectUrl }) {
@@ -12,6 +11,7 @@ function SignupAuth({ redirectUrl }) {
   const privacyCheckboxRef = useRef(null);
   const [consentHost, setConsentHost] = useState(null);
   const [privacyAcceptedAt, setPrivacyAcceptedAt] = useState(null);
+  const [consentError, setConsentError] = useState(false);
   const [marketingChoice, setMarketingChoice] = useState({ optedIn: false, updatedAt: null });
   const privacyAccepted = Boolean(privacyAcceptedAt);
   const consentMetadata = buildSignupConsentMetadata({
@@ -62,26 +62,10 @@ function SignupAuth({ redirectUrl }) {
     };
   }, []);
 
-  useEffect(() => {
-    const authRoot = authRootRef.current;
-    if (!authRoot) return undefined;
-
-    const syncSignupActions = () => setSignupActionsConsentState(authRoot, privacyAccepted);
-    const observer = new MutationObserver(syncSignupActions);
-    observer.observe(authRoot, { childList: true, subtree: true });
-    syncSignupActions();
-
-    return () => {
-      observer.disconnect();
-      setSignupActionsConsentState(authRoot, true);
-    };
-  }, [privacyAccepted]);
-
   const blockSignupWithoutConsent = (event) => {
-    if (privacyAccepted || (event.type !== "submit" && !isSignupAction(event.target))) return;
+    if (!preventSignupWithoutConsent(event, privacyAccepted)) return;
 
-    event.preventDefault();
-    event.stopPropagation();
+    setConsentError(true);
     privacyCheckboxRef.current?.focus();
   };
 
@@ -107,7 +91,12 @@ function SignupAuth({ redirectUrl }) {
               type="checkbox"
               checked={privacyAccepted}
               required
-              onChange={(event) => setPrivacyAcceptedAt(event.target.checked ? new Date().toISOString() : null)}
+              aria-invalid={consentError || undefined}
+              aria-describedby={consentError ? "signup-consent-error" : undefined}
+              onChange={(event) => {
+                setPrivacyAcceptedAt(event.target.checked ? new Date().toISOString() : null);
+                if (event.target.checked) setConsentError(false);
+              }}
             />
             <span>
               I agree to Meadow's <a href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
@@ -131,9 +120,9 @@ function SignupAuth({ redirectUrl }) {
             </span>
           </label>
 
-          {!privacyAccepted && (
-            <p id="signup-consent-prompt" className="signup-consent-prompt" role="status">
-              Accept the Privacy Policy to continue.
+          {consentError && (
+            <p id="signup-consent-error" className="signup-consent-error" role="alert">
+              Please check the Privacy Policy box to continue.
             </p>
           )}
         </fieldset>,
