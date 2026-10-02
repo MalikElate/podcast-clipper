@@ -2,7 +2,8 @@ import { Icon } from "./Icons.jsx";
 import { FORMAT_LABELS } from "./platforms.js";
 import { Alert, Badge, dateTime, MediaThumb, Modal, PlatformBadge } from "./ui.jsx";
 import { canCancelRemaining, isTikTokInbox, tiktokProcessingMessage } from "./deliveryPresentation.js";
-import { failed, pending, postSectionDate } from "./postListOrder.js";
+import { failed, pending } from "./postListOrder.js";
+import { cardPostDate } from "./postListFilters.js";
 
 const postTitle = post => post.title || (post.media?.length ? "Media post" : post.caption ? "Text post" : "Untitled post");
 const formatLabel = format => FORMAT_LABELS[format] || (format === "auto" ? "Automatic" : format || "Automatic");
@@ -26,8 +27,8 @@ function SettingValue({ name, value, media }) {
   return String(value);
 }
 
-export function CompactPostCard({ post, section, accountId, project, onView }) {
-  const postDate = postSectionDate(post, section, accountId);
+export function CompactPostCard({ post, section, accountId, platform = "", project, onView }) {
+  const postDate = cardPostDate(post, section, accountId, platform);
   return <article className="bridge-panel bridge-post-card bridge-post-compact">
     <div className="bridge-post-card-heading">
       {post.media[0] && <div className="bridge-post-thumbnail"><MediaThumb media={post.media[0]}/></div>}
