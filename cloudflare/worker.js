@@ -89,6 +89,8 @@ export class PodcastClipperBackend extends Container {
     TELEGRAM_BOT_TOKEN: env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_BOT_USERNAME: env.TELEGRAM_BOT_USERNAME,
     TELEGRAM_WEBHOOK_SECRET: env.TELEGRAM_WEBHOOK_SECRET,
+    RESEND_API_KEY: env.RESEND_API_KEY,
+    MEADOW_EMAIL_FROM: env.MEADOW_EMAIL_FROM,
   });
 
   get durableState() { return new DurableState(this.ctx.storage); }
@@ -156,7 +158,9 @@ export class PodcastClipperBackend extends Container {
   }
 
   onStart() {
-    console.log(`Meadow backend container started. Bluesky OAuth ${this.envVars.BLUESKY_PRIVATE_KEY ? "configured" : "not configured"}.`);
+    // A secret the container never receives looks exactly like a feature nobody
+    // enabled, so say which ones arrived rather than leaving it to be inferred.
+    console.log(`Meadow backend container started. Bluesky OAuth ${this.envVars.BLUESKY_PRIVATE_KEY ? "configured" : "not configured"}. Welcome email ${this.envVars.RESEND_API_KEY ? "configured" : "not configured"}.`);
   }
 
   onStop() {
