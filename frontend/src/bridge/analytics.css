@@ -1,0 +1,86 @@
+.bridge-analytics-dashboard{min-width:0}
+.bridge-analytics-tabs{display:flex;gap:26px;border-bottom:1px solid var(--b-line);margin-top:-10px}
+.bridge-analytics-tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--b-muted);padding:12px 4px;font-size:15px!important}
+.bridge-analytics-tabs button.active{color:var(--b-blue);border-bottom-color:var(--b-blue)}
+.bridge-analytics-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:17px 0 23px}
+.bridge-analytics-platform-filter{display:flex;max-width:100%;overflow-x:auto;border:1px solid var(--b-line);border-radius:7px;background:var(--b-raised);scrollbar-width:thin}
+.bridge-analytics-platform-filter button{display:flex;align-items:center;justify-content:center;gap:7px;flex-shrink:0;border:0;border-right:1px solid var(--b-line);background:none;color:var(--b-muted);padding:7px 11px;font-size:13px!important;white-space:nowrap}
+.bridge-analytics-platform-filter button:last-child{border-right:0}
+.bridge-analytics-platform-filter button.active{background:var(--b-panel);color:var(--b-text)}
+.bridge-analytics-dashboard select.bridge-analytics-period{width:148px!important;flex-shrink:0;padding:7px 11px!important;font-size:14px!important}
+.bridge-analytics-sync{display:flex;align-items:center;gap:18px;margin-left:auto;flex-shrink:0}
+.bridge-analytics-sync small{font-size:12px}
+.bridge-analytics-sync button{display:flex;align-items:center;gap:8px;border:0;background:none;color:var(--b-text);font-size:14px!important;padding:7px 5px}
+.bridge-analytics-sync button[aria-busy=true] svg{animation:bridge-analytics-spin 1.2s linear infinite}
+@keyframes bridge-analytics-spin{to{transform:rotate(360deg)}}
+.bridge-analytics-period-caption{margin:0 0 10px;font-size:12px}
+.bridge-analytics-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:24px}
+.bridge-analytics-stat{padding:16px;background:var(--b-panel);border:1px solid var(--b-line);border-radius:14px;box-shadow:0 1px 2px #17203308}
+.bridge-analytics-stat>div{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.bridge-analytics-stat>div>span{display:flex;align-items:center;gap:7px;color:var(--b-muted);font-size:13px;white-space:nowrap}
+.bridge-analytics-stat strong{display:block;font-size:27px;font-weight:650;line-height:1.3;margin-top:6px;letter-spacing:-.025em}
+.bridge-analytics-stat small{font-size:12px;white-space:nowrap}
+.bridge-analytics-stat .positive{color:#1d9970}.bridge-analytics-stat .negative{color:#d75164}
+.bridge-analytics-platforms,.bridge-analytics-publication,.bridge-analytics-post-board{padding:18px 17px;margin:0 0 24px;border-radius:15px;box-shadow:0 1px 3px #17203308}
+.bridge-analytics-dashboard .bridge-panel h2{font-size:15px;font-weight:500;color:var(--b-muted);margin:0 0 14px}
+.bridge-analytics-platform-row{display:grid;grid-template-columns:125px minmax(0,1fr) 80px 44px 70px;align-items:center;gap:15px;min-height:31px}
+.bridge-analytics-platform-row>button{display:flex;align-items:center;gap:8px;border:0;background:none;padding:3px 0;color:var(--b-text);font-size:14px!important;text-align:left}
+.bridge-analytics-platform-row>button:hover{color:var(--b-blue)}
+.bridge-analytics-platform-row>strong{font-size:14px;font-weight:500;text-align:right}
+.bridge-analytics-platform-row>small{font-size:12px;text-align:right}
+.bridge-analytics-platform-row .bridge-analytics-video-link{grid-column:2/5;color:var(--b-muted);font-size:13px!important}
+.bridge-analytics-bar{height:8px;border-radius:5px;background:var(--b-raised);overflow:hidden}
+.bridge-analytics-bar>span{display:block;min-width:0;height:100%;border-radius:5px;background:var(--b-blue)}
+.bridge-analytics-chart-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:10px}
+.bridge-analytics-chart-heading>div{min-width:0}
+.bridge-analytics-chart-heading h2{margin:0!important}
+.bridge-analytics-chart-heading p{font-size:12px;margin-top:2px}
+.bridge-analytics-chart-switches{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.bridge-analytics-toggle{display:flex;border:1px solid var(--b-line);border-radius:6px;overflow:hidden;background:var(--b-raised)}
+.bridge-analytics-toggle button{border:0;border-right:1px solid var(--b-line);padding:5px 10px;background:none;color:var(--b-muted);font-size:12px!important;white-space:nowrap}
+.bridge-analytics-toggle button:last-child{border-right:0}
+.bridge-analytics-toggle button.active{background:var(--b-panel);color:var(--b-text)}
+.bridge-publish-chart{position:relative;min-width:0}
+.bridge-publish-chart-scroll{overflow-x:auto;scrollbar-width:thin}
+.bridge-publish-chart svg{display:block;width:100%;min-width:640px}
+.bridge-publish-chart .bridge-chart-grid{stroke-dasharray:3 4;opacity:.7}
+.bridge-publish-count{fill:var(--b-muted);opacity:.15}
+.bridge-publish-chart rect[tabindex]:focus{outline:none;stroke:var(--b-blue);stroke-width:1}
+.bridge-publish-tooltip{left:50%;top:10px}
+.bridge-publish-tooltip>span{display:block}
+.bridge-publish-tooltip small{display:block;font-size:12px}
+.bridge-publish-chart-note{font-size:11px;margin:10px 0 0;color:var(--b-muted)}
+.bridge-analytics-definition,.bridge-analytics-source{font-size:12px;margin:-8px 0 20px;line-height:1.6}
+.bridge-analytics-source{margin:0 0 20px}
+.bridge-analytics-post-board{padding:0;overflow:hidden}
+.bridge-analytics-post-tools{display:flex;align-items:center;gap:12px;padding:17px;flex-wrap:wrap}
+.bridge-analytics-post-tools .bridge-search{max-width:320px!important;margin:0}
+.bridge-analytics-post-tools select{width:220px!important;font-size:14px!important}
+.bridge-analytics-post-tools>span{margin-left:auto;color:var(--b-muted);font-size:13px}
+.bridge-analytics-comparison-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.bridge-analytics-comparison-actions select{width:150px!important;padding:6px 10px!important;font-size:13px!important}
+.bridge-analytics-comparison-actions .bridge-text-button{padding:0}
+.bridge-analytics-post-table td:first-child{width:42px;text-align:center}
+.bridge-analytics-post-table td:nth-child(2){min-width:290px;max-width:400px}
+.bridge-analytics-post-table td:not(:nth-child(2)){white-space:nowrap}
+.bridge-analytics-post-table .bridge-table-title{font-size:14px!important;line-height:1.6;text-align:left}
+.bridge-analytics-post-table .bridge-analytics-post-accounts{margin-top:7px}
+.bridge-analytics-post-table .bridge-analytics-post-accounts>span{display:flex;align-items:center;gap:5px;font-size:12px!important}
+.bridge-analytics-post-table .bridge-analytics-table-note{font-size:12px!important;line-height:1.5}
+.bridge-analytics-post-table tr.selected td{background:color-mix(in srgb,var(--b-blue) 7%,transparent)}
+.bridge-analytics-status{padding:12px 17px}
+.bridge-analytics-status>summary{padding:0!important;color:var(--b-muted)!important;font-size:13px!important}
+.bridge-analytics-status>div{padding:15px 0;border-top:1px solid var(--b-line);margin-top:12px}
+.bridge-analytics-status p{font-size:12px;margin-top:5px;overflow-wrap:anywhere}
+.bridge-analytics-status .bridge-analytics-identity strong,.bridge-analytics-status .bridge-analytics-identity small{font-size:13px}
+.bridge-analytics-detail>p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;margin-bottom:8px}
+.bridge-analytics-detail .bridge-table-scroll{margin-top:22px}
+.bridge-analytics-detail td{min-width:80px}
+.bridge-analytics-detail td:first-child{min-width:220px}
+.bridge-analytics-detail td a{display:inline-flex;align-items:center;gap:4px;font-size:12px;margin-top:5px}
+/* Boundaries distinguish analytics controls and the reference's data panels. */
+.bridge-analytics-dashboard .bridge-panel,.bridge-analytics-stat,.bridge-analytics-tabs,.bridge-analytics-platform-filter,.bridge-analytics-toggle{border-color:var(--b-line)!important}
+.bridge-analytics-platform-filter button,.bridge-analytics-toggle button{border-right-color:var(--b-line)!important}
+.bridge-analytics-tabs button.active{border-bottom-color:var(--b-blue)!important}
+@media(max-width:1250px){.bridge-analytics-stat{padding:14px 12px}.bridge-analytics-stat>div{align-items:flex-start;flex-direction:column}.bridge-analytics-stat>div>span{font-size:12px}.bridge-analytics-chart-heading{flex-wrap:wrap}}
+@media(max-width:760px){.bridge-analytics-toolbar{gap:12px;padding-bottom:20px}.bridge-analytics-platform-filter{width:100%}.bridge-analytics-platform-filter button{padding:8px 12px}.bridge-analytics-sync{gap:8px}.bridge-analytics-sync small{max-width:125px;text-align:right;font-size:11px;line-height:1.4}.bridge-analytics-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:20px}.bridge-analytics-stat:last-child{grid-column:1/-1}.bridge-analytics-stat>div{flex-direction:row;flex-wrap:wrap}.bridge-analytics-stat small{margin-left:auto}.bridge-analytics-stat{padding:14px}.bridge-analytics-stat strong{font-size:25px}.bridge-analytics-platforms,.bridge-analytics-publication{padding:16px 13px;margin-bottom:20px}.bridge-analytics-platform-row{grid-template-columns:105px minmax(0,1fr) 62px;gap:8px;min-height:46px}.bridge-analytics-platform-row>small:not(.bridge-analytics-post-count){display:none}.bridge-analytics-platform-row .bridge-analytics-post-count{grid-column:3;font-size:11px;margin-top:-15px}.bridge-analytics-platform-row>strong{align-self:start;padding-top:6px}.bridge-analytics-platform-row .bridge-analytics-video-link{grid-column:2/4;font-size:12px!important}.bridge-analytics-platform-row:has(.bridge-analytics-video-link) .bridge-analytics-post-count{grid-column:2/4;text-align:left;margin-top:-10px}.bridge-analytics-chart-heading{gap:12px}.bridge-analytics-chart-switches{width:100%;gap:8px;flex-wrap:wrap}.bridge-analytics-toggle button{padding:6px 9px}.bridge-publish-chart .bridge-chart-axis{font-size:18px}.bridge-analytics-post-tools{padding:14px}.bridge-analytics-post-tools .bridge-search,.bridge-analytics-post-tools select{width:100%!important;max-width:none!important}.bridge-analytics-post-tools>span{margin-left:0}.bridge-analytics-detail td:first-child{min-width:190px}}

@@ -31,6 +31,8 @@ test("Zernio analytics show native posts on an account with no Meadow deliveries
   assert.equal(report.accounts[0].totals.values.views, 42); assert.equal(report.accounts[0].totals.values.likes, 0);
   assert.equal(report.accounts[0].totals.values.comments, null);
   assert.equal(report.posts[0].source, "connected_account"); assert.equal(report.publishedCount, 1);
+  assert.equal(report.posts[0].publishedAt, h.networkPost.publishedAt);
+  assert.equal(report.posts[0].deliveries[0].publishedAt, h.networkPost.publishedAt);
   assert.equal(report.accounts[0].posts[0].delivery.metricsHistory.length, 1);
   assert.match(report.sourceLabel, /connected-account posts/);
   assert.equal(h.store.list("post").length, 0); assert.equal(h.store.list("delivery").length, 0);
