@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canDeletePost, eligibleSelection } from "../src/bridge/postBulkDelete.js";
+import { canDeletePost, deleteUnavailableReason, eligibleSelection } from "../src/bridge/postBulkDelete.js";
 
 const post = (id, deliveries = [], extra = {}) => ({ id, deletable: true, deliveries, ...extra });
 const delivery = (status, extra = {}) => ({ status, ...extra });
@@ -22,4 +22,10 @@ test("selection drops missing, newly ineligible, and duplicate posts", () => {
   const posts = [post("draft"), post("failed", [delivery("failed")]), post("changed", [delivery("published")]), post("draft")];
   assert.deepEqual(eligibleSelection(posts, new Set(["missing", "changed", "failed", "draft"])).map(item => item.id), ["draft", "failed"]);
   assert.deepEqual(eligibleSelection(posts, ["missing"]), []);
+});
+
+test("unavailable delete actions explain sent content and active delivery", () => {
+  assert.match(deleteUnavailableReason(post("partial", [delivery("failed"), delivery("published")])), /sent to a platform.*stays in Meadow history/i);
+  assert.match(deleteUnavailableReason(post("active", [delivery("publishing")])), /in progress.*finishes/i);
+  assert.match(deleteUnavailableReason(post("unknown", [], { deletable: false })), /cannot be deleted right now/i);
 });
