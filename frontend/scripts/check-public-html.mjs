@@ -45,7 +45,7 @@ assert.ok(funnelHtml.includes("Start with 5 social accounts"), "The ad funnel mu
 assert.ok(funnelHtml.includes('href="https://app.findmeadow.com/sign-up"'), "The ad funnel must link directly to account creation");
 assert.ok(funnelHtml.includes('<meta name="robots" content="noindex, follow" />'), "The paid landing page must stay out of the sitemap and search results");
 assert.ok(!funnelHtml.includes('<link rel="canonical"'), "The paid landing page must not claim an indexed canonical URL");
-for (const path of ["sign-up/index.html", "sign-up/complete/index.html"]) {
+for (const path of ["sign-in/index.html", "sign-up/index.html", "sign-up/complete/index.html"]) {
   const html = await readFile(`dist/${path}`, "utf8");
   assert.ok(html.includes('<meta name="robots" content="noindex, follow" />'), `${path} must stay out of search results`);
   assert.ok(!html.includes('<link rel="canonical"'), `${path} must not claim a canonical address`);

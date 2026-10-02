@@ -13,6 +13,7 @@ import "./adSignupFunnel.css";
 import "./tools/freeTools.css";
 import { initProductAnalytics } from "./productAnalytics.js";
 import { initGoogleAnalytics, migrateLegacyGoogleAnalyticsPreference } from "./googleAnalytics.js";
+import { appHref } from "./siteUrls.js";
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || globalThis.__MEADOW_CONFIG__?.clerkPublishableKey;
 const localPreview = import.meta.env.VITE_BRIDGE_LOCAL_PREVIEW === "true";
@@ -36,6 +37,6 @@ initGoogleAnalytics({ preview: import.meta.env.DEV || localPreview });
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    {localPreview ? <Application /> : <ClerkProvider publishableKey={clerkPublishableKey} {...clerkScriptProps}><Application /></ClerkProvider>}
+    {localPreview ? <Application /> : <ClerkProvider publishableKey={clerkPublishableKey} signInUrl={appHref("/sign-in")} signUpUrl={appHref("/sign-up")} {...clerkScriptProps}><Application /></ClerkProvider>}
   </React.StrictMode>
 );

@@ -41,7 +41,7 @@ function runPreload({ hostname = "app.findmeadow.com", pathname = "/dashboard", 
 }
 
 test("signed-out app visits preload the matching auth chunks with Clerk's request mode", () => {
-  for (const pathname of ["/", "/dashboard", "/dashboard/", "/dashboard/connections"]) {
+  for (const pathname of ["/", "/sign-in", "/sign-in/", "/dashboard", "/dashboard/", "/dashboard/connections"]) {
     const links = runPreload({ pathname });
     assert.deepEqual(links.map(link => link.href), clerkAuthChunkUrls(productionKey));
     assert.ok(links.every(link => link.rel === "preload" && link.as === "script" && link.fetchPriority === "low" && !("crossOrigin" in link) && !("crossorigin" in link)));

@@ -41,6 +41,10 @@ export default function App() {
     if (surface === "marketing") return <DomainRedirect href={appHref(`${window.location.pathname}${window.location.search}`)} />;
     return <SignupSurface />;
   }
+  if (pathname === "/sign-in") {
+    if (surface === "marketing") return <DomainRedirect href={appHref(`${window.location.pathname}${window.location.search}`)} />;
+    return <SigninSurface />;
+  }
   if (pathname === "/sign-up/complete") return <SignupComplete />;
   if (pathname === "/tiktok-roast") return <TikTokRoast />;
   if (pathname === "/contact") return <PublicContactPage onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;
@@ -73,6 +77,13 @@ function SignupSurface() {
   if (loading && !localPreview) return <OpeningMeadow />;
   if (user || localPreview) return <DomainRedirect href="/dashboard" />;
   return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth mode="sign-up" redirectUrl="/sign-up/complete" /></div></div>;
+}
+
+function SigninSurface() {
+  const { user, loading } = useAuth();
+  if (loading && !localPreview) return <OpeningMeadow />;
+  if (user || localPreview) return <DomainRedirect href="/dashboard" />;
+  return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth /></div></div>;
 }
 
 function SignupComplete() {
