@@ -12,6 +12,7 @@ import { durableResponseBarrier } from "./storage/DurableDatabase.js";
 import { LocalMediaStorage } from "./storage/LocalMediaStorage.js";
 import { DurableMediaStorage } from "./storage/DurableMediaStorage.js";
 import { ProjectService } from "./services/ProjectService.js";
+import { WelcomeEmailService, clerkSignupContact } from "./services/WelcomeEmailService.js";
 import { ScheduleService } from "./services/ScheduleService.js";
 import { MediaService } from "./services/MediaService.js";
 import { UploadTokenService } from "./services/UploadTokenService.js";
@@ -76,7 +77,7 @@ export function connectionErrorMessage(platform, error) {
 
 /** Composition root. Services, repository, adapters and authentication are replaceable. */
 export class BridgeApplication {
-  constructor({ env = process.env, store, durability, registry, storage, authMiddleware, mcpOAuthKeyResolver, stripe, deleteIdentity, deleteAnalytics, clock = () => Date.now() } = {}) {
+  constructor({ env = process.env, store, durability, registry, storage, authMiddleware, mcpOAuthKeyResolver, stripe, deleteIdentity, deleteAnalytics, welcomeEmail, clock = () => Date.now() } = {}) {
     this.env = env; this.clock = clock;
     this.localPreview = env.BRIDGE_LOCAL_PREVIEW === "1" && env.NODE_ENV !== "production";
     this.dataDir = path.resolve(env.BRIDGE_DATA_DIR || path.join(backendDir, ".bridge"));
@@ -112,6 +113,7 @@ export class BridgeApplication {
     this.analytics = new AnalyticsService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, posts: this.posts, clock });
     this.accountViews = new AccountViewsService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, clock });
     this.billing = new BillingService({ store: this.store, env, appUrl: this.appUrl, stripe, locks: this.locks, clock });
+    this.welcomeEmail = welcomeEmail || new WelcomeEmailService({ env, appUrl: this.appUrl });
     this.privacy = new PrivacyService({ ...deps, registry: this.registry, storage: this.storage, projects: this.projects, billing: this.billing, clock,
       deleteIdentity: deleteIdentity || (async uid => { if (this.localPreview) return; try { await clerkClient.users.deleteUser(uid); } catch (error) { if (error.status !== 404) throw error; } }),
       deleteAnalytics: deleteAnalytics || (uid => this.localPreview ? Promise.resolve(true) : new AnalyticsErasureService({ store: this.store, env }).deleteForOwner(uid)) });
@@ -152,6 +154,9 @@ export class BridgeApplication {
       invariant(env.CLERK_WEBHOOK_SIGNING_SECRET, "Account webhooks are not configured.", { status: 503 });
       let event; try { event = await verifyWebhook(req, { signingSecret: env.CLERK_WEBHOOK_SIGNING_SECRET }); } catch { invariant(false, "Invalid account webhook signature."); }
       if (event.type === "user.deleted" && event.data.id) this.privacy.requestAccount(event.data.id, {}, { identityAlreadyDeleted: true });
+      // The account exists by the time this arrives, so a welcome email that
+      // cannot be sent is reported as received rather than retried.
+      if (event.type === "user.created") await this.welcomeEmail.sendWelcome(clerkSignupContact(event.data));
       res.json({ received: true });
     }));
     const origins = new Set([new URL(this.appUrl).origin, new URL(this.publicUrl).origin]);
