@@ -271,10 +271,6 @@ export default function Landing({ onGetStarted }) {
             <details className="faq-card" name="landing-faq"><summary>Can I connect an AI agent or my own app?</summary><p>Yes. Meadow includes API and MCP integration for secure, structured workflows such as creating drafts, previewing posts, publishing, and checking available analytics.</p></details>
           </div>
         </section>
-
-        <section className="landing-cta-section" aria-labelledby="landing-cta-title">
-          <div className="landing-cta-content"><h2 id="landing-cta-title">One workspace. However you publish.</h2><p>Start directly, bring an agent, or connect your own automation.</p><div className="landing-cta-actions"><button className="landing-cta-primary" onClick={onGetStarted}>Get started <ArrowIcon /></button><a className="landing-cta-secondary" href="#ways-to-use">Choose your path</a></div></div>
-        </section>
       </main>
 
       <SiteFooter onGetStarted={onGetStarted} />
