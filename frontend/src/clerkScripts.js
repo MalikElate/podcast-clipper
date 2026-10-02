@@ -33,7 +33,7 @@ export function clerkAuthPreloadScript(publishableKey) {
       if (location.hostname !== "app.findmeadow.com") return;
       const path = location.pathname.replace(/\\/+$/, "") || "/";
       const signup = path === "/sign-up";
-      if (!signup && path !== "/" && !/^\\/dashboard(?:\\/|$)/.test(path)) return;
+      if (!signup && path !== "/" && path !== "/sign-in" && !/^\\/dashboard(?:\\/|$)/.test(path)) return;
       if (document.cookie.split(";").some(cookie => {
         const parts = cookie.trim().split("=");
         return /^__client_uat(?:_[^=]+)?$/.test(parts[0]) && Number(parts[1]) > 0;
