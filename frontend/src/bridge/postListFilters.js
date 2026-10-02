@@ -31,6 +31,17 @@ function localDate(time, timeZone) {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
+export function postDatePresetRange(preset, timeZone, now = Date.now()) {
+  if (preset === "all") return { fromDate: "", toDate: "" };
+  const days = { last_7_days: 7, last_30_days: 30, last_90_days: 90 }[preset];
+  if (!days) throw new RangeError(`Unknown post date preset: ${preset}`);
+
+  const toDate = localDate(now, timeZone);
+  const [year, month, day] = toDate.split("-").map(Number);
+  const fromDate = new Date(Date.UTC(year, month - 1, day - days + 1)).toISOString().slice(0, 10);
+  return { fromDate, toDate };
+}
+
 // Use the same event as the card label, narrowed to the selected destination when needed.
 export function cardPostDate(post, section, accountId = "", platform = "") {
   if (!platform || section === "drafts" || section === "posts") return postSectionDate(post, section, accountId);
