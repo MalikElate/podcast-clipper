@@ -114,19 +114,29 @@ export function ComparisonChart({ rows, metric, grain, period, timeZone }) {
 export function AccountAnalyticsCard({ account, catalog = [], timeZone, selected, onCompare, compareDisabled, onOpen }) {
   const deliveries = account.posts.map(post => post.delivery).filter(delivery => delivery && published(delivery));
   const updatedAt = Math.max(account.demoMetricsUpdatedAt || 0, ...deliveries.map(delivery => delivery.metricsUpdatedAt || 0));
-  const notes = [...new Set([account.demoMetricsNote, ...deliveries.map(delivery => delivery.metricsNote)].filter(Boolean))];
-  const errors = [...new Set(deliveries.map(delivery => delivery.metricsError).filter(Boolean))];
+  const notes = [...new Set([account.metricsNote, account.demoMetricsNote, ...deliveries.map(delivery => delivery.metricsNote)].filter(Boolean))];
+  const errors = [...new Set([account.metricsError, ...deliveries.map(delivery => delivery.metricsError)].filter(Boolean))];
   const perVideo = account.platform === "youtube";
   const hasMetrics = metrics.some(metric => Number.isFinite(account.totals.values?.[metric]));
   return <article className={`bridge-account-analytics ${selected ? "selected" : ""}`} aria-label={accountLabel(account, catalog)}>
     <div className="bridge-account-analytics-heading"><AccountIdentity account={account} catalog={catalog}/><label className="bridge-account-compare"><input type="checkbox" aria-label={`Compare ${accountLabel(account, catalog)}`} checked={selected} disabled={compareDisabled || perVideo} onChange={event => onCompare(event.target.checked)}/><span>Compare</span></label></div>
     <div className="bridge-account-analytics-status"><span>{deliveries.length} published {deliveries.length === 1 ? "post" : "posts"}</span>{account.status !== "connected" && <Badge status={account.status}/>}</div>
     {perVideo ? <div className="bridge-account-metric-notice"><Icon name="analytics" size={24}/><strong>Metrics available per video</strong><p>Open this account’s published videos to see their individual views and interactions.</p></div> : <dl className="bridge-account-metrics">{metrics.map(metric => <div key={metric}><dt>{labels[metric]}</dt><dd><MetricValue totals={account.totals} metric={metric}/></dd></div>)}</dl>}
-    {!deliveries.length && !account.demoMetrics ? <p className="bridge-account-metric-note">No posts published through Meadow yet.</p> : !deliveries.length && account.demoMetrics ? null : !perVideo && !hasMetrics && <p className="bridge-account-metric-note">Metrics are not available yet. Refresh to check what this platform reports.</p>}
+    {!deliveries.length && !account.demoMetrics && account.analyticsSource !== "zernio" ? <p className="bridge-account-metric-note">No posts published through Meadow yet.</p> : !deliveries.length && account.demoMetrics ? null : !perVideo && !hasMetrics && <p className="bridge-account-metric-note">Metrics are not available yet. Refresh to check what this platform reports.</p>}
     {notes.map(note => <p className="bridge-account-metric-note" key={note}>{note}</p>)}
     {errors.length > 0 && <details className="bridge-account-metric-errors"><summary>Some post metrics could not be refreshed</summary>{errors.map(error => <p className="bridge-validation-error" key={error}>{error}</p>)}</details>}
     <div className="bridge-account-analytics-footer"><small>{updatedAt ? `${account.demoMetrics ? "Latest profile snapshot" : "Latest post update"}: ${dateTime(updatedAt, timeZone)}` : "No metrics received yet"}</small><button className="bridge-text-button" type="button" onClick={onOpen} disabled={!deliveries.length}>{perVideo ? "View video analytics" : "View posts"}<Icon name="arrow" size={16}/></button></div>
   </article>;
+}
+
+export function analyticsAccountRow(item, catalog = []) {
+  const deliveries = item.posts.map(post => post.delivery).filter(delivery => delivery && published(delivery));
+  const history = aggregateDeliveryHistory(deliveries, { deriveEngagement: item.platform !== "youtube" });
+  if (!history.length && item.demoMetrics && item.demoMetricsUpdatedAt) history.push({ at: item.demoMetricsUpdatedAt, values: sumMetrics(item.demoMetrics) });
+  return { ...item, title: accountLabel(item, catalog), count: deliveries.length, deliveries, history,
+    metricsNote: [...new Set([item.metricsNote, item.demoMetricsNote, ...deliveries.map(delivery => delivery.metricsNote)].filter(Boolean))].join(" "),
+    metricsError: [...new Set([item.metricsError, ...deliveries.map(delivery => delivery.metricsError)].filter(Boolean))].join(" "),
+    lastUpdated: Math.max(item.demoMetricsUpdatedAt || 0, ...deliveries.map(delivery => delivery.metricsUpdatedAt || 0)), comparisonDisabled: item.platform === "youtube" };
 }
 
 export default function Analytics({ project, catalog }) {
@@ -136,12 +146,7 @@ export default function Analytics({ project, catalog }) {
   const deliveryIdentity = delivery => ({ ...delivery, accountName: accounts.find(account => account.id === delivery.accountId)?.label || delivery.accountName });
   const [mode, setMode] = useState("accounts"), [accountId, setAccountId] = useState(""), [postId, setPostId] = useState(""), [metric, setMetric] = useState("engagement"), [compare, setCompare] = useState([]), [period, setPeriod] = useState("30"), [grain, setGrain] = useState("day"), [query, setQuery] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const account = accounts.find(item => item.id === accountId), post = data.posts.find(item => item.id === postId);
-  const accountRows = accounts.map(item => {
-    const deliveries = item.posts.map(post => post.delivery).filter(delivery => delivery && published(delivery));
-    const history = aggregateDeliveryHistory(deliveries, { deriveEngagement: item.platform !== "youtube" });
-    if (!history.length && item.demoMetrics && item.demoMetricsUpdatedAt) history.push({ at: item.demoMetricsUpdatedAt, values: sumMetrics(item.demoMetrics) });
-    return { ...item, title: accountLabel(item, catalog), count: deliveries.length, deliveries, history, lastUpdated: Math.max(item.demoMetricsUpdatedAt || 0, ...deliveries.map(delivery => delivery.metricsUpdatedAt || 0)), comparisonDisabled: item.platform === "youtube" };
-  });
+  const accountRows = accounts.map(item => analyticsAccountRow(item, catalog));
   const allPostRows = (account ? account.posts.filter(item => item.delivery && published(item.delivery)).map(item => ({ ...item, title: item.title || "Media post", count: 1, deliveries: [deliveryIdentity(item.delivery)], history: aggregateDeliveryHistory([item.delivery], { deriveEngagement: account.platform !== "youtube" }) })) : data.posts.filter(item => item.deliveries.some(published)).map(item => {
     const deliveries = item.deliveries.map(deliveryIdentity).filter(published);
     return { ...item, deliveries, title: item.title || item.caption || "Media post", count: deliveries.length, history: aggregateDeliveryHistory(deliveries, { excludeYoutube: true }) };
@@ -158,7 +163,7 @@ export default function Analytics({ project, catalog }) {
   const searchedRows = (mode === "post" ? postRows : rows).filter(row => (row.title || "").toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   async function refresh() {
     setBusy(true); setError("");
-    try { setData(await api.project(project.id, "/analytics/refresh", { method: "POST", body: { ...(accountId ? { accountId } : {}), ...(mode === "post" && postId ? { postId } : {}) } })); }
+    try { setData(await api.project(project.id, "/analytics/refresh", { method: "POST", body: { ...(accountId ? { accountId } : {}), ...(mode === "post" && post?.source === "connected_account" ? { accountId: post.deliveries[0].accountId } : mode === "post" && postId ? { postId } : {}) } })); }
     catch (error) { setError(error.message); } finally { setBusy(false); }
   }
   function setScope(nextMode, nextAccount = "", nextPost = "") { setMode(nextMode); setAccountId(nextAccount); setPostId(nextPost); setCompare([]); setQuery(""); }
@@ -167,11 +172,11 @@ export default function Analytics({ project, catalog }) {
   return <>
     <div className="bridge-intro-row"><p>Track results over time, then select platforms or posts to compare them on one graph.</p></div><Alert message={error || loadError}/>
     <div className="bridge-library-toolbar"><div className="bridge-filter-tabs"><button className={mode === "accounts" ? "active" : ""} onClick={() => setScope("accounts")}>Account performance</button><button className={mode === "posts" ? "active" : ""} onClick={() => setScope("posts")}>Post performance</button><button className={mode === "post" ? "active" : ""} onClick={() => setScope("post", "", postId || data.posts.find(item => item.deliveries.some(published))?.id || "")}>Same post, different accounts</button></div></div>
-    <div className="bridge-analytics-scope"><strong>{scopeLabel}</strong><span>Posts published through Meadow</span></div>
+    <div className="bridge-analytics-scope"><strong>{scopeLabel}</strong><span>{data.sourceLabel || "Posts published through Meadow"}</span></div>
     {account?.platform === "youtube" && mode === "posts" ? <p className="bridge-small">YouTube metrics are shown per video below. Account totals are not combined.</p> : <div className="bridge-stat-grid">{["engagement", "views", "impressions", "clicks"].map(key => <div className="bridge-stat" key={key}><span>{labels[key]}</span><strong><MetricValue totals={totals || { values: {} }} metric={key}/></strong><small>{key === "engagement" ? "Reported likes + comments + shares + saves" : "Current reported total"}</small></div>)}</div>}
     <div className="bridge-analytics-filters">{mode === "posts" && <label>Account<select value={accountId} onChange={event => { setAccountId(event.target.value); setCompare([]); }}><option value="">All accounts combined</option>{accounts.map(item => <option key={item.id} value={item.id}>{accountLabel(item, catalog)}</option>)}</select></label>}{mode === "post" && <label>Post<select value={postId} onChange={event => { setPostId(event.target.value); setCompare([]); }}><option value="">Choose a published post</option>{data.posts.filter(item => item.deliveries.some(published)).map(item => <option key={item.id} value={item.id}>{(item.title || item.caption || "Media post").slice(0, 100)}</option>)}</select></label>}<label>Metric<select value={metric} onChange={event => setMetric(event.target.value)}>{metrics.map(key => <option value={key} key={key}>{labels[key]}</option>)}</select></label></div>
     <div className="bridge-panel bridge-analytics-main">
-      <div className="bridge-section-label"><div><h2>{mode === "accounts" ? "Compare social accounts" : mode === "post" ? "Compare this post by destination" : account ? `Compare posts · ${account.label}` : "Compare posts across all accounts"}</h2><p className="bridge-small">Select up to five rows below. The graph and legend update immediately.</p></div><div className="bridge-analytics-board-actions"><Badge>{(mode === "post" ? postRows : rows).length} {countLabel}</Badge><button type="button" className="bridge-button secondary small" disabled={busy || !data.publishedCount} aria-busy={busy} onClick={refresh}><Icon name="refresh" size={16}/>{busy ? "Refreshing…" : "Refresh analytics"}</button></div></div>
+      <div className="bridge-section-label"><div><h2>{mode === "accounts" ? "Compare social accounts" : mode === "post" ? "Compare this post by destination" : account ? `Compare posts · ${account.label}` : "Compare posts across all accounts"}</h2><p className="bridge-small">Select up to five rows below. The graph and legend update immediately.</p></div><div className="bridge-analytics-board-actions"><Badge>{(mode === "post" ? postRows : rows).length} {countLabel}</Badge><button type="button" className="bridge-button secondary small" disabled={busy || !data.publishedCount && !accounts.some(account => account.status === "connected" && account.analyticsSource === "zernio")} aria-busy={busy} onClick={refresh}><Icon name="refresh" size={16}/>{busy ? "Refreshing…" : "Refresh analytics"}</button></div></div>
       {(mode !== "post" || postRows.length) && <section className="bridge-performance-chart"><div className="bridge-chart-heading"><div><h3>{labels[metric]} over time</h3><p>Daily snapshots are recorded when Meadow refreshes available platform metrics.</p></div><div className="bridge-chart-controls"><label>Range<select value={period} onChange={event => setPeriod(event.target.value)}><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="all">All available</option></select></label><div className="bridge-segmented bridge-chart-grain" aria-label="Chart interval">{[["day", "Daily"], ["week", "Weekly"], ["month", "Monthly"]].map(([value, label]) => <button type="button" className={grain === value ? "active" : ""} aria-pressed={grain === value} onClick={() => setGrain(value)} key={value}>{label}</button>)}</div></div></div><ComparisonChart rows={comparisonRows} metric={metric} grain={grain} period={period} timeZone={project.timeZone}/></section>}
       {mode === "post" && !postRows.length ? <Empty icon="analytics" title="Choose a published post">Compare the same content across its destinations once it has been published.</Empty> : (mode === "post" ? postRows : rows).length ? <>
         <div className="bridge-analytics-table-tools"><input className="bridge-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${countLabel}…`} aria-label={`Search ${countLabel}`}/><span>{compare.length ? `${compare.length} selected` : "Select rows to plot"}</span>{compare.length > 0 && <button className="bridge-text-button" onClick={() => setCompare([])}>Clear selection</button>}</div>
