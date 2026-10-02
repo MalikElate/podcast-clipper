@@ -70,7 +70,7 @@ assert.ok(!roastHtml.includes("Meadow, with the gloves off."), "tiktok-roast/ind
 assert.ok(!roastHtml.includes("A little heat. A lot of room to grow."), "tiktok-roast/index.html still contains the removed roaster note");
 assert.ok(roastHtml.includes('class="landing-header site-header"'), "tiktok-roast/index.html must use the standard Meadow navbar");
 assert.ok(!roastHtml.includes('class="roast-nav"'), "tiktok-roast/index.html must not use its old custom navbar");
-for (const navItem of ['href="https://findmeadow.com/#platforms">Platforms</a>', 'href="https://findmeadow.com/#ways-to-use">API/MCP</a>', ">Sign in</button>", ">Start posting "]) assert.ok(roastHtml.includes(navItem), `tiktok-roast/index.html missing standard navbar item ${navItem}`);
+for (const navItem of ['href="https://findmeadow.com/#platforms">Platforms</a>', 'href="https://findmeadow.com/#ways-to-use">API/MCP</a>', ">Sign in</button>", 'href="https://app.findmeadow.com/sign-up">Try for free']) assert.ok(roastHtml.includes(navItem), `tiktok-roast/index.html missing standard navbar item ${navItem}`);
 for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
   const html = await readFile(`dist${route}/index.html`, "utf8");
   assert.match(html, /<title>Dashboard · Meadow<\/title>/);
@@ -78,6 +78,14 @@ for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
   assert.ok(!html.includes('<link rel="canonical"'), `${route} must not claim a canonical address`);
 }
 const landingHtml = await readFile("dist/index.html", "utf8");
+for (const id of ["workflows", "publish-with-an-agent"]) {
+  const section = landingHtml.match(new RegExp(`<section\\b[^>]*id="${id}"[\\s\\S]*?<\\/section>`))?.[0];
+  assert.ok(section, `Homepage must retain the ${id} section`);
+  const actions = section.match(/<div class="scheduling-use-case-actions">([\s\S]*?)<\/div>/)?.[1];
+  assert.ok(actions, `${id} must have a signup action`);
+  assert.equal([...actions.matchAll(/<(?:a|button)\b/g)].length, 1, `${id} must have only one action`);
+  assert.ok(actions.includes('href="https://app.findmeadow.com/sign-up">Try for free '), `${id} must link directly to free signup`);
+}
 assert.ok(landingHtml.includes('href="https://findmeadow.com/#platforms">Platforms</a>'), "Homepage navbar must jump to the platform section");
 assert.ok(!landingHtml.includes('platform-mega-menu'), "Homepage navbar must not render the old platform dropdown");
 assert.ok(landingHtml.includes("Show up for every audience."), "Homepage platform section must use the requested heading");
@@ -107,7 +115,8 @@ for (const platform of PLATFORM_USE_CASES) {
   if (platform.chatOnly) {
     assert.doesNotMatch(html, /coming[ -]soon/i);
     assert.ok(html.includes("depend on platform configuration"));
-    assert.equal(html.match(/>Start posting /g)?.length || 0, 1, `${platform.slug} must only show Start posting in the shared navbar`);
+    assert.ok(html.includes('class="btn-small-primary" href="https://app.findmeadow.com/sign-up">Try for free'), `${platform.slug} must use the shared free signup action`);
+    assert.doesNotMatch(html, />Start posting /, `${platform.slug} must not offer video publishing`);
   }
 }
 for (const page of GENERAL_PAGES) {

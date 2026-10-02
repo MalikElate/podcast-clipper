@@ -3,7 +3,7 @@ import { useAuth as useClerkAuth, useClerk, useUser } from "@clerk/react";
 import { installTokenProvider } from "./authToken.js";
 import { marketingHref } from "./siteUrls.js";
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   if (import.meta.env.VITE_BRIDGE_LOCAL_PREVIEW === "true") {
     return (
@@ -63,4 +63,9 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used inside an AuthProvider");
   return ctx;
+}
+
+// Public HTML can render signed-out navigation without mounting Clerk.
+export function usePublicAuth() {
+  return useContext(AuthContext) || { user: null, loading: false };
 }

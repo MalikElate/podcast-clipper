@@ -1,4 +1,4 @@
-import { appHref } from "./siteUrls.js";
+import { signupHref } from "./siteUrls.js";
 
 export const PLANS = [
   {
@@ -44,7 +44,7 @@ export const PLANS = [
 export const PAID_PLANS = PLANS.filter(plan => plan.id !== "free");
 
 export function planHref(plan, cycle) {
-  return plan.id === "free" ? appHref("/dashboard") : `/pricing?checkout=${encodeURIComponent(plan.id)}&cycle=${cycle}`;
+  return plan.id === "free" ? signupHref() : `/pricing?checkout=${encodeURIComponent(plan.id)}&cycle=${cycle}`;
 }
 
 export function planBillingNote(plan, yearly) {
