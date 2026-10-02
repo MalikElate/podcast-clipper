@@ -171,14 +171,14 @@ function Workspace({ user, signOut }) {
     </aside>
     <main className="bridge-main"><header className="bridge-topbar"><button className="bridge-icon-button bridge-menu-toggle" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Icon name="menu"/></button></header>
       <div className="bridge-content"><Alert message={error}/><Alert message={notice} success/><div className="bridge-page-heading"><h1>{activeModule?.title || activeModule?.name}</h1></div>
-        {!config ? <div className="bridge-panel bridge-empty"><p>{error ? "Meadow could not load. Check your connection and refresh this page." : ""}</p></div> : isConfigurationView ? <ConfigurationWorkspace billingSearch={billingSearch} user={user} project={project} config={config} view={view} onSignOut={handleSignOut} signingOut={signingOut} onProjectUpdated={updated => setProjects(current => current.map(item => item.id === updated.id ? updated : item))}/> : !project ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Meadow is getting ready</h2><p>Your publishing account is not available yet.</p></div> : <ProjectWorkspace key={project.id} userId={user?.id} project={project} config={config} view={view} navigate={navigate} compose={compose} draftId={draftId} onComposeDirty={setComposerDirty} onComposeBusy={setComposerBusy} scheduledDate={scheduledDate} clearScheduledDate={() => setScheduledDate("")} draftVersion={draftVersion} connectionId={connectionId} clearConnection={() => setConnectionId("")} notify={setNotice}/>}
+        {!config ? <div className="bridge-panel bridge-empty"><p>{error ? "Meadow could not load. Check your connection and refresh this page." : ""}</p></div> : isConfigurationView ? <ConfigurationWorkspace billingSearch={billingSearch} user={user} project={project} config={config} view={view} onSignOut={handleSignOut} signingOut={signingOut}/> : !project ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Meadow is getting ready</h2><p>Your publishing account is not available yet.</p></div> : <ProjectWorkspace key={project.id} userId={user?.id} project={project} config={config} view={view} navigate={navigate} compose={compose} draftId={draftId} onComposeDirty={setComposerDirty} onComposeBusy={setComposerBusy} scheduledDate={scheduledDate} clearScheduledDate={() => setScheduledDate("")} draftVersion={draftVersion} connectionId={connectionId} clearConnection={() => setConnectionId("")} notify={setNotice}/>}
       </div>
     </main>
   </div>;
 }
-function ConfigurationWorkspace({ billingSearch, user, project, config, view, onProjectUpdated, onSignOut, signingOut }) {
+function ConfigurationWorkspace({ billingSearch, user, project, config, view, onSignOut, signingOut }) {
   return <>
-    {view === "settings" && <ConfigurationSettings user={user} project={project} config={config} onProjectUpdated={onProjectUpdated} onSignOut={onSignOut} signingOut={signingOut}/>}
+    {view === "settings" && <ConfigurationSettings user={user} project={project} config={config} onSignOut={onSignOut} signingOut={signingOut}/>}
     {view === "api-keys" && <ApiKeys timeZone={project?.timeZone}/>}
     {view === "billing" && <Billing key={billingSearch} returnSearch={billingSearch} localPreview={config.localPreview}/>}
   </>;
