@@ -97,6 +97,44 @@
 .bridge-post-grid .bridge-post-actions{margin-top:auto}
 @media(max-width:1180px){.bridge-post-list.bridge-post-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.bridge-post-list.bridge-post-grid{grid-template-columns:minmax(0,1fr)}}
+.bridge-post-compact .bridge-post-card-heading{margin-bottom:16px;min-height:72px}
+.bridge-post-compact .bridge-post-card-heading h3{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+.bridge-post-compact-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto}
+.bridge-post-detail-modal h2{overflow-wrap:anywhere}
+.bridge-post-detail-status{display:flex;align-items:center;gap:12px;color:var(--b-muted);font-size:calc(.8rem + 3px);margin-bottom:18px}
+.bridge-post-detail-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 22px;margin-bottom:22px;color:var(--b-muted);font-size:calc(.8rem + 3px)}
+.bridge-post-detail-meta>span,.bridge-post-detail-meta strong{display:block;overflow-wrap:anywhere}
+.bridge-post-detail-meta strong{color:var(--b-text);font-weight:550}
+.bridge-post-detail-section{border-top:1px solid var(--b-line);padding:22px 0}
+.bridge-post-detail-section h3{font-size:calc(.95rem + 3px);margin:0 0 12px}
+.bridge-post-full-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65}
+.bridge-post-detail-media{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.bridge-post-detail-media figure{min-width:0;margin:0;border:1px solid var(--b-line);border-radius:8px;overflow:hidden}
+.bridge-post-detail-media-preview{height:170px;background:var(--b-raised);display:flex;align-items:center;justify-content:center}
+.bridge-post-detail-media-preview img,.bridge-post-detail-media-preview video{display:block;width:100%;height:100%;object-fit:contain}
+.bridge-post-detail-media-preview .bridge-document-thumb{width:100%;height:100%}
+.bridge-post-detail-media figcaption{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:9px 11px;font-size:calc(.75rem + 3px)}
+.bridge-post-detail-media figcaption span{min-width:0;overflow-wrap:anywhere}
+.bridge-post-detail-media figcaption a{white-space:nowrap}
+.bridge-post-detail-delivery{padding:16px 0;border-bottom:1px solid var(--b-line)}
+.bridge-post-detail-delivery-heading{display:flex;align-items:center;gap:10px;min-width:0}
+.bridge-post-detail-delivery-heading>strong{min-width:0;overflow-wrap:anywhere;font-size:calc(.875rem + 3px);font-weight:550}
+.bridge-post-detail-delivery-heading>.bridge-badge{margin-left:auto}
+.bridge-post-detail-delivery-body,.bridge-post-detail-delivery-actions{padding-left:45px}
+.bridge-post-detail-delivery-body>span,.bridge-post-detail-delivery-body>small{display:block;color:var(--b-muted);font-size:calc(.8rem + 3px);line-height:1.55}
+.bridge-post-detail-delivery-actions{margin-top:10px}
+.bridge-post-delivery-times{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px}
+.bridge-post-destination-content{border-left:2px solid var(--b-blue);padding:8px 0 8px 12px;margin-top:12px;overflow-wrap:anywhere}
+.bridge-post-destination-content>strong{display:block;font-size:calc(.78rem + 3px);margin-bottom:5px}
+.bridge-post-destination-content p{white-space:pre-wrap;margin:8px 0;font-size:calc(.78rem + 3px)}
+.bridge-post-destination-content p span,.bridge-post-destination-content>div>span{display:block;color:var(--b-muted);font-size:calc(.75rem + 3px)}
+.bridge-post-destination-content ul{margin:5px 0 0;padding-left:20px}
+.bridge-post-setting-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 15px;margin:12px 0 0;font-size:calc(.78rem + 3px)}
+.bridge-post-setting-list dt{color:var(--b-muted);font-size:calc(.75rem + 3px)}
+.bridge-post-setting-list dd{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.bridge-post-setting-list ol{margin:4px 0 0;padding-left:20px}
+.bridge-post-setting-list li+li{margin-top:5px}
+@media(max-width:600px){.bridge-post-detail-meta,.bridge-post-setting-list{grid-template-columns:minmax(0,1fr)}.bridge-post-detail-media{grid-template-columns:repeat(2,minmax(0,1fr))}.bridge-post-detail-media-preview{height:120px}.bridge-post-detail-media figcaption{flex-direction:column;gap:3px}.bridge-post-detail-delivery-body,.bridge-post-detail-delivery-actions{padding-left:0}}
 /* The analytics refresh stays attached to the board it updates. */
 .bridge-analytics-board-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-left:auto}.bridge-analytics-board-actions .bridge-button{flex-shrink:0;white-space:nowrap}
 @media(max-width:600px){.bridge-analytics-main>.bridge-section-label{align-items:flex-start;flex-wrap:wrap}.bridge-analytics-board-actions{width:100%;margin-left:0;justify-content:space-between}}
