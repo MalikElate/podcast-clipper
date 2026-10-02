@@ -5,9 +5,9 @@ import { billingPlanAction, SUBSCRIPTION_STATUSES } from "../src/bridge/billingS
 
 test("all pricing surfaces share Free, Starter, Creator and Pro capacities", () => {
   assert.deepEqual(PLANS.map(({ id, accounts }) => [id, accounts]), [
-    ["free", "5 connected social accounts"],
-    ["starter", "10 connected social accounts"],
-    ["creator", "25 connected social accounts"],
+    ["free", "5 connected accounts"],
+    ["starter", "10 connected accounts"],
+    ["creator", "25 connected accounts"],
     ["pro", "Unlimited connected accounts"],
   ]);
   assert.deepEqual(PAID_PLANS.map(plan => plan.id), ["starter", "creator", "pro"]);

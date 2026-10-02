@@ -5,7 +5,7 @@ const SECTIONS = [
   {
     title: "Publishing",
     rows: [
-      { label: "Connected social accounts", hint: "The total number of social accounts connected to a Meadow workspace.", values: ["5", "10", "25", "Unlimited"] },
+      { label: "Connected accounts", hint: "The total number of accounts connected to a Meadow workspace.", values: ["5", "10", "25", "Unlimited"] },
       { label: "Schedule posts", values: [true, true, true, true] },
       { label: "Unlimited posts", values: [false, true, true, true] },
       { label: "Multiple accounts per platform", values: [false, true, true, true] },
