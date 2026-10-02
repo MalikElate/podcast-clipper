@@ -29,7 +29,7 @@ test("account analytics attribute measured and unavailable values to their socia
     server: { middlewareMode: true, hmr: false, ws: false }, appType: "custom", optimizeDeps: { noDiscovery: true, include: [] },
   });
   try {
-    const { AccountAnalyticsCard, aggregateDeliveryHistory, buildComparisonSeries, analyticsAccountRow } = await server.ssrLoadModule("/src/bridge/Analytics.jsx");
+    const { AccountAnalyticsCard, aggregateDeliveryHistory, buildComparisonSeries, analyticsAccountRow, DeliveryMetricsError } = await server.ssrLoadModule("/src/bridge/Analytics.jsx");
     const props = account => ({ account, catalog, timeZone: "UTC", selected: false, compareDisabled: false, onCompare() {}, onOpen() {} });
     const render = account => visibleText(renderToStaticMarkup(createElement(AccountAnalyticsCard, props(account))));
 
@@ -98,6 +98,33 @@ test("account analytics attribute measured and unavailable values to their socia
       assert.deepEqual(history.map(point => point.values.engagement), [1, 5]);
       const chart = buildComparisonSeries([{ id: "combined", label: "Combined", history }], "views", "day", "all", second);
       assert.deepEqual(chart.series[0].points.map(point => point.value), [10, 22]);
+    });
+
+    await t.test("an unavailable X post does not produce an account warning or a post error", () => {
+      const missing = { platform: "x", status: "published", metricsError: "X could not find this account or its posts.", metrics: null };
+      const measured = { platform: "x", status: "published", metrics: { impressions: 20 }, metricsUpdatedAt: updatedAt };
+      const row = analyticsAccountRow(accountFixture({ platform: "x", posts: [{ delivery: missing }, { delivery: measured }] }), catalog);
+      assert.equal(row.metricsError, "");
+      assert.equal(row.count, 2);
+      assert.equal(row.lastUpdated, updatedAt);
+      assert.equal(row.deliveries[1].metrics.impressions, 20);
+      const html = renderToStaticMarkup(createElement(DeliveryMetricsError, { delivery: missing }));
+      assert.match(visibleText(html), /This post is no longer available on X\./);
+      assert.doesNotMatch(html, /could not find|bridge-validation-error/);
+      assert.equal(missing.metrics, null);
+    });
+
+    await t.test("X account access errors remain visible alongside an unavailable post", () => {
+      const permission = "X has not granted this connection access to these analytics.";
+      const missing = { platform: "x", status: "published", metricsError: "X could not find this account or its posts." };
+      const denied = { platform: "x", status: "published", metricsError: permission };
+      const row = analyticsAccountRow(accountFixture({ platform: "x", metricsError: "Reconnect this account.", posts: [{ delivery: missing }, { delivery: denied }] }), catalog);
+      assert.equal(row.metricsError, `Reconnect this account. ${permission}`);
+      const html = renderToStaticMarkup(createElement(DeliveryMetricsError, { delivery: denied }));
+      assert.match(html, /bridge-validation-error/);
+      assert.equal(visibleText(html), permission);
+      const otherPlatform = analyticsAccountRow(accountFixture({ posts: [{ delivery: { ...missing, platform: "tiktok" } }] }), catalog);
+      assert.equal(otherPlatform.metricsError, missing.metricsError);
     });
 
     await t.test("the active account table includes network access errors and deduplicated post notes", () => {
