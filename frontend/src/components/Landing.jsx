@@ -246,9 +246,6 @@ export default function Landing({ onGetStarted }) {
               <div className="usage-card-copy"><h3>For custom workflows</h3><p>Connect internal tools, scheduled jobs, or your own application to Meadow&apos;s publishing layer.</p><ul><li><CheckIcon />Use one consistent API</li><li><CheckIcon />Preview and validate destinations</li><li><CheckIcon />Track delivery programmatically</li></ul></div>
             </article>
           </div>
-          <div className="usage-integrations" aria-label="Supported AI clients">
-            {AGENT_LOGOS.map((agent) => <span key={agent.name} className={agent.className}><agent.Icon /><span>{agent.name}</span></span>)}
-          </div>
           <a className="btn-primary usage-start" href={appHref("/dashboard")}>Open Meadow <ArrowIcon /></a>
         </section>
 
