@@ -344,8 +344,33 @@ test("deleting partially published content is atomic and leaves pending deliveri
   const h = setup(t); h.account("two");
   const { posts: [post] } = await h.submit([h.post("Partial", ["one", "two"])]);
   await h.app.worker.deliver(post.deliveries.find(d => d.accountId === "one").id);
-  assert.throws(() => h.app.posts.remove("alice", h.project.id, post.id), /stay in your history/i);
+  assert.throws(() => h.app.posts.remove("alice", h.project.id, post.id, { revision: post.revision }), /stay in your history/i);
   assert.equal(h.app.store.get("delivery", post.deliveries.find(d => d.accountId === "two").id).status, "queued");
+});
+
+test("revision-aware deletion rejects stale scheduled and failed posts without weakening active-delivery protection", async t => {
+  const h = setup(t), { app, project } = h;
+  const { posts: [scheduled, failed, active] } = await h.submit([h.post("Scheduled"), h.post("Failed"), h.post("Active")]);
+
+  const updatedScheduled = await app.posts.update("alice", project.id, scheduled.id, { ...scheduled, caption: "Updated schedule" });
+  assert.throws(() => app.posts.remove("alice", project.id, scheduled.id, { revision: scheduled.revision }), error => error.code === "revision_conflict" && error.status === 409);
+  assert.ok(app.store.get("post", scheduled.id));
+  assert.deepEqual(app.posts.remove("alice", project.id, scheduled.id, { revision: updatedScheduled.revision }), { deleted: true });
+
+  const failedDelivery = app.store.get("delivery", failed.deliveries[0].id);
+  app.store.put("delivery", { ...failedDelivery, status: "failed" });
+  const failedBeforeEdit = app.posts.get("alice", project.id, failed.id);
+  const updatedFailed = await app.posts.update("alice", project.id, failed.id, { ...failedBeforeEdit, caption: "Updated failure" });
+  const revisedDelivery = app.store.get("delivery", updatedFailed.deliveries[0].id);
+  app.store.put("delivery", { ...revisedDelivery, status: "failed" });
+  assert.throws(() => app.posts.remove("alice", project.id, failed.id, { revision: failedBeforeEdit.revision }), error => error.code === "revision_conflict" && error.status === 409);
+  assert.ok(app.store.get("post", failed.id));
+  assert.deepEqual(app.posts.remove("alice", project.id, failed.id, { revision: updatedFailed.revision }), { deleted: true });
+
+  const activeDelivery = app.store.get("delivery", active.deliveries[0].id);
+  app.store.put("delivery", { ...activeDelivery, status: "publishing" });
+  assert.throws(() => app.posts.remove("alice", project.id, active.id, { revision: active.revision }), /already in progress/i);
+  assert.ok(app.store.get("post", active.id));
 });
 
 test("reconnecting a processing delivery resumes polling without another upload", async t => {
