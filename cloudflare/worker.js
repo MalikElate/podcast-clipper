@@ -7,6 +7,7 @@ import { timingSafeEqual } from "node:crypto";
 import { DurableState } from "./durableState.js";
 import { migrationScript } from "./migrationScript.js";
 import { appDomainRedirect, dashboardShellUrl } from "./domainRouting.js";
+import { handlePosthogProxy, isPosthogProxyPath } from "./posthogProxy.js";
 export { ContainerProxy } from "@cloudflare/containers";
 
 const definedEnv = values => Object.fromEntries(
@@ -218,6 +219,7 @@ function migrationAuthorized(request, workerEnv) {
 export default {
   async fetch(request, workerEnv, ctx) {
     const url = new URL(request.url);
+    if (isPosthogProxyPath(url.pathname)) return handlePosthogProxy(request);
     if (url.pathname === "/api/tools/tiktok-roast") return handleTikTokRoast(request, workerEnv, ctx);
     if (url.pathname.startsWith("/api/free-tools/")) return handleFreeTools(request, workerEnv, ctx);
     const appRedirect = appDomainRedirect(url);

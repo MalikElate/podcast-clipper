@@ -2,6 +2,17 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { analyticsKey, analyticsPath, analyticsEnabled, browserPrivacyOptOut, cleanAnalyticsUrl, sanitizeAnalyticsEvent, posthogOptions, productEventForRequest, setAnalyticsEnabled } from "../src/productAnalytics.js";
 import { BridgeApi } from "../src/bridge/BridgeApi.js";
+import { POSTHOG_PROXY_PATH } from "../../cloudflare/posthogProxy.js";
+
+test("PostHog uses the same-origin proxy by default while self-hosted builds can override it", () => {
+  assert.equal(posthogOptions().api_host, POSTHOG_PROXY_PATH);
+  assert.equal(posthogOptions().ui_host, "https://us.posthog.com");
+  assert.equal(posthogOptions({ VITE_POSTHOG_HOST: "https://us.i.posthog.com" }).api_host, "https://us.i.posthog.com");
+  const proxied = sanitizeAnalyticsEvent({ event: "$pageview", properties: { $lib_custom_api_host: POSTHOG_PROXY_PATH } });
+  assert.equal(proxied.properties.$lib_custom_api_host, POSTHOG_PROXY_PATH);
+  const unsafe = sanitizeAnalyticsEvent({ event: "$pageview", properties: { $lib_custom_api_host: "https://private.example/?secret=value" } });
+  assert.equal(unsafe.properties.$lib_custom_api_host, undefined);
+});
 
 test("production tracking excludes previews and supports a kill switch", () => {
   assert.match(analyticsKey("app.findmeadow.com"), /^phc_/);

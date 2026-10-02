@@ -4,6 +4,7 @@ import { GENERAL_PAGES } from "./marketing/generalPages.js";
 
 // This is PostHog's public, write-only project token, not a personal API key.
 export const MEADOW_POSTHOG_KEY = "phc_noGcZmRtAvHTjbRDfWdqMW5X3sdpsjwiRMt6evTw7AmM";
+export const MEADOW_POSTHOG_PROXY_PATH = "/sprout";
 const hosts = new Set(["findmeadow.com", "www.findmeadow.com", "app.findmeadow.com"]);
 const preference = "meadow.product-analytics.disabled";
 const preferenceCookie = "meadow_analytics";
@@ -56,6 +57,8 @@ export function sanitizeAnalyticsEvent(event) {
   const source = event.properties || {};
   const clean = {};
   for (const name of properties) if (source[name] !== undefined) clean[name] = source[name];
+  // Let PostHog recognize proxied traffic without retaining arbitrary host URLs.
+  if (source.$lib_custom_api_host === MEADOW_POSTHOG_PROXY_PATH) clean.$lib_custom_api_host = MEADOW_POSTHOG_PROXY_PATH;
   // PostHog requires this SDK field to derive the daily cookieless hash,
   // then strips it during processing. HTTP headers alone are insufficient.
   if (typeof source.$raw_user_agent === "string") clean.$raw_user_agent = source.$raw_user_agent;
@@ -86,9 +89,9 @@ export function sanitizeAnalyticsEvent(event) {
   return { event: event.event, properties: clean, ...(event.timestamp ? { timestamp: event.timestamp } : {}), ...(event.uuid ? { uuid: event.uuid } : {}) };
 }
 
-export function posthogOptions() {
+export function posthogOptions(env = {}) {
   return {
-    api_host: "https://us.i.posthog.com", ui_host: "https://us.posthog.com",
+    api_host: env.VITE_POSTHOG_HOST || MEADOW_POSTHOG_PROXY_PATH, ui_host: "https://us.posthog.com",
     defaults: "2026-05-30", cookieless_mode: "always", person_profiles: "never",
     capture_pageview: "history_change", capture_pageleave: true,
     autocapture: false, disable_session_recording: true, disable_surveys: true,
@@ -114,7 +117,7 @@ export function initProductAnalytics() {
   }
   starting = import("posthog-js").then(({ default: posthog }) => {
     if (!analyticsEnabled()) return;
-    posthog.init(key, posthogOptions());
+    posthog.init(key, posthogOptions(import.meta.env || {}));
     client = posthog;
     for (const event of pending) captureProductEvent(event);
     pending = [];
