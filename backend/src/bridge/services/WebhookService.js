@@ -102,10 +102,10 @@ export class WebhookService {
     const item = this.enqueue(uid, "webhook.test", { message: "Meadow webhook connection test." });
     invariant(item, "Save a webhook URL first.", { status: 404 });
     await this.store.flush?.();
-    await this.deliver(item.id);
+    await this.deliver(item.id, { waitMs: 15000 });
     return this.get(uid);
   }
-  async deliver(id) {
+  async deliver(id, { waitMs = 0 } = {}) {
     const initial = this.store.get("webhookDelivery", id);
     if (!initial || initial.status !== "pending") return;
     return this.locks.withLock(`webhook-delivery:${id}`, async () => {
@@ -120,7 +120,7 @@ export class WebhookService {
         this.store.put("webhookDelivery", { ...item, attempts: attempt, dueAt: this.clock() + 60000 });
         await this.store.flush?.();
         const current = this.record(item.ownerUid);
-        if (!current || current.generation !== item.generation || this.privacy?.blocked(item.ownerUid)) return;
+        if (!current || current.generation !== item.generation || !this.store.get("webhookDelivery", id) || this.privacy?.blocked(item.ownerUid)) return;
         const body = JSON.stringify(item.event), timestamp = String(Math.floor(this.clock() / 1000));
         const secret = this.vault.decrypt(current.encryptedSecret, `webhook:${current.id}`);
         const signature = createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex");
@@ -135,7 +135,7 @@ export class WebhookService {
           this.store.put("webhook", { ...latest, lastDelivery: { eventId: id, type: item.event.type, status, attempts: attempt, at: now, statusCode: statusCode || null, error: error || null } });
         });
       } finally { try { await this.store.flush?.(); } finally { release?.(); } }
-    }, { waitMs: 0, leaseMs: 30000 });
+    }, { waitMs, leaseMs: 30000 });
   }
   start() {
     if (!this.enabled || this.timer) return;

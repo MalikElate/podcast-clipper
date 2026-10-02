@@ -99,6 +99,14 @@ test("a settings change during an in-flight delivery cannot restore the old endp
   assert.equal(h.service.get("alice").webhook, null); assert.equal(h.store.list("webhookDelivery").length, 0);
 });
 
+test("connection erasure during the durable barrier prevents queued data from being sent", async t => {
+  const h = fixture(t); h.service.save("alice", { url: "https://receiver.example/events" });
+  const item = h.service.enqueue("alice", "post.completed", { account_id: "removed-account" });
+  let first = true;
+  h.store.flush = async () => { if (first) { first = false; h.store.remove("webhookDelivery", item.id); } };
+  await h.service.deliver(item.id); assert.equal(h.sent.length, 0);
+});
+
 test("local preview configures endpoints but cannot deliver or send a test", async t => {
   const h = fixture(t, { enabled: false }); h.service.save("alice", { url: "https://receiver.example/events" }); h.service.enqueue("alice", "post.completed", {}); await h.service.tick();
   await assert.rejects(h.service.test("alice"), /disabled in local preview/); assert.equal(h.sent.length, 0);
