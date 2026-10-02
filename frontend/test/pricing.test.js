@@ -15,7 +15,7 @@ test("all pricing surfaces share Free, Starter, Creator and Pro capacities", () 
   assert.equal(free.monthly, 0);
   assert.equal(free.yearly, 0);
   for (const yearly of [false, true]) assert.equal(planBillingNote(free, yearly), "No credit card required");
-  assert.equal(new URL(planHref(free)).pathname, "/dashboard");
+  assert.equal(new URL(planHref(free)).pathname, "/sign-up");
 });
 
 test("Free is the current plan without a subscription and never opens checkout", () => {

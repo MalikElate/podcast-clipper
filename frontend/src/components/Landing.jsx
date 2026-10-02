@@ -9,6 +9,7 @@ import { PLANS, planHref, planBillingNote } from "../pricing.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
 import SiteHeader from "./SiteHeader.jsx";
+import { signupHref } from "../siteUrls.js";
 
 const HOMEPAGE_RECORDING = {
   asset: "/marketing/meadow-landing-demo-caption-v4-20260929",
@@ -147,15 +148,14 @@ function ScenarioVisual({ goal }) {
   );
 }
 
-function GoalScenarios({ onGetStarted }) {
+function GoalScenarios() {
   return (
     <section className="landing-section goals-section scheduling-use-case" id="workflows" aria-labelledby="goals-title">
       <div className="scheduling-use-case-copy">
         <h2 id="goals-title">Cross-platform posting</h2>
         <p>Turn one idea into channel-ready posts, tailor each version for its destination, and schedule every connected platform from one Meadow campaign.</p>
         <div className="scheduling-use-case-actions">
-          <button type="button" className="scheduling-use-case-primary" onClick={onGetStarted}>Start scheduling <ArrowIcon /></button>
-          <a className="scheduling-use-case-secondary" href="#ways-to-use">See how it works</a>
+          <a className="scheduling-use-case-primary" href={signupHref()}>Try for free <ArrowIcon /></a>
         </div>
       </div>
       <div className="scheduling-use-case-visual">
@@ -180,7 +180,7 @@ export default function Landing({ onGetStarted }) {
               </div>
               <h1 className="landing-title">Post to every platform from one dashboard</h1>
               <p className="landing-subtitle">Plan, tailor, and schedule posts across your social accounts from one Meadow dashboard.</p>
-              <div className="hero-actions hero-actions-v2"><button className="btn-primary landing-cta" onClick={onGetStarted}>Try for free <ArrowIcon /></button></div>
+              <div className="hero-actions hero-actions-v2"><a className="btn-primary landing-cta" href={signupHref()}>Try for free <ArrowIcon /></a></div>
               <a className="home-hero-agent-link" href="#ways-to-use">Publishing with an AI agent? Explore API/MCP <ArrowIcon /></a>
               <div className="home-hero-agent-logos" aria-hidden="true">{AGENT_LOGOS.map(agent => <span className={agent.className} key={agent.name}><agent.Icon /></span>)}</div>
             </div>
@@ -205,7 +205,7 @@ export default function Landing({ onGetStarted }) {
           </div>
         </section>
 
-        <GoalScenarios onGetStarted={onGetStarted} />
+        <GoalScenarios />
 
         <section className="landing-section scheduling-use-case agent-publishing-section" id="publish-with-an-agent" aria-labelledby="agent-publishing-title">
           <div className="scheduling-use-case-visual">
@@ -215,8 +215,7 @@ export default function Landing({ onGetStarted }) {
             <h2 id="agent-publishing-title">Make sure you show up for <span className="agent-audience-highlight">every audience.</span></h2>
             <p>Tell your AI assistant what you want to share. Let it prepare posts for your connected channels, review the details, and give the go-ahead. Meadow takes care of publishing.</p>
             <div className="scheduling-use-case-actions">
-              <button type="button" className="scheduling-use-case-primary" onClick={onGetStarted}>Start publishing <ArrowIcon /></button>
-              <a className="scheduling-use-case-secondary" href="#ways-to-use">Explore AI publishing <ArrowIcon /></a>
+              <a className="scheduling-use-case-primary" href={signupHref()}>Try for free <ArrowIcon /></a>
             </div>
           </div>
         </section>
