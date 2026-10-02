@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { availableCardPlatforms, cardPostDate, matchesPostCardFilters, postContentType } from "../src/bridge/postListFilters.js";
+import { availableCardPlatforms, cardPostDate, matchesPostCardFilters, postContentType, postDatePresetRange } from "../src/bridge/postListFilters.js";
 
 const at = value => Date.parse(value);
 const post = (deliveries = [], extra = {}) => ({
@@ -11,6 +11,21 @@ const post = (deliveries = [], extra = {}) => ({
 const delivery = (accountId, platform, status, eventTime) => ({
   id: `${accountId}-${status}`, accountId, platform, status,
   ...(status === "published" ? { publishedAt: at(eventTime) } : status === "queued" ? { requestedAt: at(eventTime), dueAt: at(eventTime) + 60_000 } : { updatedAt: at(eventTime) }),
+});
+
+test("date presets include today and the preceding project-local calendar days", () => {
+  const now = at("2026-10-01T23:30:00Z"); // October 2 in Douala; October 1 in Los Angeles.
+  assert.deepEqual(postDatePresetRange("last_7_days", "Africa/Douala", now), { fromDate: "2026-09-26", toDate: "2026-10-02" });
+  assert.deepEqual(postDatePresetRange("last_30_days", "Africa/Douala", now), { fromDate: "2026-09-03", toDate: "2026-10-02" });
+  assert.deepEqual(postDatePresetRange("last_90_days", "Africa/Douala", now), { fromDate: "2026-07-05", toDate: "2026-10-02" });
+  assert.deepEqual(postDatePresetRange("last_7_days", "America/Los_Angeles", now), { fromDate: "2026-09-25", toDate: "2026-10-01" });
+  assert.deepEqual(postDatePresetRange("all", "Africa/Douala", now), { fromDate: "", toDate: "" });
+  assert.throws(() => postDatePresetRange("unknown", "UTC", now), RangeError);
+});
+
+test("date presets cross leap days and daylight-saving changes by calendar day", () => {
+  assert.deepEqual(postDatePresetRange("last_30_days", "UTC", at("2024-03-01T12:00:00Z")), { fromDate: "2024-02-01", toDate: "2024-03-01" });
+  assert.deepEqual(postDatePresetRange("last_7_days", "America/New_York", at("2026-03-09T03:30:00Z")), { fromDate: "2026-03-02", toDate: "2026-03-08" });
 });
 
 test("platform, account, and date must describe a delivery in the current section", () => {
