@@ -11,10 +11,11 @@ import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 import { SecretVault } from "../src/bridge/core/SecretVault.js";
 import { CONNECTION_PRIVACY_VERSION } from "../src/bridge/platforms/connectionPrivacy.js";
 
-async function setup(t, { localPreview = false, auth = true, stripe, envOverrides = {} } = {}) {
+async function setup(t, { localPreview = false, auth = true, stripe, webhookSend, envOverrides = {} } = {}) {
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bridge-api-test-"));
   const dir = path.join(temporaryRoot, ".bridge");
   const application = new BridgeApplication({ store: new SqliteStore(), stripe, env: { NODE_ENV: localPreview ? "development" : "test", BRIDGE_LOCAL_PREVIEW: localPreview ? "1" : "0", BRIDGE_DATA_DIR: dir, BRIDGE_APP_URL: "http://localhost:5173", BRIDGE_MEDIA_SIGNING_KEY: "test-signing-key", BRIDGE_PUBLISHING_ENABLED: "false", ...envOverrides }, ...(auth ? { authMiddleware: (req, res, next) => { if (!/^Bearer (alice|bob)$/.test(req.headers.authorization || "")) return res.status(401).json({ error: "Sign in required" }); req.uid = req.headers.authorization.split(" ")[1]; next(); } } : {}) });
+  if (webhookSend) application.webhooks.send = webhookSend;
   const server = await new Promise((resolve, reject) => { const server = application.app.listen(0, "127.0.0.1", () => resolve(server)); server.on("error", reject); });
   const base = `http://127.0.0.1:${server.address().port}`;
   t.after(async () => { await new Promise(resolve => server.close(resolve)); application.close(); fs.rmSync(temporaryRoot, { recursive: true, force: true }); });
@@ -26,6 +27,28 @@ async function setup(t, { localPreview = false, auth = true, stripe, envOverride
   return { application, request, project, base, dir, root: `/api/bridge/projects/${project.id}` };
 }
 const pdf = Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF");
+
+test("webhook routes require a session, isolate owners, keep secrets private and send signed tests", async t => {
+  const sent = [];
+  const h = await setup(t, { envOverrides: { BRIDGE_ENCRYPTION_KEY: randomBytes(32).toString("base64"), BRIDGE_PUBLIC_URL: "https://meadow.example" }, webhookSend: async (url, body, headers) => { sent.push({ url, body, headers }); return 204; } });
+  assert.equal((await h.request("/api/bridge/webhooks", { user: null })).status, 401);
+  assert.equal((await h.request("/api/bridge/webhooks", { method: "POST", body: { url: "http://receiver.example" } })).status, 400);
+  const saved = await (await h.request("/api/bridge/webhooks", { method: "POST", body: { url: "https://receiver.example/events" } })).json();
+  assert.match(saved.secret, /^whsec_/);
+  const own = await (await h.request("/api/bridge/webhooks")).json(); assert.equal(own.webhook.url, saved.webhook.url); assert.ok(!JSON.stringify(own).includes(saved.secret));
+  const other = await (await h.request("/api/bridge/webhooks", { user: "bob" })).json(); assert.equal(other.webhook, null);
+  const { key } = await (await h.request("/api/bridge/api-keys", { method: "POST", body: { name: "External client" } })).json();
+  for (const [method, suffix] of [["GET", ""], ["POST", ""], ["DELETE", ""], ["POST", "/test"], ["POST", "/rotate-secret"]]) {
+    assert.equal((await h.request(`/api/bridge/webhooks${suffix}`, { method, headers: { Authorization: `Bearer ${key}` }, ...(method === "POST" ? { body: { url: "https://other.example/events" } } : {}) })).status, 403);
+  }
+  const testResult = await (await h.request("/api/bridge/webhooks/test", { method: "POST", body: {} })).json(); assert.equal(testResult.webhook.lastDelivery.status, "delivered"); assert.equal(sent.length, 1);
+  const [timestamp, signature] = sent[0].headers["X-Meadow-Signature"].split(",").map(part => part.split("=")[1]);
+  assert.equal(signature, createHmac("sha256", saved.secret).update(`${timestamp}.${sent[0].body}`).digest("hex"));
+  const setupResult = await (await h.request("/api/bridge/agent-setup")).json(); assert.equal(setupResult.mcpUrl, "https://meadow.example/mcp"); assert.equal(setupResult.oauthReady, false);
+  const rotated = await (await h.request("/api/bridge/webhooks/rotate-secret", { method: "POST", body: {} })).json(); assert.notEqual(rotated.secret, saved.secret);
+  assert.equal((await h.request("/api/bridge/webhooks", { method: "DELETE" })).status, 200);
+  assert.equal((await (await h.request("/api/bridge/webhooks")).json()).webhook, null);
+});
 function fileForm(bytes = pdf, name = "document.pdf", type = "application/pdf") { const form = new FormData(); form.set("file", new Blob([bytes], { type }), name); return form; }
 
 test("Facebook connection failures explain the safe failing stage and Meta reference", () => {

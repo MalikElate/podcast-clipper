@@ -321,7 +321,11 @@ export class AccountService {
     if (Object.hasOwn(expected, "authorizationId") && account.authorizationId !== expected.authorizationId) return false;
     if (expected.credentials && account.encryptedCredentials && !sameTokens(this.vault.decrypt(account.encryptedCredentials, `account:${id}`), expected.credentials)) return false;
     if (account.status === "deleting") return expected.lossScope === "authorization" && account.platform === "youtube" ? Boolean(this.privacy?.requestLostAccess(account, { authorizationLost: true })) : false;
-    const updated = this.store.put("account", { ...account, status: "reconnect_required", lastError: message, updatedAt: this.clock() });
+    const updated = this.store.transaction(() => {
+      const result = this.store.put("account", { ...account, status: "reconnect_required", lastError: message, updatedAt: this.clock() });
+      if (account.status === "connected") this.webhooks?.reconnect(result);
+      return result;
+    });
     if (expected.lossScope && updated.platform === "youtube") this.privacy?.requestLostAccess(updated, { authorizationLost: expected.lossScope === "authorization" });
     return true;
   }

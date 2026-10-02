@@ -4,8 +4,8 @@ import { isPendingDelivery } from "./RateLimitService.js";
 
 /** One durable delivery per destination. A successful destination is never resent. */
 export class PublishingWorker {
-  constructor({ store, accounts, registry, posts, rates, media, locks, analytics, clock = () => Date.now(), enabled = true, intervalMs = 5000 }) {
-    Object.assign(this, { store, accounts, registry, posts, rates, media, locks, analytics, clock, enabled, intervalMs });
+  constructor({ store, accounts, registry, posts, rates, media, locks, analytics, webhooks, clock = () => Date.now(), enabled = true, intervalMs = 5000 }) {
+    Object.assign(this, { store, accounts, registry, posts, rates, media, locks, analytics, webhooks, clock, enabled, intervalMs });
     this.id = randomUUID(); this.running = false; this.stopped = true; this.timer = null;
   }
   start() {
@@ -17,10 +17,18 @@ export class PublishingWorker {
   }
   stop() { this.stopped = true; clearInterval(this.timer); }
 
+  complete(delivery) {
+    return this.store.transaction(() => {
+      const result = this.store.put("delivery", delivery);
+      this.webhooks?.postCompleted(result);
+      return result;
+    });
+  }
+
   recover() {
     for (const delivery of this.store.list("delivery", { status: "publishing" })) {
       if (delivery.leaseUntil > this.clock()) continue;
-      this.store.put("delivery", { ...delivery, status: "needs_review", error: "Publishing was interrupted before the platform confirmed the result. Check the social account before retrying to avoid a duplicate.", updatedAt: this.clock() });
+      this.complete({ ...delivery, status: "needs_review", error: "Publishing was interrupted before the platform confirmed the result. Check the social account before retrying to avoid a duplicate.", updatedAt: this.clock() });
     }
   }
 
@@ -115,14 +123,14 @@ export class PublishingWorker {
           const inboxDelivered = result.status === "awaiting_publish" && account.platform === "tiktok" && content.settings.deliveryMode === "inbox";
           if ((!inboxDelivered && result.status !== "published") || !result.externalId) throw new BridgeError("The platform did not confirm the delivery.", { code: "unconfirmed_publication" });
           const url = !inboxDelivered && result.url?.startsWith("https://") ? result.url : null;
-          this.store.put("delivery", { ...current, status: inboxDelivered ? "awaiting_publish" : "published", externalId: String(result.externalId), url, error: null, ...(inboxDelivered ? { deliveredAt: this.clock() } : { publishedAt: this.clock() }), leaseUntil: null, progress: { ...current.progress, ...(result.progress || {}) }, updatedAt: this.clock() });
+          this.complete({ ...current, status: inboxDelivered ? "awaiting_publish" : "published", externalId: String(result.externalId), url, error: null, ...(inboxDelivered ? { deliveredAt: this.clock() } : { publishedAt: this.clock() }), leaseUntil: null, progress: { ...current.progress, ...(result.progress || {}) }, updatedAt: this.clock() });
           this.rates.replan(account.rateKey);
         }
       } catch (error) {
         const current = this.store.get("delivery", id);
         if (!current || ["published", "awaiting_publish"].includes(current.status) || !claimed && !isPendingDelivery(current) && current.status !== "processing") return;
         if (dispatched && (error.durableCheckpoint || error.code?.startsWith("durable_"))) {
-          this.store.put("delivery", { ...current, status: "needs_review", error: "Meadow could not save the platform's response. Check the social account before retrying.", leaseUntil: null, updatedAt: this.clock() });
+          this.complete({ ...current, status: "needs_review", error: "Meadow could not save the platform's response. Check the social account before retrying.", leaseUntil: null, updatedAt: this.clock() });
           return;
         }
         const retryConnection = (message, extra = {}) => {
@@ -143,7 +151,7 @@ export class PublishingWorker {
           return;
         }
         if (error.uncertain || ["processing_timeout", "unconfirmed_publication"].includes(error.code)) {
-          this.store.put("delivery", { ...current, status: "needs_review", error: error.message, leaseUntil: null, updatedAt: this.clock() });
+          this.complete({ ...current, status: "needs_review", error: error.message, leaseUntil: null, updatedAt: this.clock() });
         } else if (error.reconnect || error.code === "reconnect_required") {
           const message = error instanceof BridgeError ? error.message : "Reconnect this account to renew its permissions.";
           const marked = this.accounts.markReconnect(account.id, message, { authorizationId: account.authorizationId, credentials, lossScope: ["grant", "access_token"].includes(error.authFailure) ? "authorization" : null });
@@ -162,7 +170,7 @@ export class PublishingWorker {
           if (!polling) this.rates.replan(account.rateKey);
         } else {
           if (!polling) this.store.removeRateEvent(id);
-          this.store.put("delivery", { ...current, status: "failed", error: error instanceof BridgeError ? error.message : "Publishing could not be completed. Check the media and account settings.", leaseUntil: null, updatedAt: this.clock() });
+          this.complete({ ...current, status: "failed", error: error instanceof BridgeError ? error.message : "Publishing could not be completed. Check the media and account settings.", leaseUntil: null, updatedAt: this.clock() });
           this.rates.replan(account.rateKey);
         }
       } finally { clearInterval(timer); }

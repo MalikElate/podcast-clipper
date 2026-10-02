@@ -77,7 +77,7 @@ export class PrivacyService {
     this.activeRequests.set(uid, (this.activeRequests.get(uid) || 0) + 1);
     let finished = false;
     const release = () => { if (finished) return; finished = true; const remaining = (this.activeRequests.get(uid) || 1) - 1; if (remaining) this.activeRequests.set(uid, remaining); else this.activeRequests.delete(uid); };
-    res.once("finish", release);
+    res?.once("finish", release);
     return release;
   }
   requestAccount(uid, input, { identityAlreadyDeleted = false } = {}) {
@@ -94,6 +94,7 @@ export class PrivacyService {
   }
   markDeleting(account) {
     this.store.put("account", { ...account, status: "deleting", deletionRequestedAt: account.deletionRequestedAt || this.clock(), updatedAt: this.clock() });
+    for (const event of this.store.list("webhookDelivery", { ownerUid: account.ownerUid, limit: null }).filter(item => item.event?.data?.account_id === account.id)) this.store.remove("webhookDelivery", event.id);
     for (const delivery of this.store.list("delivery", { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountId === account.id && !["published", "awaiting_publish", "publishing"].includes(item.status))) {
       this.store.put("delivery", { ...delivery, status: "cancelled", error: null, updatedAt: this.clock() });
     }

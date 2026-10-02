@@ -22,6 +22,7 @@ import { RateLimitService } from "./services/RateLimitService.js";
 import { AnalyticsService } from "./services/AnalyticsService.js";
 import { AccountViewsService } from "./services/AccountViewsService.js";
 import { ApiKeyService } from "./services/ApiKeyService.js";
+import { WebhookService } from "./services/WebhookService.js";
 import { PublishingWorker } from "./services/PublishingWorker.js";
 import { BillingService } from "./services/BillingService.js";
 import { AnalyticsErasureService } from "./services/AnalyticsErasureService.js";
@@ -77,7 +78,7 @@ export function connectionErrorMessage(platform, error) {
 
 /** Composition root. Services, repository, adapters and authentication are replaceable. */
 export class BridgeApplication {
-  constructor({ env = process.env, store, durability, registry, storage, authMiddleware, mcpOAuthKeyResolver, stripe, deleteIdentity, deleteAnalytics, welcomeEmail, clock = () => Date.now() } = {}) {
+  constructor({ env = process.env, store, durability, registry, storage, authMiddleware, mcpOAuthKeyResolver, stripe, deleteIdentity, deleteAnalytics, welcomeEmail, webhookSend, clock = () => Date.now() } = {}) {
     this.env = env; this.clock = clock;
     this.localPreview = env.BRIDGE_LOCAL_PREVIEW === "1" && env.NODE_ENV !== "production";
     this.dataDir = path.resolve(env.BRIDGE_DATA_DIR || path.join(backendDir, ".bridge"));
@@ -120,7 +121,9 @@ export class BridgeApplication {
     this.projects.privacy = this.privacy; this.accounts.privacy = this.privacy; this.privacy.accounts = this.accounts; this.privacy.media = this.media;
     this.metaPrivacy = new MetaPrivacyService({ ...deps, privacy: this.privacy, clock });
     this.accounts.metaPrivacy = this.metaPrivacy; this.privacy.metaPrivacy = this.metaPrivacy;
-    this.worker = new PublishingWorker({ store: this.store, accounts: this.accounts, registry: this.registry, posts: this.posts, rates: this.rates, media: this.media, locks: this.locks, analytics: this.analytics, clock, enabled: !this.localPreview && env.BRIDGE_PUBLISHING_ENABLED !== "false" });
+    this.webhooks = new WebhookService({ store: this.store, vault: this.vault, locks: this.locks, privacy: this.privacy, send: webhookSend, clock, enabled: !this.localPreview });
+    this.accounts.webhooks = this.webhooks;
+    this.worker = new PublishingWorker({ store: this.store, accounts: this.accounts, registry: this.registry, posts: this.posts, rates: this.rates, media: this.media, locks: this.locks, analytics: this.analytics, webhooks: this.webhooks, clock, enabled: !this.localPreview && env.BRIDGE_PUBLISHING_ENABLED !== "false" });
     const incoming = path.join(this.dataDir, "incoming"); fs.mkdirSync(incoming, { recursive: true, mode: 0o700 });
     this.privacy.incomingDirectory = incoming;
     this.upload = multer({ dest: incoming, limits: { fileSize: this.media.maxBytes, files: 1, fields: 0 } });
@@ -286,6 +289,12 @@ export class BridgeApplication {
     app.get("/api/bridge/api-keys", route((req, res) => res.json({ apiKeys: this.apiKeys.list(req.uid) })));
     app.post("/api/bridge/api-keys", route((req, res) => res.status(201).json(this.apiKeys.create(req.uid, req.body))));
     app.delete("/api/bridge/api-keys/:id", route((req, res) => res.json(this.apiKeys.remove(req.uid, req.params.id))));
+    app.get("/api/bridge/agent-setup", route((req, res) => res.json({ mcpUrl: new URL("/mcp", this.publicUrl).href, apiUrl: new URL("/api/bridge", this.publicUrl).href, oauthReady: Boolean(this.mcpOAuth) })));
+    app.get("/api/bridge/webhooks", route((req, res) => { requireSession(req); res.json(this.webhooks.get(req.uid)); }));
+    app.post("/api/bridge/webhooks", route((req, res) => { requireSession(req); res.json(this.webhooks.save(req.uid, req.body)); }));
+    app.delete("/api/bridge/webhooks", route((req, res) => { requireSession(req); res.json(this.webhooks.remove(req.uid)); }));
+    app.post("/api/bridge/webhooks/rotate-secret", route((req, res) => { requireSession(req); res.json(this.webhooks.rotate(req.uid)); }));
+    app.post("/api/bridge/webhooks/test", route(async (req, res) => { requireSession(req); res.json(await this.webhooks.test(req.uid)); }));
     app.get("/api/bridge/projects", route((req, res) => res.json({ projects: this.projects.list(req.uid) })));
     app.post("/api/bridge/projects/default", route((req, res) => res.json({ project: this.projects.ensureDefault(req.uid, req.body) })));
     app.patch(root, route((req, res) => res.json({ project: this.projects.update(req.uid, req.params.projectId, req.body) })));
@@ -329,6 +338,7 @@ export class BridgeApplication {
   }
   start() {
     this.worker.start();
+    this.webhooks.start();
     const telegram = this.registry.list().find(provider => provider.id === "telegram");
     if (telegram?.configured) telegram.configureWebhook().catch(error => console.error("Telegram webhook:", error.code || error.name));
     this.privacy.tick().catch(error => console.error("Privacy worker:", error.code || error.name));
@@ -344,11 +354,11 @@ export class BridgeApplication {
       this.analyticsTimer.unref?.();
     }
   }
-  stopWorkers() { this.worker.stop(); clearInterval(this.analyticsTimer); clearInterval(this.privacyTimer); clearInterval(this.connectionTimer); }
+  stopWorkers() { this.worker.stop(); this.webhooks.stop(); clearInterval(this.analyticsTimer); clearInterval(this.privacyTimer); clearInterval(this.connectionTimer); }
   async shutdown({ timeoutMs = 25000 } = {}) {
     this.stopWorkers();
     const deadline = Date.now() + timeoutMs;
-    while (this.worker.running || this.analytics.running || this.privacy.running || this.accounts.running) {
+    while (this.worker.running || this.webhooks.running || this.analytics.running || this.privacy.running || this.accounts.running) {
       if (Date.now() >= deadline) return false;
       await new Promise(resolve => setTimeout(resolve, 50));
     }
