@@ -35,6 +35,31 @@ function setup(t) {
   return { app, provider, project, account, post, submit, now: () => now, advance: ms => { now += ms; } };
 }
 
+test("publication outcomes and reconnection transitions queue owner-scoped webhooks once", async t => {
+  const h = setup(t); h.app.webhooks.save("alice", { url: "https://receiver.example/events" }); h.account("two");
+  const { posts: [post] } = await h.submit([h.post("Private caption", ["one", "two"])]);
+  await h.app.worker.tick(); await h.app.worker.tick();
+  const events = h.app.store.list("webhookDelivery"); assert.equal(events.length, 2);
+  for (const item of events) {
+    assert.equal(item.ownerUid, "alice"); assert.equal(item.event.type, "post.completed"); assert.equal(item.event.data.post_id, post.id); assert.equal(item.event.data.status, "published"); assert.ok(item.event.data.external_ref);
+    assert.ok(!JSON.stringify(item.event).includes("Private caption")); assert.ok(!JSON.stringify(item.event).includes("test-token"));
+  }
+  h.app.accounts.markReconnect("one"); h.app.accounts.markReconnect("one");
+  const reconnectEvents = h.app.store.list("webhookDelivery").filter(item => item.event.type === "connection.needs_reconnect"); assert.equal(reconnectEvents.length, 1); assert.equal(reconnectEvents[0].event.data.account_id, "one");
+  h.app.privacy.markDeleting(h.app.store.get("account", "one"));
+  assert.ok(h.app.store.list("webhookDelivery").every(item => item.event.data.account_id === "two"));
+  assert.equal(h.app.webhooks.postCompleted(h.app.store.get("delivery", post.deliveries.find(item => item.accountId === "one").id)), null);
+});
+
+test("terminal failures queue completion events while automatic retries do not", async t => {
+  const h = setup(t); h.app.webhooks.save("alice", { url: "https://receiver.example/events" });
+  h.provider.behavior = async () => { throw new ProviderError("Temporary failure", { retryable: true }); };
+  const { posts: [post] } = await h.submit([h.post()]); await h.app.worker.tick(); assert.equal(h.app.store.list("webhookDelivery").length, 0);
+  h.advance(60000); h.provider.behavior = async () => { throw new ProviderError("Cannot publish this post"); }; await h.app.worker.tick();
+  const [event] = h.app.store.list("webhookDelivery"); assert.equal(event.event.data.status, "failed"); assert.equal(event.event.data.delivery_id, post.deliveries[0].id);
+  await h.app.worker.tick(); assert.equal(h.app.store.list("webhookDelivery").length, 1);
+});
+
 test("project ownership isolates accounts, media, posts, analytics, and queue writes", async t => {
   const h = setup(t), { app, project } = h, other = app.projects.create("bob", { name: "Other" });
   h.account("other", { projectId: other.id, ownerUid: "bob" }); const { posts: [post] } = await h.submit([h.post()]);
