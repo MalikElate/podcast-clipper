@@ -358,7 +358,7 @@ button:not(:where(.cl-rootBox *)) {
 
 .signup-consent-error {
   margin: 5px 0 0;
-  color: var(--danger);
+  color: #b42318;
   font-size: 12px;
   line-height: 1.4;
 }
