@@ -21,7 +21,7 @@ export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error =
 
       <main className="pricing-main">
         <section className="pricing-intro">
-          <h1>Choose the space your publishing needs.</h1>
+          <h1>Pricing</h1>
 
           <div className="pricing-cycle" role="group" aria-label="Billing frequency">
             <button className={!yearly ? "active" : ""} onClick={() => setYearly(false)}>Monthly</button>

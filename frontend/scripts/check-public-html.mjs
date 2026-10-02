@@ -6,7 +6,7 @@ import { GENERAL_PAGES } from "../src/marketing/generalPages.js";
 import { FREE_TOOL_PAGES, FREE_TOOLS, MEDIA_GUIDES } from "../src/tools/freeToolsCatalog.js";
 import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_DISPLAY, LEGAL_ENTITY } from "../src/siteContact.js";
 
-for (const [path, heading] of [["tiktok-roast/index.html", "TikTok <span>Niche or Not"], ["index.html", "Post to every platform from one dashboard"], ["404.html", ">404<"], ["pricing/index.html", "Choose the space your publishing needs"], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
+for (const [path, heading] of [["tiktok-roast/index.html", "TikTok <span>Niche or Not"], ["index.html", "Post to every platform from one dashboard"], ["404.html", ">404<"], ["pricing/index.html", "<h1>Pricing</h1>"], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
   const html = await readFile(`dist/${path}`, "utf8");
   assert.match(html, /<h1/);
   assert.ok(html.includes(heading), `${path} must contain its own content without JavaScript`);
