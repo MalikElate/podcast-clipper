@@ -2430,6 +2430,8 @@ input[type="range"]::-moz-range-thumb {
 .footer-link-group > div { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
 .footer-link-group a, .footer-link-group button, .footer-mobile-group a, .footer-mobile-group button { padding: 0; border: 0; background: transparent; color: #5f6368; font-family: var(--font-body); font-size: 17px; line-height: 1.35; text-align: left; text-decoration: none; }
 .footer-link-group a:hover, .footer-link-group button:hover, .footer-mobile-group a:hover, .footer-mobile-group button:hover { color: #202124; text-decoration: underline; text-underline-offset: 3px; }
+.footer-community-link { display: inline-flex; align-items: center; gap: 10px; color: #5f6368; font-family: var(--font-body); font-size: 17px; line-height: 1.35; }
+.footer-community-icon { width: 16px; height: 16px; flex: 0 0 auto; }
 .footer-mobile-columns { display: none; }
 .footer-legal-brand { color: inherit; text-decoration: none; }
 .footer-legal-brand .brand { justify-content: flex-start; gap: 8px; }

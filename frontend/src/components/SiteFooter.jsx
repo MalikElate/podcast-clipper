@@ -1,4 +1,5 @@
 import BrandLogo from "./BrandLogo.jsx";
+import { FaInstagram, FaLinkedin, FaXTwitter, FaYoutube } from "react-icons/fa6";
 import { sortPlatforms } from "../bridge/platforms.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import { GENERAL_PAGES } from "../marketing/generalPages.js";
@@ -7,6 +8,12 @@ import { appHref, marketingHref, siteSurface } from "../siteUrls.js";
 const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
 const FEATURED_PLATFORM_IDS = ["instagram", "tiktok", "youtube", "linkedin", "facebook", "x"];
 const FEATURED_PLATFORMS = FEATURED_PLATFORM_IDS.map((id) => PLATFORMS.find((platform) => platform.id === id)).filter(Boolean);
+const COMMUNITY_LINKS = [
+  { label: "X", icon: FaXTwitter, color: "#111111" },
+  { label: "LinkedIn", href: "https://www.linkedin.com/company/findmeadow/", icon: FaLinkedin, color: "#0a66c2" },
+  { label: "Instagram", href: "https://www.instagram.com/findmeadow", icon: FaInstagram, color: "#e4405f" },
+  { label: "YouTube", icon: FaYoutube, color: "#ff0000" },
+];
 
 // Marketing pages are not served on the app host, so link there absolutely.
 const href = (path) => siteSurface() === "app" ? marketingHref(path) : path;
@@ -47,12 +54,13 @@ function HelpLinks() {
   </>;
 }
 
-function SocialLinks() {
-  return <>
-    <a href="https://www.facebook.com/profile.php?id=61594364881932" target="_blank" rel="noopener noreferrer">Facebook</a>
-    <a href="https://www.instagram.com/findmeadow" target="_blank" rel="noopener noreferrer">Instagram</a>
-    <a href="https://www.tiktok.com/@findmeadow" target="_blank" rel="noopener noreferrer">TikTok</a>
-  </>;
+function CommunityLinks() {
+  return COMMUNITY_LINKS.map(({ label, href, icon: Logo, color }) => {
+    const content = <><Logo className="footer-community-icon" style={{ color }} aria-hidden="true" focusable="false" /><span>{label}</span></>;
+    return href
+      ? <a className="footer-community-link" href={href} key={label} target="_blank" rel="noopener noreferrer">{content}</a>
+      : <span className="footer-community-link" key={label}>{content}</span>;
+  });
 }
 
 /** The one footer shared by every public page. */
@@ -70,14 +78,14 @@ export default function SiteFooter({ onGetStarted }) {
           <FooterGroup title="Products"><ProductLinks onGetStarted={onGetStarted} /></FooterGroup>
           <FooterGroup title="Free tools"><ToolLinks /></FooterGroup>
           <FooterGroup title="Help and company"><HelpLinks /></FooterGroup>
-          <FooterGroup title="Follow us"><SocialLinks /></FooterGroup>
+          <FooterGroup title="Community"><CommunityLinks /></FooterGroup>
         </nav>
 
         <nav className="footer-mobile-columns" aria-label="Footer links">
           <MobileFooterGroup title="Products"><ProductLinks onGetStarted={onGetStarted} /></MobileFooterGroup>
           <MobileFooterGroup title="Free tools"><ToolLinks /></MobileFooterGroup>
           <MobileFooterGroup title="Help and company"><HelpLinks /></MobileFooterGroup>
-          <MobileFooterGroup title="Follow us"><SocialLinks /></MobileFooterGroup>
+          <MobileFooterGroup title="Community"><CommunityLinks /></MobileFooterGroup>
         </nav>
 
         <div className="footer-meta-row">
