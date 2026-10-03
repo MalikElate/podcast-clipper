@@ -30,20 +30,11 @@ function ProductLinks({ onGetStarted }) {
   </>;
 }
 
-function WaysLinks() {
+function ToolLinks() {
   return <>
-    <a href={href("/#ways-to-use")}>Create directly</a>
-    <a href={href("/#ways-to-use")}>Publish through agents</a>
-    <a href={href("/#ways-to-use")}>Connect automation</a>
-    <a href={href("/#ways-to-use")}>API and MCP</a>
-  </>;
-}
-
-function PlatformLinks() {
-  return <>
-    {FEATURED_PLATFORMS.map((platform) => <a href={href(`/${platform.slug}`)} key={platform.id}>{platform.name}</a>)}
-    {PLATFORM_USE_CASES.filter(platform => platform.chatOnly).map(platform => <a href={href(`/${platform.slug}`)} key={platform.id}>{platform.name}</a>)}
-    <a href={href("/#platforms")}>View all platforms</a>
+    {FEATURED_PLATFORMS.map((platform) => <a href={href(`/${platform.slug}`)} key={platform.id}>{platform.name} Scheduler</a>)}
+    {PLATFORM_USE_CASES.filter(platform => platform.chatOnly).map(platform => <a href={href(`/${platform.slug}`)} key={platform.id}>{platform.name} Chat Scheduler</a>)}
+    <a href={href("/social-media-scheduler")}>All-platform Scheduler</a>
   </>;
 }
 
@@ -69,15 +60,13 @@ export default function SiteFooter({ onGetStarted }) {
 
         <nav className="footer-columns" aria-label="Footer links">
           <FooterGroup title="Products"><ProductLinks onGetStarted={onGetStarted} /></FooterGroup>
-          <FooterGroup title="Ways to use Meadow"><WaysLinks /></FooterGroup>
-          <FooterGroup title="Platforms"><PlatformLinks /></FooterGroup>
+          <FooterGroup title="Tools"><ToolLinks /></FooterGroup>
           <FooterGroup title="Help and company"><HelpLinks /></FooterGroup>
         </nav>
 
         <nav className="footer-mobile-columns" aria-label="Footer links">
           <MobileFooterGroup title="Products"><ProductLinks onGetStarted={onGetStarted} /></MobileFooterGroup>
-          <MobileFooterGroup title="Ways to use Meadow"><WaysLinks /></MobileFooterGroup>
-          <MobileFooterGroup title="Platforms"><PlatformLinks /></MobileFooterGroup>
+          <MobileFooterGroup title="Tools"><ToolLinks /></MobileFooterGroup>
           <MobileFooterGroup title="Help and company"><HelpLinks /></MobileFooterGroup>
         </nav>
 
