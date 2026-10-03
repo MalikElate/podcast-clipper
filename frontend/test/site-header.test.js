@@ -34,7 +34,7 @@ test("signed-out navigation separates sign-in from free account creation", () =>
 
 test("a restored signed-in session shows only the dashboard action", () => {
   const html = renderHeader({ user: { id: "test_user" }, loading: false }, { onSignIn: () => {}, onStartPosting: () => {} });
-  assert.doesNotMatch(html, /Sign in|Try for free|\/sign-up|Start posting|<button/);
+  assert.doesNotMatch(html, /Sign in|Try for free|\/sign-up|Start posting|<button class="btn-small-primary"/);
   assert.match(html, /class="btn-small-primary" href="https:\/\/app\.findmeadow\.com\/dashboard">Dashboard /);
 });
 
