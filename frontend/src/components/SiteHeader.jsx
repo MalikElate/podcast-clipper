@@ -15,7 +15,6 @@ function HeaderAction({ children, className, href, onClick }) {
 export default function SiteHeader({ className = "", homeHref = marketingHref("/"), onSignIn, onStartPosting }) {
   const { user, loading } = usePublicAuth();
   const signIn = onSignIn || onStartPosting;
-  const startPosting = onStartPosting || onSignIn;
 
   return (
     <header className={`landing-header site-header ${className}`.trim()}>
@@ -27,7 +26,7 @@ export default function SiteHeader({ className = "", homeHref = marketingHref("/
       </nav>
       <div className="landing-actions">
         {!user && !loading && <HeaderAction className="btn-ghost" href={appHref("/sign-in")} onClick={signIn}>Sign in</HeaderAction>}
-        <HeaderAction className="btn-small-primary" href={user ? appHref("/dashboard") : signupHref()} onClick={user ? startPosting : undefined}>{user ? "Start posting" : "Try for free"} <ArrowIcon /></HeaderAction>
+        <HeaderAction className="btn-small-primary" href={user ? appHref("/dashboard") : signupHref()}>{user ? "Dashboard" : "Try for free"} <ArrowIcon /></HeaderAction>
       </div>
     </header>
   );

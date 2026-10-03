@@ -33,9 +33,9 @@ test("signed-out navigation separates sign-in from free account creation", () =>
 });
 
 test("a restored signed-in session shows only the dashboard action", () => {
-  const html = renderHeader({ user: { id: "test_user" }, loading: false });
-  assert.doesNotMatch(html, /Sign in|Try for free|\/sign-up/);
-  assert.match(html, /class="btn-small-primary" href="https:\/\/app\.findmeadow\.com\/dashboard">Start posting /);
+  const html = renderHeader({ user: { id: "test_user" }, loading: false }, { onSignIn: () => {}, onStartPosting: () => {} });
+  assert.doesNotMatch(html, /Sign in|Try for free|\/sign-up|Start posting|<button/);
+  assert.match(html, /class="btn-small-primary" href="https:\/\/app\.findmeadow\.com\/dashboard">Dashboard /);
 });
 
 test("session restoration does not show a sign-in action", () => {
