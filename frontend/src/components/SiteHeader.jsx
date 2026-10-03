@@ -21,7 +21,7 @@ export default function SiteHeader({ className = "", homeHref = marketingHref("/
     <header className={`landing-header site-header ${className}`.trim()}>
       <a className="landing-logo-link" href={homeHref} aria-label="Meadow home"><BrandLogo /></a>
       <nav className="landing-nav" aria-label="Main navigation">
-        <a href={marketingHref("/#platforms")}>Platforms</a>
+        <a href={marketingHref("/#platforms")}>Tools</a>
         <a href={marketingHref("/#ways-to-use")}>API/MCP</a>
         <a href={marketingHref("/contact")}>Contact</a>
       </nav>
