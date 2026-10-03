@@ -55,10 +55,7 @@ export default function AgentPublishingDemo() {
     <figure className="agent-demo" ref={demoRef} aria-label="Publishing through an AI assistant" aria-describedby="agent-demo-description">
       <div className="agent-demo-header">
         <span className="agent-demo-avatar"><AssistantMark /></span>
-        <div><strong>AI assistant</strong><span className="agent-demo-connection"><i />Meadow connected</span></div>
-        <button type="button" className="agent-demo-toggle" onClick={() => setPlaying(current => !current)} aria-label={playing ? "Pause AI publishing demo" : "Play AI publishing demo"}>
-          {playing ? <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10" stroke="currentColor" strokeWidth="2" /></svg> : <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 2 9 6-9 6z" fill="currentColor" /></svg>}
-        </button>
+        <strong>AI assistant</strong>
       </div>
 
       <div className="agent-demo-conversation" aria-hidden="true" data-step={step} data-playing={playing}>
@@ -68,7 +65,7 @@ export default function AgentPublishingDemo() {
           <div className="agent-demo-answer">
             <p>{step === 0 ? <>Preparing your posts<span className="agent-demo-thinking">…</span></> : "Three posts prepared. Ready for your review."}</p>
             <div className={`agent-demo-preview ${step >= 1 ? "is-visible" : ""}`}>
-              <div className="agent-demo-post"><span>STUDIO LAUNCH</span><strong>A little more room to create.</strong><p>Our new studio is open. Come make something good.</p></div>
+              <div className="agent-demo-post"><strong>A little more room to create.</strong><p>Our new studio is open. Come make something good.</p></div>
               <div className="agent-demo-channels">
                 {CHANNELS.map((channel, index) => {
                   const published = step >= index + 4;
@@ -86,7 +83,6 @@ export default function AgentPublishingDemo() {
         <div className={`agent-demo-success ${step >= 6 ? "is-visible" : ""}`}><span><Check /></span>You’re live on all 3 channels.</div>
       </div>
 
-      <div className="agent-demo-composer" aria-hidden="true"><span>Ask your assistant…</span><span className="agent-demo-send"><svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4m-4 4 4-4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span></div>
       <figcaption id="agent-demo-description" className="sr-only">Illustrative sample conversation: ask a generic AI assistant connected to Meadow to share a studio launch on LinkedIn, Threads, and Bluesky. The assistant prepares the posts for review, waits for your approval, and then shows each channel as published. No real posts are created by this demo.</figcaption>
     </figure>
   );
