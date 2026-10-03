@@ -68,14 +68,14 @@ export default function SiteFooter({ onGetStarted }) {
 
         <nav className="footer-columns" aria-label="Footer links">
           <FooterGroup title="Products"><ProductLinks onGetStarted={onGetStarted} /></FooterGroup>
-          <FooterGroup title="Tools"><ToolLinks /></FooterGroup>
+          <FooterGroup title="Free tools"><ToolLinks /></FooterGroup>
           <FooterGroup title="Help and company"><HelpLinks /></FooterGroup>
           <FooterGroup title="Follow us"><SocialLinks /></FooterGroup>
         </nav>
 
         <nav className="footer-mobile-columns" aria-label="Footer links">
           <MobileFooterGroup title="Products"><ProductLinks onGetStarted={onGetStarted} /></MobileFooterGroup>
-          <MobileFooterGroup title="Tools"><ToolLinks /></MobileFooterGroup>
+          <MobileFooterGroup title="Free tools"><ToolLinks /></MobileFooterGroup>
           <MobileFooterGroup title="Help and company"><HelpLinks /></MobileFooterGroup>
           <MobileFooterGroup title="Follow us"><SocialLinks /></MobileFooterGroup>
         </nav>
