@@ -47,6 +47,14 @@ function HelpLinks() {
   </>;
 }
 
+function SocialLinks() {
+  return <>
+    <a href="https://www.facebook.com/profile.php?id=61594364881932" target="_blank" rel="noopener noreferrer">Facebook</a>
+    <a href="https://www.instagram.com/findmeadow" target="_blank" rel="noopener noreferrer">Instagram</a>
+    <a href="https://www.tiktok.com/@findmeadow" target="_blank" rel="noopener noreferrer">TikTok</a>
+  </>;
+}
+
 /** The one footer shared by every public page. */
 export default function SiteFooter({ onGetStarted }) {
   return (
@@ -62,12 +70,14 @@ export default function SiteFooter({ onGetStarted }) {
           <FooterGroup title="Products"><ProductLinks onGetStarted={onGetStarted} /></FooterGroup>
           <FooterGroup title="Tools"><ToolLinks /></FooterGroup>
           <FooterGroup title="Help and company"><HelpLinks /></FooterGroup>
+          <FooterGroup title="Follow us"><SocialLinks /></FooterGroup>
         </nav>
 
         <nav className="footer-mobile-columns" aria-label="Footer links">
           <MobileFooterGroup title="Products"><ProductLinks onGetStarted={onGetStarted} /></MobileFooterGroup>
           <MobileFooterGroup title="Tools"><ToolLinks /></MobileFooterGroup>
           <MobileFooterGroup title="Help and company"><HelpLinks /></MobileFooterGroup>
+          <MobileFooterGroup title="Follow us"><SocialLinks /></MobileFooterGroup>
         </nav>
 
         <div className="footer-meta-row">
