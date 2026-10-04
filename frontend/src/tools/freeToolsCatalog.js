@@ -67,6 +67,19 @@ export const MEDIA_GUIDES = [
   { slug: 'pinterest-image-sizes', platform: 'Pinterest', intro: 'Build a vertical Pin that gives the image room to lead and keeps your headline readable.', note: 'Pinterest recommends a 2:3 ratio, such as 1000 × 1500 pixels, for standard image creative. Taller images may be cut off in feeds. Use a concise text overlay with enough contrast, and keep branding visible without covering the subject.', source: 'https://business.pinterest.com/creative-best-practices/', sourceLabel: 'Pinterest creative guidance', rows: [['Standard Pin',1000,1500,'2:3'],['Square image canvas',1000,1000,'1:1'],['Vertical video canvas',1080,1920,'9:16']] },
 ].map(guide => ({ ...guide, path: `/free-tools/media-size-guide/${guide.slug}`, name: `${guide.platform} Media Sizes`, title: `${guide.platform} Image and Video Size Guide · Meadow`, description: `${guide.intro} Dimensions, ratios and free crop presets.` }));
 
+// A tool prepares something that still has to be posted somewhere, so each one
+// points at the page that schedules it. Tools with no single destination point
+// at the all-platform scheduler instead.
+const SCHEDULERS = [['instagram', 'instagram-publishing', 'Instagram'], ['tiktok', 'tiktok-publishing', 'TikTok'], ['youtube', 'youtube-publishing', 'YouTube'], ['linkedin', 'linkedin-publishing', 'LinkedIn'], ['facebook', 'facebook-publishing', 'Facebook'], ['pinterest', 'pinterest-publishing', 'Pinterest'], ['x', 'x-publishing', 'X']];
+
+export function schedulerFor(page) {
+  const slug = page?.slug || '';
+  const match = SCHEDULERS.find(([prefix]) => slug.startsWith(`${prefix}-`));
+  return match
+    ? { path: `/${match[1]}/`, platform: match[2], label: `Schedule ${match[2]} posts with Meadow` }
+    : { path: '/social-media-scheduler/', platform: null, label: 'Schedule posts across every connected platform' };
+}
+
 export const CROP_PRESETS = MEDIA_GUIDES.flatMap(guide => guide.rows.map(([label, width, height, ratio], index) => ({ id: `${guide.slug}-${index}`, label: `${guide.platform} · ${label}`, width, height, ratio })));
 export const TOOLS_HUB = { path: '/free-tools', name: 'Free Social Media Tools', title: 'Free Social Media Tools for Creators · Meadow', description: 'Free tools for better social posts: crop images, split Instagram grids, build UTM links, format text, check titles and generate captions and tags.' };
 export const GUIDES_HUB = { path: '/free-tools/media-size-guide', name: 'Social Media Size Guide', title: 'Social Media Image and Video Size Guide · Meadow', description: 'Find practical image dimensions and video canvas sizes for Instagram, TikTok, YouTube, LinkedIn, Facebook, X, and Pinterest, with free crop presets.' };

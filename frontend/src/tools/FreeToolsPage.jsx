@@ -2,7 +2,7 @@ import { useState } from 'react';
 import SiteHeader from '../components/SiteHeader.jsx';
 import SiteFooter from '../components/SiteFooter.jsx';
 import { appHref } from '../siteUrls.js';
-import { FREE_TOOLS, GUIDES_HUB, MEDIA_GUIDES, TOOLS_HUB } from './freeToolsCatalog.js';
+import { FREE_TOOLS, GUIDES_HUB, MEDIA_GUIDES, TOOLS_HUB, schedulerFor } from './freeToolsCatalog.js';
 import ImageTools from './ImageTools.jsx';
 import { CaptionGenerator, HandleChecker, LinkedInFormatter, UtmBuilder, YouTubeTagGenerator, YouTubeTitleChecker } from './TextTools.jsx';
 
@@ -72,12 +72,14 @@ export default function FreeToolsPage({ page }) {
   const isHub = page === TOOLS_HUB;
   const isGuide = page === GUIDES_HUB || Boolean(page.platform);
   const related = FREE_TOOLS.filter(tool => tool !== page).sort((a, b) => Number(b.category === page.category) - Number(a.category === page.category)).slice(0, 4);
+  const scheduler = schedulerFor(page);
   return <div className="app"><div className="centered-shell landing-shell"><div className="landing landing-v2 ft-page">
     <SiteHeader />
     <main className="ft-main"><StructuredData page={page} />
       <nav className="ft-breadcrumbs" aria-label="Breadcrumb"><a href="/">Meadow</a><span aria-hidden="true">/</span>{isHub ? <span>Free tools</span> : <><a href="/free-tools/">Free tools</a><span aria-hidden="true">/</span>{page.platform && <><a href={href(GUIDES_HUB)}>Media sizes</a><span aria-hidden="true">/</span></>}<span>{page.name}</span></>}</nav>
       <header className={`ft-heading ${isHub ? 'ft-hub-heading' : ''}`}><h1>{page.name}</h1><p>{isHub ? 'A little help for your next post. Create, crop, format, and plan with tools that are free for everyone.' : page.intro || page.description}</p>{!isGuide && <span className="ft-hint">Free to use. No signup required.</span>}</header>
       {isHub ? <Hub /> : isGuide ? <Guides page={page} /> : <><noscript><p className="ft-error">Enable JavaScript to use the interactive tool. The guide and frequently asked questions are available below.</p></noscript><Tool page={page} /><div className="ft-editorial ft-tool-guide">{page.sections.map(([heading, text]) => <section key={heading}><h2>{heading}</h2><p>{text}</p></section>)}</div><section className="ft-faq"><h2>Questions about {page.name.toLowerCase()}</h2>{page.faq.map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}</section><section className="ft-related"><div className="ft-section-heading"><h2>Keep creating.</h2><a href="/free-tools/">All free tools ↗</a></div><ToolList entries={related} /></section></>}
+      {!isHub && <section className="ft-scheduler-link"><p>{scheduler.platform ? <>Made something for {scheduler.platform}? <a href={scheduler.path}>{scheduler.label}</a>, alongside your other channels.</> : <><a href={scheduler.path}>{scheduler.label}</a> from one calendar.</>}</p></section>}
       <section className="ft-cta"><div><h2>Ready for the next post?</h2><p>Bring your content and channels together in Meadow.</p></div><a className="ft-button" href={appHref('/dashboard')}>Start posting ↗</a></section>
     </main>
     <SiteFooter />

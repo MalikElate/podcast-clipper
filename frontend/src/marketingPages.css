@@ -78,3 +78,7 @@
 .contact-method p a:hover { text-decoration: underline; }
 .contact-method .contact-method-note { margin-top: 12px; color: var(--text-muted); font-size: 15px; font-weight: 400; line-height: 1.6; }
 .contact-entity { max-width: 760px; margin-top: 30px; color: var(--text-muted); font-size: 15px; line-height: 1.7; }
+
+.ft-scheduler-link { margin-top: 26px; padding: 18px 22px; border: 1px solid var(--border); border-radius: 16px; background: rgba(255,255,255,.6); }
+.ft-scheduler-link p { margin: 0; color: var(--text-muted); font-size: 15px; line-height: 1.6; }
+.ft-scheduler-link a { color: var(--text); font-weight: 650; }
