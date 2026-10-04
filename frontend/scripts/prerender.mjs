@@ -11,7 +11,7 @@ const server = await createServer({ server: { middlewareMode: true }, appType: "
 const pages = [
   ...FREE_TOOL_PAGES.map(page => ({ path: page.path.slice(1), kind: "free-tool", platformId: page.path, title: page.title, description: page.description })),
   { path: "tiktok-roast", kind: "tiktok-roast", title: "TikTok Niche or Not — Free Caption Review · Meadow", description: "Review public TikTok captions, get practical fixes, then use Meadow to schedule and cross-post what you create next." },
-  { path: "", kind: null, title: "Meadow — Plan once, publish everywhere", description: "Connect your channels, create once, and schedule the right version of every post from one Meadow workspace." },
+  { path: "", kind: null, title: "Post to 11 Social Platforms at Once — Free | Meadow", description: "Schedule posts to TikTok, Instagram, YouTube, LinkedIn and 7 more from one place. Free plan with 5 connected accounts, no credit card." },
   { path: "start", kind: "ad-funnel", title: "Start Posting Free · Meadow", description: "Create in Meadow or prepare drafts from Claude. Schedule posts to your connected social accounts, track every delivery, and start free with no credit card.", noindex: true },
   { path: "404", kind: "not-found", title: "Page not found · Meadow", description: "The page could not be found. Head back to Meadow to keep your publishing work in one place." },
   { path: "pricing", kind: "pricing", title: "Pricing · Meadow", description: "Compare Meadow plans for creating, scheduling, and publishing across your social channels." },

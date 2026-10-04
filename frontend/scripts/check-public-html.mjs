@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { DASHBOARD_PATHS } from "../src/bridge/dashboardRoutes.js";
 import { PLATFORM_USE_CASES } from "../src/platformUseCases.js";
 import { GENERAL_PAGES } from "../src/marketing/generalPages.js";
-import { FREE_TOOL_PAGES, FREE_TOOLS, MEDIA_GUIDES } from "../src/tools/freeToolsCatalog.js";
+import { FREE_TOOL_PAGES, FREE_TOOLS, MEDIA_GUIDES, schedulerFor } from "../src/tools/freeToolsCatalog.js";
 import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_DISPLAY, LEGAL_ENTITY } from "../src/siteContact.js";
 
 for (const [path, heading] of [["tiktok-roast/index.html", "TikTok <span>Niche or Not"], ["index.html", "Post to every platform from one dashboard"], ["404.html", ">404<"], ["pricing/index.html", "<h1>Pricing</h1>"], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
@@ -61,6 +61,18 @@ for (const detail of [`mailto:${CONTACT_EMAIL}`, `tel:${CONTACT_PHONE}`, CONTACT
 }
 assert.ok(contactHtml.includes('"@type":"ContactPoint"'), "The contact page must describe its contact point for search engines");
 assert.ok(sitemapUrls.includes("https://findmeadow.com/contact/"), "The contact page must appear in the sitemap");
+
+// A tool that never points anywhere leaves the visitor at a dead end and the
+// page without an internal link to the product it exists to introduce.
+for (const tool of FREE_TOOLS) {
+  const html = await readFile(`dist${tool.path}/index.html`, "utf8");
+  const { path } = schedulerFor(tool);
+  assert.ok(html.includes(`href="${path}"`), `${tool.path} must link to ${path}`);
+}
+for (const platform of PLATFORM_USE_CASES) {
+  const html = await readFile(`dist/${platform.slug}/index.html`, "utf8");
+  assert.ok(html.includes('href="https://findmeadow.com/#ways-to-use"'), `${platform.slug} must link to the API and MCP section`);
+}
 
 const roastHtml = await readFile("dist/tiktok-roast/index.html", "utf8");
 assert.ok(!roastHtml.includes("Meadow is a social media scheduling tool, and I’m not sure what this has to do with our main product."), "tiktok-roast/index.html still contains removed intro copy");

@@ -1,11 +1,14 @@
-const tool = (slug, name, category, description, intro, sections, faq) => ({ slug, path: `/free-tools/${slug}`, name, category, title: `Free ${name} · Meadow`, description, intro, sections, faq });
+// `Free <name> · Meadow` suits a tool whose name is already what people search
+// for. A tool competing on a broader phrase passes its own title instead.
+const tool = (slug, name, category, description, intro, sections, faq, title) => ({ slug, path: `/free-tools/${slug}`, name, category, title: title || `Free ${name} · Meadow`, description, intro, sections, faq });
 
 export const FREE_TOOLS = [
   tool('utm-builder', 'UTM Builder', 'Planning',
-    'Build campaign tracking URLs with source, medium, campaign, term, and content parameters. Free UTM link builder with no signup.',
+    'Build a UTM tracking link in seconds. Add source, medium and campaign tags to any URL, then copy it into your next post. Free, no signup.',
     'Know which post brought people to your site. Build a campaign link you can copy straight into your next post.',
     [['Give every campaign a consistent name', 'Use the source for the platform, the medium for the type of traffic, and the campaign for the initiative. For example: instagram, social, and autumn_launch. Keep the same spelling and capitalization across a campaign so your analytics can group visits together.'], ['Keep the destination intact', 'Existing query parameters and page anchors stay in your link. The fields below replace matching UTM parameters, so you can update an old campaign URL without stacking duplicate tags. Use UTMs on external links to your site; adding them to internal navigation can confuse attribution.']],
-    [['What are UTM parameters?', 'UTM parameters are labels added to a URL. Analytics tools can use them to associate a visit with a source, medium, and campaign. They do not shorten the link or measure conversions by themselves.'], ['Which fields are required?', 'This builder requires a destination URL, source, medium, and campaign. Term, content, and campaign ID are optional.'], ['Does this connect to Google Analytics?', 'No connection is needed to build links. Your destination website needs its own analytics setup to record visits and campaign information.']]),
+    [['What are UTM parameters?', 'UTM parameters are labels added to a URL. Analytics tools can use them to associate a visit with a source, medium, and campaign. They do not shorten the link or measure conversions by themselves.'], ['Which fields are required?', 'This builder requires a destination URL, source, medium, and campaign. Term, content, and campaign ID are optional.'], ['Does this connect to Google Analytics?', 'No connection is needed to build links. Your destination website needs its own analytics setup to record visits and campaign information.']],
+    'Free UTM Builder — Tracking Links for Social Posts | Meadow'),
   tool('social-media-image-cropper', 'Social Media Image Cropper', 'Images',
     'Crop and resize images for Instagram, TikTok, YouTube, LinkedIn, Facebook, X, and Pinterest. Preview your crop and download JPG or PNG for free.',
     'One image, the right fit for every feed. Pick a canvas, adjust the crop, and download a ready-to-use image.',
@@ -42,10 +45,11 @@ export const FREE_TOOLS = [
     [['Use emphasis sparingly', 'Highlight a short heading or a key phrase, then let plain text do the rest. Select the words you want to change before choosing a style. If nothing is selected, the style applies to the whole post. Line breaks and punctuation stay in place.'], ['Keep the post accessible', 'These styles use Unicode characters, not native LinkedIn rich text. Screen readers, search, and some fonts may interpret them differently. Keep essential information in plain text and use the Plain text button to remove these styles when needed.']],
     [['How does LinkedIn formatting work?', 'The formatter replaces Latin letters and, for some styles, numbers with corresponding Unicode characters. These can be copied into a plain-text post.'], ['Can I style just one part?', 'Yes. Select text in the editor, then choose a style. Without a selection, the style is applied to the entire editor.'], ['Will every language change style?', 'The bold and italic alphabets cover basic Latin letters. Other scripts, accented letters, emoji, and punctuation are preserved. Underline uses combining marks.']]),
   tool('youtube-title-checker', 'YouTube Title Checker', 'Writing',
-    'Check a YouTube title against the 100-character limit, review keyword placement, and preview mobile and desktop cards with your thumbnail.',
+    'Check your YouTube title before you publish: 100-character limit, keyword placement, and a mobile and desktop preview with your thumbnail. Free.',
     'See your title before viewers do. Check the length, put the key idea first, and preview it with a thumbnail.',
     [['Lead with the reason to watch', 'A title should tell a viewer what the video is about while matching what it delivers. Put the topic or payoff near the beginning. The optional target phrase check helps you spot an omission, but it is not a ranking score.'], ['A preview is an approximation', 'YouTube uses different layouts, fonts, and available widths across devices and feeds. This tool checks the 100-character title limit and shows an illustrative two-line preview. The exact point of truncation can vary on YouTube.']],
-    [['What is YouTube’s title limit?', 'The YouTube Data API specifies a maximum of 100 characters and disallows < and > in video titles.'], ['Does a shorter title rank better?', 'There is no ranking promise here. Clear, accurate wording matters more than reaching an arbitrary length. Keep important context near the start for smaller displays.'], ['Does the thumbnail leave my device?', 'No. An optional thumbnail is displayed locally in your browser and is not uploaded.']]),
+    [['What is YouTube’s title limit?', 'The YouTube Data API specifies a maximum of 100 characters and disallows < and > in video titles.'], ['Does a shorter title rank better?', 'There is no ranking promise here. Clear, accurate wording matters more than reaching an arbitrary length. Keep important context near the start for smaller displays.'], ['Does the thumbnail leave my device?', 'No. An optional thumbnail is displayed locally in your browser and is not uploaded.']],
+    'YouTube Title Checker — Length, Keywords & Preview | Meadow'),
   tool('youtube-tag-generator', 'YouTube Tag Generator', 'Writing',
     'Generate relevant YouTube tag ideas from your video topic and keywords. Edit the list, check the 500-character budget, and copy comma-separated tags.',
     'Give your video a focused set of tags. Describe the topic, add your key phrases, and keep the suggestions that fit.',
@@ -62,6 +66,19 @@ export const MEDIA_GUIDES = [
   { slug: 'x-image-sizes', platform: 'X', intro: 'Prepare landscape or square post images and a wide profile header for X.', note: 'A post can appear in a feed, a detail view, or a multi-image layout, each with a different crop. Keep the important content near the middle and check it on a phone. Profile header artwork also needs room for the avatar overlap.', source: 'https://help.x.com/en/managing-your-account/common-issues-when-uploading-profile-photo', sourceLabel: 'X profile image guidance', rows: [['Landscape post canvas',1600,900,'16:9'],['Square post canvas',1080,1080,'1:1'],['Profile header',1500,500,'3:1']] },
   { slug: 'pinterest-image-sizes', platform: 'Pinterest', intro: 'Build a vertical Pin that gives the image room to lead and keeps your headline readable.', note: 'Pinterest recommends a 2:3 ratio, such as 1000 × 1500 pixels, for standard image creative. Taller images may be cut off in feeds. Use a concise text overlay with enough contrast, and keep branding visible without covering the subject.', source: 'https://business.pinterest.com/creative-best-practices/', sourceLabel: 'Pinterest creative guidance', rows: [['Standard Pin',1000,1500,'2:3'],['Square image canvas',1000,1000,'1:1'],['Vertical video canvas',1080,1920,'9:16']] },
 ].map(guide => ({ ...guide, path: `/free-tools/media-size-guide/${guide.slug}`, name: `${guide.platform} Media Sizes`, title: `${guide.platform} Image and Video Size Guide · Meadow`, description: `${guide.intro} Dimensions, ratios and free crop presets.` }));
+
+// A tool prepares something that still has to be posted somewhere, so each one
+// points at the page that schedules it. Tools with no single destination point
+// at the all-platform scheduler instead.
+const SCHEDULERS = [['instagram', 'instagram-publishing', 'Instagram'], ['tiktok', 'tiktok-publishing', 'TikTok'], ['youtube', 'youtube-publishing', 'YouTube'], ['linkedin', 'linkedin-publishing', 'LinkedIn'], ['facebook', 'facebook-publishing', 'Facebook'], ['pinterest', 'pinterest-publishing', 'Pinterest'], ['x', 'x-publishing', 'X']];
+
+export function schedulerFor(page) {
+  const slug = page?.slug || '';
+  const match = SCHEDULERS.find(([prefix]) => slug.startsWith(`${prefix}-`));
+  return match
+    ? { path: `/${match[1]}/`, platform: match[2], label: `Schedule ${match[2]} posts with Meadow` }
+    : { path: '/social-media-scheduler/', platform: null, label: 'Schedule posts across every connected platform' };
+}
 
 export const CROP_PRESETS = MEDIA_GUIDES.flatMap(guide => guide.rows.map(([label, width, height, ratio], index) => ({ id: `${guide.slug}-${index}`, label: `${guide.platform} · ${label}`, width, height, ratio })));
 export const TOOLS_HUB = { path: '/free-tools', name: 'Free Social Media Tools', title: 'Free Social Media Tools for Creators · Meadow', description: 'Free tools for better social posts: crop images, split Instagram grids, build UTM links, format text, check titles and generate captions and tags.' };

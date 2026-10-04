@@ -3,6 +3,7 @@ import { PlatformIcon } from "../bridge/ui.jsx";
 import SiteFooter from "./SiteFooter.jsx";
 import HeroDemo from "./HeroDemo.jsx";
 import SiteHeader from "./SiteHeader.jsx";
+import { marketingHref } from "../siteUrls.js";
 
 const PLATFORM_THEMES = {
   twitch: { "--platform-accent": "#9146ff", "--platform-secondary": "#5c16c5", "--platform-highlight": "#c8a8ff", "--platform-surface-from": "#fcfaff", "--platform-surface-to": "#f1eaff", "--platform-action": "#772ce8", "--platform-action-hover": "#5c16c5" },
@@ -69,6 +70,13 @@ export default function PlatformUseCasePage({ platform, onGetStarted }) {
           <ul className="platform-use-case-list" aria-label={`${platform.name} use cases`}>
             {platform.useCases.map(useCase => <li key={useCase}>{useCase}</li>)}
           </ul>
+        </section>
+
+        <section className="landing-section platform-use-case-api">
+          <p>
+            Prefer to publish from your own code? {platform.name} is also reachable through Meadow&rsquo;s{" "}
+            <a href={marketingHref("/#ways-to-use")}>API and MCP server</a>, so an agent or a script can prepare and schedule a post without opening the dashboard.
+          </p>
         </section>
 
         <section className="landing-cta-section platform-use-case-cta">
