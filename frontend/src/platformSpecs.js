@@ -52,11 +52,18 @@ export function specRows(platformId, platformName) {
   } else if (spec.maxImages > 1) {
     rows.push({ label: "Photos per post", value: `Up to ${spec.maxImages}` });
   }
+  // A platform may cap a video's length, its size, both, or state no length cap
+  // at all. Each combination has to read as a sentence on its own.
   const videoSize = formatBytes(spec.videoMaxBytes);
-  if (videoSize || spec.videoMaxSeconds) {
-    const length = formatDuration(spec.videoMaxSeconds);
-    const noLimit = spec.videoMaxSeconds === null && spec.formats.includes("video");
-    rows.push({ label: "Video", value: length ? `Up to ${length}${videoSize ? ` and ${videoSize}` : ""}` : `${noLimit ? "No length limit through Meadow" : "Up to"}${videoSize ? `, up to ${videoSize}` : ""}` });
+  const videoLength = formatDuration(spec.videoMaxSeconds);
+  const uncapped = spec.videoMaxSeconds === null && spec.formats.includes("video");
+  if (videoLength || videoSize) {
+    let value;
+    if (videoLength && videoSize) value = `Up to ${videoLength} and ${videoSize}`;
+    else if (videoLength) value = `Up to ${videoLength}`;
+    else if (uncapped) value = `No length limit through Meadow, up to ${videoSize}`;
+    else value = `Up to ${videoSize}`;
+    rows.push({ label: "Video", value });
   }
   if (spec.imageMaxBytes) rows.push({ label: "Photo size", value: `Up to ${formatBytes(spec.imageMaxBytes)}` });
   if (spec.documentMaxBytes) rows.push({ label: "Document size", value: `Up to ${formatBytes(spec.documentMaxBytes)}` });

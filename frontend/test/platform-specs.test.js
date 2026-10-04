@@ -46,11 +46,26 @@ test("sizes and durations read the way a person would write them", () => {
   assert.equal(formatDuration(null), null);
 });
 
-test("video limits read as one sentence, including the platform with no length cap", () => {
-  const instagram = specRows("instagram", "Instagram").find(row => row.label === "Video");
-  assert.equal(instagram.value, "Up to 15 minutes and 1,000 MB");
-  const tiktok = specRows("tiktok", "TikTok").find(row => row.label === "Video");
-  assert.equal(tiktok.value, "No length limit through Meadow, up to 4 GB");
+test("video limits read as one sentence whichever caps a platform sets", () => {
+  const video = id => specRows(id, id).find(row => row.label === "Video")?.value;
+  // Length and size.
+  assert.equal(video("instagram"), "Up to 15 minutes and 1,000 MB");
+  // Size only, with the length explicitly uncapped.
+  assert.equal(video("tiktok"), "No length limit through Meadow, up to 4 GB");
+  // Size only, with no length stated at all.
+  assert.equal(video("telegram"), "Up to 50 MB");
+  // Neither: a chat platform takes no video.
+  assert.equal(video("twitch"), undefined);
+});
+
+test("no specification reads as an unfinished sentence", () => {
+  for (const id of Object.keys(PLATFORM_SPECS)) {
+    for (const row of specRows(id, id)) {
+      assert.doesNotMatch(row.value, /(^|\s)(Up to|and|,)\s*$/, `${id} ${row.label} ends mid-phrase: "${row.value}"`);
+      assert.doesNotMatch(row.value, /,\s*up to.*,\s*up to/, `${id} ${row.label} repeats itself: "${row.value}"`);
+      assert.doesNotMatch(row.value, /Up to,/, `${id} ${row.label} is missing a value: "${row.value}"`);
+    }
+  }
 });
 
 test("a chat-only platform does not claim it can publish media", () => {
