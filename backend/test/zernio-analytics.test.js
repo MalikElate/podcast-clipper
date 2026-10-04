@@ -50,6 +50,55 @@ test("Zernio analytics do not count a Meadow delivery twice under either identif
   }
 });
 
+test("TikTok's delayed public ID and link repair the saved delivery and remove analytics duplicates", async () => {
+  const h = fixture(), delivery = h.meadowPost(), url = "https://www.tiktok.com/@creator/video/12345";
+  h.store.put("delivery", { ...delivery, externalId: "v_pub_url~v2.temporary", url: null, publishedAt: h.now() - 86400000 });
+  // Connected-account discovery may use its own ID instead of the publishing ID.
+  h.networkPost.zernioPostId = "discovered-post";
+  h.provider.metrics = async () => ({ values: { views: 42 }, publication: { externalId: "native", url } });
+  const report = await h.service.refresh("alice", "project"), saved = h.store.get("delivery", delivery.id);
+  assert.equal(saved.externalId, "native"); assert.equal(saved.url, url);
+  assert.equal(saved.publishedAt, h.now() - 86400000); assert.equal(saved.status, "published");
+  assert.deepEqual(saved.progress, delivery.progress);
+  assert.equal(report.posts.length, 1); assert.equal(report.publishedCount, 1);
+  assert.equal(report.totals.values.views, 42);
+  assert.equal(report.accounts[0].posts[0].delivery.url, url);
+});
+
+test("unresolved or invalid publication metadata preserves the saved TikTok ID and link", async () => {
+  for (const publication of [undefined, {}, { externalId: null, url: null }, { externalId: "", url: "javascript:alert(1)" }, { url: "http://www.tiktok.com/@creator/video/12345" }, { url: "https://secret@example.com/video" }]) {
+    const h = fixture(), delivery = h.meadowPost(), url = "https://www.tiktok.com/@creator/video/12345";
+    h.store.put("delivery", { ...delivery, url });
+    h.provider.metrics = async () => ({ values: { views: 42 }, publication });
+    await h.service.syncDelivery(h.store.get("delivery", delivery.id));
+    const saved = h.store.get("delivery", delivery.id);
+    assert.equal(saved.externalId, delivery.externalId); assert.equal(saved.url, url);
+  }
+});
+
+test("late TikTok metadata is discarded after delivery replacement or account privacy changes", async () => {
+  const changes = [
+    h => h.store.put("delivery", { ...h.store.get("delivery", "delivery"), status: "cancelled" }),
+    h => h.store.put("delivery", { ...h.store.get("delivery", "delivery"), externalId: "replacement" }),
+    h => h.store.put("delivery", { ...h.store.get("delivery", "delivery"), progress: { zernioPostId: "replacement" } }),
+    h => h.store.put("account", { ...h.account, authorizationId: "replacement" }),
+    h => h.store.put("account", { ...h.account, status: "disconnected" }),
+    h => { h.accounts.privacy.blocked = () => true; },
+  ];
+  for (const change of changes) for (const failure of [false, true]) {
+    const h = fixture(), delivery = h.meadowPost();
+    h.provider.metrics = async () => {
+      change(h);
+      if (failure) throw new Error("Stale analytics failure");
+      return { values: { views: 42 }, publication: { externalId: "resolved", url: "https://www.tiktok.com/@creator/video/12345" } };
+    };
+    await h.service.syncDelivery(delivery);
+    const saved = h.store.get("delivery", delivery.id);
+    assert.equal(saved.url, undefined); assert.equal(saved.metrics, undefined); assert.equal(saved.metricsError, undefined);
+    assert.notEqual(saved.externalId, "resolved");
+  }
+});
+
 test("Zernio account refreshes are coalesced, cooled down, and expire after 30 minutes", async () => {
   const h = fixture();
   await Promise.all([h.service.refresh("alice", "project"), h.service.refresh("alice", "project")]);
