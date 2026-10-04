@@ -82,3 +82,14 @@
 .ft-scheduler-link { margin-top: 26px; padding: 18px 22px; border: 1px solid var(--border); border-radius: 16px; background: rgba(255,255,255,.6); }
 .ft-scheduler-link p { margin: 0; color: var(--text-muted); font-size: 15px; line-height: 1.6; }
 .ft-scheduler-link a { color: var(--text); font-weight: 650; }
+
+.dev-hero { padding-block: clamp(48px,6vw,88px); }
+.dev-section { padding-block: clamp(30px,4vw,54px); }
+.dev-section h2 { margin: 0 0 12px; font-size: clamp(22px,2.6vw,30px); letter-spacing: -.02em; }
+.dev-section p { max-width: 760px; color: var(--text-muted); line-height: 1.7; }
+.dev-code { overflow-x: auto; margin: 18px 0; padding: 18px 20px; border: 1px solid var(--border); border-radius: 14px; background: #10151c; color: #e6edf3; font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size: 13.5px; line-height: 1.6; }
+.dev-tool-list { display: grid; gap: 10px; margin: 18px 0 0; }
+.dev-tool-row { display: grid; grid-template-columns: minmax(150px,auto) 1fr; gap: 8px 20px; align-items: baseline; padding: 14px 18px; border: 1px solid var(--border); border-radius: 14px; background: rgba(255,255,255,.6); }
+.dev-tool-row dt code { color: var(--text); font-size: 14px; font-weight: 650; }
+.dev-tool-row dd { margin: 0; color: var(--text-muted); font-size: 15px; line-height: 1.6; }
+@media (max-width: 720px) { .dev-tool-row { grid-template-columns: 1fr; gap: 4px; } }
