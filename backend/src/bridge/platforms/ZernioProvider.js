@@ -38,6 +38,20 @@ function entryMetrics(entry, name) {
   return { values, pending: pending || !measured, ...(pending ? { note: `${name} analytics are still syncing. Refresh again shortly.` } : !measured ? { unavailableReason: `${name} has not returned metrics for this post yet.` } : {}) };
 }
 
+function tiktokPublication(entry) {
+  if (entry?.status !== "published" || entry.platformSpecificData?.isDraft === true || entry.platformSpecificData?.draft === true || entry.platformSpecificData?.tiktokSettings?.draft === true) return null;
+  // TikTok initially supplies an upload reference (for example v_pub_url~v2.…).
+  // Only a native post ID and a provider-supplied public post URL can replace it.
+  const externalId = typeof entry.platformPostId === "string" && /^\d+$/.test(entry.platformPostId) ? entry.platformPostId : null;
+  let url = safeUrl(entry.platformPostUrl);
+  if (url) {
+    const parsed = new URL(url), post = parsed.pathname.match(/^\/@[^/]+\/(?:video|photo)\/(\d+)\/?$/);
+    if (parsed.username || parsed.password || !(parsed.hostname === "tiktok.com" || parsed.hostname.endsWith(".tiktok.com")) || !post) url = null;
+    else if (externalId && post[1] !== externalId) return null;
+  }
+  return externalId || url ? { ...(externalId ? { externalId } : {}), ...(url ? { url } : {}) } : null;
+}
+
 function connectionError(params) {
   const code = params.get("error"), message = params.get("error_message");
   if (message && params.get("is_user_fixable") === "true") return message.slice(0, 300);
@@ -228,13 +242,34 @@ export function withZernio(Base) {
       const { credentials, delivery } = args;
       const postId = delivery.progress?.zernioPostId || delivery.externalId;
       if (!postId) return { values: {}, pending: true, unavailableReason: "This post has no analytics identifier yet." };
+      let metrics, publication, analyticsError;
+      const inbox = delivery.contentSnapshot?.settings?.deliveryMode === "inbox" || delivery.progress?.deliveryMode === "inbox";
+      const resolvePublication = this.id === "tiktok" && !inbox;
       try {
         const result = await this.zernio(`analytics?${new URLSearchParams({ postId, accountId: credentials.zernioAccountId, platform: this.zernioPlatform, ...(credentials.zernioProfileId ? { profileId: credentials.zernioProfileId } : {}) })}`);
-        return entryMetrics(analyticsEntry(result, credentials, this.zernioPlatform), this.capabilities.name);
+        const entry = analyticsEntry(result, credentials, this.zernioPlatform);
+        metrics = entryMetrics(entry, this.capabilities.name);
+        if (resolvePublication) publication = tiktokPublication(entry);
       } catch (error) {
-        if (error.code === "analytics_pending") return { values: {}, pending: true, unavailableReason: error.message };
-        throw error;
+        if (error.reconnect || error.authFailure || error.code === "reconnect_required") throw error;
+        if (error.code === "analytics_pending") metrics = { values: {}, pending: true, unavailableReason: error.message };
+        else analyticsError = error;
       }
+      // Zernio backfills TikTok links after reporting publication. Older Meadow
+      // deliveries need the same reconciliation, including while analytics lag.
+      if (resolvePublication && delivery.status === "published" && delivery.progress?.zernioPostId && ((!delivery.url && !publication?.url) || (!/^\d+$/.test(delivery.externalId || "") && !publication?.externalId))) {
+        try {
+          const { post } = await this.zernio(`posts/${encodeURIComponent(delivery.progress.zernioPostId)}`);
+          const resolved = tiktokPublication(analyticsEntry(post || {}, credentials, this.zernioPlatform));
+          if (resolved) {
+            const merged = { ...publication, ...resolved };
+            publication = tiktokPublication({ status: "published", platformPostId: merged.externalId, platformPostUrl: merged.url }) || publication;
+          }
+        } catch { /* Link resolution must not discard a successful metrics read. */ }
+      }
+      if (publication && !tiktokPublication({ status: "published", platformPostId: publication.externalId || delivery.externalId, platformPostUrl: publication.url || delivery.url })) publication = null;
+      if (analyticsError && !publication) throw analyticsError;
+      return { ...(metrics || { values: {}, pending: true, unavailableReason: analyticsError.message }), ...(publication ? { publication } : {}) };
     }
 
     async accountPostAnalytics({ credentials }) {

@@ -1,6 +1,18 @@
 export const metrics = ["views", "impressions", "likes", "comments", "shares", "saves", "clicks"];
 const interactions = ["likes", "comments", "shares", "saves"];
 
+function publicationFields(publication) {
+  const fields = {};
+  if (typeof publication?.externalId === "string" && publication.externalId.trim()) fields.externalId = publication.externalId;
+  if (typeof publication?.url === "string") {
+    try {
+      const url = new URL(publication.url);
+      if (url.protocol === "https:" && !url.username && !url.password) fields.url = url.href;
+    } catch { /* Keep the saved link until the provider returns a valid one. */ }
+  }
+  return fields;
+}
+
 export class AnalyticsService {
   constructor({ store, projects, accounts, registry, posts, clock = () => Date.now() }) {
     Object.assign(this, { store, projects, accounts, registry, posts, clock });
@@ -117,20 +129,25 @@ export class AnalyticsService {
     const account = this.store.get("account", delivery.accountId);
     if (!account || account.status !== "connected") return;
     if (this.accounts.privacy?.blocked(account.ownerUid)) return;
+    const currentDelivery = () => {
+      const current = this.store.get("delivery", delivery.id), latestAccount = this.store.get("account", account.id);
+      if (!current || current.status !== "published" || current.accountId !== delivery.accountId || current.externalId !== delivery.externalId || current.progress?.zernioPostId !== delivery.progress?.zernioPostId || latestAccount?.status !== "connected" || latestAccount.authorizationId !== account.authorizationId || this.accounts.privacy?.blocked(account.ownerUid)) return null;
+      return current;
+    };
     try {
       const result = await this.accounts.withCredentials(account, credentials => this.registry.get(account.platform).metrics({ account, credentials, delivery }));
-      const current = this.store.get("delivery", delivery.id);
-      const latestAccount = this.store.get("account", account.id);
-      if (!current || latestAccount?.status !== "connected" || latestAccount.authorizationId !== account.authorizationId) return;
+      const current = currentDelivery();
+      if (!current) return;
       const now = this.clock(), values = this.normalize(result.values);
       const keepPrevious = result.pending && !Object.values(values).some(Number.isFinite) && current.metrics;
       const patch = { metrics: keepPrevious ? current.metrics : values, metricsHistory: keepPrevious ? current.metricsHistory || [] : this.metricHistory(current, values, now), metricsUpdatedAt: keepPrevious ? current.metricsUpdatedAt : now, metricsAttemptedAt: now, metricsError: null, metricsNote: result.unavailableReason || result.note || null };
       if (account.platform === "pinterest") return patch;
-      this.store.put("delivery", { ...current, ...patch, ...(result.removed ? { externalId: null, url: null, progress: {}, contentSnapshot: null, metrics: null, metricsHistory: [] } : {}) });
+      // TikTok can confirm publishing before its public ID/link is available.
+      // Reconcile that metadata on later reads without publishing a second post.
+      this.store.put("delivery", { ...current, ...patch, ...publicationFields(result.publication), ...(result.removed ? { externalId: null, url: null, progress: {}, contentSnapshot: null, metrics: null, metricsHistory: [] } : {}) });
     } catch (error) {
-      const current = this.store.get("delivery", delivery.id);
-      const latestAccount = this.store.get("account", account.id);
-      if (!current || latestAccount?.status !== "connected" || latestAccount.authorizationId !== account.authorizationId) return;
+      const current = currentDelivery();
+      if (!current) return;
       if (account.platform !== "pinterest") this.store.put("delivery", { ...current, metricsAttemptedAt: this.clock(), metricsError: error.message });
     }
   }

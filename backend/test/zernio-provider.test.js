@@ -45,6 +45,106 @@ test("Zernio post analytics use the delivery's Zernio id and only its account's 
   assert.equal(calls.length, 1); assert.equal(result.pending, false);
 });
 
+const resolvedTikTok = { platform: "tiktok", accountId: "acct1", status: "published", platformPostId: "7692456089249500423", platformPostUrl: "https://www.tiktok.com/@creator/video/7692456089249500423?utm_source=api", syncStatus: "synced", analytics: { views: 141, likes: 3 } };
+const unresolvedTikTokDelivery = () => ({ status: "published", externalId: "v_pub_url~v2.7692455748873766918", url: null, progress: { zernioPostId: "post1" } });
+
+test("TikTok analytics resolve an existing upload reference from only the matching account and platform", async () => {
+  const { calls, transport } = zernioApi({ [`GET ${singleQuery}`]: () => [200, { platformAnalytics: [
+    { ...resolvedTikTok, accountId: "foreign", platformPostId: "111", platformPostUrl: "https://www.tiktok.com/@other/video/111" },
+    { ...resolvedTikTok, platform: "instagram", platformPostId: "222", platformPostUrl: "https://www.instagram.com/p/222" },
+    { ...resolvedTikTok, accountId: { _id: "acct1" } },
+  ] }] });
+  const result = await provider(TikTokProvider, transport).metrics({ credentials: analyticsCredentials, delivery: unresolvedTikTokDelivery() });
+  assert.deepEqual(result.publication, { externalId: resolvedTikTok.platformPostId, url: resolvedTikTok.platformPostUrl });
+  assert.equal(result.values.views, 141); assert.equal(result.values.likes, 3);
+  assert.equal(calls.length, 1);
+});
+
+test("TikTok publication metadata excludes foreign targets, drafts, temporary IDs and unsafe or inconsistent URLs", async () => {
+  for (const entry of [
+    { ...resolvedTikTok, accountId: "foreign" },
+    { ...resolvedTikTok, platform: "instagram" },
+    { ...resolvedTikTok, status: "pending" },
+    { ...resolvedTikTok, platformSpecificData: { isDraft: true } },
+    { ...resolvedTikTok, platformPostId: "v_pub_url~v2.7692455748873766918", platformPostUrl: null },
+    { ...resolvedTikTok, platformPostId: null, platformPostUrl: "javascript:alert(1)" },
+    { ...resolvedTikTok, platformPostId: null, platformPostUrl: "http://www.tiktok.com/@creator/video/7692456089249500423" },
+    { ...resolvedTikTok, platformPostId: null, platformPostUrl: "https://www.tiktok.com.evil.example/@creator/video/7692456089249500423" },
+    { ...resolvedTikTok, platformPostId: null, platformPostUrl: "https://www.tiktok.com/@creator" },
+    { ...resolvedTikTok, platformPostUrl: "https://www.tiktok.com/@creator/video/111" },
+  ]) {
+    const { transport } = zernioApi({ [`GET ${singleQuery}`]: () => [200, { platformPostUrl: resolvedTikTok.platformPostUrl, platformAnalytics: [entry] }] });
+    const result = await provider(TikTokProvider, transport).metrics({ credentials: analyticsCredentials, delivery: { externalId: "temporary", progress: { zernioPostId: "post1" } } });
+    assert.equal(result.publication, undefined);
+  }
+});
+
+test("TikTok resolves delayed links from its saved Zernio post when analytics have no public metadata", async () => {
+  for (const [status, analytics] of [[200, { platformAnalytics: [{ platform: "tiktok", accountId: "acct1", status: "published", analytics: { views: 141 } }] }], [404, { error: "Not synced yet" }], [402, { error: "Analytics unavailable" }]]) {
+    const { calls, transport } = zernioApi({
+      [`GET ${singleQuery}`]: () => [status, analytics],
+      "GET posts/post1": () => [200, { post: { platforms: [{ ...resolvedTikTok, accountId: "foreign" }, { ...resolvedTikTok, accountId: { _id: "acct1" } }] } }],
+    });
+    const result = await provider(TikTokProvider, transport).metrics({ credentials: analyticsCredentials, delivery: unresolvedTikTokDelivery() });
+    assert.deepEqual(result.publication, { externalId: resolvedTikTok.platformPostId, url: resolvedTikTok.platformPostUrl });
+    if (status === 200) assert.equal(result.values.views, 141);
+    else { assert.equal(result.pending, true); assert.ok(result.unavailableReason); }
+    assert.equal(calls.length, 2);
+  }
+});
+
+test("TikTok link reconciliation preserves metrics when the post lookup fails or lacks the account", async () => {
+  for (const [status, body] of [[404, { error: "Missing post" }], [200, { post: { platforms: [{ ...resolvedTikTok, accountId: "foreign" }] } }], [200, { post: { platforms: [{ ...resolvedTikTok, platform: "instagram" }] } }]]) {
+    const { transport } = zernioApi({
+      [`GET ${singleQuery}`]: () => [200, { platformAnalytics: [{ platform: "tiktok", accountId: "acct1", status: "published", analytics: { views: 141 } }] }],
+      "GET posts/post1": () => [status, body],
+    });
+    const result = await provider(TikTokProvider, transport).metrics({ credentials: analyticsCredentials, delivery: unresolvedTikTokDelivery() });
+    assert.equal(result.values.views, 141); assert.equal(result.publication, undefined);
+  }
+});
+
+test("TikTok combines partial publication metadata only when the native ID and public URL agree", async () => {
+  for (const id of [resolvedTikTok.platformPostId, "111"]) {
+    const url = `https://www.tiktok.com/@creator/video/${id}`;
+    const { transport } = zernioApi({
+      [`GET ${singleQuery}`]: () => [200, { platformAnalytics: [{ ...resolvedTikTok, platformPostUrl: null }] }],
+      "GET posts/post1": () => [200, { post: { platforms: [{ ...resolvedTikTok, platformPostId: "v_pub_url~v2.temporary", platformPostUrl: url }] } }],
+    });
+    const result = await provider(TikTokProvider, transport).metrics({ credentials: analyticsCredentials, delivery: unresolvedTikTokDelivery() });
+    assert.deepEqual(result.publication, { externalId: resolvedTikTok.platformPostId, ...(id === resolvedTikTok.platformPostId ? { url } : {}) });
+  }
+});
+
+test("TikTok partial metadata cannot conflict with a preserved delivery ID or URL", async () => {
+  const saved = { ...unresolvedTikTokDelivery(), externalId: "111", url: "https://www.tiktok.com/@creator/video/111" };
+  for (const entry of [
+    { ...resolvedTikTok, platformPostUrl: null },
+    { ...resolvedTikTok, platformPostId: null },
+    resolvedTikTok,
+  ]) {
+    const { calls, transport } = zernioApi({ [`GET ${singleQuery}`]: () => [200, { platformAnalytics: [entry] }] });
+    const result = await provider(TikTokProvider, transport).metrics({ credentials: analyticsCredentials, delivery: saved });
+    assert.deepEqual(result.publication, entry === resolvedTikTok ? { externalId: resolvedTikTok.platformPostId, url: resolvedTikTok.platformPostUrl } : undefined);
+    assert.equal(calls.length, 1);
+  }
+});
+
+test("TikTok inbox delivery never acquires public publication metadata from analytics", async () => {
+  const { calls, transport } = zernioApi({ [`GET ${singleQuery}`]: () => [200, { platformAnalytics: [resolvedTikTok] }] });
+  const result = await provider(TikTokProvider, transport).metrics({ credentials: analyticsCredentials, delivery: { ...unresolvedTikTokDelivery(), contentSnapshot: { settings: { deliveryMode: "inbox" } } } });
+  assert.equal(result.publication, undefined); assert.equal(calls.length, 1);
+});
+
+test("TikTok link reconciliation preserves account reconnection errors", async () => {
+  const { calls, transport } = zernioApi({
+    [`GET ${singleQuery}`]: () => [403, { error: "Account disconnected", code: "ACCOUNT_DISCONNECTED" }],
+    "GET posts/post1": () => [200, { post: { platforms: [resolvedTikTok] } }],
+  });
+  await assert.rejects(provider(TikTokProvider, transport).metrics({ credentials: analyticsCredentials, delivery: unresolvedTikTokDelivery() }), error => error.reconnect && error.code === "reconnect_required");
+  assert.equal(calls.length, 1);
+});
+
 test("Zernio metrics keep sync-pending, missing posts and failed publications unavailable", async () => {
   for (const [status, body] of [[202, { syncStatus: "pending", platformAnalytics: [] }], [404, { error: "not found" }], [424, { status: "failed", platformAnalytics: [] }], [200, { analytics: { views: 999 }, platformAnalytics: [{ platform: "tiktok", accountId: "foreign", analytics: { views: 999 } }] }]]) {
     const { transport } = zernioApi({ [`GET ${singleQuery}`]: () => [status, body] });
