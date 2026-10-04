@@ -63,7 +63,7 @@ test("failed TikTok settings can be refreshed in both editors without changing t
       const recovered = render();
       assert.doesNotMatch(recovered, /HTTP 401|Refresh TikTok settings|Refreshing settings/);
       assert.match(recovered, /<option value="PUBLIC_TO_EVERYONE" selected="">Everyone<\/option>/);
-      assert.match(recovered, /<textarea[^>]*aria-label="Text"[^>]*>Keep this caption<\/textarea>/);
+      assert.match(recovered, /<textarea[^>]*aria-label="Caption"[^>]*>Keep this caption<\/textarea>/);
       assert.match(recovered, /Keep this account caption/);
       assert.match(recovered, /keep.mp4/);
       assert.match(recovered, /By posting, I agree/);
