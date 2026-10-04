@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { PlatformIcon } from "../bridge/ui.jsx";
+import { specRows } from "../platformSpecs.js";
+import { faqsFor } from "../platformFaqs.js";
 import SiteFooter from "./SiteFooter.jsx";
 import HeroDemo from "./HeroDemo.jsx";
 import SiteHeader from "./SiteHeader.jsx";
@@ -33,6 +35,9 @@ export default function PlatformUseCasePage({ platform, onGetStarted }) {
   const headlineSuffix = "organized in one place";
   const headlineLead = platform.headline.slice(0, -headlineSuffix.length).trim();
   const identityLabel = `${platform.name} ${platform.chatOnly ? "chat" : "publishing"}`;
+  const specs = specRows(platform.id, platform.name);
+  const faqs = faqsFor(platform.id);
+  const faqSchema = faqs.length ? { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqs.map(item => ({ "@type": "Question", name: item.q, acceptedAnswer: { "@type": "Answer", text: item.a } })) } : null;
   useEffect(() => {
     document.title = platform.title;
     const description = document.querySelector('meta[name="description"]');
@@ -72,10 +77,31 @@ export default function PlatformUseCasePage({ platform, onGetStarted }) {
           </ul>
         </section>
 
+        {specs.length > 0 && (
+          <section className="landing-section platform-use-case-specs" aria-labelledby="platform-specs-title">
+            <div className="section-heading">
+              <h2 id="platform-specs-title">What Meadow publishes to {platform.name}</h2>
+              <p>The limits Meadow checks before queuing a post to {platform.name}, so a problem surfaces while you can still fix it rather than at delivery.</p>
+            </div>
+            <dl className="platform-spec-list">
+              {specs.map(row => <div className="platform-spec-row" key={row.label}><dt>{row.label}</dt><dd>{row.value}</dd></div>)}
+            </dl>
+          </section>
+        )}
+
+        {faqs.length > 0 && (
+          <section className="landing-section faq-section" id="faq" aria-labelledby="platform-faq-title">
+            <div className="faq-heading"><h2 id="platform-faq-title">{platform.name} publishing questions</h2></div>
+            <div className="mkt-faq-list">
+              {faqs.map(item => <details className="mkt-faq-item" key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
+            </div>
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema).replace(/</g, "\\u003c") }} />
+          </section>
+        )}
         <section className="landing-section platform-use-case-api">
           <p>
-            Prefer to publish from your own code? {platform.name} is also reachable through Meadow&rsquo;s{" "}
-            <a href={marketingHref("/#ways-to-use")}>API and MCP server</a>, so an agent or a script can prepare and schedule a post without opening the dashboard.
+            Prefer to work from your own code? An AI client or a script can prepare {platform.name} drafts through Meadow&rsquo;s{" "}
+            <a href={marketingHref("/#ways-to-use")}>API and MCP server</a>, and you review and publish them from the dashboard.
           </p>
         </section>
 
