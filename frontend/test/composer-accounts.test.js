@@ -90,7 +90,7 @@ test("composer destinations remain usable during uploads and reflect connection 
           post: post({ accountIds: ["Video channel"], overrides: { "Video channel": { title: "Title entered during upload", caption: "Channel-specific text", settings: { privacy: "unlisted" } } } }),
           uploading: true, uploadProgress: { stage, loaded: 50, total: 100, filename: "clip.mp4" },
         });
-        const textArea = html.match(/<textarea\b[^>]*aria-label="Text"[^>]*>[\s\S]*?<\/textarea>/)?.[0];
+        const textArea = html.match(/<textarea\b[^>]*aria-label="Caption"[^>]*>[\s\S]*?<\/textarea>/)?.[0];
         assert.ok(textArea);
         assert.equal(isDisabled(textArea), false);
         assert.match(textArea, /Text written while uploading/);
@@ -116,7 +116,7 @@ test("composer destinations remain usable during uploads and reflect connection 
       });
       assert.match(html, /<button\b[^>]*class="bridge-add-media"[^>]*disabled=""/);
       assert.equal(isDisabled(choice(html, "Live account")), false);
-      assert.equal(isDisabled(html.match(/<textarea\b[^>]*aria-label="Text"[^>]*>/)[0]), false);
+      assert.equal(isDisabled(html.match(/<textarea\b[^>]*aria-label="Caption"[^>]*>/)[0]), false);
     });
 
     await t.test("completed destinations stay immutable in both composer and queued-post layouts", () => {

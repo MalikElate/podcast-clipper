@@ -63,7 +63,7 @@ function DestinationContent({ source, post, media, snapshot = false }) {
   const mediaById = new Map([...media, ...(post.media || [])].map(item => [item.id, item]));
   return <div className="bridge-post-destination-content"><strong>{snapshot ? "Saved delivery content" : "Custom destination content"}</strong>
     {titleChanged && <p><span>Title</span>{source.title || "No title"}</p>}
-    {captionChanged && <p><span>Text</span>{source.caption || "No text"}</p>}
+    {captionChanged && <p><span>Caption</span>{source.caption || "No caption"}</p>}
     {formatChanged && <p><span>Format</span>{formatLabel(source.format)}</p>}
     {source.localDateTime && <p><span>Custom schedule</span>{source.localDateTime.replace("T", " ")}</p>}
     {mediaChanged && <div><span>Media sent with this delivery</span><ul>{source.mediaIds.map(id => { const item = mediaById.get(id); return <li key={id}>{item ? <a href={item.url} target="_blank" rel="noreferrer">{item.filename}</a> : "Media no longer available"}</li>; })}</ul></div>}
@@ -82,7 +82,7 @@ export default function PostDetails({ post, project, accounts, media, catalog, a
       <span><strong>Last updated</strong>{dateTime(post.updatedAt, timeZone)}</span>
       {post.schedule?.mode === "scheduled" && <span><strong>Schedule</strong>{post.schedule.localDateTime?.replace("T", " ") || "Custom destination times"} · {post.schedule.timeZone || timeZone}</span>}
     </div>
-    <section className="bridge-post-detail-section"><h3>Text</h3><p className="bridge-post-full-text">{post.caption || "No text added."}</p></section>
+    <section className="bridge-post-detail-section"><h3>Caption</h3><p className="bridge-post-full-text">{post.caption || "No caption added."}</p></section>
     <section className="bridge-post-detail-section"><h3>Media</h3><PostMedia items={post.media}/></section>
     <section className="bridge-post-detail-section"><h3>Destinations</h3>
       {post.deliveries.length ? <div className="bridge-deliveries">{post.deliveries.map(delivery => {
