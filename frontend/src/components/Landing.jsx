@@ -10,6 +10,7 @@ import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
 import SiteHeader from "./SiteHeader.jsx";
 import { signupHref } from "../siteUrls.js";
+import { homepageSchema, schemaScriptProps } from "../siteSchema.js";
 
 const HOMEPAGE_RECORDING = {
   asset: "/marketing/meadow-landing-demo-caption-v4-20260929",
@@ -190,7 +191,7 @@ export default function Landing({ onGetStarted }) {
           </div>
           <div className="home-platform-grid" aria-label="Meadow platforms">
             {PLATFORMS.map(platform => (
-              <a className="home-platform-link" key={platform.id} href={`/${platform.slug}`} aria-label={`Learn about ${platform.name} publishing`} style={{ "--platform-color": platform.color }}>
+              <a className="home-platform-link" key={platform.id} href={`/${platform.slug}/`} aria-label={`Learn about ${platform.name} publishing`} style={{ "--platform-color": platform.color }}>
                 <span className="home-platform-icon"><PlatformIcon platform={platform.id} size={40} variant={platform.id === "google_business" ? "hero" : "default"} /></span>
                 <span>{platform.name}</span>
               </a>
@@ -272,6 +273,7 @@ export default function Landing({ onGetStarted }) {
         </section>
       </main>
 
+      <script {...schemaScriptProps(homepageSchema())} />
       <SiteFooter onGetStarted={onGetStarted} />
     </div>
   );

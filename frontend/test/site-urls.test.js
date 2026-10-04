@@ -25,7 +25,7 @@ test("development keeps the combined local surface", () => {
   const local = location("localhost", "http://localhost:5173");
   assert.equal(siteSurface(local), "integrated");
   assert.equal(appHref("/dashboard", local), "http://localhost:5173/dashboard");
-  assert.equal(marketingHref("/pricing", local), "http://localhost:5173/pricing");
+  assert.equal(marketingHref("/pricing", local), "http://localhost:5173/pricing/");
   const marketingPreview = { ...local, search: "?surface=marketing" };
   assert.equal(isLocalMarketingPreview(marketingPreview, true), true);
   assert.equal(isLocalMarketingPreview(marketingPreview, false), false);

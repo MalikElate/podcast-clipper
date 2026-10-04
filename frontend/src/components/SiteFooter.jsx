@@ -3,7 +3,7 @@ import { FaInstagram, FaLinkedin, FaXTwitter, FaYoutube } from "react-icons/fa6"
 import { sortPlatforms } from "../bridge/platforms.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import { GENERAL_PAGES } from "../marketing/generalPages.js";
-import { appHref, marketingHref, siteSurface } from "../siteUrls.js";
+import { appHref, marketingHref, marketingPath, siteSurface } from "../siteUrls.js";
 
 const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
 const FEATURED_PLATFORM_IDS = ["instagram", "tiktok", "youtube", "linkedin", "facebook", "x"];
@@ -16,7 +16,7 @@ const COMMUNITY_LINKS = [
 ];
 
 // Marketing pages are not served on the app host, so link there absolutely.
-const href = (path) => siteSurface() === "app" ? marketingHref(path) : path;
+const href = (path) => siteSurface() === "app" ? marketingHref(path) : marketingPath(path);
 
 function FooterGroup({ title, children }) {
   return <div className="footer-link-group"><h2>{title}</h2><div>{children}</div></div>;

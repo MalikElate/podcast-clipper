@@ -39,7 +39,7 @@ export const GENERAL_PAGES = [
   {
     path: "/cross-posting", kind: "cross-posting", footerLabel: "Cross posting",
     title: "Cross Posting to 11 Social Platforms · Meadow",
-    description: "Cross post to X, Instagram, LinkedIn, Facebook, TikTok, YouTube, Bluesky, Threads, Pinterest, Telegram, and Google Business with Meadow, with a tailored version for every platform.",
+    description: "Cross post to Instagram, TikTok, YouTube, X, LinkedIn, Telegram and more, with a version tailored to each platform instead of one shared caption.",
     headline: "Cross post everywhere without sounding copy-pasted.",
     subtitle: "Upload once and publish to eleven platforms together, including Telegram channels and groups, with a caption, format, and settings that fit each one.",
     problem: {

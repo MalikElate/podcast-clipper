@@ -43,7 +43,17 @@ export function signupHref(locationLike) {
   return url.href;
 }
 
+// Public pages are built as <path>/index.html, which the asset layer serves at the
+// trailing-slash address and redirects to from the bare one. Linking without the
+// slash costs every visitor and crawler a redirect, so the links carry it instead.
+// A fragment, a query or an app route is left exactly as written.
+export function marketingPath(path = "/") {
+  if (typeof path !== "string" || !path.startsWith("/")) return path;
+  if (path.endsWith("/") || path.includes("#") || path.includes("?")) return path;
+  return `${path}/`;
+}
+
 export function marketingHref(path = "/", locationLike) {
   const origin = siteSurface(locationLike) === "integrated" ? localOrigin(locationLike) || MARKETING_ORIGIN : MARKETING_ORIGIN;
-  return new URL(path, `${origin}/`).href;
+  return new URL(marketingPath(path), `${origin}/`).href;
 }
