@@ -49,6 +49,16 @@ test("user API 401 and explicit invalid access-token responses identify renewabl
   }
 });
 
+test("raw adapters must explicitly opt in to inspect an authorization response", async () => {
+  const data = { error: "Account authorization expired", code: "TOKEN_EXPIRED" };
+  const response = await transport(401, data).request("https://zernio.com/api/v1/accounts/account/tiktok/creator-info", { raw: true, acceptStatuses: [401] });
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), data);
+  for (const options of [{ raw: true }, { raw: true, acceptStatuses: [400] }, { acceptStatuses: [401] }]) {
+    await assert.rejects(transport(401, data).request("https://api.example/account", options), error => error.reconnect && error.authFailure === "access_token");
+  }
+});
+
 test("Meta failures retain only safe connection diagnostics", async () => {
   const http = transport(400, { error: { code: 100, error_subcode: 1349126, message: "Invalid private-code and secret" } });
   await assert.rejects(http.request("https://graph.facebook.com/v26.0/oauth/access_token", { method: "POST", form: { code: "private-code" }, diagnosticStage: "authorization_code_exchange" }), error => {

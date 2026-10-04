@@ -26,6 +26,20 @@ const numericMetrics = analytics => Object.fromEntries(metricKeys.map(key => {
   return [key, ["number", "string"].includes(typeof value) && String(value).trim() && Number.isFinite(Number(value)) && Number(value) >= 0 ? Number(value) : null];
 }));
 
+const appCredentialCodes = new Set(["missing_credentials", "invalid_credentials"]);
+const accountAuthorizationCodes = new Set(["TOKEN_EXPIRED", "ACCOUNT_DISCONNECTED", "access_token_invalid", "access_token_expired", "token_expired", "invalid_token", "invalid_grant"]);
+const upstreamAuthorizationCodes = new Set([...accountAuthorizationCodes, "scope_not_authorized"]);
+
+function zernioAuthorizationError(data, status, platform, name) {
+  const upstream = data.type === "platform_error" || data.code === "platform_api_error";
+  const knownCode = [...appCredentialCodes, ...accountAuthorizationCodes, "platform_api_error"].includes(data.code) ? data.code : null;
+  const upstreamCode = data.platformError?.error?.code || data.platformError?.code;
+  const details = { provider: "zernio", httpStatus: status, ...(knownCode ? { providerCode: knownCode } : {}), ...(upstream && upstreamAuthorizationCodes.has(upstreamCode) ? { upstreamCode } : {}) };
+  if (!upstream && appCredentialCodes.has(data.code)) return new ProviderError("Zernio rejected Meadow's API key. Meadow's administrator must check ZERNIO_API_KEY.", { code: "provider_app_credentials", details });
+  if (accountAuthorizationCodes.has(data.code) || upstream && (!data.platform || data.platform === platform)) return new ProviderError(`Reconnect this ${name} account in Meadow to renew its publishing authorization.`, { reconnect: true, code: "reconnect_required", details });
+  return new ProviderError(`${name}'s connection service could not authorize this request (HTTP ${status}). Try again. If it continues, contact hello@findmeadow.com.`, { code: "provider_authorization", details });
+}
+
 function analyticsEntry(post, credentials, platform) {
   // Never use the cross-platform roll-up: it can include other accounts.
   return (post.platformAnalytics || post.platforms || []).find(entry => refId(entry.accountId) === credentials.zernioAccountId && entry.platform === platform);
@@ -75,20 +89,17 @@ export function withZernio(Base) {
 
     async zernio(path, { method = "GET", json, headers, safeToRetry = ["GET", "DELETE"].includes(method) } = {}) {
       invariant(this.env.ZERNIO_API_KEY, `${this.capabilities.name} publishing is not configured on this server yet.`, { status: 503, code: "platform_unconfigured" });
-      let response;
-      try {
-        response = await this.http.request(`${API}/${path}`, { method, json, headers, token: this.env.ZERNIO_API_KEY, safeToRetry, raw: true, acceptStatuses: [400, 402, 403, 404, 409, 422, ...(path.startsWith("analytics?") ? [424] : [])], timeoutMs: path.startsWith("analytics?") ? 30000 : 120000 });
-      } catch (error) {
-        // Zernio answers 401 only for Meadow's own API key, never for a user's account.
-        if (error.authFailure) throw new ProviderError("Zernio rejected Meadow's API key. Meadow's administrator must check ZERNIO_API_KEY.", { code: "provider_app_credentials" });
-        throw error;
-      }
-      const data = await response.json().catch(() => ({}));
+      const response = await this.http.request(`${API}/${path}`, { method, json, headers, token: this.env.ZERNIO_API_KEY, safeToRetry, raw: true, acceptStatuses: [400, 401, 402, 403, 404, 409, 422, ...(path.startsWith("analytics?") ? [424] : [])], timeoutMs: path.startsWith("analytics?") ? 30000 : 120000 });
+      const payload = await response.json().catch(() => ({}));
+      const data = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
       if (response.ok || path.startsWith("analytics?") && response.status === 424) return data;
       if (method === "DELETE" && response.status === 404) return null;
+      // Zernio can forward a platform's 401 as well as reject its own API key.
+      // Classify the envelope without disclosing its raw message or token data.
+      if (response.status === 401) throw zernioAuthorizationError(data, response.status, this.zernioPlatform, this.capabilities.name);
       const message = typeof data.error === "string" && data.error ? data.error.slice(0, 300) : `Zernio rejected the request (HTTP ${response.status}).`;
       const details = { provider: "zernio", httpStatus: response.status, ...(typeof data.code === "string" ? { providerCode: data.code } : {}) };
-      if (response.status === 403 && data.code === "ACCOUNT_DISCONNECTED") throw new ProviderError(`Reconnect this ${this.capabilities.name} account in Meadow.`, { reconnect: true, code: "reconnect_required", details });
+      if (response.status === 403 && accountAuthorizationCodes.has(data.code)) throw zernioAuthorizationError(data, response.status, this.zernioPlatform, this.capabilities.name);
       if (path.startsWith("analytics?")) {
         if (response.status === 402) throw new ProviderError("Analytics access is not enabled for Meadow's Zernio connection. Contact hello@findmeadow.com.", { code: "provider_permissions", details });
         if (response.status === 404) throw new ProviderError("This post's analytics are not available in Zernio yet. Refresh again shortly.", { code: "analytics_pending", details });

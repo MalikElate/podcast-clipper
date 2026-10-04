@@ -32,7 +32,10 @@ export class HttpTransport {
     const googleTokenEndpoint = parsed.hostname === "oauth2.googleapis.com" && parsed.pathname === "/token";
     const tokenEndpoint = /\/(?:token|access_token|accessToken)\/?$/i.test(parsed.pathname);
     if (response.status >= 500) throw new ProviderError("The platform is temporarily unavailable.", { retryable: safeToRetry, uncertain: !safeToRetry, code: "provider_unavailable" });
-    if (raw && response.status !== 401 && (response.ok || acceptStatuses.includes(response.status))) return response;
+    // An adapter may explicitly inspect a 401 envelope to distinguish its app
+    // credential from an upstream account token. Other callers still use the
+    // normal authorization handling below.
+    if (raw && (response.ok || acceptStatuses.includes(response.status))) return response;
     let text;
     try { text = await response.text(); }
     catch { throw new ProviderError(safeToRetry ? "The platform response was interrupted. Meadow will try again." : "The platform response was interrupted. Check whether it published before retrying.", { retryable: safeToRetry, uncertain: !safeToRetry, code: "provider_connection" }); }

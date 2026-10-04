@@ -127,10 +127,11 @@ export class PostService {
       const savedAccount = this.accounts.require(uid, projectId, accountId);
       const account = { ...savedAccount, options: freshOptions.get(accountId) || savedAccount.options };
       const provider = this.registry.get(account.platform);
-      const errors = provider.validate(this.content(post, account));
+      // Missing or stale creator settings cannot establish publishing restrictions.
+      // Keep the options failure blocking until the provider can validate this account.
+      const errors = optionErrors.has(accountId) ? [optionErrors.get(accountId)] : provider.validate(this.content(post, account));
       if (account.status !== "connected") errors.push("Reconnect this account before publishing.");
       if (!provider.configured) errors.push("This platform is not configured on the server.");
-      if (optionErrors.has(accountId)) errors.push(optionErrors.get(accountId));
       const id = `preview:${index}:${accountId}`;
       const requestedAt = post.accountSchedules[accountId].requestedAt;
       proposed.push({ id, rateKey: account.rateKey, requestedAt, order: this.clock() * 100 + index, status: "queued" });
