@@ -205,6 +205,50 @@ test("Zernio routing is enabled only with an API key and for supported platforms
   assert.deepEqual([...zernioPlatforms({ ZERNIO_API_KEY: "sk", ZERNIO_PLATFORMS: "tiktok, youtube,pinterest" })], ["tiktok", "pinterest"]);
 });
 
+test("Zernio creator-info distinguishes app credentials from a social account's authorization", async () => {
+  const path = "accounts/acct1/tiktok/creator-info?mediaType=video";
+  for (const { status = 401, body, code, reconnect, upstreamCode } of [
+    { body: { type: "authentication_error", code: "invalid_credentials" }, code: "provider_app_credentials", reconnect: false },
+    { body: { type: "authentication_error", code: "missing_credentials" }, code: "provider_app_credentials", reconnect: false },
+    { body: { code: "TOKEN_EXPIRED" }, code: "reconnect_required", reconnect: true },
+    { body: { code: "ACCOUNT_DISCONNECTED" }, code: "reconnect_required", reconnect: true },
+    { status: 403, body: { code: "TOKEN_EXPIRED" }, code: "reconnect_required", reconnect: true },
+    { body: { type: "platform_error", code: "platform_api_error", platform: "tiktok", platformError: { error: { code: "access_token_invalid", message: "private-token" } } }, code: "reconnect_required", reconnect: true, upstreamCode: "access_token_invalid" },
+    { body: { type: "platform_error", platform: "tiktok", platformError: { code: "access_token_expired", message: "private-token" } }, code: "reconnect_required", reconnect: true, upstreamCode: "access_token_expired" },
+    { body: { code: "platform_api_error", platform: "tiktok", platformError: { error: { code: "scope_not_authorized" } } }, code: "reconnect_required", reconnect: true, upstreamCode: "scope_not_authorized" },
+  ]) {
+    const { calls, transport } = zernioApi({ [`GET ${path}`]: () => [status, { ...body, error: "private-api-key private-token" }] });
+    await assert.rejects(provider(TikTokProvider, transport).options({}, analyticsCredentials), error => {
+      assert.equal(error.code, code); assert.equal(error.reconnect, reconnect);
+      assert.equal(error.authFailure, undefined);
+      assert.equal(error.details.provider, "zernio"); assert.equal(error.details.httpStatus, status);
+      assert.equal(error.details.upstreamCode, upstreamCode);
+      assert.match(error.message, reconnect ? /Reconnect this TikTok account/ : /Meadow's API key/);
+      assert.doesNotMatch(JSON.stringify({ ...error, message: error.message }), /private-api-key|private-token/);
+      return true;
+    });
+    assert.equal(calls.length, 1);
+  }
+});
+
+test("unknown Zernio 401 envelopes do not blame the API key or invalidate a social account", async () => {
+  const path = "accounts/acct1/tiktok/creator-info?mediaType=video";
+  for (const body of [
+    { error: "private-api-key", code: "private-token" },
+    { type: "platform_error", code: "platform_api_error", platform: "instagram", platformError: { error: { code: "private-token" } } },
+    { error: "Unauthorized" }, null, "private-token",
+  ]) {
+    const { transport } = zernioApi({ [`GET ${path}`]: () => [401, body] });
+    await assert.rejects(provider(TikTokProvider, transport).options({}, analyticsCredentials), error => {
+      assert.equal(error.code, "provider_authorization"); assert.equal(error.reconnect, false);
+      assert.equal(error.authFailure, undefined);
+      assert.match(error.message, /TikTok.*HTTP 401/);
+      assert.doesNotMatch(JSON.stringify({ ...error, message: error.message }), /private-api-key|private-token|ZERNIO_API_KEY|Reconnect/);
+      return true;
+    });
+  }
+});
+
 test("TikTok connections use native OAuth when explicitly excluded from Zernio routing", async () => {
   const liveEnv = { ZERNIO_API_KEY: "sk_test", ZERNIO_PLATFORMS: "snapchat,facebook,instagram,threads,pinterest", TIKTOK_CLIENT_KEY: "meadow-client", TIKTOK_CLIENT_SECRET: "meadow-secret" };
   const calls = [];
@@ -314,7 +358,7 @@ test("Zernio failures become delivery errors without flagging user accounts for 
   const { transport } = zernioApi({
     "GET posts/post1": () => [200, { post: { platforms: [{ accountId: "acct1", status: "failed", errorMessage: "Video too short" }] } }],
     "POST posts": () => [403, { error: "Account is disconnected", code: "ACCOUNT_DISCONNECTED" }],
-    "GET accounts/acct1/pinterest-boards": () => [401, { error: "Unauthorized" }],
+    "GET accounts/acct1/pinterest-boards": () => [401, { error: "Unauthorized", type: "authentication_error", code: "invalid_credentials" }],
   });
   const pinterest = provider(PinterestProvider, transport), credentials = { zernioAccountId: "acct1", zernioProfileId: "profile1" };
   const ctx = { credentials, progress: { zernioPostId: "post1" } };

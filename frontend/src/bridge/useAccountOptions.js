@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "./BridgeApi.js";
-
-const accountVersion = account => `${account.status}:${account.updatedAt || 0}`;
+import { accountOptionsVersion, createAccountOptionsRequests, mergeAccountOptions } from "./accountOptions.js";
 
 // Keep the account list authoritative on the very first render after a refresh.
 // Only cache options here; mirroring the whole list in state briefly exposed an
@@ -9,23 +8,28 @@ const accountVersion = account => `${account.status}:${account.updatedAt || 0}`;
 export function useAccountOptions(projectId, accounts, selectedIds) {
   const [details, setDetails] = useState({});
   const selected = accounts.filter(account => account.status === "connected" && selectedIds.includes(account.id));
-  const selectionVersion = selected.map(account => `${account.id}:${accountVersion(account)}`).sort().join(",");
-  useEffect(() => {
-    const controller = new AbortController();
-    for (const account of selected) {
-      const version = accountVersion(account);
-      api.project(projectId, `/accounts/${account.id}/options`, { signal: controller.signal }).then(({ options }) => {
-        if (!controller.signal.aborted) setDetails(current => ({ ...current, [account.id]: { projectId, version, options, optionsError: null } }));
-      }).catch(error => {
-        if (!controller.signal.aborted) setDetails(current => ({ ...current, [account.id]: { projectId, version, optionsError: error.message } }));
+  const selectionVersion = selected.map(account => `${account.id}:${accountOptionsVersion(account)}`).sort().join(",");
+  const scope = `${projectId}:${selectionVersion}`, currentScope = useRef(scope);
+  currentScope.current = scope;
+  const requests = useRef(null);
+  if (!requests.current) requests.current = createAccountOptionsRequests({
+    request: (...args) => api.project(...args),
+    onChange(context, patch) {
+      if (context.scope !== currentScope.current) return;
+      setDetails(current => {
+        const previous = current[context.accountId];
+        const cached = previous?.projectId === context.projectId && previous.version === context.version ? previous : {};
+        return { ...current, [context.accountId]: { ...cached, projectId: context.projectId, version: context.version, ...patch } };
       });
-    }
-    return () => controller.abort();
-  }, [projectId, selectionVersion]);
-  return accounts.map(account => {
-    const cached = details[account.id];
-    return cached?.projectId === projectId && cached.version === accountVersion(account)
-      ? { ...account, ...(cached.options ? { options: cached.options } : {}), optionsError: cached.optionsError }
-      : account;
+    },
   });
+  useEffect(() => {
+    for (const account of selected) requests.current.load(projectId, account, { scope });
+    return () => requests.current.cancelAll();
+  }, [scope]);
+  function refreshOptions(accountId) {
+    const account = selected.find(item => item.id === accountId);
+    if (account) return requests.current.load(projectId, account, { force: true, scope });
+  }
+  return { accounts: accounts.map(account => mergeAccountOptions(account, details[account.id], projectId)), refreshOptions };
 }
