@@ -108,7 +108,7 @@ for (const platform of PLATFORM_USE_CASES) {
   assert.ok(html.includes(`<title>${platform.title}</title>`), `${platform.slug} must have a platform-specific title`);
   assert.ok(html.includes(`content="${platform.description}"`), `${platform.slug} must have a platform-specific description`);
   assert.ok(html.includes(platform.headline), `${platform.slug} must render its own heading without JavaScript`);
-  assert.ok(landingHtml.includes(`href="/${platform.slug}"`), `${platform.slug} must be linked from the homepage`);
+  assert.ok(landingHtml.includes(`href="/${platform.slug}/"`), `${platform.slug} must be linked from the homepage`);
   assert.ok(html.includes(`<meta property="og:url" content="https://findmeadow.com/${platform.slug}/" />`), `${platform.slug} must declare its own link preview URL`);
   assert.ok(html.includes(`<link rel="canonical" href="https://findmeadow.com/${platform.slug}/" />`), `${platform.slug} must name its own canonical address`);
   assert.ok(sitemapUrls.includes(`https://findmeadow.com/${platform.slug}/`), `${platform.slug} must appear in the sitemap`);
@@ -126,13 +126,13 @@ for (const page of GENERAL_PAGES) {
   assert.ok(html.includes(page.headline), `${page.path} must render its own heading without JavaScript`);
   assert.ok(html.includes("application/ld+json"), `${page.path} must include FAQ structured data`);
   assert.ok(!html.includes("BridgeApp-"), "Public HTML must not preload the authenticated workspace");
-  assert.ok(landingHtml.includes(`href="${page.path}"`), `${page.path} must be linked from the homepage`);
+  assert.ok(landingHtml.includes(`href="${page.path}/"`), `${page.path} must be linked from the homepage`);
   assert.ok(html.includes(`<meta property="og:url" content="https://findmeadow.com${page.path}/" />`), `${page.path} must declare its own link preview URL`);
   assert.ok(html.includes(`<link rel="canonical" href="https://findmeadow.com${page.path}/" />`), `${page.path} must name its own canonical address`);
   assert.ok(sitemapUrls.includes(`https://findmeadow.com${page.path}/`), `${page.path} must appear in the sitemap`);
-  assert.ok(html.includes('href="/telegram-publishing"'), `${page.path} must link to Telegram publishing`);
+  assert.ok(html.includes('href="/telegram-publishing/"'), `${page.path} must link to Telegram publishing`);
   assert.ok(html.includes("Can I publish to Telegram channels and groups?"), `${page.path} must explain Telegram setup`);
-  for (const id of ["twitch", "kick"]) assert.ok(html.includes(`href="/${id}-publishing"`), `${page.path} must link to ${id}`);
+  for (const id of ["twitch", "kick"]) assert.ok(html.includes(`href="/${id}-publishing/"`), `${page.path} must link to ${id}`);
   assert.ok(!html.includes('class="upcoming-platforms"'));
   for (const name of ["Twitch", "Kick"]) assert.ok(html.includes(`aria-label="${name}"`), `${page.path} must include ${name} in its logo sections`);
 }

@@ -138,7 +138,7 @@ export default function MarketingPage({ page, onGetStarted }) {
           </div>
           <div className="mkt-platform-links">
             {PLATFORMS.map(platform => (
-              <a href={`/${platform.slug}`} key={platform.id} style={{ "--platform-color": platform.color }}>
+              <a href={`/${platform.slug}/`} key={platform.id} style={{ "--platform-color": platform.color }}>
                 <PlatformMark platform={platform} />
                 <span>{platform.name}</span>
               </a>

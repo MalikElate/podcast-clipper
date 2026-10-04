@@ -99,7 +99,7 @@ function SignupAuth({ redirectUrl }) {
               }}
             />
             <span>
-              I agree to Meadow's <a href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
+              I agree to Meadow's <a href="/privacy/" target="_blank" rel="noreferrer">Privacy Policy</a>.
               <small>Required to create an account.</small>
             </span>
           </label>
