@@ -54,6 +54,17 @@ const oauthConsentHtml = await readFile("dist/oauth-consent/index.html", "utf8")
 assert.ok(oauthConsentHtml.includes('<meta name="referrer" content="strict-origin-when-cross-origin" />'), "The OAuth consent route must preserve its origin on Clerk submissions");
 for (const url of sitemapUrls) assert.match(url, /^https:\/\/findmeadow\.com\//, `Sitemap entry ${url} must use the canonical host`);
 
+// The developer page exists to be found by someone evaluating the MCP server,
+// so what it promises has to match what the contract actually does.
+const developersHtml = await readFile("dist/developers/index.html", "utf8");
+assert.ok(developersHtml.includes("https://findmeadow.com/mcp"), "The developer page must give the server URL");
+assert.ok(developersHtml.includes('"@type":"FAQPage"'), "The developer page must answer questions in a form search engines read");
+assert.ok(/does not connect accounts, upload media, queue posts or publish/.test(developersHtml), "The developer page must say the contract cannot publish");
+for (const overclaim of ["publish to 13", "Publish to 13", "publish to eleven platforms"]) {
+  assert.ok(!developersHtml.includes(overclaim), `The developer page must not claim it can ${overclaim}`);
+}
+assert.ok(sitemapUrls.includes("https://findmeadow.com/developers/"), "The developer page must appear in the sitemap");
+
 // People must be able to reach a person, and search engines must see how.
 const contactHtml = await readFile("dist/contact/index.html", "utf8");
 for (const detail of [`mailto:${CONTACT_EMAIL}`, `tel:${CONTACT_PHONE}`, CONTACT_PHONE_DISPLAY, LEGAL_ENTITY]) {
@@ -92,6 +103,7 @@ for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
 const landingHtml = await readFile("dist/index.html", "utf8");
 // Search engines read these from the served HTML, so assert the rendered page
 // rather than the module that builds them.
+assert.ok(landingHtml.includes('href="/developers/"'), "The developer page must be reachable from the footer");
 for (const type of ["Organization", "WebSite", "SoftwareApplication"]) {
   assert.ok(landingHtml.includes(`"@type":"${type}"`), `The homepage must describe itself as a ${type}`);
 }
