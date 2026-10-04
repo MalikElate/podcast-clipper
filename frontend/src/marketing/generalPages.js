@@ -14,8 +14,8 @@ const SHARED_FAQS = [
 export const GENERAL_PAGES = [
   {
     path: "/social-media-scheduler", kind: "scheduler", footerLabel: "Social media scheduler",
-    title: "Social Media Scheduler for 11 Platforms · Meadow",
-    description: "Schedule posts to X, Instagram, LinkedIn, Facebook, TikTok, YouTube, Bluesky, Threads, Pinterest, Telegram, and Google Business from one Meadow workspace.",
+    title: "Social Media Scheduler — Post to 11 Platforms Free | Meadow",
+    description: "Schedule posts across TikTok, Instagram, YouTube, LinkedIn, Telegram and 6 more from one calendar. Free plan, no credit card needed.",
     headline: "A social media scheduler for all eleven of your platforms.",
     subtitle: "Write a post once and schedule it to every account you run. Unlimited posts on every plan, multiple accounts per platform, and API access so your tools and AI agents can post too.",
     platformHeading: "Schedule to every platform you actually use",
@@ -38,7 +38,7 @@ export const GENERAL_PAGES = [
   },
   {
     path: "/cross-posting", kind: "cross-posting", footerLabel: "Cross posting",
-    title: "Cross Posting to 11 Social Platforms · Meadow",
+    title: "Cross Post to 11 Social Platforms at Once | Meadow",
     description: "Cross post to Instagram, TikTok, YouTube, X, LinkedIn, Telegram and more, with a version tailored to each platform instead of one shared caption.",
     headline: "Cross post everywhere without sounding copy-pasted.",
     subtitle: "Upload once and publish to eleven platforms together, including Telegram channels and groups, with a caption, format, and settings that fit each one.",
