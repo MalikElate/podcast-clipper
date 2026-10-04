@@ -78,6 +78,15 @@ for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
   assert.ok(!html.includes('<link rel="canonical"'), `${route} must not claim a canonical address`);
 }
 const landingHtml = await readFile("dist/index.html", "utf8");
+// Search engines read these from the served HTML, so assert the rendered page
+// rather than the module that builds them.
+for (const type of ["Organization", "WebSite", "SoftwareApplication"]) {
+  assert.ok(landingHtml.includes(`"@type":"${type}"`), `The homepage must describe itself as a ${type}`);
+}
+assert.ok(landingHtml.includes('"priceCurrency":"USD"'), "The homepage must price its plans in the currency the pricing page charges");
+for (const unearned of ["aggregateRating", "reviewCount", "ratingValue"]) {
+  assert.ok(!landingHtml.includes(unearned), `The homepage must not claim ${unearned}`);
+}
 for (const id of ["workflows", "publish-with-an-agent"]) {
   const section = landingHtml.match(new RegExp(`<section\\b[^>]*id="${id}"[\\s\\S]*?<\\/section>`))?.[0];
   assert.ok(section, `Homepage must retain the ${id} section`);

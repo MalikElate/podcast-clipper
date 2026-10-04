@@ -10,6 +10,7 @@ import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
 import SiteHeader from "./SiteHeader.jsx";
 import { signupHref } from "../siteUrls.js";
+import { homepageSchema, schemaScriptProps } from "../siteSchema.js";
 
 const HOMEPAGE_RECORDING = {
   asset: "/marketing/meadow-landing-demo-caption-v4-20260929",
@@ -272,6 +273,7 @@ export default function Landing({ onGetStarted }) {
         </section>
       </main>
 
+      <script {...schemaScriptProps(homepageSchema())} />
       <SiteFooter onGetStarted={onGetStarted} />
     </div>
   );
