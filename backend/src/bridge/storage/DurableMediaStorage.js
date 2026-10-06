@@ -26,6 +26,24 @@ export class DurableMediaStorage extends LocalMediaStorage {
       throw new BridgeError("Media storage is temporarily unavailable. Please try again.", { status: 503, code: "media_storage_unavailable" });
     }
   }
+  async multipart(key, action, fields = {}) {
+    this.path(key);
+    let response;
+    try {
+      response = await this.fetcher(new URL(`/uploads/${encodeURIComponent(key)}`, this.baseUrl), {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, ...fields }), redirect: "error", signal: AbortSignal.timeout(30000),
+      });
+    } catch {
+      throw new BridgeError("Media storage is temporarily unavailable. Please try again.", { status: 503, code: "media_storage_unavailable" });
+    }
+    const result = await response.json().catch(() => ({}));
+    invariant(response.ok, result.error || "Media storage is temporarily unavailable. Please try again.", { status: response.status >= 500 ? 503 : response.status, code: result.code || "media_storage_unavailable" });
+    return result;
+  }
+  createUpload(key, options) { return this.multipart(key, "create", options); }
+  completeUpload(key, options) { return this.multipart(key, "complete", options); }
+  abortUpload(key, uploadId) { return this.multipart(key, "abort", { uploadId }); }
   exclusive(key, operation) {
     this.path(key);
     const pending = (this.operations.get(key) || Promise.resolve()).catch(() => {}).then(operation);
