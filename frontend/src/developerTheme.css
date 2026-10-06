@@ -60,19 +60,26 @@
   line-height: 1.04;
 }
 
-/* Hero: dot-matrix field inside the column, with a highlighted headline. */
+/*
+ * Hero: a dot-matrix sky over a low meadow (PixelMeadow), with a highlighted
+ * headline. The CSS dots share the canvas grid and show until it paints.
+ */
 .landing-home .home-centered-hero {
   width: auto;
   margin-left: 0;
   padding: 0;
   overflow: hidden;
   background-color: var(--bg);
-  background-image: radial-gradient(circle, var(--rule) 1.1px, transparent 1.6px);
+  background-image: radial-gradient(circle, #dceef6 1.1px, transparent 1.6px);
   background-position: 0 0;
   background-size: 6px 6px;
 }
 .landing-home .home-hero-top,
-.landing-home .home-hero-demo-stage { background: transparent; }
+.landing-home .home-hero-demo-stage {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
 .landing-home .home-hero-top { padding: clamp(64px, 6.5vw, 96px) 0 0; }
 .landing-home .home-centered-hero .landing-title {
   max-width: 22ch;
@@ -102,16 +109,14 @@
   font-size: 17px;
 }
 .landing-home .home-hero-agent-link { font-family: var(--font-mono); font-size: 13px; }
-.landing-home .home-hero-demo-stage {
-  position: relative;
-  padding: 56px var(--rail-pad) clamp(72px, 9vw, 136px);
-}
+.landing-home .home-hero-demo-stage { padding: 56px var(--rail-pad) clamp(88px, 12vw, 168px); }
 .pixel-meadow {
   position: absolute;
-  inset: auto 0 0;
+  inset: 0;
   display: block;
   width: 100%;
-  height: 82%;
+  height: 100%;
+  image-rendering: pixelated;
   pointer-events: none;
 }
 .landing-home .home-centered-hero .hero-demo {

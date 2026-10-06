@@ -171,6 +171,7 @@ export default function Landing({ onGetStarted }) {
 
       <main>
         <section className="landing-hero landing-hero-v2 home-centered-hero">
+          <PixelMeadow />
           <div className="home-hero-top">
             <div className="hero-copy">
               <div className="home-hero-platforms" aria-label="Supported social platforms">
@@ -183,7 +184,7 @@ export default function Landing({ onGetStarted }) {
               <div className="home-hero-agent-logos" aria-hidden="true">{AGENT_LOGOS.map(agent => <span className={agent.className} key={agent.name}><agent.Icon /></span>)}</div>
             </div>
           </div>
-        <div className="home-hero-demo-stage"><PixelMeadow /><HeroDemo recording={HOMEPAGE_RECORDING} /></div>
+        <div className="home-hero-demo-stage"><HeroDemo recording={HOMEPAGE_RECORDING} /></div>
         </section>
 
         <section className="landing-section home-platform-section" id="platforms" aria-labelledby="home-platforms-title">
