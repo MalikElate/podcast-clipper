@@ -88,7 +88,7 @@ export class BridgeApi {
     // sent. A long transfer must not depend on a one-minute session token.
     const { ok, status, data } = await this.uploader(`/api/bridge${this.projectPath(projectId, "/media")}`, { body, token: uploadToken, signal, onProgress });
     if (!ok) {
-      const error = new Error(data.error || `Upload failed (${status}). Please try again.`);
+      const error = new Error(data.error || (status === 413 ? "This file is too large for the current upload route. Please choose a smaller video." : `Upload failed (${status}). Please try again.`));
       Object.assign(error, { code: data.code, details: data.details, status });
       throw error;
     }

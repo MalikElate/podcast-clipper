@@ -457,3 +457,17 @@ test("Clerk deletion webhooks verify the raw signature and erase the deleted ide
   assert.equal(h.application.store.get("project", h.project.id), null);
   assert.equal(h.application.privacy.status("alice").deletion.status, "complete");
 });
+
+test("Meadow-wide platform usage is served only to administrators, including through their API key", async t => {
+  const h = await setup(t, { envOverrides: { BRIDGE_ADMIN_UIDS: "alice" } });
+  h.application.store.put("account", { id: "usage-account", ownerUid: "bob", projectId: "bob-project", platform: "youtube", status: "connected" });
+  h.application.store.put("delivery", { id: "usage-delivery", ownerUid: "bob", projectId: "bob-project", platform: "youtube", status: "published" });
+  assert.equal((await h.request("/api/bridge/admin/platform-usage", { user: null })).status, 401);
+  assert.equal((await h.request("/api/bridge/admin/platform-usage", { user: "bob" })).status, 403);
+  const { key } = await (await h.request("/api/bridge/api-keys", { method: "POST", body: { name: "Marketing dashboard" } })).json();
+  const response = await h.request("/api/bridge/admin/platform-usage", { headers: { Authorization: `Bearer ${key}` } });
+  assert.equal(response.status, 200);
+  const report = await response.json();
+  assert.deepEqual(report.totals, { connectedAccounts: 1, publishedPosts: 1 });
+  assert.deepEqual(report.platforms.find(platform => platform.platform === "youtube"), { platform: "youtube", name: "YouTube", connectedAccounts: 1, publishedPosts: 1 });
+});

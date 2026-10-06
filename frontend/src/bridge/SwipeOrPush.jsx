@@ -3,6 +3,7 @@ import { api } from "./BridgeApi.js";
 import { Icon } from "./Icons.jsx";
 import { Alert, Check, Modal, PlatformIcon, dateTime, useProjectResource } from "./ui.jsx";
 import { DestinationSettings } from "./DestinationSettings.jsx";
+import { useHandSwipe } from "./useHandSwipe.js";
 import "./swipe.css";
 
 // Swipe or Push: review recent videos from connected accounts. Right pushes a
@@ -13,6 +14,10 @@ const SOURCE_PLATFORMS = ["tiktok", "youtube", "instagram", "facebook", "threads
 const CHAT_ONLY = new Set(["twitch", "kick"]);
 const OPTION_PLATFORMS = new Set(["tiktok", "pinterest"]);
 const THRESHOLD = 110;
+// A hand swipe could be accidental, so a camera push waits this long and can be cancelled.
+const CAMERA_PUSH_DELAY_MS = 2000;
+const CAMERA_KEY = "meadow:swipe-camera";
+const readCameraPreference = () => { try { return window.localStorage.getItem(CAMERA_KEY) === "on"; } catch { return false; } };
 const initial = { cards: null, queue: [], sources: [], settings: { accountIds: [], overrides: {} }, nextSlotAt: null, spacingHours: 8 };
 
 const platformName = (catalog, id) => catalog.find(item => item.id === id)?.name || id;
@@ -26,6 +31,10 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
   const [last, setLast] = useState(null);
+  const [cameraOn, setCameraOn] = useState(readCameraPreference);
+  const [pending, setPending] = useState(null);
+  const pendingRef = useRef(pending);
+  pendingRef.current = pending;
   const cards = (data.cards || []).filter(card => !hidden.includes(card.id));
   const card = cards[0];
   const settingsReady = data.settings.accountIds.length > 0;
@@ -40,6 +49,8 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
   }, [working, resource.reload]);
 
   async function decide(decision) {
+    // A skip during a camera countdown cancels the push; any other choice replaces it.
+    if (pendingRef.current) { setPending(null); if (decision === "skip") return false; }
     if (!card || busy || editing) return false;
     if (decision === "push" && !card.pushable) return false;
     if (decision === "push" && !settingsReady) { setEditing(true); return false; }
@@ -72,12 +83,48 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
     finally { setBusy(false); }
   }
 
-  // Arrow keys mirror the swipe: right pushes, left skips.
+  function toggleCamera() {
+    setCameraOn(on => {
+      try { window.localStorage.setItem(CAMERA_KEY, on ? "off" : "on"); } catch { /* The choice lasts for this visit. */ }
+      return !on;
+    });
+    setPending(null);
+  }
+
+  // A right swipe in front of the camera starts a short countdown; a left
+  // swipe cancels it or skips the card.
+  function onGesture(direction) {
+    if (!card || busy || editing) return;
+    if (pending) { if (direction === "left") setPending(null); return; }
+    if (direction === "left") { decide("skip"); return; }
+    if (!card.pushable) { setError(`Meadow can't download ${platformName(catalog, card.platform)} videos yet. Swipe left to skip it.`); return; }
+    if (!settingsReady) { setError("Choose destinations before pushing with your hand."); return; }
+    setError("");
+    setPending({ cardId: card.id });
+  }
+  const camera = useHandSwipe({ enabled: cameraOn, onGesture });
+
   const decideRef = useRef(decide);
   decideRef.current = decide;
+  const topCardRef = useRef(card?.id);
+  topCardRef.current = card?.id;
+  useEffect(() => {
+    if (!pending) return undefined;
+    const timer = setTimeout(async () => {
+      if (pendingRef.current?.cardId !== pending.cardId || topCardRef.current !== pending.cardId) return;
+      pendingRef.current = null;
+      setPending(null);
+      await decideRef.current("push");
+    }, CAMERA_PUSH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [pending]);
+
+  // Arrow keys mirror the swipe: right pushes, left skips. Escape or left
+  // cancels a camera push that is counting down.
   useEffect(() => {
     const onKey = event => {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || event.target.closest?.("input, textarea, select, [contenteditable], .bridge-modal")) return;
+      if (pendingRef.current && ["Escape", "ArrowLeft"].includes(event.key)) { event.preventDefault(); setPending(null); return; }
       if (event.key === "ArrowRight") { event.preventDefault(); decideRef.current("push"); }
       if (event.key === "ArrowLeft") { event.preventDefault(); decideRef.current("skip"); }
     };
@@ -85,12 +132,17 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const handNudge = cameraOn && camera.status === "ready" && camera.hand && !pending ? Math.max(-1, Math.min(1, camera.offset / camera.minDistance)) * 80 : 0;
+
   const loading = data.cards === null;
   return <div className="swipe-page">
     <Alert message={error || resource.error}/>
     <div className="swipe-toolbar">
       <p className="bridge-small">Swipe right to push a video to your other accounts, or left to skip it. The first push goes out now, then one every {data.spacingHours} hours.</p>
+      <div className="swipe-toolbar-actions">
+      <button type="button" className={`bridge-button small ${cameraOn ? "" : "secondary"}`} onClick={toggleCamera} aria-pressed={cameraOn}><Icon name="camera" size={16}/>{cameraOn ? "Stop camera" : "Swipe with your hand"}</button>
       <button type="button" className="bridge-button secondary small" onClick={() => setEditing(true)}><Icon name="settings" size={16}/>{settingsReady ? `Pushing to ${data.settings.accountIds.length} ${data.settings.accountIds.length === 1 ? "account" : "accounts"}` : "Choose destinations"}</button>
+      </div>
     </div>
     <div className="swipe-layout">
       <section className="swipe-stage" aria-label="Videos to review">
@@ -101,7 +153,8 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
           : <>
             <div className="swipe-deck">
               {cards[1] && <div className="swipe-card swipe-card-behind" aria-hidden="true"/>}
-              <SwipeCard key={card.id} card={card} catalog={catalog} timeZone={project.timeZone} disabled={busy || editing} onDecide={decide}/>
+              <SwipeCard key={card.id} card={card} catalog={catalog} timeZone={project.timeZone} disabled={busy || editing || Boolean(pending)} onDecide={decide} nudge={handNudge}
+                pending={pending?.cardId === card.id ? <div className="swipe-pending" role="status"><strong>Pushing in 2 seconds</strong><span>Swipe left or press Esc to cancel.</span><i/><button type="button" className="bridge-button secondary small" onClick={() => setPending(null)}>Cancel</button></div> : null}/>
             </div>
             <div className="swipe-actions">
               <button type="button" className="swipe-action skip" onClick={() => decide("skip")} disabled={busy} aria-label="Skip this video"><Icon name="close" size={26}/></button>
@@ -111,13 +164,37 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
             <p className="swipe-hint bridge-small">{card.pushable ? "Use ← and → on your keyboard too." : `Meadow can't download ${platformName(catalog, card.platform)} videos yet, so this one can only be skipped.`} {cards.length - 1 > 0 ? `${cards.length - 1} more after this.` : "This is the last one."}</p>
           </>}
       </section>
-      <PushQueue queue={data.queue} nextSlotAt={data.nextSlotAt} sources={data.sources} catalog={catalog} timeZone={project.timeZone}/>
+      <div className="swipe-side-column">
+        {cameraOn && <CameraPanel camera={camera} onStop={toggleCamera}/>}
+        <PushQueue queue={data.queue} nextSlotAt={data.nextSlotAt} sources={data.sources} catalog={catalog} timeZone={project.timeZone}/>
+      </div>
     </div>
     {editing && <PushSettings project={project} catalog={catalog} accounts={accounts} settings={data.settings} onClose={() => setEditing(false)} onSaved={settings => { resource.setData(current => ({ ...current, settings })); setEditing(false); setError(""); notify("Push destinations saved."); }}/>}
   </div>;
 }
 
-function SwipeCard({ card, catalog, timeZone, disabled, onDecide }) {
+function CameraPanel({ camera, onStop }) {
+  const ready = camera.status === "ready";
+  const strength = Math.min(1, Math.abs(camera.offset) / camera.minDistance);
+  const message = camera.status === "error" ? camera.error
+    : camera.status === "starting" ? "Starting the camera…"
+    : camera.status === "loading" ? "Loading hand tracking. The first time downloads about 11 MB, so it can take a little while."
+    : camera.hand ? "Swipe your hand right to push, left to skip." : "Raise one hand so the camera can see it.";
+  return <section className="bridge-panel swipe-camera" aria-label="Camera">
+    <div className="swipe-camera-view">
+      <video ref={camera.videoRef} muted playsInline aria-hidden="true"/>
+      {ready && <>
+        <span className="swipe-camera-zone skip" style={{ opacity: camera.offset < 0 ? 0.25 + strength * 0.75 : 0.25 }}><Icon name="close" size={18}/>Skip</span>
+        <span className="swipe-camera-zone push" style={{ opacity: camera.offset > 0 ? 0.25 + strength * 0.75 : 0.25 }}>Push<Icon name="arrow" size={18}/></span>
+        {camera.hand && <span className="swipe-camera-hand" style={{ left: `${camera.hand.x * 100}%`, top: `${camera.hand.y * 100}%` }}/>}
+      </>}
+    </div>
+    <p className={`bridge-small ${camera.status === "error" ? "swipe-camera-error" : ""}`} role="status">{message}</p>
+    <p className="bridge-small swipe-camera-privacy">Hand tracking runs on this device. Meadow never receives the camera feed. <button type="button" className="swipe-link" onClick={onStop}>Turn off camera</button></p>
+  </section>;
+}
+
+function SwipeCard({ card, catalog, timeZone, disabled, onDecide, nudge = 0, pending = null }) {
   const [drag, setDrag] = useState({ x: 0, active: false });
   const start = useRef(null);
   const name = platformName(catalog, card.platform);
@@ -142,11 +219,13 @@ function SwipeCard({ card, catalog, timeZone, disabled, onDecide }) {
     if (!await onDecide(decision)) setDrag({ x: 0, active: false });
   }
 
-  const strength = Math.min(1, Math.abs(drag.x) / THRESHOLD);
-  return <article className={`swipe-card ${drag.active ? "is-dragging" : ""}`} style={{ transform: `translateX(${drag.x}px) rotate(${drag.x / 22}deg)` }}
+  const x = drag.active || drag.x ? drag.x : pending ? 60 : nudge;
+  const strength = Math.min(1, Math.abs(x) / THRESHOLD);
+  return <article className={`swipe-card ${drag.active ? "is-dragging" : ""} ${nudge && !drag.active ? "is-following" : ""}`} style={{ transform: `translateX(${x}px) rotate(${x / 22}deg)` }}
     onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd}>
-    <span className="swipe-stamp push" style={{ opacity: drag.x > 0 ? strength : 0 }}>Push</span>
-    <span className="swipe-stamp skip" style={{ opacity: drag.x < 0 ? strength : 0 }}>Skip</span>
+    <span className="swipe-stamp push" style={{ opacity: pending ? 1 : x > 0 ? strength : 0 }}>Push</span>
+    <span className="swipe-stamp skip" style={{ opacity: x < 0 ? strength : 0 }}>Skip</span>
+    {pending}
     <header className="swipe-card-head">
       <PlatformIcon platform={card.platform} size={22}/>
       <div><strong>{card.accountName}</strong><span>{name}{card.publishedAt ? ` · ${dateTime(card.publishedAt, timeZone)}` : ""}</span></div>

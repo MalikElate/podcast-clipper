@@ -40,6 +40,11 @@ test("failed authorization prevents sending the file", async () => {
   await assert.rejects(api.uploadMedia("project", new File(["video"], "video.mp4")), error => error.code === "authentication_required");
 });
 
+test("proxy upload size rejection is actionable even without a JSON error", async () => {
+  const api = new BridgeApi({ getToken: async () => "session", fetcher: async () => Response.json({ uploadToken: "meadow_upload_fixture" }), uploader: async () => ({ ok: false, status: 413, data: {} }) });
+  await assert.rejects(api.uploadMedia("project", new File(["video"], "video.mp4")), error => error.status === 413 && /too large.*smaller video/.test(error.message));
+});
+
 test("file transfers never replay after authentication, server, or network failure", async () => {
   for (const failure of [
     () => ({ ok: false, status: 401, data: { error: "Retry your upload.", code: "invalid_upload_token" } }),
