@@ -187,8 +187,7 @@
 
 /* Ruled grids: hairlines between cells instead of floating cards. */
 .landing-home .usage-grid,
-.landing-home .pricing-grid,
-.landing-home .home-faq-grid {
+.landing-home .pricing-grid {
   gap: 1px;
   overflow: hidden;
   border: 1px solid var(--rule) !important;
@@ -235,7 +234,7 @@
 .landing-home .landing-section.home-faq { padding-block: 72px 88px; }
 .landing-home .home-faq-heading { display: flex; align-items: center; gap: 16px; text-align: left; }
 .landing-home .home-faq-icon { width: 40px; height: 40px; margin: 0; }
-.landing-home .home-faq-grid { margin-top: 32px; }
+.landing-home .home-faq-grid { gap: 1px; margin-top: 32px; }
 .landing-home .home-faq-item { padding: 28px clamp(20px, 2.4vw, 32px) 32px; background: var(--bg); }
 .landing-home .home-faq-item h3 { font-weight: 600; }
 .landing-home .home-faq-item p { font-size: 16px; }
