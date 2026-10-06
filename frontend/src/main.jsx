@@ -11,6 +11,7 @@ import "./platformUseCases.css";
 import "./marketingPages.css";
 import "./adSignupFunnel.css";
 import "./tools/freeTools.css";
+import "./developerTheme.css";
 import { initProductAnalytics } from "./productAnalytics.js";
 import { initGoogleAnalytics, migrateLegacyGoogleAnalyticsPreference } from "./googleAnalytics.js";
 import { appHref } from "./siteUrls.js";
