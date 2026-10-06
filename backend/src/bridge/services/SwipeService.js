@@ -19,9 +19,10 @@ const kind = "swipeDecision";
 const cardKey = (accountId, externalId) => createHash("sha256").update(`${accountId}:${externalId}`).digest("base64url").slice(0, 22);
 const clip = (text, limit) => { const characters = [...String(text || "")]; return characters.length > limit ? `${characters.slice(0, limit - 1).join("").trimEnd()}…` : characters.join(""); };
 
+// TikTok's embed player shows just the video, which fits a 9:16 card.
 function tiktokEmbed(url) {
   const id = /\/video\/(\d+)/.exec(url || "")?.[1];
-  return id ? `https://www.tiktok.com/embed/v2/${id}` : null;
+  return id ? `https://www.tiktok.com/player/v1/${id}?music_info=0&description=0&rel=0` : null;
 }
 
 function videoTitle(source) {

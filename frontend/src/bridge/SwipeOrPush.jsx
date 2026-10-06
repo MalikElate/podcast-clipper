@@ -90,11 +90,12 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
     <Alert message={error || resource.error}/>
     <div className="swipe-toolbar">
       <p className="bridge-small">Swipe right to push a video to your other accounts, or left to skip it. The first push goes out now, then one every {data.spacingHours} hours.</p>
-      <button type="button" className="bridge-button secondary small" onClick={() => setEditing(true)}><Icon name="settings" size={16}/>Push to {settingsReady ? `${data.settings.accountIds.length} ${data.settings.accountIds.length === 1 ? "account" : "accounts"}` : "…"}</button>
+      <button type="button" className="bridge-button secondary small" onClick={() => setEditing(true)}><Icon name="settings" size={16}/>{settingsReady ? `Pushing to ${data.settings.accountIds.length} ${data.settings.accountIds.length === 1 ? "account" : "accounts"}` : "Choose destinations"}</button>
     </div>
     <div className="swipe-layout">
       <section className="swipe-stage" aria-label="Videos to review">
-        {loading ? <div className="bridge-panel bridge-empty"><p>Loading your videos…</p></div>
+        {loading && resource.error ? <div className="bridge-panel bridge-empty"><p>Your videos could not be loaded.</p><button type="button" className="bridge-button secondary" onClick={resource.reload} disabled={resource.loading}>Try again</button></div>
+          : loading ? <div className="bridge-panel bridge-empty"><p>Loading your videos…</p></div>
           : !hasSource && accountsReady ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><Icon name="video" size={28}/></div><h2>Connect a video account</h2><p>Swipe or Push uses recent videos from TikTok, YouTube, Instagram, Facebook and Threads.</p><button type="button" className="bridge-button" onClick={onAccounts}>Connect an account</button></div>
           : !card ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><Icon name="check" size={28}/></div><h2>You're all caught up</h2><p>New videos from your connected accounts show up here.</p><button type="button" className="bridge-button secondary" onClick={resource.reload} disabled={resource.loading}>Check again</button></div>
           : <>
