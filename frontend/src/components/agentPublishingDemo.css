@@ -3,14 +3,16 @@
 .agent-audience-highlight { color: #5d913f; }
 .agent-demo { position: relative; container-type: inline-size; margin: 0; padding: 0; overflow: hidden; border: 1px solid #dfe5d9; border-radius: 19px; background: #fcfdf9; color: #26372e; box-shadow: 0 28px 58px -42px rgba(28,45,64,.55); }
 .agent-demo-header { display: flex; align-items: center; gap: 11px; padding: 13px 22px; border-bottom: 1px solid #e6eadf; background: #fffefa; }
-.agent-demo-avatar { display: grid; width: 35px; height: 35px; flex: 0 0 35px; place-items: center; border-radius: 11px; background: #eaf1e1; color: #52793f; }
-.agent-demo-avatar svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+.agent-demo-avatar { display: grid; width: 35px; height: 35px; flex: 0 0 35px; place-items: center; color: #26372e; }
+.agent-demo-avatar svg, .agent-demo-avatar img { display: block; width: 22px; height: 22px; object-fit: contain; }
+.agent-demo-avatar.is-claude { color: #d97757; }
+.agent-demo-avatar.is-openai { color: #10a37f; }
 .agent-demo-header strong { display: block; font-size: 14px; font-weight: 700; }
 .agent-demo-conversation { display: flex; flex-direction: column; gap: 12px; padding: 18px 24px 14px; font-size: clamp(11px,2.5cqw,14px); line-height: 1.5; }
 .agent-demo-user { align-self: flex-end; max-width: 83%; padding: 10px 15px; border-radius: 15px 15px 4px 15px; background: #eaf0e2; color: #33432f; }
 .agent-demo-response { display: flex; align-items: flex-start; gap: 10px; }
-.agent-demo-avatar-small { width: 25px; height: 25px; flex-basis: 25px; margin-top: 2px; border-radius: 8px; }
-.agent-demo-avatar-small svg { width: 18px; height: 18px; }
+.agent-demo-avatar-small { width: 25px; height: 25px; flex-basis: 25px; margin-top: 2px; }
+.agent-demo-avatar-small svg, .agent-demo-avatar-small img { width: 18px; height: 18px; }
 .agent-demo-answer { min-width: 0; flex: 1; }
 .agent-demo-answer > p { min-height: 1.5em; margin: 0 0 8px; }
 .agent-demo-preview { overflow: hidden; border: 1px solid #dfe5d9; border-radius: 12px; background: #fff; }
