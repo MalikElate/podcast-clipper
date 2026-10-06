@@ -61,7 +61,7 @@ test("the deck lists recent videos from connected accounts, newest first", async
   assert.deepEqual(deck.cards.map(card => card.externalId), ["7000000001", "7000000002", "ytVideo0001", "7000000003"]);
   const tiktok = deck.cards[0];
   assert.equal(tiktok.platform, "tiktok");
-  assert.equal(tiktok.embedUrl, "https://www.tiktok.com/embed/v2/7000000001");
+  assert.equal(tiktok.embedUrl, "https://www.tiktok.com/player/v1/7000000001?music_info=0&description=0&rel=0");
   assert.equal(tiktok.thumbnailUrl, "https://p16.tiktokcdn.com/7000000001.webp");
   assert.equal(tiktok.pushable, true);
   assert.equal(deck.cards[2].embedUrl, "https://www.youtube.com/embed/ytVideo0001");
