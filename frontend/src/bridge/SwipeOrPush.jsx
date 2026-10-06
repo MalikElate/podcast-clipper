@@ -178,7 +178,7 @@ function CameraPanel({ camera, onStop }) {
   const strength = Math.min(1, Math.abs(camera.offset) / camera.minDistance);
   const message = camera.status === "error" ? camera.error
     : camera.status === "starting" ? "Starting the camera…"
-    : camera.status === "loading" ? "Loading hand tracking…"
+    : camera.status === "loading" ? "Loading hand tracking. The first time downloads about 11 MB, so it can take a little while."
     : camera.hand ? "Swipe your hand right to push, left to skip." : "Raise one hand so the camera can see it.";
   return <section className="bridge-panel swipe-camera" aria-label="Camera">
     <div className="swipe-camera-view">
