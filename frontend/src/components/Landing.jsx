@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { SiClaude, SiCursor } from "react-icons/si";
+import OpenAILogo from "./OpenAILogo.jsx";
 import { PlatformIcon } from "../bridge/ui.jsx";
 import HeroDemo from "./HeroDemo.jsx";
 import PixelMeadow from "./PixelMeadow.jsx";
@@ -76,17 +77,10 @@ function ArrowIcon() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-function CodexLogo() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="currentColor" fillRule="evenodd" d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26.095 1.88-.309a5.96 5.96 0 004.162 1.713z" />
-    </svg>
-  );
-}
 
 const AGENT_LOGOS = [
   { name: "Claude", Icon: SiClaude, className: "is-claude" },
-  { name: "Codex", Icon: CodexLogo, className: "is-codex" },
+  { name: "Codex", Icon: OpenAILogo, className: "is-codex" },
   { name: "Cursor", Icon: SiCursor, className: "is-cursor" },
 ];
 
@@ -178,7 +172,7 @@ export default function Landing({ onGetStarted }) {
                 {PLATFORMS.map(platform => <PlatformMark platform={platform} size={32} variant={platform.id === "google_business" ? "hero" : "default"} key={platform.id} />)}
                 {AGENT_LOGOS.map(agent => <span className={`home-hero-agent-mark ${agent.className}`} role="img" aria-label={agent.name} title={agent.name} key={agent.name}><agent.Icon /></span>)}
               </div>
-              <h1 className="landing-title"><span className="landing-title-mark">Creator tool kit for agents and developers</span></h1>
+              <h1 className="landing-title"><span className="landing-title-mark">creator tools for your ai</span></h1>
               <p className="landing-subtitle">Plan, tailor, and schedule posts across your social accounts from one Meadow dashboard.</p>
               <div className="hero-actions hero-actions-v2"><a className="btn-primary landing-cta" href={signupHref()}>Try for free <ArrowIcon /></a></div>
             </div>
@@ -210,7 +204,7 @@ export default function Landing({ onGetStarted }) {
             <AgentPublishingDemo />
           </div>
           <div className="scheduling-use-case-copy">
-            <h2 id="agent-publishing-title">Make sure you show up for <span className="agent-audience-highlight">every audience.</span></h2>
+            <h2 id="agent-publishing-title">use from your <span className="agent-audience-highlight">assistant</span></h2>
             <p>Tell your AI assistant what you want to share. Let it prepare posts for your connected channels, review the details, and give the go-ahead. Meadow takes care of publishing.</p>
             <div className="scheduling-use-case-actions">
               <a className="scheduling-use-case-primary" href={signupHref()}>Try for free <ArrowIcon /></a>
