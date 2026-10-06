@@ -121,7 +121,7 @@ test("durable processing resumes after a worker restart and expired grants are c
   h.application.store.put("media", { ...record, status: "processing" });
   h.application.media.start(); await h.application.media.directProcessing; h.application.media.stop();
   assert.equal(h.application.store.get("media", ticket.mediaId).status, "ready");
-  const expired = await h.issue(), pending = h.stage(expired); h.advance(3600001);
+  const expired = await h.issue(), pending = h.stage(expired); h.advance(3 * 3600000 + 1);
   assert.equal((await h.complete(expired)).status, 410);
   h.application.media.directStopped = false; await h.application.media.processDirectUploads();
   assert.equal(h.application.store.get("media", expired.mediaId).status, "failed"); assert.equal(h.objects.has(`staging:${pending.storageKey}`), false);
@@ -145,7 +145,15 @@ test("maintenance observes completion during another large file's preparation ra
   const processing = h.application.media.processDirectUploads();
   await new Promise(resolve => setImmediate(resolve));
   await h.application.media.completeDirectUpload("alice", h.project.id, pending.mediaId);
-  h.advance(3600001); release(); await processing;
+  h.advance(3 * 3600000 + 1); release(); await processing;
   assert.equal(h.application.store.get("media", busy.mediaId).status, "ready");
   assert.equal(h.application.store.get("media", pending.mediaId).status, "ready");
+});
+
+test("an admitted slow transfer can complete after its signed PUT start window expires", async t => {
+  const h = await setup(t), ticket = await h.issue(); h.stage(ticket);
+  h.advance(3600001);
+  assert.equal((await h.complete(ticket)).status, 202);
+  await h.application.media.directProcessing;
+  assert.equal(h.application.store.get("media", ticket.mediaId).status, "ready");
 });

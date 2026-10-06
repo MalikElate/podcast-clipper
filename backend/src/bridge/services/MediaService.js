@@ -68,7 +68,8 @@ export class MediaService {
     const id = randomUUID(), storageKey = `${id}.upload`;
     const ticket = await this.storage.createDirectUpload(storageKey, { bytes });
     this.projects.require(uid, projectId);
-    const record = { id, ownerUid: uid, projectId, storageKey, bytes, filename: String(filename || "media").replace(/[\x00-\x1f/\\]/g, "_").slice(0, 180), source: "direct_upload", status: "uploading", uploadExpiresAt: ticket.expiresAt, variants: {}, metadata: {}, createdAt: this.clock(), updatedAt: this.clock() };
+    // The signature limits when PUT may start; a slow transfer can finish later.
+    const record = { id, ownerUid: uid, projectId, storageKey, bytes, filename: String(filename || "media").replace(/[\x00-\x1f/\\]/g, "_").slice(0, 180), source: "direct_upload", status: "uploading", uploadExpiresAt: ticket.expiresAt + 2 * 3600000, variants: {}, metadata: {}, createdAt: this.clock(), updatedAt: this.clock() };
     this.store.put("media", record);
     await this.store.flush?.();
     return { directUpload: { ...ticket, mediaId: id } };
