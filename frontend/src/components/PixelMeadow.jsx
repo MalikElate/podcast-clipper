@@ -85,7 +85,9 @@ function paint(columns, rows) {
   const grid = Array.from({ length: rows }, () => new Array(columns));
   // Anchor the pattern at the center so resizing reveals more meadow at the edges.
   const center = Math.floor(columns / 2);
-  const base = Math.max(14, Math.round(rows * 0.15));
+  // On narrow screens the demo is short, so keep the meadow below the hero copy.
+  const base = Math.max(10, Math.round(Math.min(rows * 0.15, columns * 0.2)));
+  const tallestStem = Math.min(8, Math.floor(columns / 12));
   const ground = [];
   for (let column = 0; column < columns; column += 1) {
     const x = column - center;
@@ -113,7 +115,7 @@ function paint(columns, rows) {
     const bloom = hash(x, 0, 83);
     if (bloom < 0.15 && column - lastFlower >= 4) {
       lastFlower = column;
-      const stem = 2 + Math.floor(hash(x, 1, 84) * 8);
+      const stem = 2 + Math.floor(hash(x, 1, 84) * tallestStem);
       for (let step = 0; step < stem; step += 1) set(grid, top - step, column, STEM);
       const head = top - stem - 1;
       const coral = hash(x, 2, 85) < 0.3;

@@ -170,7 +170,7 @@ export default function Landing({ onGetStarted }) {
       <SiteHeader homeHref="#top" onSignIn={onGetStarted} onStartPosting={onGetStarted} />
 
       <main>
-        <section className="landing-hero landing-hero-v2 home-centered-hero">
+        <section className="landing-hero landing-hero-v2 home-centered-hero" style={{ "--demo-ratio": HOMEPAGE_RECORDING.height / HOMEPAGE_RECORDING.width }}>
           <PixelMeadow />
           <div className="home-hero-top">
             <div className="hero-copy">
