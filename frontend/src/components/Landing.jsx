@@ -175,7 +175,7 @@ export default function Landing({ onGetStarted }) {
               <div className="home-hero-platforms" aria-label="Supported social platforms">
                 {PLATFORMS.map(platform => <PlatformMark platform={platform} size={32} variant={platform.id === "google_business" ? "hero" : "default"} key={platform.id} />)}
               </div>
-              <h1 className="landing-title">Creator tools for developers and agents</h1>
+              <h1 className="landing-title">Turn Claude into your social media manager</h1>
               <p className="landing-subtitle">Plan, tailor, and schedule posts across your social accounts from one Meadow dashboard.</p>
               <div className="hero-actions hero-actions-v2"><a className="btn-primary landing-cta" href={signupHref()}>Try for free <ArrowIcon /></a></div>
               <a className="home-hero-agent-link" href="#ways-to-use">Publishing with an AI agent? Explore API/MCP <ArrowIcon /></a>
