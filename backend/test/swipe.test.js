@@ -75,7 +75,7 @@ test("swiping right needs destinations, then queues pushes eight hours apart", a
   const { cards } = await h.app.swipe.deck("alice", h.project.id);
   await assert.rejects(h.app.swipe.decide("alice", h.project.id, { cardId: cards[0].id, decision: "push" }), error => error.code === "swipe_settings_required");
 
-  h.app.swipe.saveSettings("alice", h.project.id, { destinations: ["x", "youtube", "tiktok"], overrides: { youtube: { settings: { privacy: "public", madeForKids: false } } } });
+  h.app.swipe.saveSettings("alice", h.project.id, { accountIds: ["x", "youtube", "tiktok"], overrides: { youtube: { settings: { privacy: "public", madeForKids: false } } } });
   const first = await h.app.swipe.decide("alice", h.project.id, { cardId: cards[0].id, decision: "push" });
   assert.equal(first.decision.status, "queued");
   assert.equal(first.decision.slotAt, h.now());
@@ -95,7 +95,7 @@ test("swiping right needs destinations, then queues pushes eight hours apart", a
 test("pushes download the video and publish it to every other destination on schedule", async t => {
   const h = setup(t);
   const { cards } = await h.app.swipe.deck("alice", h.project.id);
-  h.app.swipe.saveSettings("alice", h.project.id, { destinations: ["x", "youtube", "tiktok"], overrides: { youtube: { settings: { privacy: "public", madeForKids: false } } } });
+  h.app.swipe.saveSettings("alice", h.project.id, { accountIds: ["x", "youtube", "tiktok"], overrides: { youtube: { settings: { privacy: "public", madeForKids: false } } } });
   await h.app.swipe.decide("alice", h.project.id, { cardId: cards[0].id, decision: "push" });
   await h.app.swipe.decide("alice", h.project.id, { cardId: cards[2].id, decision: "push" });
   await h.app.swipe.tick();
@@ -125,7 +125,7 @@ test("destinations that reject a video are reported, and a failed push can be re
   const h = setup(t);
   const { cards } = await h.app.swipe.deck("alice", h.project.id);
   // YouTube without its required visibility settings rejects the video.
-  h.app.swipe.saveSettings("alice", h.project.id, { destinations: ["x", "youtube"] });
+  h.app.swipe.saveSettings("alice", h.project.id, { accountIds: ["x", "youtube"] });
   await h.app.swipe.decide("alice", h.project.id, { cardId: cards[0].id, decision: "push" });
   h.videoDownloader.failUrls.add(cards[1].url);
   await h.app.swipe.decide("alice", h.project.id, { cardId: cards[1].id, decision: "push" });
@@ -148,9 +148,9 @@ test("destinations that reject a video are reported, and a failed push can be re
 test("removing a connection clears its videos and destination from Swipe or Push", async t => {
   const h = setup(t);
   const { cards } = await h.app.swipe.deck("alice", h.project.id);
-  h.app.swipe.saveSettings("alice", h.project.id, { destinations: ["x", "tiktok"] });
+  h.app.swipe.saveSettings("alice", h.project.id, { accountIds: ["x", "tiktok"] });
   await h.app.swipe.decide("alice", h.project.id, { cardId: cards[0].id, decision: "skip" });
   h.app.privacy.removeConnectionData(h.app.store.get("account", "tiktok"));
   assert.equal(h.app.store.list("swipeDecision").length, 0);
-  assert.deepEqual(h.app.store.get("swipeSettings", h.project.id).destinations, ["x"]);
+  assert.deepEqual(h.app.store.get("swipeSettings", h.project.id).accountIds, ["x"]);
 });

@@ -115,29 +115,29 @@ export class SwipeService {
     this.projects.require(uid, projectId);
     const saved = this.store.get("swipeSettings", projectId);
     const connected = new Set(this.connectedAccounts(uid, projectId).map(account => account.id));
-    const destinations = (saved?.ownerUid === uid ? saved.destinations : []).filter(id => connected.has(id));
-    return { destinations, overrides: Object.fromEntries(Object.entries(saved?.overrides || {}).filter(([id]) => destinations.includes(id))), updatedAt: saved?.updatedAt || null };
+    const accountIds = (saved?.ownerUid === uid ? saved.accountIds : []).filter(id => connected.has(id));
+    return { accountIds, overrides: Object.fromEntries(Object.entries(saved?.overrides || {}).filter(([id]) => accountIds.includes(id))), updatedAt: saved?.updatedAt || null };
   }
 
   saveSettings(uid, projectId, input = {}) {
     this.projects.require(uid, projectId);
-    const destinations = input.destinations;
-    invariant(Array.isArray(destinations) && destinations.length <= 100 && new Set(destinations).size === destinations.length && destinations.every(id => typeof id === "string" && id.length <= 200), "Choose where pushed videos go.");
-    destinations.forEach(id => invariant(this.accounts.require(uid, projectId, id).status === "connected", "Reconnect this account before pushing videos to it."));
+    const accountIds = input.accountIds;
+    invariant(Array.isArray(accountIds) && accountIds.length <= 100 && new Set(accountIds).size === accountIds.length && accountIds.every(id => typeof id === "string" && id.length <= 200), "Choose where pushed videos go.");
+    accountIds.forEach(id => invariant(this.accounts.require(uid, projectId, id).status === "connected", "Reconnect this account before pushing videos to it."));
     const overrides = {};
     for (const [id, value] of Object.entries(input.overrides || {})) {
-      if (!destinations.includes(id)) continue;
+      if (!accountIds.includes(id)) continue;
       invariant(value && typeof value === "object" && !Array.isArray(value) && (value.settings === undefined || value.settings && typeof value.settings === "object" && !Array.isArray(value.settings)), "Invalid destination settings.");
       invariant(JSON.stringify(value.settings || {}).length <= 10000, "Destination settings are too large.");
       overrides[id] = { settings: value.settings || {} };
     }
     const previous = this.store.get("swipeSettings", projectId);
-    this.store.put("swipeSettings", { id: projectId, projectId, ownerUid: uid, destinations, overrides, createdAt: previous?.createdAt || this.clock(), updatedAt: this.clock() });
+    this.store.put("swipeSettings", { id: projectId, projectId, ownerUid: uid, accountIds, overrides, createdAt: previous?.createdAt || this.clock(), updatedAt: this.clock() });
     return this.settings(uid, projectId);
   }
 
   destinationsFor(uid, projectId, sourceAccountId) {
-    return this.settings(uid, projectId).destinations.filter(id => id !== sourceAccountId);
+    return this.settings(uid, projectId).accountIds.filter(id => id !== sourceAccountId);
   }
 
   nextSlot(projectId) {
@@ -259,9 +259,9 @@ export class SwipeService {
   removeAccount(account) {
     for (const record of this.store.list(kind, { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountId === account.id)) this.store.remove(kind, record.id);
     const saved = this.store.get("swipeSettings", account.projectId);
-    if (saved?.destinations?.includes(account.id)) {
+    if (saved?.accountIds?.includes(account.id)) {
       const overrides = { ...saved.overrides }; delete overrides[account.id];
-      this.store.put("swipeSettings", { ...saved, destinations: saved.destinations.filter(id => id !== account.id), overrides, updatedAt: this.clock() });
+      this.store.put("swipeSettings", { ...saved, accountIds: saved.accountIds.filter(id => id !== account.id), overrides, updatedAt: this.clock() });
     }
     this.videoCache.delete(account.id);
   }
