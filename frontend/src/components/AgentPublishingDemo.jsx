@@ -17,7 +17,7 @@ function HermesLogo() {
 
 const AGENTS = [
   { id: "claude", name: "Claude", Logo: SiClaude },
-  { id: "openai", name: "OpenAI", Logo: OpenAILogo },
+  { id: "openai", name: "ChatGPT", Logo: OpenAILogo },
   { id: "hermes", name: "Hermes", Logo: HermesLogo },
 ];
 
@@ -99,7 +99,7 @@ export default function AgentPublishingDemo() {
         <div className={`agent-demo-success ${step >= 6 ? "is-visible" : ""}`}><span><Check /></span>You’re live on all 3 channels.</div>
       </div>
 
-      <figcaption id="agent-demo-description" className="sr-only">Illustrative sample conversation: ask an AI assistant connected to Meadow to share a studio launch on LinkedIn, Threads, and Bluesky. The assistant prepares the posts for review, waits for your approval, and then shows each channel as published. Each replay uses Claude, OpenAI, then Hermes. No real posts are created by this demo.</figcaption>
+      <figcaption id="agent-demo-description" className="sr-only">Illustrative sample conversation: ask an AI assistant connected to Meadow to share a studio launch on LinkedIn, Threads, and Bluesky. The assistant prepares the posts for review, waits for your approval, and then shows each channel as published. Each replay uses Claude, ChatGPT, then Hermes. No real posts are created by this demo.</figcaption>
     </figure>
   );
 }

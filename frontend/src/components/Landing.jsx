@@ -172,7 +172,7 @@ export default function Landing({ onGetStarted }) {
                 {PLATFORMS.map(platform => <PlatformMark platform={platform} size={32} variant={platform.id === "google_business" ? "hero" : "default"} key={platform.id} />)}
                 {AGENT_LOGOS.map(agent => <span className={`home-hero-agent-mark ${agent.className}`} role="img" aria-label={agent.name} title={agent.name} key={agent.name}><agent.Icon /></span>)}
               </div>
-              <h1 className="landing-title"><span className="landing-title-mark">creator tools for your ai</span></h1>
+              <h1 className="landing-title">creator tools for your AI</h1>
               <p className="landing-subtitle">Plan, tailor, and schedule posts across your social accounts from one Meadow dashboard.</p>
               <div className="hero-actions hero-actions-v2"><a className="btn-primary landing-cta" href={signupHref()}>Try for free <ArrowIcon /></a></div>
             </div>
@@ -204,7 +204,7 @@ export default function Landing({ onGetStarted }) {
             <AgentPublishingDemo />
           </div>
           <div className="scheduling-use-case-copy">
-            <h2 id="agent-publishing-title">use from your <span className="agent-audience-highlight">assistant</span></h2>
+            <h2 id="agent-publishing-title">use from your assistant</h2>
             <p>Tell your AI assistant what you want to share. Let it prepare posts for your connected channels, review the details, and give the go-ahead. Meadow takes care of publishing.</p>
             <div className="scheduling-use-case-actions">
               <a className="scheduling-use-case-primary" href={signupHref()}>Try for free <ArrowIcon /></a>

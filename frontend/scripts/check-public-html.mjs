@@ -6,7 +6,7 @@ import { GENERAL_PAGES } from "../src/marketing/generalPages.js";
 import { FREE_TOOL_PAGES, FREE_TOOLS, MEDIA_GUIDES, schedulerFor } from "../src/tools/freeToolsCatalog.js";
 import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_DISPLAY, LEGAL_ENTITY } from "../src/siteContact.js";
 
-for (const [path, heading] of [["tiktok-roast/index.html", "TikTok <span>Niche or Not"], ["index.html", "creator tools for your ai"], ["404.html", ">404<"], ["pricing/index.html", "<h1>Pricing</h1>"], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
+for (const [path, heading] of [["tiktok-roast/index.html", "TikTok <span>Niche or Not"], ["index.html", "creator tools for your AI"], ["404.html", ">404<"], ["pricing/index.html", "<h1>Pricing</h1>"], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
   const html = await readFile(`dist/${path}`, "utf8");
   assert.match(html, /<h1/);
   assert.ok(html.includes(heading), `${path} must contain its own content without JavaScript`);
@@ -123,8 +123,8 @@ assert.ok(landingHtml.includes(`href="tel:${CONTACT_PHONE}"><span>Talk to a huma
 assert.ok(!landingHtml.includes('platform-mega-menu'), "Homepage navbar must not render the old platform dropdown");
 assert.ok(landingHtml.includes("Show up for every audience."), "Homepage platform section must use the requested heading");
 assert.ok(!landingHtml.includes("Go where your audience is."), "Homepage platform section must not use the old heading");
-assert.ok(landingHtml.indexOf('class="home-hero-platforms"') < landingHtml.indexOf('creator tools for your ai'), "Homepage platform logos must appear above the headline");
-assert.ok(landingHtml.indexOf('creator tools for your ai') < landingHtml.indexOf('class="hero-demo"'), "Homepage demo must appear below the hero copy");
+assert.ok(landingHtml.indexOf('class="home-hero-platforms"') < landingHtml.indexOf('creator tools for your AI'), "Homepage platform logos must appear above the headline");
+assert.ok(landingHtml.indexOf('creator tools for your AI') < landingHtml.indexOf('class="hero-demo"'), "Homepage demo must appear below the hero copy");
 assert.ok(!landingHtml.includes("Free plan includes 5 connections."), "Homepage hero must not show the free connection count");
 assert.ok(landingHtml.indexOf('class="footer-brand-row"') < landingHtml.indexOf('class="footer-columns"'), "Footer brand must appear above its link columns");
 for (const removed of ["footer-network-row", "footer-disclaimer", "footer-legal-row", "footer-help-link", "footer-locale"]) {

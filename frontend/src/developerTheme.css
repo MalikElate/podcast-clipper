@@ -61,7 +61,7 @@
 }
 
 /*
- * Hero: a highlighted headline on the plain page, with a dot-matrix sky over a
+ * Hero: a headline on the plain page, with a dot-matrix sky over a
  * meadow (PixelMeadow) filling the hero from halfway down the demo video to
  * the bottom. Landing sets --demo-ratio (video height / width); the hero is a
  * size container so the canvas can work out where the video's midpoint falls.
@@ -89,13 +89,6 @@
   font-weight: 600;
   line-height: 1.12;
   letter-spacing: -.03em;
-}
-.landing-title-mark {
-  padding: .04em .16em .06em;
-  background: #72c991;
-  color: var(--text);
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
 }
 .landing-home .home-centered-hero .landing-subtitle {
   max-width: 620px;

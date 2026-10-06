@@ -61,6 +61,7 @@
 .bridge-empty-icon{ display:inline-flex; align-items:center; justify-content:center; width:65px; height:65px; border:1px solid #2a3a5c; border-radius:15px; background:#182643; color:var(--b-blue); }
 .bridge-alert{ padding:12px 15px; border:1px solid #704055; background:#351d2b; color:#ffb1c4; border-radius:8px; margin-bottom:24px; display:flex; justify-content:space-between; gap:14px; font-size:calc(.875rem + 3px); }
 .bridge-alert button{ border:0; background:none; color:inherit; }
+.bridge-publish-error-modal .bridge-alert{ overflow-wrap:anywhere; white-space:pre-wrap; }
 .bridge-preview-note{ padding:9px 40px; color:#c3b287; background:#242117; border-bottom:1px solid #3e3623; font-size:calc(.75rem + 3px); }
 .bridge-modal-backdrop{ position:fixed; inset:0; z-index:60; background:#030711b8; backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; padding:24px; }
 .bridge-modal{ position:relative; width:100%; max-width:470px; padding:30px; border:1px solid #33415d; border-radius:15px; background:#121b2a; max-height:90vh; overflow:auto; box-shadow:0 20px 70px #0008; }
