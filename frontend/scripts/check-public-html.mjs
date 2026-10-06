@@ -93,7 +93,7 @@ assert.ok(!roastHtml.includes("Meadow, with the gloves off."), "tiktok-roast/ind
 assert.ok(!roastHtml.includes("A little heat. A lot of room to grow."), "tiktok-roast/index.html still contains the removed roaster note");
 assert.ok(roastHtml.includes('class="landing-header site-header"'), "tiktok-roast/index.html must use the standard Meadow navbar");
 assert.ok(!roastHtml.includes('class="roast-nav"'), "tiktok-roast/index.html must not use its old custom navbar");
-for (const navItem of ['href="https://findmeadow.com/#platforms">Tools</a>', 'href="https://findmeadow.com/#ways-to-use">API/MCP</a>', ">Sign in</button>", 'href="https://app.findmeadow.com/sign-up">Try for free']) assert.ok(roastHtml.includes(navItem), `tiktok-roast/index.html missing standard navbar item ${navItem}`);
+for (const navItem of [`href="tel:${CONTACT_PHONE}"><span>Talk to a human:</span> <strong>${CONTACT_PHONE_DISPLAY}</strong></a>`, 'href="https://findmeadow.com/#ways-to-use">API/MCP</a>', ">Sign in</button>", 'href="https://app.findmeadow.com/sign-up">Try for free']) assert.ok(roastHtml.includes(navItem), `tiktok-roast/index.html missing standard navbar item ${navItem}`);
 for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
   const html = await readFile(`dist${route}/index.html`, "utf8");
   assert.match(html, /<title>Dashboard · Meadow<\/title>/);
@@ -119,7 +119,7 @@ for (const id of ["workflows", "publish-with-an-agent"]) {
   assert.equal([...actions.matchAll(/<(?:a|button)\b/g)].length, 1, `${id} must have only one action`);
   assert.ok(actions.includes('href="https://app.findmeadow.com/sign-up">Try for free '), `${id} must link directly to free signup`);
 }
-assert.ok(landingHtml.includes('href="https://findmeadow.com/#platforms">Tools</a>'), "Homepage navbar must jump to the platform section");
+assert.ok(landingHtml.includes(`href="tel:${CONTACT_PHONE}"><span>Talk to a human:</span> <strong>${CONTACT_PHONE_DISPLAY}</strong></a>`), "Homepage navbar must offer the phone contact");
 assert.ok(!landingHtml.includes('platform-mega-menu'), "Homepage navbar must not render the old platform dropdown");
 assert.ok(landingHtml.includes("Show up for every audience."), "Homepage platform section must use the requested heading");
 assert.ok(!landingHtml.includes("Go where your audience is."), "Homepage platform section must not use the old heading");
