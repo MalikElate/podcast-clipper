@@ -7,7 +7,6 @@ export const DASHBOARD_PATHS = Object.freeze({
   drafts: "/dashboard/posts/drafts",
   failed: "/dashboard/posts/failed",
   analytics: "/dashboard/analytics",
-  clips: "/dashboard/clipping-studio",
   accounts: "/dashboard/connections",
   settings: "/dashboard/settings",
   "api-keys": "/dashboard/api-keys",

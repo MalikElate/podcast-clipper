@@ -1,4 +1,4 @@
-.bridge{ --b-bg:#090d16; --b-panel:#101621; --b-raised:#151d2b; --b-line:#263044; --b-text:#edf2fa; --b-muted:#99a7bd; --b-blue:#638aff; --b-blue-dark:#355cdb; min-height:100vh; background:var(--b-bg); color:var(--b-text); font-family:var(--font-body),sans-serif; font-size:calc(1rem + 3px); line-height:1.5; }
+.bridge{ --b-sidebar-width:242.5px; --b-bg:#090d16; --b-panel:#101621; --b-raised:#151d2b; --b-line:#263044; --b-text:#edf2fa; --b-muted:#99a7bd; --b-blue:#638aff; --b-blue-dark:#355cdb; min-height:100vh; background:var(--b-bg); color:var(--b-text); font-family:var(--font-body),sans-serif; font-size:calc(1rem + 3px); line-height:1.5; }
 .bridge button,.bridge input,.bridge textarea,.bridge select{ font:inherit; }
 .bridge button{ cursor:pointer; }
 .bridge button:disabled{ cursor:not-allowed; opacity:.55; }
@@ -8,7 +8,7 @@
 .bridge h2{ font-size:calc(1.2rem + 3px); letter-spacing:-.025em; }
 .bridge h3{ font-size:calc(1rem + 3px); }
 .bridge p{ color:var(--b-muted); }
-.bridge-sidebar{ position:fixed; inset:0 auto 0 0; width:250px; background:#0d121c; border-right:1px solid var(--b-line); display:flex; flex-direction:column; padding:32px 18px 18px; z-index:30; }
+.bridge-sidebar{ position:fixed; inset:0 auto 0 0; width:var(--b-sidebar-width); background:#0d121c; border-right:1px solid var(--b-line); display:flex; flex-direction:column; padding:32px 18px 18px; z-index:30; }
 .bridge-logo{ display:flex; align-items:center; gap:11px; color:var(--b-blue); text-decoration:none; margin:0 16px 39px; }
 .bridge-logo-image{ display:block; width:31px; height:31px; flex:0 0 auto; object-fit:contain; }
 .bridge-logo>span{ font-family:var(--font-display); font-size:calc(1.9rem + 3px); font-weight:650; letter-spacing:-.055em; color:var(--b-text); }
@@ -25,7 +25,7 @@
 .bridge-sidebar-person-text strong{ font-size:calc(.875rem + 3px); font-weight:500; }
 .bridge-sidebar-person-text>span{ color:var(--b-muted); font-size:calc(.75rem + 3px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .bridge-person-avatar{ background:#2d223b; color:#dab9f9; border-radius:50%; width:32px; height:32px; }
-.bridge-main{ margin-left:250px; min-width:0; }
+.bridge-main{ margin-left:var(--b-sidebar-width); min-width:0; }
 .bridge-topbar{ display:none; }
 .bridge-topbar-note{ display:flex; align-items:center; gap:8px; color:var(--b-muted); font-size:calc(.75rem + 3px); }
 .bridge-topbar-note>span{ width:6px; height:6px; background:#63cbb0; border-radius:50%; }
@@ -73,7 +73,7 @@
 .bridge-signin{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:30px; min-height:100vh; padding:30px; }
 .bridge-signin-brand{ display:flex; align-items:center; gap:10px; color:#7296ff; font-size:calc(2rem + 3px); }
 .bridge-signin .bridge-panel{ max-width:500px; }
-@media(max-width:1100px) { .bridge-sidebar{width:225px}.bridge-main{margin-left:225px}.bridge-content{padding:28px 25px}.bridge-topbar{padding:16px 25px}.bridge-workbench{grid-template-columns:1fr}.bridge-topbar-note{display:none} }
+@media(max-width:1100px) { .bridge{--b-sidebar-width:218.25px}.bridge-content{padding:28px 25px}.bridge-topbar{padding:16px 25px}.bridge-workbench{grid-template-columns:1fr}.bridge-topbar-note{display:none} }
 @media(max-width:760px) { .bridge-sidebar{transform:translateX(-100%);transition:transform .2s}.bridge-sidebar.is-open{transform:translateX(0)}.bridge-main{margin:0}.bridge-topbar{min-height:64px;display:flex;align-items:center;padding:12px 16px}.bridge-menu-toggle{display:flex}.bridge-content{padding:25px 16px}.bridge-page-heading{align-items:flex-start;flex-direction:column;gap:13px}.bridge h1{font-size:calc(1.75rem + 3px)}.bridge-panel{padding:20px}.bridge-modal-backdrop{padding:15px} }
 @media(prefers-reduced-motion:reduce) { .bridge *{transition:none!important;animation:none!important} }
 /* Shared feature primitives */
@@ -239,8 +239,8 @@
 .bridge-welcome-modal .bridge-modal-close{display:none}
 @media(max-width:600px){.bridge[data-theme=light] .bridge-modal.bridge-welcome-modal{padding:24px 20px 18px}.bridge-welcome-modal::before{width:92px;height:92px;margin:14px auto 24px}.bridge-welcome-actions{margin-top:28px}}
 
-/* Coming soon */
-.bridge-coming-soon{min-height:540px;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:70px 28px;text-align:center;overflow:hidden}.bridge-coming-soon-visual{position:relative;display:grid;place-items:center;width:150px;height:150px;margin-bottom:28px}.bridge-coming-soon-ring{position:absolute;border-radius:50%;border:1px solid color-mix(in srgb,var(--b-blue) 22%,transparent)}.bridge-coming-soon-ring.ring-one{inset:15px;background:color-mix(in srgb,var(--b-blue) 5%,transparent)}.bridge-coming-soon-ring.ring-two{inset:34px;border-color:color-mix(in srgb,var(--b-blue) 35%,transparent);background:color-mix(in srgb,var(--b-blue) 8%,var(--b-panel))}.bridge-coming-soon-icon{position:relative;z-index:1;display:grid;place-items:center;width:62px;height:62px;border-radius:18px;background:var(--b-blue);color:#fff;box-shadow:0 16px 34px color-mix(in srgb,var(--b-blue) 30%,transparent)}.bridge-coming-soon-label{display:inline-flex;align-items:center;border-radius:999px;background:color-mix(in srgb,var(--b-blue) 10%,var(--b-panel));color:var(--b-blue);padding:6px 11px;font-size:calc(.72rem + 3px);font-weight:700;letter-spacing:.08em;text-transform:uppercase}.bridge-coming-soon h2{margin-top:17px;font-size:calc(1.65rem + 3px)}.bridge-coming-soon>p{max-width:540px;margin-top:10px;font-size:calc(.95rem + 3px);line-height:1.7}.bridge-badge.active,.bridge-badge.approved,.bridge-badge.paid{background:#142f29;color:#8bd4b9;border-color:#295447}.bridge-badge.pending{background:#1c2946;color:#a5bdf6;border-color:#344a76}.bridge-badge.reversed{background:#38242d;color:#f1a7ba;border-color:#694050}
+/* Billing statuses */
+.bridge-badge.active,.bridge-badge.approved,.bridge-badge.paid{background:#142f29;color:#8bd4b9;border-color:#295447}.bridge-badge.pending{background:#1c2946;color:#a5bdf6;border-color:#344a76}.bridge-badge.reversed{background:#38242d;color:#f1a7ba;border-color:#694050}
 
 /* Privacy controls use the same workspace surfaces and form controls. */
 .bridge-privacy-card { margin-top: 24px; max-width: 840px; }
