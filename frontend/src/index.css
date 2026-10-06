@@ -2575,7 +2575,7 @@ input[type="range"]::-moz-range-thumb {
 .home-hero-top { padding: clamp(70px, 7vw, 104px) 28px 0; background: var(--bg); }
 .home-hero-demo-stage { padding: 52px 28px 0; background: var(--bg); }
 .landing-v2 .home-centered-hero .hero-copy { width: 100%; max-width: 980px; align-items: center; margin: 0 auto; }
-.home-hero-platforms { display: flex; max-width: 780px; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 16px; margin: 0 auto 35px; }
+.home-hero-platforms { display: flex; max-width: 900px; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 16px; margin: 0 auto 35px; }
 .home-hero-platforms .landing-platform-mark { width: 37px; height: 37px; }
 .home-hero-platforms .social-brand-icon[data-platform="x"],
 .home-hero-platforms .social-brand-icon[data-platform="threads"] { color: var(--text) !important; }
@@ -2584,15 +2584,12 @@ input[type="range"]::-moz-range-thumb {
 .landing-v2 .home-centered-hero .hero-actions-v2 { display: flex; justify-content: center; margin-top: 32px; }
 .landing-v2 .home-centered-hero .landing-cta { min-width: 242px; min-height: 60px; padding: 16px 30px; border-radius: 999px; background: #72c991; color: #193829; font-size: 18px; font-weight: 750; text-decoration: none; box-shadow: none; }
 .landing-v2 .home-centered-hero .landing-cta:hover { background: #89d9a5; }
-.home-hero-agent-link { display: inline-flex; max-width: 100%; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 31px; color: var(--text-muted); font-size: 15px; line-height: 1.5; text-align: center; text-decoration: none; }
-.home-hero-agent-link:hover { color: var(--text); text-decoration: underline; text-underline-offset: 4px; }
-.home-hero-agent-link svg { width: 14px; height: 14px; }
-.home-hero-agent-logos { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 14px; }
-.home-hero-agent-logos span { display: grid; width: 20px; height: 20px; place-items: center; }
-.home-hero-agent-logos svg { width: 20px; height: 20px; }
-.home-hero-agent-logos .is-claude { color: #df8e6e; }
-.home-hero-agent-logos .is-codex { color: #62caa7; }
-.home-hero-agent-logos .is-cursor { color: var(--text); }
+/* Agent marks share the same logo row and size as social platforms. */
+.home-hero-agent-mark { display: grid; width: 37px; height: 37px; place-items: center; }
+.home-hero-agent-mark svg { display: block; width: 32px; height: 32px; }
+.home-hero-agent-mark.is-claude { color: #df8e6e; }
+.home-hero-agent-mark.is-codex { color: #62caa7; }
+.home-hero-agent-mark.is-cursor { color: var(--text); }
 .landing-v2 .home-centered-hero .home-hero-note { margin: 24px 0 0; font-size: 14px; }
 .landing-v2 .home-centered-hero .hero-demo { width: min(100%, 1020px); margin: 0 auto; border-radius: 16px; }
 
@@ -2601,7 +2598,8 @@ input[type="range"]::-moz-range-thumb {
   .home-hero-top { padding: 54px 18px 0; }
   .home-hero-demo-stage { padding: 42px 18px 0; }
   .home-hero-platforms { max-width: 390px; gap: 9px 12px; margin-bottom: 28px; }
-  .home-hero-platforms .landing-platform-mark { width: 30px; height: 30px; }
+  .home-hero-platforms .landing-platform-mark, .home-hero-agent-mark { width: 30px; height: 30px; }
+  .home-hero-agent-mark svg { width: 28px; height: 28px; }
   .home-hero-platforms .social-brand-icon { width: 28px !important; height: 28px !important; }
   .landing-v2 .home-centered-hero .landing-title { max-width: 650px; font-size: clamp(42px, 10vw, 58px); line-height: 1.07; }
   .landing-v2 .home-centered-hero .landing-subtitle { margin-top: 20px; font-size: 18px; }

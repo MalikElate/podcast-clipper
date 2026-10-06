@@ -110,7 +110,6 @@
   padding: 12px 24px;
   font-size: 17px;
 }
-.landing-home .home-hero-agent-link { font-family: var(--font-mono); font-size: 13px; }
 .landing-home .home-hero-demo-stage { padding: 56px var(--rail-pad) var(--stage-bottom); }
 .pixel-meadow {
   position: absolute;
