@@ -57,7 +57,7 @@ export default function SiteHeader({ className = "", homeHref = marketingHref("/
       }}>
         <nav className="landing-nav" aria-label="Main navigation">
           <a href={marketingHref("/#ways-to-use")}>API/MCP</a>
-          <a className="site-human-link" href={CONTACT_PHONE_HREF}><span>Talk to a human:</span> <strong>{CONTACT_PHONE_DISPLAY}</strong></a>
+          <a className="site-human-link" href={CONTACT_PHONE_HREF}><strong>{CONTACT_PHONE_DISPLAY}</strong></a>
         </nav>
         <div className="landing-actions">
           {!user && !loading && <HeaderAction className="btn-ghost" href={appHref("/sign-in")} onClick={signIn}>Sign in</HeaderAction>}
