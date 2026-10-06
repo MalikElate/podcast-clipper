@@ -74,6 +74,16 @@ References: [OpenAI authentication](https://developers.openai.com/plugins/build/
 
 ## Build and run
 
+### Browser uploads directly to R2
+
+Production browser uploads use R2 S3 multipart part URLs when the Worker has `R2_ACCOUNT_ID`, `R2_BUCKET_NAME=meadow-media`, and the secrets `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`. Create a dedicated R2 credential with **Object Read & Write** restricted to `meadow-media`. Keep those secrets in the Worker only; the container receives a boolean feature flag, and the browser receives only thirty-minute part URLs. No public R2 bucket domain is needed.
+
+Preserve existing bucket CORS rules and add a rule allowing `PUT` from `https://app.findmeadow.com`, request header `Content-Type`, and exposed response header `ETag`. Keep the bucket private. Preserve the existing incomplete-multipart abort rule; do not add an object-expiration rule to retained-media keys.
+
+Stage signer secrets with `wrangler versions secret bulk` without deploying a task checkout, then release code through the normal merged-main build. Verify the deployed Worker retains both signer secrets and the new public variables. Before declaring the change live, use an authorized disposable upload to verify browser part requests reach `<account>.r2.cloudflarestorage.com`, preflight permits the app origin, each part returns an accessible ETag, completion returns ready media, and cancellation aborts the multipart upload. Include a file above 100 MB to verify the former Worker request-body limit is bypassed. Do not publish a social post for this test.
+
+Processing still downloads the completed original into the backend's FFmpeg cache and stores thumbnails/derivatives in R2. Direct uploading removes the browser-to-container transfer and the container's second upload of the original; it does not eliminate processing or container costs. Self-hosted filesystem deployments and older clients continue using the existing multipart API.
+
 From the repository root on a Docker host:
 
 ```sh

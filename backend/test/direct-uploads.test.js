@@ -97,6 +97,7 @@ test("direct uploads keep original bytes in R2, validate them, and finish idempo
   assert.equal(h.objects.size, 1); assert.equal(h.store.list("media").length, 1);
   const reads = h.requests.filter(item => item.method === "GET").length;
   assert.equal((await h.complete(ticket, parts)).status, 201);
+  assert.equal((await h.complete(ticket, [{ partNumber: 1, etag: "0".repeat(32) }])).status, 409);
   assert.equal(h.requests.filter(item => item.method === "GET").length, reads, "An acknowledgement retry does not reprocess media");
   assert.equal(h.store.list("media").length, 1);
   assert.deepEqual(fs.readdirSync(path.join(h.dir, "incoming")), []);
@@ -140,8 +141,8 @@ test("a lost completion response recovers the same immutable R2 original", async
 
 test("unsupported file contents and size mismatches are removed instead of becoming media", async t => {
   const h = await setup(t);
-  for (const bytes of [Buffer.from("not a PDF"), pdf.subarray(0, pdf.length - 1)]) {
-    const ticket = await h.create(bytes === pdf ? pdf.length : bytes.length + (bytes[0] === 37 ? 1 : 0));
+  for (const [bytes, declaredBytes] of [[Buffer.from("not a PDF"), 9], [pdf.subarray(0, pdf.length - 1), pdf.length]]) {
+    const ticket = await h.create(declaredBytes);
     const response = await h.complete(ticket, h.send(ticket, bytes));
     assert.ok([409, 415].includes(response.status));
     assert.equal(h.store.list("media").length, 0);

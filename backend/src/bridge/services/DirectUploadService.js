@@ -53,11 +53,11 @@ export class DirectUploadService {
     this.require(uid, projectId, id);
     return this.locks.withLock(`upload:${id}`, async () => {
       let session = this.require(uid, projectId, id);
+      const parts = this.parts(session, input.parts);
       const ready = this.store.get("media", id);
       if (ready?.status === "ready") { await this.store.flush?.(); return ready; }
       invariant(["uploading", "completing"].includes(session.status), "This upload is no longer available. Select the file again.", { status: 410, code: "upload_expired" });
       invariant(session.status === "completing" || session.expiresAt > this.clock(), "This upload has expired. Select the file again.", { status: 410, code: "upload_expired" });
-      const parts = this.parts(session, input.parts);
       session = this.store.put("media_upload", { ...session, parts, status: "completing", completingAt: session.completingAt || this.clock() });
       await this.store.flush?.();
       try {
