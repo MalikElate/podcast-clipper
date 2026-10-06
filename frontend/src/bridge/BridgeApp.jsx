@@ -222,15 +222,15 @@ function ProjectWorkspace({ userId, project, config, view, navigate, compose, dr
     }).catch(error => { if (error.name !== "AbortError" && !controller.signal.aborted) setDraftState({ id: draftId, post: null, loading: false, error: error.message }); });
     return () => controller.abort();
   }, [view, draftId, project.id]);
-  async function upload(files, onProgress = () => {}) {
+  async function upload(files, onProgress = () => {}, { signal } = {}) {
     const uploaded = [], failures = []; setUploadError("");
     for (const [index, file] of files.slice(0, 100).entries()) {
       const progress = event => onProgress({ ...event, filename: file.name, fileIndex: index + 1, fileCount: Math.min(files.length, 100) });
-      try { if (file.size > config.maxUploadBytes) throw new Error(`exceeds ${Math.round(config.maxUploadBytes / 1024 ** 2)} MB`); const data = await api.uploadMedia(project.id, file, { onProgress: progress }); uploaded.push(data.media); }
-      catch (error) { failures.push(`${file.name}: ${error.message}`); }
+      try { signal?.throwIfAborted(); if (file.size > config.maxUploadBytes) throw new Error(`exceeds ${Math.round(config.maxUploadBytes / 1024 ** 2)} MB`); const data = await api.uploadMedia(project.id, file, { onProgress: progress, signal }); uploaded.push(data.media); }
+      catch (error) { failures.push(`${file.name}: ${error.name === "AbortError" ? "Upload cancelled. Select the file again when you are ready." : error.message}`); if (signal?.aborted) break; }
     }
     mediaResource.setData(current => ({ media: [...uploaded, ...current.media.filter(item => !uploaded.some(newItem => newItem.id === item.id))] }));
-    if (failures.length) setUploadError(failures.slice(0, 5).join(" · "));
+    if (failures.length) { const error = failures.slice(0, 5).join(" · "); setUploadError(error); onProgress({ stage: signal?.aborted ? "cancelled" : "failed", error }); }
     if (uploaded.length) notify(`${uploaded.length} ${uploaded.length === 1 ? "file" : "files"} added to ${project.name}.`);
     return uploaded;
   }

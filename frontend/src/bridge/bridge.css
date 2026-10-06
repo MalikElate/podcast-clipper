@@ -39,10 +39,11 @@
 .bridge-upload-zone>svg{ color:#819ee2; margin-bottom:7px; }
 .bridge-upload-zone p{ font-size:calc(.875rem + 3px); }
 .bridge-upload-progress{ padding:14px 16px; margin:0 0 20px; border:1px solid var(--b-line); border-radius:9px; background:var(--b-raised); }
-.bridge-upload-progress>div{ display:flex; justify-content:space-between; gap:12px; font-size:calc(.875rem + 3px); }
+.bridge-upload-progress>div{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; font-size:calc(.875rem + 3px); }
 .bridge-upload-progress>div>span,.bridge-upload-progress p{ color:var(--b-muted); font-size:calc(.75rem + 3px); }
 .bridge-upload-progress progress{ display:block; width:100%; height:8px; margin:10px 0; accent-color:var(--b-blue); }
 .bridge-upload-progress p{ margin-top:5px; }
+.bridge-upload-progress.is-error{border-color:#694050;background:#38242d;color:#f1a7ba}.bridge-upload-progress.is-error p{color:inherit;overflow-wrap:anywhere;line-height:1.5}.bridge[data-theme=light] .bridge-upload-progress.is-error{border-color:#efbdc8;background:#fff0f3;color:#9f304b}
 .bridge-upload-filename{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .bridge-field{ display:flex; flex-direction:column; gap:8px; font-size:calc(.875rem + 3px); color:#c7d3e7; margin:20px 0; font-weight:500; }
 .bridge input:not([type=checkbox]):not([type=radio]):not([type=file]),.bridge textarea,.bridge select:not(#project-select){ border:1px solid #2d394e; border-radius:7px; background:#0c121e; color:var(--b-text); padding:11px 12px; width:100%; font-size:calc(.9rem + 3px); min-width:0; }
