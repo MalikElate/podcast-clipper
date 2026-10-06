@@ -136,3 +136,16 @@ test("account deletion blocks pending uploads and never resurrects in-flight pro
   release(); await h.application.media.directProcessing;
   assert.notEqual(h.application.store.get("media", ticket.mediaId)?.status, "ready"); assert.equal(h.objects.size, 0);
 });
+
+test("maintenance observes completion during another large file's preparation rather than expiring a stale grant", async t => {
+  const h = await setup(t), pending = await h.issue(); h.stage(pending);
+  h.advance(1); const busy = await h.issue(); h.stage(busy);
+  await h.application.media.completeDirectUpload("alice", h.project.id, busy.mediaId);
+  let release; h.blockDownloads(new Promise(resolve => { release = resolve; }));
+  const processing = h.application.media.processDirectUploads();
+  await new Promise(resolve => setImmediate(resolve));
+  await h.application.media.completeDirectUpload("alice", h.project.id, pending.mediaId);
+  h.advance(3600001); release(); await processing;
+  assert.equal(h.application.store.get("media", busy.mediaId).status, "ready");
+  assert.equal(h.application.store.get("media", pending.mediaId).status, "ready");
+});

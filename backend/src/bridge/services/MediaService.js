@@ -131,8 +131,11 @@ export class MediaService {
   processDirectUploads() {
     if (this.directProcessing || this.directStopped) return this.directProcessing;
     this.directProcessing = (async () => {
-      for (const record of this.store.list("media", { statuses: ["uploading", "processing", "failed"], limit: null }).filter(record => record.source === "direct_upload")) {
+      for (const item of this.store.list("media", { statuses: ["uploading", "processing", "failed"], limit: null }).filter(record => record.source === "direct_upload")) {
         if (this.directStopped) break;
+        // Another upload may finish while an earlier large file is being prepared.
+        const record = this.store.get("media", item.id);
+        if (!record || !["uploading", "processing", "failed"].includes(record.status)) continue;
         if (record.status === "uploading" && record.uploadExpiresAt <= this.clock()) {
           Object.assign(record, { status: "failed", error: "This upload authorization has expired. Select the file again.", cleanupPending: true, updatedAt: this.clock() });
           this.store.put("media", record); await this.store.flush?.();
