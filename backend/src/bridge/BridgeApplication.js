@@ -313,10 +313,16 @@ export class BridgeApplication {
     app.get(`${root}/accounts/:id/options`, route(async (req, res) => res.json({ options: await this.accounts.options(req.uid, req.params.projectId, req.params.id, { force: req.query.refresh === "1" }) })));
     app.delete(`${root}/accounts/:id`, route((req, res) => res.status(202).json(this.privacy.requestConnection(req.uid, req.params.projectId, req.params.id))));
     app.get(`${root}/media`, route((req, res) => res.json({ media: this.media.list(req.uid, req.params.projectId) })));
-    app.post(`${root}/media/uploads`, route((req, res) => {
+    app.post(`${root}/media/uploads`, route(async (req, res) => {
       invariant(this.media.signingKey, "Media storage is not configured on this server.", { status: 503 });
-      res.status(201).json(this.uploadTokens.create(req.uid, req.params.projectId, req.body));
+      res.status(201).json(req.body?.direct === true && this.storage.createDirectUpload ? await this.media.createDirectUpload(req.uid, req.params.projectId, req.body) : this.uploadTokens.create(req.uid, req.params.projectId, req.body));
     }));
+    app.post(`${root}/media/uploads/:id/complete`, route(async (req, res) => {
+      const result = await this.media.completeDirectUpload(req.uid, req.params.projectId, req.params.id);
+      res.status(result.media.status === "ready" ? 200 : 202).json(result);
+      this.media.processDirectUploads();
+    }));
+    app.get(`${root}/media/:id`, route((req, res) => res.json({ media: this.media.toPublic(this.media.require(req.uid, req.params.projectId, req.params.id)) })));
     app.post(`${root}/media`, (req, res, next) => { try { this.projects.require(req.uid, req.params.projectId); invariant(this.media.signingKey, "Media storage is not configured on this server.", { status: 503 }); next(); } catch (error) { next(error); } }, this.receiveUpload, route(async (req, res) => {
       invariant(req.file, "Choose a file to upload.");
       try {
@@ -341,6 +347,7 @@ export class BridgeApplication {
     app.post(`${root}/analytics/refresh`, route(async (req, res) => res.json(await this.analytics.refresh(req.uid, req.params.projectId, req.body))));
   }
   start() {
+    this.media.start();
     this.worker.start();
     this.webhooks.start();
     const telegram = this.registry.list().find(provider => provider.id === "telegram");
@@ -358,11 +365,11 @@ export class BridgeApplication {
       this.analyticsTimer.unref?.();
     }
   }
-  stopWorkers() { this.worker.stop(); this.webhooks.stop(); clearInterval(this.analyticsTimer); clearInterval(this.privacyTimer); clearInterval(this.connectionTimer); }
+  stopWorkers() { this.media.stop(); this.worker.stop(); this.webhooks.stop(); clearInterval(this.analyticsTimer); clearInterval(this.privacyTimer); clearInterval(this.connectionTimer); }
   async shutdown({ timeoutMs = 25000 } = {}) {
     this.stopWorkers();
     const deadline = Date.now() + timeoutMs;
-    while (this.worker.running || this.webhooks.running || this.analytics.running || this.privacy.running || this.accounts.running) {
+    while (this.media.directProcessing || this.worker.running || this.webhooks.running || this.analytics.running || this.privacy.running || this.accounts.running) {
       if (Date.now() >= deadline) return false;
       await new Promise(resolve => setTimeout(resolve, 50));
     }

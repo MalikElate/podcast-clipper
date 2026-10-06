@@ -1,14 +1,15 @@
-export function uploadWithProgress(url, { body, token, signal, onProgress = () => {}, createRequest = () => new XMLHttpRequest() }) {
+export function uploadWithProgress(url, { body, token, method = "POST", headers = {}, signal, onProgress = () => {}, createRequest = () => new XMLHttpRequest() }) {
   signal?.throwIfAborted();
   return new Promise((resolve, reject) => {
     const xhr = createRequest();
     const cleanup = () => signal?.removeEventListener("abort", abort);
     const abort = () => xhr.abort();
     const fail = error => { cleanup(); reject(error); };
-    xhr.open("POST", url);
+    xhr.open(method, url);
     xhr.responseType = "json";
-    xhr.timeout = 30 * 60 * 1000;
-    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.timeout = (method === "PUT" ? 120 : 30) * 60 * 1000;
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    for (const [name, value] of Object.entries(headers)) xhr.setRequestHeader(name, value);
     xhr.upload.onprogress = event => onProgress({ stage: "uploading", loaded: event.loaded, total: event.lengthComputable ? event.total : 0 });
     xhr.upload.onload = () => onProgress({ stage: "processing" });
     xhr.onload = () => {

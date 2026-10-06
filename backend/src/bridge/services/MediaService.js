@@ -27,17 +27,7 @@ export class MediaService {
     await this.store.flush?.();
     try {
       await this.storage.importFile(file.path, storageKey);
-      if (kind === "image" || kind === "video") {
-        const result = JSON.parse(await this.runner.run("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-of", "json", this.storage.path(storageKey)]));
-        const visual = result.streams?.find(stream => stream.codec_type === "video");
-        invariant(visual?.width && visual?.height && visual.width * visual.height <= 100000000, "The media dimensions could not be read or are too large.");
-        Object.assign(record, { width: visual.width, height: visual.height, durationSec: Number(result.format?.duration) || null, videoCodec: visual.codec_name });
-        if (kind === "video") invariant(record.durationSec > 0 && record.durationSec <= 43200, "This video is empty or exceeds 12 hours.");
-        const thumbnailKey = `${id}-thumb.jpg`;
-        await this.runner.run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-i", this.storage.path(storageKey), "-frames:v", "1", "-vf", "scale=480:480:force_original_aspect_ratio=decrease", this.storage.path(thumbnailKey)]);
-        record.thumbnailKey = thumbnailKey;
-        await this.storage.persist?.(thumbnailKey);
-      }
+      await this.inspect(record);
       invariant(this.store.get("media", id)?.status === "processing", "The selected media was removed.");
       record.status = "ready";
       const saved = this.store.put("media", record);
@@ -57,7 +47,110 @@ export class MediaService {
     }
   }
 
-  list(uid, projectId) { this.projects.require(uid, projectId); return this.store.list("media", { projectId }).filter(item => !["failed", "deleting"].includes(item.status)).map(item => this.toPublic(item)); }
+  async inspect(record) {
+    if (!["image", "video"].includes(record.kind)) return;
+    const result = JSON.parse(await this.runner.run("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-of", "json", this.storage.path(record.storageKey)]));
+    const visual = result.streams?.find(stream => stream.codec_type === "video");
+    invariant(visual?.width && visual?.height && visual.width * visual.height <= 100000000, "The media dimensions could not be read or are too large.");
+    Object.assign(record, { width: visual.width, height: visual.height, durationSec: Number(result.format?.duration) || null, videoCodec: visual.codec_name });
+    if (record.kind === "video") invariant(record.durationSec > 0 && record.durationSec <= 43200, "This video is empty or exceeds 12 hours.");
+    const thumbnailKey = `${record.id}-thumb.jpg`;
+    await this.runner.run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-i", this.storage.path(record.storageKey), "-frames:v", "1", "-vf", "scale=480:480:force_original_aspect_ratio=decrease", this.storage.path(thumbnailKey)]);
+    invariant(this.store.get("media", record.id)?.status === "processing" && !this.projects.privacy?.blocked(record.ownerUid), "The selected media was removed.");
+    record.thumbnailKey = thumbnailKey;
+    await this.storage.persist?.(thumbnailKey);
+  }
+
+  async createDirectUpload(uid, projectId, { bytes, filename } = {}) {
+    this.projects.require(uid, projectId);
+    invariant(Number.isSafeInteger(bytes) && bytes > 0 && bytes <= this.maxBytes, `Choose a file of up to ${Math.round(this.maxBytes / 1024 ** 2)} MB.`, { code: "upload_size_invalid" });
+    invariant(this.store.list("media", { ownerUid: uid, statuses: ["uploading", "processing"] }).length < 100, "Finish your existing uploads before adding more.", { status: 429 });
+    const id = randomUUID(), storageKey = `${id}.upload`;
+    const ticket = await this.storage.createDirectUpload(storageKey, { bytes });
+    this.projects.require(uid, projectId);
+    const record = { id, ownerUid: uid, projectId, storageKey, bytes, filename: String(filename || "media").replace(/[\x00-\x1f/\\]/g, "_").slice(0, 180), source: "direct_upload", status: "uploading", uploadExpiresAt: ticket.expiresAt, variants: {}, metadata: {}, createdAt: this.clock(), updatedAt: this.clock() };
+    this.store.put("media", record);
+    await this.store.flush?.();
+    return { directUpload: { ...ticket, mediaId: id } };
+  }
+
+  async completeDirectUpload(uid, projectId, id) {
+    this.require(uid, projectId, id);
+    return this.locks.withLock(`upload:${id}`, async () => {
+      const record = this.require(uid, projectId, id);
+      invariant(record.source === "direct_upload" && ["uploading", "processing", "ready"].includes(record.status), record.error || "This upload is unavailable. Select the file again.", { status: 409, code: "upload_unavailable" });
+      if (record.status !== "uploading") return { media: this.toPublic(record) };
+      invariant(record.uploadExpiresAt > this.clock(), "This upload authorization has expired. Select the file again.", { status: 410, code: "upload_expired" });
+      await this.storage.completeDirectUpload(record.storageKey, { bytes: record.bytes });
+      if (this.store.get("media", id)?.status !== "uploading" || this.projects.privacy?.blocked(uid)) await this.cleanDirectUpload(record);
+      invariant(this.store.get("media", id)?.status === "uploading" && !this.projects.privacy?.blocked(uid), "The selected media was removed.", { status: 410 });
+      const saved = this.store.put("media", { ...record, status: "processing", updatedAt: this.clock() });
+      await this.store.flush?.();
+      return { media: this.toPublic(saved) };
+    }, { waitMs: 150000, leaseMs: 90000 });
+  }
+
+  directKeys(record) { return [record.storageKey, `${record.id}-thumb.jpg`]; }
+  async cleanDirectUpload(record) {
+    await Promise.all(this.directKeys(record).map(key => this.storage.remove(key)));
+    if (this.store.get("media", record.id)?.status === "failed") this.store.put("media", { ...this.store.get("media", record.id), cleanupPending: false });
+    await this.store.flush?.();
+  }
+
+  async processDirectRecord(record) {
+    try {
+      await this.storage.ensure(record.storageKey);
+      const stat = await fs.promises.stat(this.storage.path(record.storageKey));
+      invariant(stat.size === record.bytes, "The uploaded file size did not match. Select the file again.");
+      const type = await fileTypeFromFile(this.storage.path(record.storageKey));
+      invariant(type && accepted.has(type.mime), "This file type cannot be posted. Upload an image, video, PDF, Word document, or PowerPoint file.", { status: 415, code: "unsupported_media" });
+      Object.assign(record, { mime: type.mime, kind: type.mime.startsWith("image/") ? "image" : type.mime.startsWith("video/") ? "video" : "document" });
+      await this.inspect(record);
+      invariant(this.store.get("media", record.id)?.status === "processing" && !this.projects.privacy?.blocked(record.ownerUid), "The selected media was removed.");
+      this.store.put("media", { ...record, status: "ready", updatedAt: this.clock(), error: undefined });
+      await this.store.flush?.();
+    } catch (error) {
+      const current = this.store.get("media", record.id);
+      if (current?.status === "ready") throw error;
+      if (current?.status === "processing" && !this.projects.privacy?.blocked(record.ownerUid)) {
+        if (error.code === "media_storage_unavailable" && (current.processingAttempts || 0) < 5) {
+          this.store.put("media", { ...current, processingAttempts: (current.processingAttempts || 0) + 1, retryAt: this.clock() + 30000 });
+          await this.store.flush?.();
+          return;
+        }
+        this.store.put("media", { ...current, status: "failed", error: error.code === "unsupported_media" ? error.message : "The uploaded file could not be prepared. Please check the file and try again.", cleanupPending: true, updatedAt: this.clock() });
+        await this.store.flush?.();
+      }
+      await this.cleanDirectUpload(record);
+    }
+  }
+
+  processDirectUploads() {
+    if (this.directProcessing || this.directStopped) return this.directProcessing;
+    this.directProcessing = (async () => {
+      for (const record of this.store.list("media", { statuses: ["uploading", "processing", "failed"], limit: null }).filter(record => record.source === "direct_upload")) {
+        if (this.directStopped) break;
+        if (record.status === "uploading" && record.uploadExpiresAt <= this.clock()) {
+          Object.assign(record, { status: "failed", error: "This upload authorization has expired. Select the file again.", cleanupPending: true, updatedAt: this.clock() });
+          this.store.put("media", record); await this.store.flush?.();
+        }
+        if (record.status === "failed") {
+          if (record.cleanupPending) await this.cleanDirectUpload(record);
+          else if (record.updatedAt < this.clock() - 86400000) { this.store.remove("media", record.id); await this.store.flush?.(); }
+        } else if (record.status === "processing" && (!record.retryAt || record.retryAt <= this.clock())) {
+          await this.locks.withLock(`upload-processing:${record.id}`, async () => {
+            const current = this.store.get("media", record.id);
+            if (current?.status === "processing") await this.processDirectRecord(current);
+          }, { waitMs: 0, leaseMs: 90000 });
+        }
+      }
+    })().catch(error => console.error("Direct upload preparation:", error.code || error.name)).finally(() => { this.directProcessing = null; });
+    return this.directProcessing;
+  }
+  start() { this.directStopped = false; this.processDirectUploads(); this.directTimer = setInterval(() => this.processDirectUploads(), 10000); this.directTimer.unref?.(); }
+  stop() { this.directStopped = true; clearInterval(this.directTimer); }
+
+  list(uid, projectId) { this.projects.require(uid, projectId); return this.store.list("media", { projectId }).filter(item => !["uploading", "failed", "deleting"].includes(item.status) && (item.source !== "direct_upload" || item.status === "ready")).map(item => this.toPublic(item)); }
   require(uid, projectId, id) { return this.projects.requireRecord(uid, projectId, "media", id); }
 
   signature(id, variant, expires, download = false) {
@@ -83,8 +176,8 @@ export class MediaService {
     return { record, key, mime: variant === "original" ? record.mime : variant === "thumbnail" ? "image/jpeg" : record.variants[variant].mime };
   }
   toPublic(record) {
-    const { storageKey, thumbnailKey, variants, ...visible } = record;
-    return { ...visible, url: this.url(record), thumbnailUrl: thumbnailKey ? this.url(record, { variant: "thumbnail" }) : null, downloadUrl: this.url(record, { download: true }) };
+    const { storageKey, thumbnailKey, variants, uploadExpiresAt, processingAttempts, retryAt, cleanupPending, ...visible } = record;
+    return { ...visible, url: record.status === "ready" ? this.url(record) : null, thumbnailUrl: record.status === "ready" && thumbnailKey ? this.url(record, { variant: "thumbnail" }) : null, downloadUrl: record.status === "ready" ? this.url(record, { download: true }) : null };
   }
 
   async prepare(record, variant = "original") {

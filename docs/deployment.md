@@ -84,6 +84,16 @@ Compose passes Clerk and optional PostHog public-token overrides to the frontend
 
 The reverse proxy must support large request bodies, media byte ranges, and long upload timeouts. Set its upload limit consistently with `BRIDGE_MAX_UPLOAD_MB` (default 1 GiB). Provider retrieval of signed `/media/...` URLs and `/oauth/...` callbacks must be publicly reachable without a login wall.
 
+### Direct browser uploads to private R2
+
+Production browsers request a small authenticated upload ticket, then PUT the raw file directly to R2's S3 endpoint. The signed ticket expires after one hour and fixes the object, method, content type, byte count and create-only condition. Meadow verifies the stored size and copies the staging object inside R2 to its immutable media namespace. The backend then prepares the file and thumbnail asynchronously; the browser polls until the media is ready. Publishing validation and per-platform conversions still apply. Processing resumes after container restarts. Self-hosted local storage, older clients and MCP retain the existing upload-token/multipart route.
+
+Before releasing this path, create an R2 **Object Read & Write** API token restricted to `meadow-media`. Store its Access Key ID and Secret Access Key as Worker secrets `R2_UPLOAD_ACCESS_KEY_ID` and `R2_UPLOAD_SECRET_ACCESS_KEY`. The account ID and bucket are configured by `R2_UPLOAD_ACCOUNT_ID` and `R2_UPLOAD_BUCKET` in Wrangler. These credentials must never be frontend variables or container environment variables. Missing configuration returns an actionable storage error rather than silently sending large files through the proxy.
+
+Merge the rule in `cloudflare/r2-cors.json` into the bucket's current CORS configuration; preserve unrelated rules. Only Meadow's three production origins can make the signed PUT with `Content-Type` and `If-None-Match`. Keep the bucket private. Likewise merge `cloudflare/r2-staging-lifecycle.json` into existing lifecycle rules. It expires only the `direct-uploads/` prefix after one day, including abandoned transfers and staging objects recreated with an unexpired ticket. Normal cleanup deletes staging alongside originals; expiration bounds retention when the client never confirms an upload or a grant outlives account deletion. Do not apply this lifecycle to permanent originals or derivatives.
+
+The production `BRIDGE_MAX_UPLOAD_MB=5115` matches R2's actual single-request maximum (5 GiB minus 5 MiB), about 5 GB. Direct uploads bypass the site's 100 MB request-body cap, but are not unlimited; larger files require a separate multipart-upload implementation. Destination platforms may impose lower size, duration, resolution or format limits. See [R2 limits](https://developers.cloudflare.com/r2/platform/limits/) and [presigned URLs](https://developers.cloudflare.com/r2/api/s3/presigned-urls/).
+
 Allow outbound HTTPS to Clerk, enabled providers, and Bluesky identity/PDS endpoints. Start with one container. Reserve disk space for uploaded media and generated derivatives, then observe CPU, memory, disk, and queue latency before increasing workload.
 
 The `/health` route verifies that the process responds. It does not verify platform credentials, provider quota, external service status, or available disk space.
