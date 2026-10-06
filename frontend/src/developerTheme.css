@@ -247,8 +247,6 @@
   margin: 0;
 }
 .landing-home .site-footer-inner { width: auto; padding-inline: var(--rail-pad); }
-.landing-home .footer-brand-row,
-.landing-home .footer-meta-row { border-color: var(--rule) !important; }
 .landing-home .footer-link-group h2 { font-family: var(--font-mono); font-size: 14px; font-weight: 600; }
 .landing-home .footer-meta-row { font-family: var(--font-mono); font-size: 13px; }
 
