@@ -13,7 +13,7 @@ test("uploads authorize first, refresh only the small grant request, then send t
     fetcher: async (path, options) => {
       assert.equal(path, "/api/bridge/projects/project/media/uploads");
       assert.equal(options.method, "POST");
-      assert.deepEqual(JSON.parse(options.body), { bytes: file.size });
+      assert.deepEqual(JSON.parse(options.body), { bytes: file.size, filename: file.name, contentType: file.type, direct: true });
       requests.push(options.headers.Authorization);
       assert.equal(uploads, 0, "No file bytes may be sent before authorization succeeds");
       return requests.length === 1 ? rejectedSession() : Response.json({ uploadToken: "meadow_upload_fixture", expiresAt: Date.now() + 1800000 }, { status: 201 });
@@ -210,4 +210,162 @@ test("local preview uses its preview header without calling Clerk", async () => 
     return Response.json({ projects: [] });
   } });
   assert.deepEqual(await api.getProjects(), { projects: [] });
+});
+
+function directGrant(file, partSize = 4) {
+  return { mode: "r2-multipart", id: "upload-fixture", expiresAt: Date.now() + 1800000, partSize,
+    parts: Array.from({ length: Math.ceil(file.size / partSize) }, (_, index) => ({ partNumber: index + 1, bytes: Math.min(partSize, file.size - index * partSize), url: `https://account.r2.cloudflarestorage.com/bucket/key?partNumber=${index + 1}&signature=fixture` })) };
+}
+
+test("direct uploads send exact raw parts, aggregate file progress and complete with ETags and fresh authentication", async () => {
+  const file = new File(["0123456789"], "clip.mp4", { type: "video/mp4" }), grant = directGrant(file);
+  const progress = [], tokens = [], transfers = [], requests = [];
+  const api = new BridgeApi({
+    getToken: async options => { tokens.push(options); return `session-${tokens.length}`; },
+    fetcher: async (path, options) => {
+      requests.push({ path, options });
+      if (path.endsWith("/uploads")) {
+        assert.deepEqual(JSON.parse(options.body), { bytes: 10, filename: "clip.mp4", contentType: "video/mp4", direct: true });
+        return Response.json(grant);
+      }
+      assert.equal(path, "/api/bridge/projects/project/media/uploads/upload-fixture/complete");
+      assert.equal(options.headers.Authorization, "Bearer session-2");
+      assert.deepEqual(JSON.parse(options.body), { parts: [{ partNumber: 1, etag: '"etag-1"' }, { partNumber: 2, etag: '"etag-2"' }, { partNumber: 3, etag: '"etag-3"' }] });
+      assert.equal(transfers.length, 3);
+      assert.deepEqual(progress.at(-1), { stage: "processing", loaded: 10, total: 10 });
+      return Response.json({ media: { id: "uploaded" } });
+    },
+    uploader: () => assert.fail("A direct grant must not transfer through Meadow"),
+    partUploader: async (url, options) => {
+      const index = transfers.length;
+      assert.equal(url, grant.parts[index].url);
+      assert.deepEqual(Object.keys(options).sort(), ["body", "onProgress", "signal"]);
+      assert.equal(options.body.type, "application/octet-stream");
+      assert.equal(options.body.size, grant.parts[index].bytes);
+      assert.equal(progress.some(event => event.stage === "processing"), false);
+      transfers.push(await options.body.text());
+      options.onProgress({ stage: "uploading", loaded: options.body.size / 2, total: options.body.size });
+      return { ok: true, status: 200, etag: `"etag-${index + 1}"` };
+    },
+  });
+  assert.deepEqual(await api.uploadMedia("project", file, { onProgress: event => progress.push(event) }), { media: { id: "uploaded" } });
+  assert.deepEqual(transfers, ["0123", "4567", "89"]);
+  assert.deepEqual(tokens, [{ skipCache: false }, { skipCache: true }]);
+  assert.equal(requests.length, 2);
+  assert.deepEqual(progress.filter(event => event.stage === "uploading").map(event => event.loaded), [0, 2, 4, 6, 8, 9, 10]);
+  assert.ok(progress.every(event => event.total === file.size));
+});
+
+test("retrying a direct part reuses the same URL and slice without double-counting progress or restarting initialization", async () => {
+  const file = new File(["012345"], "clip.mp4"), grant = directGrant(file), sends = [], progress = [];
+  let grants = 0, completions = 0;
+  const api = new BridgeApi({ getToken: async () => "session", retryWait: async () => {}, fetcher: async (path, options) => {
+    if (path.endsWith("/uploads")) { grants++; return Response.json(grant); }
+    assert.equal(options.method, "POST"); completions++;
+    return Response.json({ media: { id: "uploaded" } });
+  }, partUploader: async (url, options) => {
+    sends.push({ url, body: options.body });
+    options.onProgress({ loaded: sends.length === 1 ? 3 : options.body.size, total: options.body.size });
+    if (sends.length === 1) throw Object.assign(new Error("Connection interrupted"), { code: "network_error" });
+    if (sends.length === 2) return { ok: false, status: 503 };
+    return { ok: true, status: 200, etag: `etag-${sends.length}` };
+  } });
+  await api.uploadMedia("project", file, { onProgress: event => progress.push(event) });
+  assert.equal(grants, 1); assert.equal(completions, 1); assert.equal(sends.length, 4);
+  assert.equal(sends[0].url, sends[1].url); assert.equal(sends[1].url, sends[2].url);
+  assert.equal(sends[0].body, sends[1].body); assert.equal(sends[1].body, sends[2].body);
+  const loaded = progress.filter(event => event.stage === "uploading").map(event => event.loaded);
+  assert.ok(loaded.every((value, index) => value >= (loaded[index - 1] || 0) && value <= file.size));
+  assert.equal(loaded.at(-1), file.size);
+});
+
+test("direct part failure retries are bounded and clean up without the caller's signal", async () => {
+  for (const status of [403, 500]) {
+    const file = new File(["part"], "clip.mp4"), grant = directGrant(file), controller = new AbortController();
+    let sends = 0, cleanups = 0;
+    const api = new BridgeApi({ getToken: async () => "session", retryWait: async () => {}, fetcher: async (path, options) => {
+      if (path.endsWith("/uploads")) return Response.json(grant);
+      assert.equal(path, "/api/bridge/projects/project/media/uploads/upload-fixture");
+      assert.equal(options.method, "DELETE"); assert.equal(options.signal, undefined); cleanups++;
+      return Response.json({ aborted: true });
+    }, partUploader: async () => { sends++; return { ok: false, status }; } });
+    await assert.rejects(api.uploadMedia("project", file, { signal: controller.signal }), error => error.status === status);
+    assert.equal(sends, status === 403 ? 1 : 3); assert.equal(cleanups, 1);
+  }
+});
+
+test("direct uploads never complete without a readable ETag", async () => {
+  const file = new File(["part"], "clip.mp4");
+  let cleanups = 0;
+  const api = new BridgeApi({ getToken: async () => "session", fetcher: async (path, options) => {
+    if (path.endsWith("/uploads")) return Response.json(directGrant(file));
+    assert.equal(options.method, "DELETE"); cleanups++; return Response.json({ aborted: true });
+  }, partUploader: async () => ({ ok: true, status: 200, etag: null }) });
+  await assert.rejects(api.uploadMedia("project", file), /could not confirm/);
+  assert.equal(cleanups, 1);
+});
+
+test("idempotent completion refreshes rejected authentication and recovers from a lost response without sending parts again", async () => {
+  const file = new File(["part"], "clip.mp4"), tokens = [], bodies = [];
+  let sends = 0, completions = 0;
+  const api = new BridgeApi({ getToken: async options => { tokens.push(options); return "session"; }, retryWait: async () => {}, fetcher: async (path, options) => {
+    if (path.endsWith("/uploads")) return Response.json(directGrant(file));
+    assert.ok(path.endsWith("/complete")); completions++; bodies.push(options.body);
+    if (completions === 1) return rejectedSession();
+    if (completions === 2) throw new TypeError("Response lost");
+    return Response.json({ media: { id: "uploaded" } });
+  }, partUploader: async () => { sends++; return { ok: true, status: 200, etag: '"etag"' }; } });
+  assert.deepEqual(await api.uploadMedia("project", file), { media: { id: "uploaded" } });
+  assert.equal(sends, 1); assert.equal(completions, 3);
+  assert.equal(new Set(bodies).size, 1);
+  assert.deepEqual(tokens, [{ skipCache: false }, { skipCache: true }, { skipCache: true }, { skipCache: true }]);
+});
+
+test("cancelling during direct authorization or a part cleans up and never completes", async () => {
+  for (const cancelAt of ["authorization", "part"]) {
+    const file = new File(["012345"], "clip.mp4"), controller = new AbortController();
+    let sends = 0, cleanups = 0;
+    const api = new BridgeApi({ getToken: async () => "session", fetcher: async (path, options) => {
+      if (path.endsWith("/uploads")) {
+        if (cancelAt === "authorization") controller.abort();
+        return Response.json(directGrant(file));
+      }
+      assert.equal(options.method, "DELETE"); assert.equal(options.signal, undefined); cleanups++;
+      return Response.json({ aborted: true });
+    }, partUploader: async () => { sends++; controller.abort(); throw controller.signal.reason; } });
+    await assert.rejects(api.uploadMedia("project", file, { signal: controller.signal }), error => error === controller.signal.reason);
+    assert.equal(sends, cancelAt === "part" ? 1 : 0); assert.equal(cleanups, 1);
+  }
+});
+
+test("a truncated completion response retries the same completion instead of reporting a missing media record as success", async () => {
+  const file = new File(["part"], "clip.mp4");
+  let completions = 0, sends = 0;
+  const api = new BridgeApi({ getToken: async () => "session", retryWait: async () => {}, fetcher: async (path, options) => {
+    if (path.endsWith("/uploads")) return Response.json(directGrant(file));
+    assert.ok(path.endsWith("/complete")); completions++;
+    if (completions === 1) return { ok: true, status: 200, json: async () => { throw new TypeError("Body stream interrupted"); } };
+    return Response.json({ media: { id: "uploaded" } });
+  }, partUploader: async () => { sends++; return { ok: true, status: 200, etag: '"etag"' }; } });
+  assert.deepEqual(await api.uploadMedia("project", file), { media: { id: "uploaded" } });
+  assert.equal(completions, 2); assert.equal(sends, 1);
+});
+
+test("direct initialization is never replayed after a lost response", async () => {
+  let requests = 0;
+  const api = new BridgeApi({ getToken: async () => "session", fetcher: async () => { requests++; throw new TypeError("Response lost"); }, partUploader: async () => assert.fail("No grant was received") });
+  await assert.rejects(api.uploadMedia("project", new File(["part"], "clip.mp4")), error => error.code === "network_error");
+  assert.equal(requests, 1);
+});
+
+test("invalid direct grants cannot send media to another host or mismatch the signed part sizes", async () => {
+  const file = new File(["part"], "clip.mp4");
+  for (const modify of [grant => { grant.parts[0].url = "https://attacker.example/upload"; }, grant => { grant.parts[0].bytes--; }, grant => { grant.parts[0].partNumber = 2; }]) {
+    const grant = directGrant(file); modify(grant);
+    const api = new BridgeApi({ getToken: async () => "session", fetcher: async (path, options) => {
+      if (path.endsWith("/uploads")) return Response.json(grant);
+      assert.equal(options.method, "DELETE"); return Response.json({ aborted: true });
+    }, partUploader: async () => assert.fail("Invalid grant must not transfer media") });
+    await assert.rejects(api.uploadMedia("project", file), /could not start/);
+  }
 });
