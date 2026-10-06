@@ -20,7 +20,7 @@ Completed:
 
 - The production Streamable HTTP endpoint is live at `https://findmeadow.com/mcp`.
 - Missing API keys receive an authenticated JSON-RPC error instead of application data.
-- The official MCP SDK connects, discovers all seven tools, reads a workspace, and creates an idempotent draft.
+- The official MCP SDK connects, discovers all 13 tools, reads a workspace, creates an idempotent draft, uploads media, and publishes and schedules posts idempotently. Each OAuth scope is enforced separately.
 - Empty drafts are rejected.
 - A key cannot read another owner's project.
 - A manual local smoke test created, retrieved, listed, and discarded a temporary draft, then revoked its temporary key.
@@ -152,7 +152,7 @@ Conversation acceptance prompts:
 - “Save this caption as a draft in Meadow.”
 - “Show the draft you just created.”
 - “What are my cached analytics totals?”
-- “Publish this post now.” The assistant must explain that the current Meadow tool set can save a draft but cannot publish.
+- “Publish this post now.” The assistant must confirm the content, accounts and time, preview it, and only then publish, using a private test account.
 
 Exit criteria:
 

@@ -3,10 +3,12 @@
 Copy for listing Meadow in MCP and SaaS directories. Nothing here has been
 submitted; each listing is a decision for a person to make.
 
-Every claim below is checked against the codebase. The constraint that shapes
-all of it: **the MCP server reads a workspace and saves drafts. It does not
-publish.** A listing that says otherwise will be corrected by the first person
-who tries it, and several of these directories review submissions.
+Every claim below is checked against the codebase. **The MCP server reads a
+workspace, uploads media, saves drafts, and publishes or schedules posts.**
+Publishing and uploading are separate OAuth permissions the user grants when
+connecting. It does not connect accounts. A listing that overclaims will be
+corrected by the first person who tries it, and several of these directories
+review submissions.
 
 Platform counts: **11 platforms accept posts** (Instagram, TikTok, YouTube,
 Facebook, X, LinkedIn, Pinterest, Threads, Bluesky, Telegram, Google Business),
@@ -20,24 +22,25 @@ exist.
 
 **Under 60 characters**
 
-> Draft social posts from Claude. Publish in Meadow.
+> Publish to 11 social platforms from Claude.
 
 **Under 100 characters**
 
-> An MCP server that lets an AI client draft posts for 11 social platforms. You review and publish.
+> An MCP server that lets an AI client draft, schedule and publish posts on 11 social platforms.
 
 **Under 160 characters**
 
-> Meadow's MCP server lets Claude or any MCP client read your workspace and draft posts for 11 social platforms, plus Twitch and Kick chat. You publish from the dashboard.
+> Meadow's MCP server lets Claude or any MCP client upload media and draft, schedule or publish posts on 11 social platforms, plus Twitch and Kick chat.
 
 ## Paragraph
 
 > Meadow is a social publishing workspace with an MCP server. A supported AI
 > client can read your connected accounts, look at past posts and cached
-> analytics, and prepare a draft that targets several platforms at once, each
-> with its own wording. It cannot publish: drafts wait in Meadow until a person
-> reviews and sends them. That boundary is the point — an agent can do the
-> preparation without being able to post to your audience.
+> analytics, upload images and video, and prepare a post that targets several
+> platforms at once, each with its own wording. It can save the post as a draft
+> for review, or publish or schedule it. Publishing is a separate permission
+> the user grants when connecting, and every post appears in the Meadow
+> calendar with the status of each destination.
 >
 > Eleven platforms accept posts: Instagram, TikTok, YouTube, Facebook, X,
 > LinkedIn, Pinterest, Threads, Bluesky, Telegram and Google Business. Twitch
@@ -50,8 +53,8 @@ exist.
 | Server URL | `https://findmeadow.com/mcp` |
 | Transport | HTTP |
 | Authentication | Meadow API key as `Authorization: Bearer`, or OAuth for clients that support it |
-| Scopes | `meadow:read` for the six read tools; `meadow:read` plus `meadow:draft` for `create_draft` |
-| Tools | `get_profile`, `list_projects`, `list_accounts`, `list_posts`, `get_post`, `get_analytics`, `create_draft` |
+| Scopes | `meadow:read` for the eight read tools, plus `meadow:draft` for `create_draft`, `meadow:media` for `upload_media` and `create_upload_url`, and `meadow:publish` for `publish_post` and `publish_draft` |
+| Tools | `get_profile`, `list_projects`, `list_accounts`, `list_posts`, `get_post`, `get_account_options`, `preview_post`, `get_analytics`, `create_draft`, `upload_media`, `create_upload_url`, `publish_post`, `publish_draft` |
 | Pricing | Free plan with 5 connected accounts; paid plans from $29/month |
 | Docs | `https://findmeadow.com/developers/` |
 | Support | hello@findmeadow.com |

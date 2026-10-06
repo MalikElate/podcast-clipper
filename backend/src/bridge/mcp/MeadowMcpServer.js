@@ -1,14 +1,34 @@
+import fs from "node:fs";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import express from "express";
 import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import { z } from "zod";
-import { publicError } from "../core/errors.js";
+import { invariant, publicError } from "../core/errors.js";
 import { metrics } from "../services/AnalyticsService.js";
 import { meadowMcpScopes, meadowMcpMetadataPaths } from "./MeadowMcpOAuth.js";
 
 const readOnly = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
+const remoteRead = { readOnlyHint: true, destructiveHint: false, openWorldHint: true };
 const additive = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+const mediaImport = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true };
+const uploadGrant = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
+const publishing = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true };
+
+// Tools that act beyond reading need a second OAuth scope. API keys keep their
+// owner's full access, as they do on the REST API.
+const extraScopes = {
+  create_draft: [meadowMcpScopes.draft],
+  upload_media: [meadowMcpScopes.media],
+  create_upload_url: [meadowMcpScopes.media],
+  publish_post: [meadowMcpScopes.publish],
+  publish_draft: [meadowMcpScopes.publish],
+};
+// Base64 media travels inside the JSON-RPC body, so keep it well under the /mcp body limit.
+export const inlineMediaLimit = 10 * 1024 ** 2;
 
 const metricValueShape = Object.fromEntries([...metrics, "engagement"].map(metric => [metric, z.number().min(0).optional()]));
 const metricCoverageShape = Object.fromEntries(metrics.map(metric => [metric, z.object({ available: z.number().int().min(0), total: z.number().int().min(0) })]));
@@ -40,6 +60,48 @@ const postSchema = z.object({
   updatedAt: z.number(),
 });
 
+const formatSchema = z.enum(["auto", "text", "image", "video", "carousel", "document", "reel", "story"]);
+const scheduleInput = z.object({
+  mode: z.enum(["now", "scheduled"]).default("now"),
+  timeZone: z.string().optional().describe("IANA time zone; defaults to the project's"),
+  localDateTime: z.string().max(40).optional().describe("Local time such as 2026-10-08T09:30 when mode is scheduled"),
+});
+const settingValue = z.union([z.string(), z.number(), z.boolean(), z.array(z.string().max(500)).max(10)]);
+const destinationInput = z.object({
+  caption: z.string().max(65000).optional(),
+  title: z.string().max(500).optional(),
+  format: formatSchema.optional(),
+  localDateTime: z.string().max(40).optional().describe("A different scheduled local time for this account"),
+  settings: z.record(z.string(), settingValue).optional().describe("Platform settings for this account; see the tool description"),
+});
+const settingsGuide = "Some platforms need settings in overrides[accountId].settings before they accept a post: "
+  + "TikTok needs privacy (one of the privacyOptions from get_account_options) and consent: true for TikTok's Music Usage Confirmation, or deliveryMode: \"inbox\" with uploadConsent: true to send it to the TikTok inbox instead; optional allowComments, allowDuet, allowStitch, brandedContent, ownBrand, aiGenerated, autoMusic. "
+  + "YouTube needs privacy (public, unlisted or private) and madeForKids (true or false). Pinterest needs boardId from get_account_options, with an optional link. "
+  + "Bluesky accepts altText; Google Business accepts languageCode; Twitch and Kick accept replies (up to 10 follow-up messages) and replyToMessageId. "
+  + "Ask the user for privacy, audience and consent choices instead of choosing them yourself.";
+const postInputShape = {
+  projectId: z.string().min(1).describe("A project ID returned by list_projects"),
+  caption: z.string().max(65000).default(""),
+  title: z.string().max(500).default(""),
+  mediaIds: z.array(z.string().min(1).max(200)).max(35).default([]).describe("Media IDs returned by upload_media"),
+  accountIds: z.array(z.string().min(1).max(200)).min(1).max(100).describe("Account IDs returned by list_accounts"),
+  format: formatSchema.default("auto"),
+  schedule: scheduleInput.optional(),
+  overrides: z.record(z.string(), destinationInput).optional().describe("Per-account caption, title, format, time and platform settings, keyed by account ID"),
+};
+const mediaSchema = z.object({
+  id: z.string(), kind: z.string(), filename: z.string(), mime: z.string(), bytes: z.number(), status: z.string(),
+  width: z.number().optional(), height: z.number().optional(), durationSec: z.number().optional(),
+});
+const previewSchema = z.object({
+  valid: z.boolean(),
+  delayed: z.number().int().min(0),
+  destinations: z.array(z.object({
+    accountId: z.string(), accountName: z.string(), platform: z.string(), errors: z.array(z.string()),
+    requestedAt: z.number().optional(), delayed: z.boolean().optional(),
+  })),
+});
+
 const jsonResult = data => ({
   content: [{ type: "text", text: JSON.stringify(data) }],
   structuredContent: data,
@@ -47,9 +109,11 @@ const jsonResult = data => ({
 
 const toolError = error => {
   const visible = publicError(error);
+  // Per-destination validation errors tell the agent exactly what to fix.
+  const details = visible.code === "invalid_content" && visible.details ? `\n${JSON.stringify(visible.details)}` : "";
   return {
     isError: true,
-    content: [{ type: "text", text: `${visible.error} (${visible.code})` }],
+    content: [{ type: "text", text: `${visible.error} (${visible.code})${details}` }],
   };
 };
 
@@ -119,6 +183,59 @@ const postView = post => ({
   updatedAt: post.updatedAt,
 });
 
+const mediaView = media => ({
+  id: media.id, kind: media.kind, filename: media.filename, mime: media.mime, bytes: media.bytes, status: media.status,
+  ...(Number.isFinite(media.width) ? { width: media.width } : {}),
+  ...(Number.isFinite(media.height) ? { height: media.height } : {}),
+  ...(Number.isFinite(media.durationSec) ? { durationSec: media.durationSec } : {}),
+});
+
+const previewView = ({ rows, valid, delayed }) => ({
+  valid,
+  delayed,
+  destinations: rows.flatMap(row => row.destinations).map(destination => ({
+    accountId: destination.accountId, accountName: destination.accountName, platform: destination.platform, errors: destination.errors,
+    ...(Number.isFinite(destination.requestedAt) ? { requestedAt: destination.requestedAt } : {}),
+    ...(typeof destination.delayed === "boolean" ? { delayed: destination.delayed } : {}),
+  })),
+});
+
+const accountOptionsView = (account, options = {}) => {
+  const creator = options.creator;
+  const permissions = options.tiktokPermissions;
+  return {
+    accountId: account.id,
+    platform: account.platform,
+    ...(Number.isFinite(options.remaining) ? { remainingPosts: options.remaining } : {}),
+    ...(typeof options.note === "string" ? { note: options.note } : {}),
+    ...(account.platform === "tiktok" ? { tiktok: {
+      canPublish: permissions?.canPublish !== false,
+      canSendToInbox: permissions?.canUpload !== false,
+      privateOnly: Boolean(options.tiktokDirectPostPrivateOnly),
+      privacyOptions: creator?.privacyOptions || [],
+      ...(creator ? { commentsDisabled: Boolean(creator.commentsDisabled), duetDisabled: Boolean(creator.duetDisabled), stitchDisabled: Boolean(creator.stitchDisabled) } : {}),
+      ...(Number.isFinite(creator?.maxVideoSeconds) ? { maxVideoSeconds: creator.maxVideoSeconds } : {}),
+    } } : {}),
+    ...(Array.isArray(options.boards) ? { pinterestBoards: options.boards.map(board => ({ id: String(board.id), name: String(board.name) })) } : {}),
+  };
+};
+
+// Without a schedule a post goes out now; a schedule without a zone uses the project's.
+const withTimeZone = (schedule, timeZone) => ({ mode: "now", ...schedule, timeZone: schedule?.timeZone || timeZone });
+
+const postItem = (project, { caption, title, mediaIds, accountIds, format, schedule, overrides }) => ({
+  caption, title, mediaIds, accountIds, format, overrides: overrides || {}, schedule: withTimeZone(schedule, project.timeZone),
+});
+
+const inlineBytes = data => {
+  const encoded = data.replace(/^data:[\w.+-]+\/[\w.+-]+;base64,/, "").replace(/\s+/g, "");
+  invariant(/^[A-Za-z0-9+/]*={0,2}$/.test(encoded) && encoded.length % 4 === 0, "data must be base64-encoded file bytes.");
+  const bytes = Buffer.from(encoded, "base64");
+  invariant(bytes.length > 0, "data is empty.");
+  invariant(bytes.length <= inlineMediaLimit, `Inline uploads can be up to ${inlineMediaLimit / 1024 ** 2} MB. Pass a url, or use create_upload_url for larger files.`, { status: 413, code: "upload_limit" });
+  return bytes;
+};
+
 const analyticsTotalsView = totals => ({
   values: Object.fromEntries(Object.entries(totals.values).filter(([, value]) => Number.isFinite(value))),
   coverage: Object.fromEntries(metrics.map(metric => [metric, totals.coverage[metric]])),
@@ -128,13 +245,17 @@ export function createMeadowMcpServer(application, uid, { authType = "api_key", 
   const server = new McpServer(
     { name: "meadow", version: "0.1.0" },
     {
-      instructions: "Use Meadow to review social publishing workspaces, connected accounts, saved posts, and analytics. Create a draft when the user wants to save new post content. Never claim a draft was published. An awaiting_publish delivery has been sent to the TikTok inbox; the user must open TikTok to finish editing and posting. It is not a confirmed published post.",
+      instructions: "Use Meadow to review social publishing workspaces, connected accounts, saved posts, and analytics, and to upload media and publish or schedule posts. "
+        + "Create a draft when the user wants to save content for later. Upload media with upload_media (a public url, base64 data, or a file attached in ChatGPT) or, for large local files, create_upload_url. "
+        + "Before publishing, confirm the exact content, accounts and time with the user, call get_account_options for TikTok and Pinterest accounts, and call preview_post to check every destination. "
+        + "publish_post and publish_draft queue deliveries; a post is live only when get_post shows its deliveries as published. Never claim a draft or queued post was published. "
+        + "An awaiting_publish delivery has been sent to the TikTok inbox; the user must open TikTok to finish editing and posting. It is not a confirmed published post.",
     },
   );
 
   const toolDescriptors = [];
   const registerTool = (name, config, handler) => {
-    const requiredScopes = name === "create_draft" ? [meadowMcpScopes.read, meadowMcpScopes.draft] : [meadowMcpScopes.read];
+    const requiredScopes = [meadowMcpScopes.read, ...(extraScopes[name] || [])];
     const securitySchemes = [{ type: "oauth2", scopes: requiredScopes }];
     const metadata = { ...config._meta, securitySchemes };
     toolDescriptors.push({
@@ -249,6 +370,136 @@ export function createMeadowMcpServer(application, uid, { authType = "api_key", 
     return { post: postView(result.posts[0]), duplicate: Boolean(result.duplicate) };
   }, { flush: true }));
 
+  registerTool("get_account_options", {
+    title: "Get account publishing options",
+    description: "Fetch the current publishing options for one connected account from its platform: TikTok privacy choices and interaction limits, Pinterest boards, and any known posting allowance. Call it before publishing to TikTok or Pinterest.",
+    inputSchema: {
+      projectId: z.string().min(1).describe("A project ID returned by list_projects"),
+      accountId: z.string().min(1).describe("An account ID returned by list_accounts"),
+    },
+    outputSchema: {
+      accountId: z.string(),
+      platform: z.string(),
+      remainingPosts: z.number().optional(),
+      note: z.string().optional(),
+      tiktok: z.object({
+        canPublish: z.boolean(), canSendToInbox: z.boolean(), privateOnly: z.boolean(), privacyOptions: z.array(z.string()),
+        commentsDisabled: z.boolean().optional(), duetDisabled: z.boolean().optional(), stitchDisabled: z.boolean().optional(), maxVideoSeconds: z.number().optional(),
+      }).optional(),
+      pinterestBoards: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
+    },
+    annotations: remoteRead,
+  }, run(application, async ({ projectId, accountId }) => {
+    const account = application.accounts.require(uid, projectId, accountId);
+    return accountOptionsView(account, await application.accounts.options(uid, projectId, accountId));
+  }));
+
+  registerTool("upload_media", {
+    title: "Upload media to Meadow",
+    description: `Add an image, video, PDF, Word or PowerPoint file to a Meadow project and return its media ID for publish_post, create_draft or publish_draft. Pass exactly one of: url (a public HTTP or HTTPS address that Meadow downloads; preferred for files over a few MB), data (base64 file bytes, up to ${inlineMediaLimit / 1024 ** 2} MB), or file (a file the user attached in ChatGPT). For a large local file, use create_upload_url instead.`,
+    inputSchema: {
+      projectId: z.string().min(1).describe("A project ID returned by list_projects"),
+      url: z.string().max(4096).optional().describe("A public HTTP or HTTPS URL of the file"),
+      data: z.string().optional().describe("Base64-encoded file bytes, optionally as a data: URL"),
+      file: z.object({
+        download_url: z.string().max(4096),
+        file_id: z.string(),
+        mime_type: z.string().optional(),
+        file_name: z.string().optional(),
+      }).optional().describe("A file attached in ChatGPT"),
+      filename: z.string().max(180).optional().describe("A filename to show in Meadow"),
+    },
+    outputSchema: { media: mediaSchema },
+    annotations: mediaImport,
+    _meta: { "openai/fileParams": ["file"] },
+  }, run(application, async ({ projectId, url, data, file, filename }) => {
+    invariant([url, data, file].filter(value => value !== undefined).length === 1, "Pass exactly one of url, data or file.");
+    application.projects.require(uid, projectId);
+    invariant(application.media.signingKey, "Media storage is not configured on this server.", { status: 503 });
+    const target = path.join(application.incomingDirectory, `mcp-${randomUUID()}`);
+    try {
+      let name = filename;
+      if (data !== undefined) await fs.promises.writeFile(target, inlineBytes(data), { mode: 0o600 });
+      else {
+        const downloaded = await application.downloadMedia(file ? file.download_url : url, target, { maxBytes: application.media.maxBytes });
+        name ||= file?.file_name || downloaded.filename;
+      }
+      const record = await application.media.ingest(uid, projectId, { path: target, originalname: name }, { source: "mcp" });
+      return { media: mediaView(record) };
+    } finally {
+      await fs.promises.unlink(target).catch(() => {});
+    }
+  }, { flush: true }));
+
+  registerTool("create_upload_url", {
+    title: "Create a media upload link",
+    description: "Create a one-time link for uploading one large local file to a Meadow project, for clients that can run HTTP requests such as curl. Send the file as multipart form field \"file\" with the returned Authorization header before the link expires in 30 minutes; the response contains the media ID. The file must be exactly the declared size.",
+    inputSchema: {
+      projectId: z.string().min(1).describe("A project ID returned by list_projects"),
+      bytes: z.number().int().min(1).describe("The exact file size in bytes"),
+    },
+    outputSchema: {
+      uploadUrl: z.string(),
+      method: z.literal("POST"),
+      headers: z.object({ Authorization: z.string() }),
+      fileField: z.literal("file"),
+      expiresAt: z.number(),
+      example: z.string(),
+    },
+    annotations: uploadGrant,
+  }, run(application, ({ projectId, bytes }) => {
+    invariant(application.media.signingKey, "Media storage is not configured on this server.", { status: 503 });
+    const { uploadToken, expiresAt } = application.uploadTokens.create(uid, projectId, { bytes });
+    const uploadUrl = new URL(`/api/bridge/projects/${encodeURIComponent(projectId)}/media`, application.publicUrl).href;
+    const authorization = `Bearer ${uploadToken}`;
+    return { uploadUrl, method: "POST", headers: { Authorization: authorization }, fileField: "file", expiresAt, example: `curl -X POST "${uploadUrl}" -H "Authorization: ${authorization}" -F "file=@/path/to/file"` };
+  }, { flush: true }));
+
+  registerTool("preview_post", {
+    title: "Preview a Meadow post",
+    description: `Check a post against every selected account without publishing it. Returns each destination's validation errors and the time Meadow would deliver it. ${settingsGuide}`,
+    inputSchema: postInputShape,
+    outputSchema: { preview: previewSchema },
+    annotations: remoteRead,
+  }, run(application, async input => {
+    const project = application.projects.require(uid, input.projectId);
+    return { preview: previewView(await application.posts.preview(uid, input.projectId, { items: [postItem(project, input)] })) };
+  }));
+
+  registerTool("publish_post", {
+    title: "Publish or schedule a Meadow post",
+    description: `Publish a post now or schedule it on the selected connected accounts. Confirm the content, accounts and time with the user first. Meadow queues one delivery per account; the post is live only when get_post reports its deliveries as published. Reuse the same requestId when retrying so the post is not queued twice. ${settingsGuide}`,
+    inputSchema: {
+      ...postInputShape,
+      requestId: z.string().regex(/^[\w-]{16,100}$/).describe("A stable 16-100 character idempotency identifier"),
+    },
+    outputSchema: { post: postSchema, duplicate: z.boolean(), delayed: z.number().int().min(0) },
+    annotations: publishing,
+  }, run(application, async input => {
+    const project = application.projects.require(uid, input.projectId);
+    const result = await application.posts.submit(uid, input.projectId, { requestId: input.requestId, items: [postItem(project, input)] });
+    return { post: postView(result.posts[0]), duplicate: Boolean(result.duplicate), delayed: result.delayed || 0 };
+  }, { flush: true }));
+
+  registerTool("publish_draft", {
+    title: "Publish or schedule a Meadow draft",
+    description: "Publish a saved draft with its saved content, accounts and per-account settings, now or at its saved time. Pass schedule to change when it goes out. Confirm with the user first. Reuse the same requestId when retrying.",
+    inputSchema: {
+      projectId: z.string().min(1).describe("A project ID returned by list_projects"),
+      postId: z.string().min(1).describe("A draft ID returned by list_posts or create_draft"),
+      requestId: z.string().regex(/^[\w-]{16,100}$/).describe("A stable 16-100 character idempotency identifier"),
+      revision: z.number().int().min(1).optional().describe("The draft revision you reviewed; publishing stops if the draft changed since"),
+      schedule: scheduleInput.optional(),
+    },
+    outputSchema: { post: postSchema, duplicate: z.boolean(), delayed: z.number().int().min(0) },
+    annotations: publishing,
+  }, run(application, async ({ projectId, postId, requestId, revision, schedule }) => {
+    const draft = application.posts.getDraft(uid, projectId, postId);
+    const item = { caption: draft.caption, title: draft.title, mediaIds: draft.mediaIds, accountIds: draft.accountIds, overrides: draft.overrides || {}, format: draft.format, schedule: schedule ? withTimeZone(schedule, draft.schedule.timeZone) : draft.schedule };
+    const result = await application.posts.submit(uid, projectId, { requestId, draftId: postId, revision: revision ?? draft.revision, items: [item] });
+    return { post: postView(result.posts[0]), duplicate: Boolean(result.duplicate), delayed: result.delayed || 0 };
+  }, { flush: true }));
+
   registerTool("get_analytics", {
     title: "Get Meadow analytics",
     description: "Return cached analytics totals for one Meadow project. This does not contact social platforms or refresh their metrics.",
@@ -334,7 +585,11 @@ export function registerMeadowMcpRoutes(application) {
     handler: (req, res) => jsonRpcError(res, 429, -32002, "Too many MCP requests. Please wait a moment."),
   });
 
-  application.app.post("/mcp", authenticate, limiter, async (req, res) => {
+  // Signed-in clients may send base64 media inline; anonymous discovery stays small.
+  const largeBody = express.json({ limit: "16mb" }), smallBody = express.json({ limit: "2mb" });
+  const body = (req, res, next) => (req.uid ? largeBody : smallBody)(req, res, next);
+
+  application.app.post("/mcp", authenticate, limiter, body, async (req, res) => {
     const server = createMeadowMcpServer(application, req.uid, { authType: req.authType, scopes: req.mcpScopes });
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     try {

@@ -1,6 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
-export const meadowMcpScopes = Object.freeze({ read: "meadow:read", draft: "meadow:draft" });
+export const meadowMcpScopes = Object.freeze({ read: "meadow:read", draft: "meadow:draft", media: "meadow:media", publish: "meadow:publish" });
 export const meadowMcpMetadataPaths = Object.freeze([
   "/.well-known/oauth-protected-resource/mcp",
   "/.well-known/oauth-protected-resource",

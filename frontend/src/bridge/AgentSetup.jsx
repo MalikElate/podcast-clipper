@@ -16,7 +16,7 @@ export default function AgentSetup({ onCopy }) {
   const logos = { claude: SiClaude, cursor: SiCursor, gemini: SiGooglegemini };
   return <section className="bridge-panel bridge-agent-guide">
     <h2>Connect an AI agent</h2>
-    <p>Connect your preferred agent to read your workspace, check analytics, and create drafts for review in Meadow.</p>
+    <p>Connect your preferred agent to read your workspace, check analytics, upload media, and draft, schedule or publish posts.</p>
     <div className="bridge-agent-tabs" role="tablist" aria-label="Agent setup">
       {AGENT_CLIENTS.map(item => { const Logo = logos[item.id]; return <button key={item.id} type="button" role="tab" id={`agent-tab-${item.id}`} aria-selected={client === item.id} aria-controls="agent-setup-panel" tabIndex={client === item.id ? 0 : -1} onClick={() => setClient(item.id)} onKeyDown={event => { const offset = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0; if (!offset && !["Home", "End"].includes(event.key)) return; event.preventDefault(); const index = event.key === "Home" ? 0 : event.key === "End" ? AGENT_CLIENTS.length - 1 : (AGENT_CLIENTS.findIndex(agent => agent.id === client) + offset + AGENT_CLIENTS.length) % AGENT_CLIENTS.length; setClient(AGENT_CLIENTS[index].id); document.getElementById(`agent-tab-${AGENT_CLIENTS[index].id}`)?.focus(); }}>{Logo && <Logo size={17} aria-hidden="true"/>}{item.name}</button>; })}
     </div>
@@ -29,6 +29,6 @@ export default function AgentSetup({ onCopy }) {
         {selected.docs && <a className="bridge-agent-docs" href={selected.docs} target="_blank" rel="noreferrer">{selected.name} setup guide <Icon name="external" size={14}/></a>}
       </>}
     </div>
-    <p className="bridge-small bridge-agent-permissions">MCP provides seven tools for workspace information and drafts. Scheduling and publishing stay in Meadow or the REST API.</p>
+    <p className="bridge-small bridge-agent-permissions">MCP provides 13 tools for workspace information, drafts, media uploads and publishing. An API key gives an agent your full access; OAuth sign-in asks you to approve uploading and publishing separately.</p>
   </section>;
 }

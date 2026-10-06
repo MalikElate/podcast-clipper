@@ -22,7 +22,7 @@ function token({ claims = {}, type = "at+jwt", signingKey = keys.privateKey } = 
 test("MCP OAuth advertises canonical resource, issuer and scoped permissions", () => {
   assert.equal(oauth.metadata.resource, resource);
   assert.deepEqual(oauth.metadata.authorization_servers, [issuer]);
-  assert.deepEqual(oauth.metadata.scopes_supported, [meadowMcpScopes.read, meadowMcpScopes.draft]);
+  assert.deepEqual(oauth.metadata.scopes_supported, ["meadow:read", "meadow:draft", "meadow:media", "meadow:publish"]);
   assert.match(oauth.challenge(), /resource_metadata="https:\/\/findmeadow.com\/\.well-known\/oauth-protected-resource\/mcp"/);
   assert.equal(createMeadowMcpOAuth({ resource }), null);
   assert.throws(() => createMeadowMcpOAuth({ issuer: "http://clerk.findmeadow.com", resource }));
@@ -71,11 +71,14 @@ test("real MCP transport exposes OAuth descriptors and prevents unauthorized han
     // The current SDK client's standard ToolSchema strips extension fields.
     // Inspect the response with a permissive schema to check what is on the wire.
     const tools = (await client.request({ method: "tools/list" }, z.object({ tools: z.array(z.looseObject({ name: z.string() })) }))).tools;
-    assert.equal(tools.length, 7);
+    assert.equal(tools.length, 13);
     for (const tool of tools) assert.deepEqual(tool.securitySchemes, tool._meta.securitySchemes);
     const draft = await client.callTool({ name: "create_draft", arguments: { projectId: "project", requestId: "scope-test-123456789", caption: "Test" } });
     assert.equal(draft.isError, true);
     assert.match(draft._meta["mcp/www_authenticate"][0], identity ? /insufficient_scope/ : /invalid_token/);
+    const publish = await client.callTool({ name: "publish_post", arguments: { projectId: "project", requestId: "scope-test-123456789", accountIds: ["account"], caption: "Test" } });
+    assert.equal(publish.isError, true);
+    assert.match(publish._meta["mcp/www_authenticate"][0], identity ? /scope="meadow:read meadow:publish", error="insufficient_scope"/ : /invalid_token/);
     const profile = await client.callTool({ name: "get_profile", arguments: {} });
     if (identity) assert.equal(profile.structuredContent.id, identity);
     else assert.equal(profile.isError, true);
