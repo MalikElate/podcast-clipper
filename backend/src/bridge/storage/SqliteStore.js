@@ -107,6 +107,11 @@ export class SqliteStore {
     return this.db.prepare(sql).all(...args).map(row => ({ ...JSON.parse(row.data), revision: row.revision }));
   }
 
+  countByPlatform(kind, status) {
+    const rows = this.db.prepare("SELECT json_extract(data,'$.platform') AS platform, COUNT(*) AS count FROM entities WHERE kind = ? AND status = ? GROUP BY platform").all(kind, status);
+    return new Map(rows.filter(row => row.platform).map(row => [row.platform, row.count]));
+  }
+
   put(kind, record) {
     const { revision: _, ...data } = record;
     this.upsert.run({ kind, id: data.id, ownerUid: data.ownerUid ?? "", projectId: data.projectId ?? "",
