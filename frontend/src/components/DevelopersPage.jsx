@@ -5,22 +5,28 @@ import { appHref, marketingHref } from "../siteUrls.js";
 import { DEVELOPERS_DESCRIPTION, DEVELOPERS_TITLE } from "../siteContact.js";
 
 // Every claim here is checked against docs/mcp-api.md and docs/webhooks.md.
-// The contract reads and drafts; it does not publish. Saying otherwise would
-// send developers to an endpoint that cannot do what the page promised.
+// Overclaiming would send developers to an endpoint that cannot do what the
+// page promised, so keep this list in step with MeadowMcpServer.js.
 const TOOLS = [
   ["get_profile", "Identify the connected Meadow profile."],
   ["list_projects", "List the profile's owned projects."],
   ["list_accounts", "List cached connected-account data for a project."],
   ["list_posts", "List drafts, scheduled posts and publishing history, with bounded pagination."],
-  ["get_post", "Return one post by ID."],
+  ["get_post", "Return one post by ID, with the status of each destination."],
+  ["get_account_options", "Fetch an account's current publishing options, such as TikTok privacy choices and Pinterest boards."],
   ["get_analytics", "Return cached project totals and account summaries, without calling the social platforms."],
   ["create_draft", "Save one non-empty draft. A stable requestId makes a retry idempotent."],
+  ["upload_media", "Add an image, video or document from a public URL, base64 bytes, or a file attached in ChatGPT."],
+  ["create_upload_url", "Create a one-time link for uploading a large local file."],
+  ["preview_post", "Check a post against every selected account without publishing it."],
+  ["publish_post", "Publish a post now or schedule it. A stable requestId keeps a retry from posting twice."],
+  ["publish_draft", "Publish or schedule a saved draft."],
 ];
 
 const FAQS = [
-  { q: "Can the API publish a post?", a: "No. The tool contract reads your workspace and saves drafts. It does not connect accounts, upload media, queue posts or publish. Publishing stays a decision you make in the dashboard, which is the point: an agent can prepare the work without being able to send it." },
-  { q: "How does a client authenticate?", a: "With a Meadow API key created in Settings → API Keys, sent as an Authorization: Bearer header. Clients that support OAuth sign-in can use that instead. Scopes are meadow:read for the six read tools, and meadow:read plus meadow:draft for create_draft." },
-  { q: "Which platforms can a draft target?", a: "The same destinations the dashboard reaches: 11 platforms that accept posts, plus Twitch and Kick for channel chat. A draft names its destinations, and each destination keeps its own text." },
+  { q: "Can the API publish a post?", a: "Yes. publish_post publishes or schedules a post on the accounts you choose, and publish_draft sends a saved draft. Upload media first with upload_media, or with create_upload_url for a large local file. preview_post checks every destination without sending anything, and get_post reports when each one is live. Connecting accounts still happens in the dashboard." },
+  { q: "How does a client authenticate?", a: "With a Meadow API key created in Settings → API Keys, sent as an Authorization: Bearer header. A key has your full access. Clients that support OAuth sign-in can use that instead, and you approve each permission: meadow:read for the read tools, meadow:draft for create_draft, meadow:media for upload_media and create_upload_url, and meadow:publish for publish_post and publish_draft." },
+  { q: "Which platforms can a post target?", a: "The same destinations the dashboard reaches: 11 platforms that accept posts, plus Twitch and Kick for channel chat. A post names its destinations, and each destination keeps its own text and settings." },
   { q: "How do I find out what happened to a post?", a: "Subscribe a webhook. post.completed fires once per destination with the platform, delivery ID and outcome; connection.needs_reconnect fires when an account needs reauthorizing. Payloads carry references and outcomes, never credentials, post content or media." },
   { q: "Is the MCP endpoint public?", a: "The endpoint is reachable, but anonymous clients can only initialize the protocol and read tool descriptors. Retrieving anything from a workspace requires a key." },
 ];
@@ -45,11 +51,11 @@ export default function DevelopersPage({ onGetStarted }) {
       <main>
         <section className="landing-section dev-hero" aria-labelledby="dev-title">
           <div className="section-heading">
-            <h1 id="dev-title">Let an AI client draft your posts. You publish them.</h1>
+            <h1 id="dev-title">Let an AI client draft, schedule and publish your posts.</h1>
             <p>
-              Meadow runs an MCP server so a supported AI client, a script or an automation can read your workspace and
-              prepare drafts across 11 publishing platforms, plus Twitch and Kick chat. Nothing it prepares goes out until
-              you review and publish it.
+              Meadow runs an MCP server so a supported AI client, a script or an automation can read your workspace, upload
+              media, and draft, schedule or publish posts across 11 publishing platforms, plus Twitch and Kick chat.
+              Publishing is a separate permission you grant when you connect.
             </p>
           </div>
         </section>
@@ -68,8 +74,8 @@ export default function DevelopersPage({ onGetStarted }) {
         </section>
 
         <section className="landing-section dev-section" aria-labelledby="dev-tools">
-          <h2 id="dev-tools">Seven tools</h2>
-          <p>Six read your workspace. One writes, and what it writes is a draft.</p>
+          <h2 id="dev-tools">Thirteen tools</h2>
+          <p>Eight read your workspace. Five write: a draft, uploaded media, or a published post.</p>
           <dl className="dev-tool-list">
             {TOOLS.map(([name, purpose]) => <div className="dev-tool-row" key={name}><dt><code>{name}</code></dt><dd>{purpose}</dd></div>)}
           </dl>

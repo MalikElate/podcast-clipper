@@ -15,6 +15,7 @@ import { ProjectService } from "./services/ProjectService.js";
 import { WelcomeEmailService, clerkSignupContact } from "./services/WelcomeEmailService.js";
 import { ScheduleService } from "./services/ScheduleService.js";
 import { MediaService } from "./services/MediaService.js";
+import { downloadRemoteMedia } from "./services/RemoteMedia.js";
 import { UploadTokenService } from "./services/UploadTokenService.js";
 import { AccountService } from "./services/AccountService.js";
 import { PostService } from "./services/PostService.js";
@@ -78,8 +79,8 @@ export function connectionErrorMessage(platform, error) {
 
 /** Composition root. Services, repository, adapters and authentication are replaceable. */
 export class BridgeApplication {
-  constructor({ env = process.env, store, durability, registry, storage, authMiddleware, mcpOAuthKeyResolver, stripe, deleteIdentity, deleteAnalytics, welcomeEmail, webhookSend, clock = () => Date.now() } = {}) {
-    this.env = env; this.clock = clock;
+  constructor({ env = process.env, store, durability, registry, storage, authMiddleware, mcpOAuthKeyResolver, stripe, deleteIdentity, deleteAnalytics, welcomeEmail, webhookSend, downloadMedia = downloadRemoteMedia, clock = () => Date.now() } = {}) {
+    this.env = env; this.clock = clock; this.downloadMedia = downloadMedia;
     this.localPreview = env.BRIDGE_LOCAL_PREVIEW === "1" && env.NODE_ENV !== "production";
     this.dataDir = path.resolve(env.BRIDGE_DATA_DIR || path.join(backendDir, ".bridge"));
     this.publicUrl = (env.BRIDGE_PUBLIC_URL || "http://localhost:8787").replace(/\/$/, "");
@@ -125,7 +126,7 @@ export class BridgeApplication {
     this.accounts.webhooks = this.webhooks;
     this.worker = new PublishingWorker({ store: this.store, accounts: this.accounts, registry: this.registry, posts: this.posts, rates: this.rates, media: this.media, locks: this.locks, analytics: this.analytics, webhooks: this.webhooks, clock, enabled: !this.localPreview && env.BRIDGE_PUBLISHING_ENABLED !== "false" });
     const incoming = path.join(this.dataDir, "incoming"); fs.mkdirSync(incoming, { recursive: true, mode: 0o700 });
-    this.privacy.incomingDirectory = incoming;
+    this.privacy.incomingDirectory = incoming; this.incomingDirectory = incoming;
     this.upload = multer({ dest: incoming, limits: { fileSize: this.media.maxBytes, files: 1, fields: 0 } });
     this.receiveUpload = (req, res, next) => {
       const upload = req.uploadGrant ? multer({ dest: incoming, limits: { fileSize: req.uploadGrant.bytes, files: 1, fields: 0 } }) : this.upload;
@@ -165,7 +166,10 @@ export class BridgeApplication {
     const origins = new Set([new URL(this.appUrl).origin, new URL(this.publicUrl).origin]);
     if (this.localPreview) { origins.add("http://127.0.0.1:5173"); origins.add("http://localhost:5173"); }
     this.app.use(cors({ origin: (origin, done) => done(null, !origin || origins.has(origin)), methods: ["GET", "POST", "PATCH", "DELETE"], allowedHeaders: ["Content-Type", "Authorization", "X-Bridge-Preview", "MCP-Protocol-Version", "MCP-Session-Id", "Last-Event-ID"], exposedHeaders: ["WWW-Authenticate"] }));
-    this.app.use(express.json({ limit: "2mb" }));
+    // /mcp parses its own body after authentication, so only signed-in
+    // clients can send the larger inline-media requests (see upload_media).
+    const json = express.json({ limit: "2mb" });
+    this.app.use((req, res, next) => req.path === "/mcp" ? next() : json(req, res, next));
     this.app.get("/health", (req, res) => res.json({ status: "ok", app: "Meadow" }));
     this.registerPublicRoutes();
     registerMeadowMcpRoutes(this);
@@ -216,10 +220,10 @@ export class BridgeApplication {
       req.privacyRelease?.();
       if (res.headersSent) return next(error);
       if (req.path === "/mcp") {
-        const parseError = error.type === "entity.parse.failed";
-        return res.status(parseError ? 400 : error instanceof BridgeError ? error.status : 500).json({
+        const parseError = error.type === "entity.parse.failed", tooLarge = error.type === "entity.too.large";
+        return res.status(parseError ? 400 : tooLarge ? 413 : error instanceof BridgeError ? error.status : 500).json({
           jsonrpc: "2.0",
-          error: { code: parseError ? -32700 : error instanceof BridgeError ? -32000 : -32603, message: parseError ? "Invalid JSON request." : publicError(error).error },
+          error: { code: parseError ? -32700 : error instanceof BridgeError || tooLarge ? -32000 : -32603, message: parseError ? "Invalid JSON request." : tooLarge ? "This request is too large. Pass a url or use create_upload_url for large media." : publicError(error).error },
           id: null,
         });
       }

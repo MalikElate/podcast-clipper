@@ -22,7 +22,7 @@ function token({ claims = {}, type = "at+jwt", signingKey = keys.privateKey } = 
 test("MCP OAuth advertises canonical resource, issuer and scoped permissions", () => {
   assert.equal(oauth.metadata.resource, resource);
   assert.deepEqual(oauth.metadata.authorization_servers, [issuer]);
-  assert.deepEqual(oauth.metadata.scopes_supported, [meadowMcpScopes.read, meadowMcpScopes.draft]);
+  assert.deepEqual(oauth.metadata.scopes_supported, ["meadow:read", "meadow:draft", "meadow:media", "meadow:publish"]);
   assert.match(oauth.challenge(), /resource_metadata="https:\/\/findmeadow.com\/\.well-known\/oauth-protected-resource\/mcp"/);
   assert.equal(createMeadowMcpOAuth({ resource }), null);
   assert.throws(() => createMeadowMcpOAuth({ issuer: "http://clerk.findmeadow.com", resource }));

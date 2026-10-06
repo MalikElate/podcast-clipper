@@ -59,7 +59,7 @@ for (const url of sitemapUrls) assert.match(url, /^https:\/\/findmeadow\.com\//,
 const developersHtml = await readFile("dist/developers/index.html", "utf8");
 assert.ok(developersHtml.includes("https://findmeadow.com/mcp"), "The developer page must give the server URL");
 assert.ok(developersHtml.includes('"@type":"FAQPage"'), "The developer page must answer questions in a form search engines read");
-assert.ok(/does not connect accounts, upload media, queue posts or publish/.test(developersHtml), "The developer page must say the contract cannot publish");
+assert.ok(developersHtml.includes("publish_post") && developersHtml.includes("meadow:publish"), "The developer page must name the publishing tool and the permission it needs");
 for (const overclaim of ["publish to 13", "Publish to 13", "publish to eleven platforms"]) {
   assert.ok(!developersHtml.includes(overclaim), `The developer page must not claim it can ${overclaim}`);
 }
