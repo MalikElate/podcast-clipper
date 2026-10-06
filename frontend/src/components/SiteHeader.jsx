@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { appHref, marketingHref, signupHref } from "../siteUrls.js";
 import { usePublicAuth } from "../AuthContext.jsx";
+import { CONTACT_PHONE_DISPLAY, CONTACT_PHONE_HREF } from "../siteContact.js";
 import BrandLogo from "./BrandLogo.jsx";
 
 function ArrowIcon() {
@@ -26,7 +27,7 @@ export default function SiteHeader({ className = "", homeHref = marketingHref("/
     const closeOutside = (event) => {
       if (!headerRef.current?.contains(event.target)) setMenuOpen(false);
     };
-    const desktop = window.matchMedia("(min-width: 721px)");
+    const desktop = window.matchMedia("(min-width: 981px)");
     const closeOnDesktop = () => { if (desktop.matches) setMenuOpen(false); };
     document.addEventListener("pointerdown", closeOutside);
     desktop.addEventListener("change", closeOnDesktop);
@@ -55,9 +56,8 @@ export default function SiteHeader({ className = "", homeHref = marketingHref("/
         if (event.target.closest("a, button")) setMenuOpen(false);
       }}>
         <nav className="landing-nav" aria-label="Main navigation">
-          <a href={marketingHref("/#platforms")}>Tools</a>
           <a href={marketingHref("/#ways-to-use")}>API/MCP</a>
-          <a href={marketingHref("/contact")}>Contact</a>
+          <a className="site-human-link" href={CONTACT_PHONE_HREF}><span>Talk to a human:</span> <strong>{CONTACT_PHONE_DISPLAY}</strong></a>
         </nav>
         <div className="landing-actions">
           {!user && !loading && <HeaderAction className="btn-ghost" href={appHref("/sign-in")} onClick={signIn}>Sign in</HeaderAction>}
