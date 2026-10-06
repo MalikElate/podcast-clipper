@@ -59,7 +59,7 @@ export class HttpTransport {
     if (!response.ok || tokenEndpoint && oauthCode && oauthCode !== "ok") {
       if (parsed.hostname === "api.x.com" && response.status === 402) throw new ProviderError("X requires API credits before it will return analytics.", { code: "x_credits_required" });
       if (parsed.hostname === "api.x.com" && !tokenEndpoint && response.status !== 401) assertXResponse(data);
-      if (parsed.hostname === "api.linkedin.com" && response.status !== 401) assertLinkedInResponse(data, { status: response.status });
+      if (parsed.hostname === "api.linkedin.com" && response.status !== 401) assertLinkedInResponse(data, { status: response.status, method });
       if (googleTokenEndpoint) {
         // Token revocation is an account issue; invalid app credentials are not.
         // Use fixed messages so Google's response cannot expose request data.

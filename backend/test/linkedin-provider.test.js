@@ -81,3 +81,28 @@ test("LinkedIn post rejections keep LinkedIn's status and code but not its messa
     return true;
   });
 });
+
+test("LinkedIn analytics reads never ask the member to reconnect", async () => {
+  const calls = [];
+  const http = new HttpTransport({ fetcher: async (url, options) => {
+    calls.push({ url, method: options.method });
+    return Response.json({ status: 403, serviceErrorCode: 100, code: "ACCESS_DENIED", message: "Not enough permissions to access: socialActions.GET.NO_VERSION" }, { status: 403 });
+  } });
+  const provider = new LinkedInProvider({ transport: http, env: {} });
+  const credentials = { accessToken: "test-access-token" };
+
+  // Member likes and comments need r_member_social, which Meadow's app does not have.
+  const member = await provider.metrics({ credentials, account: { remoteId: "urn:li:person:member" }, delivery: { externalId: "urn:li:share:5" } });
+  assert.deepEqual(member.values, {});
+  assert.match(member.unavailableReason, /approved partner apps/);
+  assert.equal(calls.length, 0);
+
+  // Any other refused read reports a permission gap without breaking the connection.
+  await assert.rejects(provider.metrics({ credentials, account: { remoteId: "urn:li:organization:company" }, delivery: { externalId: "urn:li:share:5" } }), error => {
+    assert.equal(error.code, "linkedin_read_permission");
+    assert.notEqual(error.reconnect, true);
+    assert.match(error.message, /LinkedIn HTTP 403, code 100/);
+    return true;
+  });
+  assert.equal(calls[0].method, "GET");
+});
