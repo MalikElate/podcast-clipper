@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { SiClaude } from "react-icons/si";
+import OpenAILogo from "./OpenAILogo.jsx";
 import { PlatformIcon } from "../bridge/ui.jsx";
 import "./agentPublishingDemo.css";
 
@@ -9,8 +11,18 @@ const CHANNELS = [
 ];
 const DURATIONS = [2200, 3800, 2200, 1000, 1000, 1000, 4200];
 
-function AssistantMark() {
-  return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="7" width="16" height="13" rx="5" /><path d="M12 3v4M2 12v3m20-3v3M9 16h6" /><circle cx="9" cy="12" r=".7" /><circle cx="15" cy="12" r=".7" /></svg>;
+function HermesLogo() {
+  return <img src="/brands/hermes-logo.png" width="22" height="22" alt="" />;
+}
+
+const AGENTS = [
+  { id: "claude", name: "Claude", Logo: SiClaude },
+  { id: "openai", name: "OpenAI", Logo: OpenAILogo },
+  { id: "hermes", name: "Hermes", Logo: HermesLogo },
+];
+
+function AssistantMark({ agent, small = false }) {
+  return <span className={`agent-demo-avatar is-${agent.id}${small ? " agent-demo-avatar-small" : ""}`} aria-hidden="true"><agent.Logo /></span>;
 }
 
 function Check() {
@@ -20,7 +32,8 @@ function Check() {
 export default function AgentPublishingDemo() {
   const demoRef = useRef(null);
   // A complete, readable example is also available before hydration and with reduced motion.
-  const [step, setStep] = useState(6);
+  const [{ step, agentIndex }, setFrame] = useState({ step: 6, agentIndex: 0 });
+  const agent = AGENTS[agentIndex];
   const [playing, setPlaying] = useState(false);
   const [visible, setVisible] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
@@ -29,7 +42,7 @@ export default function AgentPublishingDemo() {
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
     const syncMotion = () => {
       setPlaying(!preference.matches);
-      setStep(preference.matches ? 6 : 0);
+      setFrame(current => ({ ...current, step: preference.matches ? 6 : 0 }));
     };
     const syncVisibility = () => setPageVisible(!document.hidden);
     const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: 0.25 });
@@ -47,21 +60,24 @@ export default function AgentPublishingDemo() {
 
   useEffect(() => {
     if (!playing || !visible || !pageVisible) return;
-    const timer = window.setTimeout(() => setStep(current => (current + 1) % DURATIONS.length), DURATIONS[step]);
+    const timer = window.setTimeout(() => setFrame(current => {
+      const nextStep = (current.step + 1) % DURATIONS.length;
+      return { step: nextStep, agentIndex: nextStep === 0 ? (current.agentIndex + 1) % AGENTS.length : current.agentIndex };
+    }), DURATIONS[step]);
     return () => window.clearTimeout(timer);
   }, [step, playing, visible, pageVisible]);
 
   return (
-    <figure className="agent-demo" ref={demoRef} aria-label="Publishing through an AI assistant" aria-describedby="agent-demo-description">
+    <figure className="agent-demo" ref={demoRef} data-agent={agent.id} aria-label={`Publishing through ${agent.name}`} aria-describedby="agent-demo-description">
       <div className="agent-demo-header">
-        <span className="agent-demo-avatar"><AssistantMark /></span>
-        <strong>AI assistant</strong>
+        <AssistantMark agent={agent} />
+        <strong>{agent.name}</strong>
       </div>
 
       <div className="agent-demo-conversation" aria-hidden="true" data-step={step} data-playing={playing}>
         <div className="agent-demo-user">Share our studio launch on LinkedIn, Threads, and Bluesky.</div>
         <div className="agent-demo-response">
-          <span className="agent-demo-avatar agent-demo-avatar-small"><AssistantMark /></span>
+          <AssistantMark agent={agent} small />
           <div className="agent-demo-answer">
             <p>{step === 0 ? <>Preparing your posts<span className="agent-demo-thinking">…</span></> : "Three posts prepared. Ready for your review."}</p>
             <div className={`agent-demo-preview ${step >= 1 ? "is-visible" : ""}`}>
@@ -83,7 +99,7 @@ export default function AgentPublishingDemo() {
         <div className={`agent-demo-success ${step >= 6 ? "is-visible" : ""}`}><span><Check /></span>You’re live on all 3 channels.</div>
       </div>
 
-      <figcaption id="agent-demo-description" className="sr-only">Illustrative sample conversation: ask a generic AI assistant connected to Meadow to share a studio launch on LinkedIn, Threads, and Bluesky. The assistant prepares the posts for review, waits for your approval, and then shows each channel as published. No real posts are created by this demo.</figcaption>
+      <figcaption id="agent-demo-description" className="sr-only">Illustrative sample conversation: ask an AI assistant connected to Meadow to share a studio launch on LinkedIn, Threads, and Bluesky. The assistant prepares the posts for review, waits for your approval, and then shows each channel as published. Each replay uses Claude, OpenAI, then Hermes. No real posts are created by this demo.</figcaption>
     </figure>
   );
 }
