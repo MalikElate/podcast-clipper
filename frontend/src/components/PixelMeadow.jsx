@@ -1,9 +1,11 @@
 import { useEffect, useRef } from "react";
 
-// Dot-matrix meadow behind the homepage demo. Every color comes from Meadow's
-// palette or its flower mark, so the art reads as part of the brand.
+// Dot-matrix sky over a low meadow, drawn behind the homepage hero. Every color
+// comes from Meadow's palette or its flower mark, so the art reads as the brand.
 const CELL = 6;
 const DOT = 4;
+// Center each dot in its cell so it lines up with the hero's CSS dot grid.
+const INSET = (CELL - DOT) / 2;
 const INK = "#233247";
 const STEM = "#0f622b";
 const LEAF = "#36745b";
@@ -13,6 +15,9 @@ const MIST = "#cbd8bd";
 const CREAM = "#fcfdf8";
 const PETAL = "#fdbe01";
 const BLOOM = "#fb614e";
+const SKY_HIGH = "#c8d5ff";
+const SKY = "#dceef6";
+const SKY_LOW = "#e8eeff";
 
 function hash(x, y, seed) {
   let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(seed, 1442695041);
@@ -38,61 +43,114 @@ function noise2(x, y, seed) {
   return top * (1 - ty) + bottom * ty;
 }
 
-function ridge(x, seed) {
-  return noise1(x / 46, seed) * 0.55 + noise1(x / 17, seed + 1) * 0.3 + noise1(x / 6, seed + 2) * 0.15;
+function skyColor(x, row, rows) {
+  const horizon = row / rows;
+  const cloud = noise2(x / 24, row / 7, 61) * 0.7 + noise2(x / 8, row / 3, 62) * 0.3;
+  if (cloud > 0.74 - horizon * 0.1) return CREAM;
+  const speck = hash(x, row, 63);
+  if (speck < 0.05) return CREAM;
+  // Mottled blue that lightens toward the horizon.
+  const tone = noise2(x / 6, row / 6, 64) * 0.5 + speck * 0.5 - horizon * 0.3;
+  if (tone > 0.45) return SKY_HIGH;
+  if (tone > 0.25) return SKY;
+  return SKY_LOW;
 }
 
-function texture(x, y, seed) {
-  return noise2(x / 9, y / 6, seed) * 0.6 + noise2(x / 3.5, y / 2.5, seed + 1) * 0.4;
+function fieldColor(x, row) {
+  if (hash(x, row, 21) < 0.06) return PETAL;
+  const tone = noise2(x / 5, row / 2, 22);
+  if (tone < 0.4) return SAGE;
+  if (tone < 0.62) return MIST;
+  return GRASS;
 }
 
-function cellColor(x, row, rows, center) {
-  const height = rows - row;
-  const front = rows * (0.2 + 0.62 * ridge(x, 11));
-  const back = rows * (0.5 + 0.42 * ridge(x + 300, 23));
-  // Low mist gathers toward the edges, leaving the middle of the field clear.
-  const edge = Math.min(Math.abs(x) / Math.max(center, 1), 1);
-  if (edge > 0.45 && height < rows * 0.3 && noise2(x / 16, row / 5, 41) > 0.86 - (edge - 0.45) * 0.45) return CREAM;
-  if (height <= front) {
-    const depth = front - height;
-    if (depth < 1.5) return hash(x, row, 5) < 0.5 ? GRASS : PETAL;
-    const speck = hash(x, row, 7);
-    if (speck < 0.035) return PETAL;
-    if (speck < 0.06) return BLOOM;
-    const shade = texture(x, row, 3) - Math.min(depth / rows, 0.5) * 0.35;
-    if (shade < 0.3) return INK;
-    if (shade < 0.4) return STEM;
-    if (shade < 0.52) return LEAF;
-    if (shade < 0.66) return GRASS;
-    return hash(x, row, 9) < 0.6 ? PETAL : BLOOM;
+function grassColor(x, row, depth) {
+  if (depth < 1) return hash(x, row, 5) < 0.75 ? GRASS : PETAL;
+  const speck = hash(x, row, 7);
+  if (speck < 0.06) return PETAL;
+  if (speck < 0.085) return BLOOM;
+  if (speck < 0.1) return CREAM;
+  const shade = noise2(x / 9, row / 4, 3) * 0.6 + noise2(x / 3, row / 2, 4) * 0.4 - Math.min(depth / 40, 0.5) * 0.6;
+  if (shade < 0.1) return INK;
+  if (shade < 0.28) return STEM;
+  if (shade < 0.44) return LEAF;
+  return GRASS;
+}
+
+function set(grid, row, column, color) {
+  if (row >= 0 && row < grid.length && column >= 0 && column < grid[row].length) grid[row][column] = color;
+}
+
+function paint(columns, rows) {
+  const grid = Array.from({ length: rows }, () => new Array(columns));
+  // Anchor the pattern at the center so resizing reveals more meadow at the edges.
+  const center = Math.floor(columns / 2);
+  const base = Math.max(14, Math.round(rows * 0.15));
+  const ground = [];
+  for (let column = 0; column < columns; column += 1) {
+    const x = column - center;
+    const front = Math.round(base + (noise1(x / 55, 71) - 0.5) * 8 + (noise1(x / 13, 72) - 0.5) * 2);
+    const back = front + 2 + Math.round(noise1(x / 30, 73) * 3);
+    ground.push(front);
+    for (let row = 0; row < rows; row += 1) {
+      const height = rows - row;
+      grid[row][column] = height <= front ? grassColor(x, row, front - height)
+        : height <= back ? fieldColor(x, row)
+        : skyColor(x, row, rows);
+    }
   }
-  if (height <= back) {
-    const speck = hash(x, row, 13);
-    if (speck < 0.04) return GRASS;
-    return texture(x, row, 17) < 0.5 ? SAGE : MIST;
+
+  // Blades and flowers rise above the grass line.
+  let lastFlower = -Infinity;
+  for (let column = 0; column < columns; column += 1) {
+    const x = column - center;
+    const top = rows - ground[column] - 1;
+    const blade = hash(x, 0, 81);
+    if (blade < 0.4) {
+      set(grid, top, column, blade < 0.2 ? GRASS : LEAF);
+      if (blade < 0.12) set(grid, top - 1, column, GRASS);
+    }
+    const bloom = hash(x, 0, 83);
+    if (bloom < 0.15 && column - lastFlower >= 4) {
+      lastFlower = column;
+      const stem = 2 + Math.floor(hash(x, 1, 84) * 8);
+      for (let step = 0; step < stem; step += 1) set(grid, top - step, column, STEM);
+      const head = top - stem - 1;
+      const coral = hash(x, 2, 85) < 0.3;
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) set(grid, head + dy, column + dx, coral ? BLOOM : PETAL);
+      }
+      set(grid, head, column, coral ? PETAL : BLOOM);
+    } else if (bloom > 0.95) {
+      // A small daisy on a short stem.
+      set(grid, top, column, STEM);
+      set(grid, top - 1, column, CREAM);
+    }
   }
-  return null;
+  return grid;
 }
 
 function draw(canvas) {
   const { width, height } = canvas.getBoundingClientRect();
-  const ratio = window.devicePixelRatio || 1;
+  if (!width || !height) return;
+  // Integer pixel ratios scale a 1x canvas exactly (image-rendering: pixelated).
+  const deviceRatio = window.devicePixelRatio || 1;
+  const ratio = Number.isInteger(deviceRatio) ? 1 : Math.min(deviceRatio, 3);
   canvas.width = Math.round(width * ratio);
   canvas.height = Math.round(height * ratio);
   const context = canvas.getContext("2d");
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
-  context.clearRect(0, 0, width, height);
   const columns = Math.ceil(width / CELL);
-  const rows = Math.floor(height / CELL);
-  const offsetY = height - rows * CELL;
-  // Anchor the pattern at the center so resizing reveals more meadow at the edges.
-  const center = Math.floor(columns / 2);
-  for (let column = 0; column < columns; column += 1) {
-    for (let row = 0; row < rows; row += 1) {
-      const color = cellColor(column - center, row, rows, center);
-      if (!color) continue;
-      context.fillStyle = color;
-      context.fillRect(column * CELL, offsetY + row * CELL, DOT, DOT);
+  const rows = Math.ceil(height / CELL);
+  const cells = new Map();
+  paint(columns, rows).forEach((line, row) => line.forEach((color, column) => {
+    if (!cells.has(color)) cells.set(color, []);
+    cells.get(color).push(column, row);
+  }));
+  for (const [color, points] of cells) {
+    context.fillStyle = color;
+    for (let index = 0; index < points.length; index += 2) {
+      context.fillRect(points[index] * CELL + INSET, points[index + 1] * CELL + INSET, DOT, DOT);
     }
   }
 }
