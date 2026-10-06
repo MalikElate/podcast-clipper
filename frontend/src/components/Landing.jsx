@@ -174,14 +174,13 @@ export default function Landing({ onGetStarted }) {
           <PixelMeadow />
           <div className="home-hero-top">
             <div className="hero-copy">
-              <div className="home-hero-platforms" aria-label="Supported social platforms">
+              <div className="home-hero-platforms" aria-label="Supported social platforms and AI agents">
                 {PLATFORMS.map(platform => <PlatformMark platform={platform} size={32} variant={platform.id === "google_business" ? "hero" : "default"} key={platform.id} />)}
+                {AGENT_LOGOS.map(agent => <span className={`home-hero-agent-mark ${agent.className}`} role="img" aria-label={agent.name} title={agent.name} key={agent.name}><agent.Icon /></span>)}
               </div>
               <h1 className="landing-title"><span className="landing-title-mark">Creator tool kit for agents and developers</span></h1>
               <p className="landing-subtitle">Plan, tailor, and schedule posts across your social accounts from one Meadow dashboard.</p>
               <div className="hero-actions hero-actions-v2"><a className="btn-primary landing-cta" href={signupHref()}>Try for free <ArrowIcon /></a></div>
-              <a className="home-hero-agent-link" href="#ways-to-use">Publishing with an AI agent? Explore API/MCP <ArrowIcon /></a>
-              <div className="home-hero-agent-logos" aria-hidden="true">{AGENT_LOGOS.map(agent => <span className={agent.className} key={agent.name}><agent.Icon /></span>)}</div>
             </div>
           </div>
         <div className="home-hero-demo-stage"><HeroDemo recording={HOMEPAGE_RECORDING} /></div>
