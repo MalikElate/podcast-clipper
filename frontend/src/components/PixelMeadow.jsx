@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 
-// Dot-matrix sky over a low meadow, drawn behind the homepage hero. Every color
-// comes from Meadow's palette or its flower mark, so the art reads as the brand.
+// Dot-matrix sky over a meadow, drawn behind the lower half of the homepage demo.
+// Every color comes from Meadow's palette or its flower mark, so the art reads
+// as the brand.
 const CELL = 6;
 const DOT = 4;
 // Center each dot in its cell so it lines up with the hero's CSS dot grid.
@@ -85,8 +86,8 @@ function paint(columns, rows) {
   const grid = Array.from({ length: rows }, () => new Array(columns));
   // Anchor the pattern at the center so resizing reveals more meadow at the edges.
   const center = Math.floor(columns / 2);
-  // On narrow screens the demo is short, so keep the meadow below the hero copy.
-  const base = Math.max(10, Math.round(Math.min(rows * 0.15, columns * 0.2)));
+  // The grass fills the lower half, rising a little above the demo's bottom edge.
+  const base = Math.max(8, Math.round(rows * 0.5));
   const tallestStem = Math.min(8, Math.floor(columns / 12));
   const ground = [];
   for (let column = 0; column < columns; column += 1) {

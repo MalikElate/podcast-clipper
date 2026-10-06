@@ -61,13 +61,13 @@
 }
 
 /*
- * Hero: a dot-matrix sky over a low meadow (PixelMeadow) that ends halfway
- * down the demo video, with a highlighted headline. Landing sets
- * --demo-ratio (video height / width); the hero is a size container so the
- * canvas can work out where the video's midpoint falls.
+ * Hero: a highlighted headline on the plain page, with a dot-matrix sky over a
+ * meadow (PixelMeadow) filling the hero from halfway down the demo video to
+ * the bottom. Landing sets --demo-ratio (video height / width); the hero is a
+ * size container so the canvas can work out where the video's midpoint falls.
  */
 .landing-home .home-centered-hero {
-  --stage-bottom: clamp(56px, 6vw, 88px);
+  --stage-bottom: clamp(88px, 12vw, 168px);
   --demo-width: min(100cqw - 2 * var(--rail-pad), 960px);
   container-type: inline-size;
   width: auto;
@@ -114,14 +114,14 @@
 .landing-home .home-hero-demo-stage { padding: 56px var(--rail-pad) var(--stage-bottom); }
 .pixel-meadow {
   position: absolute;
-  inset: 0 0 auto;
+  inset: auto 0 0;
   display: block;
   width: 100%;
-  height: calc(100% - var(--stage-bottom) - var(--demo-width) * var(--demo-ratio) / 2);
+  height: calc(var(--stage-bottom) + var(--demo-width) * var(--demo-ratio) / 2);
   /* The CSS dots share the canvas grid and show until it paints. */
   background-image: radial-gradient(circle, #dceef6 1.1px, transparent 1.6px);
   background-size: 6px 6px;
-  box-shadow: 0 1px 0 var(--rule);
+  box-shadow: 0 -1px 0 var(--rule);
   image-rendering: pixelated;
   pointer-events: none;
 }
