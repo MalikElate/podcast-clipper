@@ -10,6 +10,7 @@ export function Icon({ name, size = 20, ...props }) {
     emoji: <><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/></>,
     queue: <><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 11h18M8 15h3M8 18h7"/></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18"/></>,
+    swipe: <><rect x="6" y="3" width="12" height="18" rx="2.5" transform="rotate(-8 12 12)"/><path d="m18.5 9.5 3 2.5-3 2.5M5.5 9.5l-3 2.5 3 2.5"/></>,
     all: <><path d="M10 6h11M10 12h11M10 18h11"/><rect x="3" y="4" width="3" height="3" rx=".5"/><rect x="3" y="10" width="3" height="3" rx=".5"/><rect x="3" y="16" width="3" height="3" rx=".5"/></>,
     scheduled: <><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h10"/><circle cx="16" cy="16" r="4"/><path d="M16 14v2l1.5 1"/></>,
     posted: <><rect x="4" y="3" width="16" height="18" rx="3"/><path d="m8 12 2.5 2.5L16 9"/></>,

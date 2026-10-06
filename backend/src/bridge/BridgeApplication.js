@@ -16,6 +16,8 @@ import { WelcomeEmailService, clerkSignupContact } from "./services/WelcomeEmail
 import { ScheduleService } from "./services/ScheduleService.js";
 import { MediaService } from "./services/MediaService.js";
 import { downloadRemoteMedia } from "./services/RemoteMedia.js";
+import { SwipeService } from "./services/SwipeService.js";
+import { VideoSourceDownloader } from "./services/VideoSourceDownloader.js";
 import { UploadTokenService } from "./services/UploadTokenService.js";
 import { AccountService } from "./services/AccountService.js";
 import { PostService } from "./services/PostService.js";
@@ -79,7 +81,7 @@ export function connectionErrorMessage(platform, error) {
 
 /** Composition root. Services, repository, adapters and authentication are replaceable. */
 export class BridgeApplication {
-  constructor({ env = process.env, store, durability, registry, storage, authMiddleware, mcpOAuthKeyResolver, stripe, deleteIdentity, deleteAnalytics, welcomeEmail, webhookSend, downloadMedia = downloadRemoteMedia, clock = () => Date.now() } = {}) {
+  constructor({ env = process.env, store, durability, registry, storage, authMiddleware, mcpOAuthKeyResolver, stripe, deleteIdentity, deleteAnalytics, welcomeEmail, webhookSend, downloadMedia = downloadRemoteMedia, videoDownloader, clock = () => Date.now() } = {}) {
     this.env = env; this.clock = clock; this.downloadMedia = downloadMedia;
     this.localPreview = env.BRIDGE_LOCAL_PREVIEW === "1" && env.NODE_ENV !== "production";
     this.dataDir = path.resolve(env.BRIDGE_DATA_DIR || path.join(backendDir, ".bridge"));
@@ -127,6 +129,9 @@ export class BridgeApplication {
     this.worker = new PublishingWorker({ store: this.store, accounts: this.accounts, registry: this.registry, posts: this.posts, rates: this.rates, media: this.media, locks: this.locks, analytics: this.analytics, webhooks: this.webhooks, clock, enabled: !this.localPreview && env.BRIDGE_PUBLISHING_ENABLED !== "false" });
     const incoming = path.join(this.dataDir, "incoming"); fs.mkdirSync(incoming, { recursive: true, mode: 0o700 });
     this.privacy.incomingDirectory = incoming; this.incomingDirectory = incoming;
+    this.swipe = new SwipeService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, analytics: this.analytics, posts: this.posts, media: this.media,
+      downloader: videoDownloader || new VideoSourceDownloader({ env }), incomingDirectory: incoming, privacy: this.privacy, clock, enabled: !this.localPreview && env.BRIDGE_PUBLISHING_ENABLED !== "false" });
+    this.privacy.swipe = this.swipe;
     this.upload = multer({ dest: incoming, limits: { fileSize: this.media.maxBytes, files: 1, fields: 0 } });
     this.receiveUpload = (req, res, next) => {
       const upload = req.uploadGrant ? multer({ dest: incoming, limits: { fileSize: req.uploadGrant.bytes, files: 1, fields: 0 } }) : this.upload;
@@ -336,6 +341,10 @@ export class BridgeApplication {
     app.delete(`${root}/posts/:id`, route((req, res) => res.json(this.posts.remove(req.uid, req.params.projectId, req.params.id, req.body))));
     app.post(`${root}/queue/reorder`, route((req, res) => res.json({ posts: this.posts.reorder(req.uid, req.params.projectId, req.body.accountId, req.body.deliveryIds) })));
     app.post(`${root}/deliveries/:id/retry`, route((req, res) => res.json({ post: this.posts.retry(req.uid, req.params.projectId, req.params.id, req.body) })));
+    app.get(`${root}/swipe`, route(async (req, res) => res.json(await this.swipe.deck(req.uid, req.params.projectId))));
+    app.post(`${root}/swipe/settings`, route((req, res) => res.json({ settings: this.swipe.saveSettings(req.uid, req.params.projectId, req.body) })));
+    app.post(`${root}/swipe/decisions`, route(async (req, res) => res.status(201).json(await this.swipe.decide(req.uid, req.params.projectId, req.body))));
+    app.delete(`${root}/swipe/decisions/:cardId`, route((req, res) => res.json(this.swipe.undo(req.uid, req.params.projectId, req.params.cardId))));
     app.get(`${root}/analytics`, route((req, res) => res.json(this.analytics.report(req.uid, req.params.projectId))));
     app.get(`${root}/analytics/account-views`, route(async (req, res) => res.json(await this.accountViews.report(req.uid, req.params.projectId, { days: req.query.days ?? 180, refresh: req.query.refresh === "true", ...(req.query.accountIds !== undefined ? { accountIds: typeof req.query.accountIds === "string" ? req.query.accountIds.split(",") : [] } : {}) }))));
     app.post(`${root}/analytics/refresh`, route(async (req, res) => res.json(await this.analytics.refresh(req.uid, req.params.projectId, req.body))));
@@ -348,6 +357,8 @@ export class BridgeApplication {
     this.privacy.tick().catch(error => console.error("Privacy worker:", error.code || error.name));
     this.privacyTimer = setInterval(() => this.privacy.tick().catch(error => console.error("Privacy worker:", error.code || error.name)), 15000);
     this.privacyTimer.unref?.();
+    this.swipeTimer = setInterval(() => this.swipe.enabled && this.swipe.tick().catch(error => console.error("Swipe or Push worker:", error.code || error.name)), 15000);
+    this.swipeTimer.unref?.();
     if (!this.localPreview) {
       // Twitch requires validation on every process start and at least hourly.
       for (const account of this.store.list("account", { status: "connected", limit: null }).filter(item => item.platform === "twitch")) this.store.put("account", { ...account, maintenanceDueAt: 0 });
@@ -358,11 +369,11 @@ export class BridgeApplication {
       this.analyticsTimer.unref?.();
     }
   }
-  stopWorkers() { this.worker.stop(); this.webhooks.stop(); clearInterval(this.analyticsTimer); clearInterval(this.privacyTimer); clearInterval(this.connectionTimer); }
+  stopWorkers() { this.worker.stop(); this.webhooks.stop(); clearInterval(this.analyticsTimer); clearInterval(this.privacyTimer); clearInterval(this.connectionTimer); clearInterval(this.swipeTimer); if (this.swipe) this.swipe.enabled = false; }
   async shutdown({ timeoutMs = 25000 } = {}) {
     this.stopWorkers();
     const deadline = Date.now() + timeoutMs;
-    while (this.worker.running || this.webhooks.running || this.analytics.running || this.privacy.running || this.accounts.running) {
+    while (this.worker.running || this.webhooks.running || this.analytics.running || this.privacy.running || this.accounts.running || this.swipe.running) {
       if (Date.now() >= deadline) return false;
       await new Promise(resolve => setTimeout(resolve, 50));
     }

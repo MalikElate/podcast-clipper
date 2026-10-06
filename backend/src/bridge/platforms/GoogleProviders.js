@@ -41,6 +41,18 @@ export class YouTubeProvider extends GoogleProvider {
     }
     return { value, throughDate };
   }
+  /** The channel's latest public or unlisted uploads, for Swipe or Push. */
+  async recentVideos({ account, credentials }) {
+    const channels = await this.http.request(`https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${encodeURIComponent(account.remoteId)}`, { token: credentials.accessToken });
+    const uploads = channels.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+    if (!uploads) return [];
+    const list = await this.http.request(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails,status&maxResults=25&playlistId=${encodeURIComponent(uploads)}`, { token: credentials.accessToken });
+    return (list.items || []).filter(item => ["public", "unlisted"].includes(item.status?.privacyStatus) && /^[\w-]{6,20}$/.test(item.contentDetails?.videoId || "")).map(item => {
+      const id = item.contentDetails.videoId, thumbnails = item.snippet?.thumbnails || {};
+      return { id, title: String(item.snippet?.title || ""), caption: String(item.snippet?.description || ""), publishedAt: Date.parse(item.contentDetails.videoPublishedAt || item.snippet?.publishedAt) || null,
+        thumbnailUrl: (thumbnails.high || thumbnails.medium || thumbnails.default)?.url || null, url: `https://www.youtube.com/watch?v=${id}` };
+    });
+  }
   async accounts(credentials) {
     const result = await this.http.request("https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true", { token: credentials.accessToken });
     return (result.items || []).map(item => ({ remoteId: item.id, label: item.snippet.title, avatar: item.snippet.thumbnails?.default?.url, profileUrl: `https://www.youtube.com/channel/${item.id}` }));
