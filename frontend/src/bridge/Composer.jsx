@@ -188,9 +188,8 @@ export function PostEditor({ post, onChange, accounts, accountsReady = true, med
 export default function Composer({ project, accounts: initialAccounts, accountsReady = true, media, catalog, config, draft = null, onAccounts, onSubmitted, onDraftSaved, onDiscard, onDirtyChange, onBusyChange, scheduledDate = "", onDraftStarted, onUpload }) {
   const [items, setItems] = useState(() => [draft ? draftPost(draft, project) : makePost(project, [], [], scheduledDate)]);
   const [active, setActive] = useState(0), [error, setError] = useState(""), [busyAction, setBusyAction] = useState(""), [uploading, setUploading] = useState(false);
-  const [publishError, setPublishError] = useState(null);
   const [dirty, setDirty] = useState(false), [discardOpen, setDiscardOpen] = useState(false);
-  const requestId = useRef(crypto.randomUUID()), fileInput = useRef(null), publishButton = useRef(null), alive = useRef(true);
+  const requestId = useRef(crypto.randomUUID()), fileInput = useRef(null), errorActions = useRef(null), alive = useRef(true);
   const [uploadProgress, setUploadProgress] = useState(null);
   const busy = Boolean(busyAction);
   const selectedAccountIds = [...new Set(items.flatMap(item => item.accountIds))].sort().join(",");
@@ -207,10 +206,12 @@ export default function Composer({ project, accounts: initialAccounts, accountsR
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
-  function changeItems(next) { setItems(next); setDirty(true); setError(""); setPublishError(null); requestId.current = crypto.randomUUID(); }
-  function dismissPublishError() { setPublishError(null); requestAnimationFrame(() => publishButton.current?.focus({ preventScroll: true })); }
+  useEffect(() => {
+    if (error) errorActions.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+  }, [error]);
+  function changeItems(next) { setItems(next); setDirty(true); setError(""); requestId.current = crypto.randomUUID(); }
   async function submit(nextItems) {
-    setBusyAction("submit"); setError(""); setPublishError(null);
+    setBusyAction("submit"); setError("");
     setItems(nextItems);
     if (JSON.stringify(nextItems) !== JSON.stringify(items)) setDirty(true);
     try {
@@ -221,9 +222,6 @@ export default function Composer({ project, accounts: initialAccounts, accountsR
       if (alive.current) {
         const message = error.message || "Your post could not be submitted. Please try again.";
         setError(message);
-        if (mobileUpload || window.matchMedia("(max-width: 760px)").matches) {
-          setPublishError({ message, title: nextItems.some(item => item.schedule.mode === "scheduled") ? "Could not schedule this post" : "Could not publish this post" });
-        }
       }
     } finally { if (alive.current) setBusyAction(""); }
   }
@@ -282,15 +280,13 @@ export default function Composer({ project, accounts: initialAccounts, accountsR
   </>;
   return <>
     <div className="bridge-intro-row"><p>Create once, tailor for every account. Each destination keeps its own place in the queue.</p><div className="bridge-inline-actions"><button className="bridge-button secondary" disabled={busy || uploading} onClick={() => changeItems(items.map(item => ({ ...item, format: "auto" })))}><Icon name={postType} size={16}/> Change type</button><button className="bridge-button secondary" disabled={busy || uploading} onClick={onAccounts}><Icon name="accounts" size={16}/> Accounts</button></div></div>
-    <Alert message={error}/>
     <input type="file" ref={fileInput} hidden multiple={postType === "carousel"} accept={ACCEPT_BY_TYPE[postType]} onChange={event => { uploadMedia(event.target.files); event.target.value = ""; }}/>
     <fieldset className="bridge-composer-workspace" disabled={busy}>
       <div className={`bridge-panel bridge-schedule-bar ${scheduled ? "on" : ""}`}><label className="bridge-switch"><input type="checkbox" role="switch" checked={scheduled} onChange={event => toggleScheduled(event.target.checked)}/><span className="bridge-switch-track" aria-hidden="true"/><span><strong>Schedule for later</strong><small>{scheduled ? "Choose a general time below, or a custom time on any account." : selectedMix.onlyInbox ? "Off: media is sent when you click Send to TikTok." : selectedMix.hasInbox ? "Off: publishing and TikTok transfers start when you click Publish & send to TikTok." : "Off: posts start publishing when you click Publish now."}</small></span></label>{scheduled && <div className="bridge-schedule-bar-fields"><div className="bridge-general-time"><strong>General time</strong><small>{selectedMix.hasInbox ? "TikTok transfers start at this time; you finish publishing in TikTok. Other destinations publish at their chosen time." : "Every selected account posts at this time unless you give it a custom time."} Times use your current time zone ({project.timeZone}).</small><ScheduleDateTime value={schedule.localDateTime} onChange={localDateTime => localDateTime && setSchedule({ localDateTime })}/></div></div>}</div>
       <div className="bridge-panel"><PostEditor post={items[active]} onChange={updatePost => changeItems(current => current.map((item, i) => i === active ? updatePost(item) : item))} accounts={accounts} accountsReady={accountsReady} media={media} catalog={catalog} uploading={uploading} uploadProgress={uploadProgress} onPickMedia={() => fileInput.current?.click()} onRefreshOptions={refreshOptions}/></div>
     </fieldset>
     {hasYouTube && <p className="bridge-small">By clicking {actionLabel}, you certify that the content you are uploading complies with the YouTube Terms of Service (including the YouTube Community Guidelines) at <a href={youtubeTermsUrl} target="_blank" rel="noreferrer">{youtubeTermsUrl}</a>. Please be sure not to violate others' copyright or privacy rights.</p>}
-    <div className="bridge-composer-footer"><div><strong>{draft ? "Editing saved draft" : "1 post in this draft"}</strong><span id={!hasDraftContent ? "bridge-empty-draft-help" : undefined}>{!hasDraftContent ? "Add a caption, a title, or media before saving." : selectedMix.hasInbox ? "TikTok transfers still need you to finish publishing in the TikTok app" : scheduled ? "Each destination publishes at its own time" : "Each destination can use its own format and settings"}</span></div><div className="bridge-inline-actions"><button className="bridge-button secondary" disabled={busy || uploading} onClick={requestDiscard}>{draft ? "Discard changes" : "Discard"}</button><button className="bridge-button secondary" disabled={busy || uploading || !dirty || !hasDraftContent} aria-describedby={!hasDraftContent ? "bridge-empty-draft-help" : undefined} onClick={saveDraft}><Icon name="drafts" size={17}/>{busyAction === "save" ? "Saving…" : "Save draft in Meadow"}</button><button ref={publishButton} className="bridge-button" disabled={busy || uploading || scheduled && !schedule.localDateTime || !config.features?.publishing} onClick={() => submit(scheduled ? items : items.map(item => ({ ...item, schedule: { ...item.schedule, mode: "now", localDateTime: "" } })))}>{scheduled && <Icon name="clock" size={17}/>} {busyAction === "submit" ? busyLabel : actionLabel}</button></div></div>
+    <div className="bridge-composer-footer"><div><strong>{draft ? "Editing saved draft" : "1 post in this draft"}</strong><span id={!hasDraftContent ? "bridge-empty-draft-help" : undefined}>{!hasDraftContent ? "Add a caption, a title, or media before saving." : selectedMix.hasInbox ? "TikTok transfers still need you to finish publishing in the TikTok app" : scheduled ? "Each destination publishes at its own time" : "Each destination can use its own format and settings"}</span></div><div ref={errorActions} className="bridge-composer-actions">{error && <div id="bridge-composer-error"><Alert message={error}/></div>}<div className="bridge-inline-actions"><button className="bridge-button secondary" disabled={busy || uploading} onClick={requestDiscard}>{draft ? "Discard changes" : "Discard"}</button><button className="bridge-button secondary" disabled={busy || uploading || !dirty || !hasDraftContent} aria-describedby={!hasDraftContent ? "bridge-empty-draft-help" : undefined} onClick={saveDraft}><Icon name="drafts" size={17}/>{busyAction === "save" ? "Saving…" : "Save draft in Meadow"}</button><button className="bridge-button" aria-describedby={error ? "bridge-composer-error" : undefined} disabled={busy || uploading || scheduled && !schedule.localDateTime || !config.features?.publishing} onClick={() => submit(scheduled ? items : items.map(item => ({ ...item, schedule: { ...item.schedule, mode: "now", localDateTime: "" } })))}>{scheduled && <Icon name="clock" size={17}/>} {busyAction === "submit" ? busyLabel : actionLabel}</button></div></div></div>
     {discardDialog}
-    {publishError && <Modal title={publishError.title} className="bridge-publish-error-modal" onClose={dismissPublishError}><Alert message={publishError.message}/><div className="bridge-modal-actions"><button type="button" className="bridge-button" onClick={dismissPublishError}>Back to post</button></div></Modal>}
   </>;
 }
