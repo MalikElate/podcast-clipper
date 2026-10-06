@@ -172,7 +172,7 @@ export default function Landing({ onGetStarted }) {
                 {PLATFORMS.map(platform => <PlatformMark platform={platform} size={32} variant={platform.id === "google_business" ? "hero" : "default"} key={platform.id} />)}
                 {AGENT_LOGOS.map(agent => <span className={`home-hero-agent-mark ${agent.className}`} role="img" aria-label={agent.name} title={agent.name} key={agent.name}><agent.Icon /></span>)}
               </div>
-              <h1 className="landing-title"><span className="landing-title-mark">Creator tool kit for agents and developers</span></h1>
+              <h1 className="landing-title"><span className="landing-title-mark">creator tools for your ai</span></h1>
               <p className="landing-subtitle">Plan, tailor, and schedule posts across your social accounts from one Meadow dashboard.</p>
               <div className="hero-actions hero-actions-v2"><a className="btn-primary landing-cta" href={signupHref()}>Try for free <ArrowIcon /></a></div>
             </div>
