@@ -16,6 +16,7 @@ import { WelcomeEmailService, clerkSignupContact } from "./services/WelcomeEmail
 import { ScheduleService } from "./services/ScheduleService.js";
 import { MediaService } from "./services/MediaService.js";
 import { UploadTokenService } from "./services/UploadTokenService.js";
+import { DirectUploadService } from "./services/DirectUploadService.js";
 import { AccountService } from "./services/AccountService.js";
 import { PostService } from "./services/PostService.js";
 import { RateLimitService } from "./services/RateLimitService.js";
@@ -108,6 +109,7 @@ export class BridgeApplication {
     }), { disabled: (env.BRIDGE_DISABLED_PLATFORMS || "").split(",").filter(Boolean) });
     this.media = new MediaService({ store: this.store, projects: this.projects, storage: this.storage, publicUrl: this.publicUrl, signingKey, clock, maxBytes: Number(env.BRIDGE_MAX_UPLOAD_MB || 1024) * 1024 ** 2 });
     this.uploadTokens = new UploadTokenService({ store: this.store, projects: this.projects, maxBytes: this.media.maxBytes, clock });
+    this.directUploads = new DirectUploadService({ store: this.store, projects: this.projects, media: this.media, storage: this.storage, locks: this.locks, clock, enabled: env.BRIDGE_DIRECT_UPLOADS_ENABLED === "true" });
     this.rates = new RateLimitService({ store: this.store, clock });
     this.accounts = new AccountService({ ...deps, registry: this.registry, projects: this.projects, clock, localPreview: this.localPreview });
     this.posts = new PostService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, media: this.media, schedules: this.schedules, rates: this.rates, clock, localPreview: this.localPreview });
@@ -119,6 +121,7 @@ export class BridgeApplication {
       deleteIdentity: deleteIdentity || (async uid => { if (this.localPreview) return; try { await clerkClient.users.deleteUser(uid); } catch (error) { if (error.status !== 404) throw error; } }),
       deleteAnalytics: deleteAnalytics || (uid => this.localPreview ? Promise.resolve(true) : new AnalyticsErasureService({ store: this.store, env }).deleteForOwner(uid)) });
     this.projects.privacy = this.privacy; this.accounts.privacy = this.privacy; this.privacy.accounts = this.accounts; this.privacy.media = this.media;
+    this.privacy.directUploads = this.directUploads;
     this.metaPrivacy = new MetaPrivacyService({ ...deps, privacy: this.privacy, clock });
     this.accounts.metaPrivacy = this.metaPrivacy; this.privacy.metaPrivacy = this.metaPrivacy;
     this.webhooks = new WebhookService({ store: this.store, vault: this.vault, locks: this.locks, privacy: this.privacy, send: webhookSend, clock, enabled: !this.localPreview });
@@ -309,10 +312,15 @@ export class BridgeApplication {
     app.get(`${root}/accounts/:id/options`, route(async (req, res) => res.json({ options: await this.accounts.options(req.uid, req.params.projectId, req.params.id, { force: req.query.refresh === "1" }) })));
     app.delete(`${root}/accounts/:id`, route((req, res) => res.status(202).json(this.privacy.requestConnection(req.uid, req.params.projectId, req.params.id))));
     app.get(`${root}/media`, route((req, res) => res.json({ media: this.media.list(req.uid, req.params.projectId) })));
-    app.post(`${root}/media/uploads`, route((req, res) => {
+    app.post(`${root}/media/uploads`, route(async (req, res) => {
       invariant(this.media.signingKey, "Media storage is not configured on this server.", { status: 503 });
+      if (req.body?.direct === true && this.directUploads.enabled) {
+        return res.status(201).json(await this.directUploads.create(req.uid, req.params.projectId, req.body));
+      }
       res.status(201).json(this.uploadTokens.create(req.uid, req.params.projectId, req.body));
     }));
+    app.post(`${root}/media/uploads/:id/complete`, route(async (req, res) => res.status(201).json({ media: this.media.toPublic(await this.directUploads.complete(req.uid, req.params.projectId, req.params.id, req.body)) })));
+    app.delete(`${root}/media/uploads/:id`, route(async (req, res) => res.json(await this.directUploads.cancel(req.uid, req.params.projectId, req.params.id))));
     app.post(`${root}/media`, (req, res, next) => { try { this.projects.require(req.uid, req.params.projectId); invariant(this.media.signingKey, "Media storage is not configured on this server.", { status: 503 }); next(); } catch (error) { next(error); } }, this.receiveUpload, route(async (req, res) => {
       invariant(req.file, "Choose a file to upload.");
       try {

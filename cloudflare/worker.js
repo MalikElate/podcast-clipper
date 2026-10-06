@@ -8,6 +8,7 @@ import { DurableState } from "./durableState.js";
 import { migrationScript } from "./migrationScript.js";
 import { appDomainRedirect, dashboardShellUrl } from "./domainRouting.js";
 import { handlePosthogProxy, isPosthogProxyPath } from "./posthogProxy.js";
+import { handleDirectUpload } from "./directUploads.js";
 export { ContainerProxy } from "@cloudflare/containers";
 
 const definedEnv = values => Object.fromEntries(
@@ -33,6 +34,7 @@ export class PodcastClipperBackend extends Container {
     BRIDGE_APP_URL: env.BRIDGE_APP_URL,
     BRIDGE_PUBLIC_URL: env.BRIDGE_PUBLIC_URL,
     BRIDGE_DURABLE_STORAGE_URL: "http://meadow.storage",
+    BRIDGE_DIRECT_UPLOADS_ENABLED: env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.R2_ACCOUNT_ID ? "true" : "false",
     BRIDGE_ENCRYPTION_KEY: env.BRIDGE_ENCRYPTION_KEY,
     BRIDGE_MEDIA_SIGNING_KEY: env.BRIDGE_MEDIA_SIGNING_KEY,
     BRIDGE_MAX_UPLOAD_MB: env.BRIDGE_MAX_UPLOAD_MB,
@@ -175,6 +177,11 @@ export class PodcastClipperBackend extends Container {
 PodcastClipperBackend.outboundByHost = {
   "meadow.storage": async (request, workerEnv, context) => {
     const url = new URL(request.url);
+    if (url.pathname.startsWith("/uploads/")) {
+      let key;
+      try { key = decodeURIComponent(url.pathname.slice("/uploads/".length)); } catch { return Response.json({ code: "invalid_upload", error: "Invalid media upload key." }, { status: 400 }); }
+      return handleDirectUpload(request, workerEnv, { containerId: context.containerId, key });
+    }
     if (url.pathname.startsWith("/media/")) {
       if (!workerEnv.MEADOW_MEDIA) return new Response("Durable media storage is not configured.", { status: 503 });
       let key;
@@ -200,10 +207,10 @@ PodcastClipperBackend.outboundByHost = {
         }
         return new Response(null, { status: 201, headers: { "X-Meadow-Bytes": String(object.size), ...(sha256 ? { "X-Meadow-Sha256": sha256 } : {}) } });
       }
-      if (request.method === "GET") {
-        const object = await workerEnv.MEADOW_MEDIA.get(objectKey);
+      if (request.method === "GET" || request.method === "HEAD") {
+        const object = await workerEnv.MEADOW_MEDIA[request.method === "HEAD" ? "head" : "get"](objectKey);
         if (!object) return new Response("Not found", { status: 404 });
-        return new Response(object.body, { headers: { "Content-Type": object.httpMetadata?.contentType || "application/octet-stream", "Content-Length": String(object.size), ...(object.customMetadata?.sha256 ? { "X-Meadow-Sha256": object.customMetadata.sha256 } : {}) } });
+        return new Response(request.method === "HEAD" ? null : object.body, { headers: { "Content-Type": object.httpMetadata?.contentType || "application/octet-stream", "Content-Length": String(object.size), ETag: object.httpEtag, ...(object.customMetadata?.sha256 ? { "X-Meadow-Sha256": object.customMetadata.sha256 } : {}) } });
       }
       if (request.method === "DELETE") { await workerEnv.MEADOW_MEDIA.delete(objectKey); return new Response(null, { status: 204 }); }
       return new Response("Method not allowed", { status: 405 });

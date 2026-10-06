@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { uploadWithProgress } from "../src/bridge/uploadTransport.js";
+import { uploadPartWithProgress, uploadWithProgress } from "../src/bridge/uploadTransport.js";
 
 function requestFixture() {
   return { upload: {}, headers: {}, open(method, url) { this.method = method; this.url = url; }, setRequestHeader(name, value) { this.headers[name] = value; }, send(body) { this.body = body; }, abort() { this.onabort(); } };
@@ -33,4 +33,31 @@ test("upload transport surfaces failures and cancellation without another send",
   }
   const controller = new AbortController(); controller.abort();
   assert.throws(() => uploadWithProgress("/media", { signal: controller.signal, createRequest: () => assert.fail("No request after cancellation") }), { name: "AbortError" });
+});
+
+test("direct parts send raw bytes without Meadow authorization or cookies and return the exposed ETag", async () => {
+  const xhr = requestFixture(), progress = [], body = new Blob(["part bytes"]);
+  xhr.getResponseHeader = name => name === "ETag" ? '"part-etag"' : null;
+  const result = uploadPartWithProgress("https://account.r2.cloudflarestorage.com/bucket/key?signature=fixture", {
+    body, token: "must-not-be-sent", createRequest: () => xhr, onProgress: event => progress.push(event),
+  });
+  assert.equal(xhr.method, "PUT");
+  assert.equal(xhr.body, body, "No FormData envelope may be added to a signed part");
+  assert.equal(xhr.withCredentials, false);
+  assert.deepEqual(xhr.headers, { "Content-Type": "application/octet-stream" });
+  xhr.upload.onprogress({ loaded: 4, total: body.size, lengthComputable: true });
+  xhr.upload.onload();
+  assert.deepEqual(progress, [{ stage: "uploading", loaded: 4, total: body.size }], "Finishing one part must not show media preparation");
+  xhr.status = 200; xhr.onload();
+  assert.deepEqual(await result, { ok: true, status: 200, etag: '"part-etag"' });
+});
+
+test("direct part failures identify retryable network errors and preserve cancellation", async () => {
+  for (const [event, code] of [["error", "network_error"], ["timeout", "upload_timeout"], ["abort", null]]) {
+    const xhr = requestFixture(), controller = new AbortController();
+    const result = uploadPartWithProgress("https://account.r2.cloudflarestorage.com/bucket/key", { body: new Blob(["part"]), signal: controller.signal, createRequest: () => xhr });
+    const rejection = assert.rejects(result, error => event === "abort" ? error === controller.signal.reason : error.code === code);
+    if (event === "abort") controller.abort(); else xhr[`on${event}`]();
+    await rejection;
+  }
 });

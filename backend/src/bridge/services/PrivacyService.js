@@ -240,6 +240,7 @@ export class PrivacyService {
     for (const id of accountIds) await this.eraseConnection(id, job.alreadyRevoked);
     if (job.type === "connection") { this.store.remove("erasure", job.id); this.store.checkpointDeletedData(); return; }
     if (!job.localDone) {
+      await this.directUploads?.eraseOwner(job.ownerUid);
       // Persist the file manifest before deleting any row; retries also remove partial variants.
       if (!job.fileKeys) {
         const fileKeys = this.store.list("media", { ownerUid: job.ownerUid, limit: null }).flatMap(item => [item.storageKey, item.thumbnailKey, `${item.id}-thumb.jpg`, `${item.id}-jpeg.jpg`, `${item.id}-mp4.mp4`, ...Object.values(item.variants || {}).map(asset => asset.key)]).filter(Boolean);
@@ -304,6 +305,7 @@ export class PrivacyService {
         catch (error) { this.store.put("erasure", { ...this.store.get("erasure", job.id), dueAt: this.clock() + 60000, lastError: error.code === "account_busy" ? "work_finishing" : "cleanup_retry" }); }
       }
       await this.accounts?.maintainApiData();
+      await this.directUploads?.prune(this.activeRequests);
       await this.media?.retryRemovals();
       await this.pruneFiles();
       this.pruneBlueskySessions();

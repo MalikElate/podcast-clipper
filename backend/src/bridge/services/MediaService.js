@@ -13,20 +13,22 @@ export class MediaService {
     this.locks = locks;
   }
 
-  async ingest(uid, projectId, file, { source = "upload", metadata = {} } = {}) {
+  async ingest(uid, projectId, file, { source = "upload", metadata = {}, stored = null } = {}) {
     this.projects.require(uid, projectId);
     const stat = await fs.promises.stat(file.path);
     invariant(stat.size > 0 && stat.size <= this.maxBytes, `Upload a file smaller than ${Math.round(this.maxBytes / 1024 ** 2)} MB.`);
     const type = await fileTypeFromFile(file.path);
     invariant(type && accepted.has(type.mime), "This file type cannot be posted. Upload an image, video, PDF, Word document, or PowerPoint file.", { status: 415, code: "unsupported_media" });
     const kind = type.mime.startsWith("image/") ? "image" : type.mime.startsWith("video/") ? "video" : "document";
-    const id = randomUUID(), storageKey = `${id}.${type.ext}`;
+    const id = stored?.id || randomUUID(), storageKey = stored?.key || `${id}.${type.ext}`;
     const filename = String(file.originalname || file.filename || `media.${type.ext}`).replace(/[\x00-\x1f/\\]/g, "_").slice(0, 180);
     const record = { id, projectId, ownerUid: uid, filename, kind, mime: type.mime, bytes: stat.size, storageKey, status: "processing", source, metadata, variants: {}, createdAt: this.clock(), updatedAt: this.clock() };
     this.store.put("media", record);
     await this.store.flush?.();
     try {
-      await this.storage.importFile(file.path, storageKey);
+      // Direct uploads already have an immutable, completed original in R2.
+      // Downloading it for validation must not upload that original a second time.
+      if (!stored) await this.storage.importFile(file.path, storageKey);
       if (kind === "image" || kind === "video") {
         const result = JSON.parse(await this.runner.run("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-of", "json", this.storage.path(storageKey)]));
         const visual = result.streams?.find(stream => stream.codec_type === "video");
@@ -46,6 +48,9 @@ export class MediaService {
     } catch (error) {
       // A failed database acknowledgement must not remove an already-ready file.
       if (this.store.get("media", id)?.status === "ready") throw error;
+      // The upload session can resume validation after a storage/tool outage or
+      // container restart. Keep its durable original until success or cancellation.
+      if (stored && (!(error instanceof BridgeError) || error.status >= 500)) throw error;
       if (this.store.get("media", id)?.status === "processing") this.store.put("media", { ...record, status: "deleting", error: error.message });
       try {
         await this.store.flush?.();
@@ -55,6 +60,17 @@ export class MediaService {
       } catch { /* Retain the deletion record so maintenance can retry durable cleanup. */ }
       throw error;
     }
+  }
+
+  async ingestStored(uid, projectId, { id, key, filename, bytes }) {
+    this.projects.require(uid, projectId);
+    const existing = this.store.get("media", id);
+    invariant(!existing || existing.ownerUid === uid && existing.projectId === projectId && existing.storageKey === key, "Upload not found.", { status: 404 });
+    if (existing?.status === "ready") { await this.store.flush?.(); return existing; }
+    invariant(!existing || existing.status === "processing", "This upload is no longer available.", { status: 409 });
+    await this.storage.ensure(key);
+    invariant(await this.storage.size(key) === bytes, "The uploaded file size did not match. Select the file again.", { code: "upload_size_mismatch" });
+    return this.ingest(uid, projectId, { path: this.storage.path(key), originalname: filename }, { stored: { id, key } });
   }
 
   list(uid, projectId) { this.projects.require(uid, projectId); return this.store.list("media", { projectId }).filter(item => !["failed", "deleting"].includes(item.status)).map(item => this.toPublic(item)); }
