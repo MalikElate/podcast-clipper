@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 // as the brand.
 const CELL = 6;
 const DOT = 4;
-// Center each dot in its cell so it lines up with the hero's CSS dot grid.
+// Center each dot in its cell.
 const INSET = (CELL - DOT) / 2;
 const INK = "#233247";
 const STEM = "#0f622b";
@@ -19,6 +19,8 @@ const BLOOM = "#fb614e";
 const SKY_HIGH = "#c8d5ff";
 const SKY = "#dceef6";
 const SKY_LOW = "#e8eeff";
+// 4×4 ordered-dither thresholds, used to fade the top edge in dot by dot.
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 
 function hash(x, y, seed) {
   let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(seed, 1442695041);
@@ -130,6 +132,15 @@ function paint(columns, rows) {
       set(grid, top - 1, column, CREAM);
     }
   }
+
+  // Thin the first few rows so the art fades in rather than starting on a hard edge.
+  const fade = Math.min(8, Math.max(4, Math.round(rows * 0.12)));
+  for (let row = 0; row < fade; row += 1) {
+    const density = (row + 1) / (fade + 1);
+    for (let column = 0; column < columns; column += 1) {
+      if (BAYER[(row % 4) * 4 + (column % 4)] >= density * 16) grid[row][column] = null;
+    }
+  }
   return grid;
 }
 
@@ -147,6 +158,7 @@ function draw(canvas) {
   const rows = Math.ceil(height / CELL);
   const cells = new Map();
   paint(columns, rows).forEach((line, row) => line.forEach((color, column) => {
+    if (!color) return;
     if (!cells.has(color)) cells.set(color, []);
     cells.get(color).push(column, row);
   }));
