@@ -70,6 +70,9 @@ export class LinkedInProvider extends PlatformProvider {
       const s = result.elements?.[0]?.totalShareStatistics || {};
       return { values: { impressions: s.impressionCount, likes: s.likeCount, comments: s.commentCount, shares: s.shareCount, clicks: s.clickCount } };
     }
+    // Reading a member's likes and comments needs r_member_social, which LinkedIn
+    // grants only to select partners. Without it the request is refused with 403.
+    if (!this.oauth.scopes.includes("r_member_social")) return { values: {}, unavailableReason: "LinkedIn shares likes and comments on personal-profile posts only with approved partner apps." };
     const result = await this.request(`socialActions/${encodeURIComponent(delivery.externalId)}`, credentials);
     return { values: { likes: result.likesSummary?.totalLikes, comments: result.commentsSummary?.aggregatedTotalComments }, note: "Member post analytics require restricted LinkedIn read permissions; some metrics are unavailable." };
   }
