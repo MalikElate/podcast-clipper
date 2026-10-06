@@ -8,6 +8,7 @@ import { DurableState } from "./durableState.js";
 import { migrationScript } from "./migrationScript.js";
 import { appDomainRedirect, dashboardShellUrl } from "./domainRouting.js";
 import { handlePosthogProxy, isPosthogProxyPath } from "./posthogProxy.js";
+import { handleDirectUpload, stagingKey } from "./directUploads.js";
 export { ContainerProxy } from "@cloudflare/containers";
 
 const definedEnv = values => Object.fromEntries(
@@ -181,6 +182,7 @@ export class PodcastClipperBackend extends Container {
 PodcastClipperBackend.outboundByHost = {
   "meadow.storage": async (request, workerEnv, context) => {
     const url = new URL(request.url);
+    if (url.pathname === "/uploads" || url.pathname === "/uploads/complete") return handleDirectUpload(request, workerEnv, context);
     if (url.pathname.startsWith("/media/")) {
       if (!workerEnv.MEADOW_MEDIA) return new Response("Durable media storage is not configured.", { status: 503 });
       let key;
@@ -211,7 +213,7 @@ PodcastClipperBackend.outboundByHost = {
         if (!object) return new Response("Not found", { status: 404 });
         return new Response(object.body, { headers: { "Content-Type": object.httpMetadata?.contentType || "application/octet-stream", "Content-Length": String(object.size), ...(object.customMetadata?.sha256 ? { "X-Meadow-Sha256": object.customMetadata.sha256 } : {}) } });
       }
-      if (request.method === "DELETE") { await workerEnv.MEADOW_MEDIA.delete(objectKey); return new Response(null, { status: 204 }); }
+      if (request.method === "DELETE") { await workerEnv.MEADOW_MEDIA.delete([objectKey, stagingKey(context.containerId, key)]); return new Response(null, { status: 204 }); }
       return new Response("Method not allowed", { status: 405 });
     }
     return workerEnv.BACKEND.get(workerEnv.BACKEND.idFromString(context.containerId)).durableStorage(request);

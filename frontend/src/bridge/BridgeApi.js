@@ -6,9 +6,16 @@ import { captureGoogleRequestSuccess } from "../googleAnalytics.js";
 export const localPreview = Boolean(import.meta.env?.DEV && import.meta.env?.VITE_BRIDGE_LOCAL_PREVIEW === "true");
 const sessionError = () => Object.assign(new Error("Your Meadow sign-in could not be verified. Please sign in again to continue."), { code: "authentication_required", status: 401 });
 const networkError = cause => Object.assign(new Error("Meadow could not reach the server. Check your internet connection and try again.", { cause }), { code: "network_error" });
+const waitForUpload = signal => new Promise((resolve, reject) => {
+  signal?.throwIfAborted();
+  const finish = () => { signal?.removeEventListener("abort", abort); resolve(); };
+  const timer = setTimeout(finish, 2000);
+  const abort = () => { clearTimeout(timer); signal.removeEventListener("abort", abort); reject(signal.reason); };
+  signal?.addEventListener("abort", abort, { once: true });
+});
 export class BridgeApi {
-  constructor({ getToken = getAuthToken, fetcher = (...args) => fetch(...args), uploader = uploadWithProgress, preview = localPreview, track = captureRequestSuccess } = {}) {
-    Object.assign(this, { getToken, fetcher, uploader, preview, track });
+  constructor({ getToken = getAuthToken, fetcher = (...args) => fetch(...args), uploader = uploadWithProgress, preview = localPreview, track = captureRequestSuccess, waitForPreparation = waitForUpload } = {}) {
+    Object.assign(this, { getToken, fetcher, uploader, preview, track, waitForPreparation });
   }
   async headers(json = true, refresh = false) {
     let token;
@@ -70,8 +77,9 @@ export class BridgeApi {
   project(id, path, options) { return this.request(this.projectPath(id, path), options); }
   async uploadMedia(projectId, file, { signal, onProgress = () => {} } = {}) {
     onProgress({ stage: "authorizing", loaded: 0, total: file.size });
-    const { uploadToken } = await this.project(projectId, "/media/uploads", { method: "POST", body: { bytes: file.size }, signal });
+    const { uploadToken, directUpload } = await this.project(projectId, "/media/uploads", { method: "POST", body: { bytes: file.size, filename: file.name, direct: true }, signal });
     signal?.throwIfAborted();
+    if (directUpload) return this.uploadDirect(projectId, file, directUpload, { signal, onProgress });
     if (typeof uploadToken !== "string" || !uploadToken.startsWith("meadow_upload_")) throw new Error("Meadow could not start the upload. Please refresh and try again.");
     const body = new FormData();
     body.append("file", file);
@@ -86,6 +94,36 @@ export class BridgeApi {
     }
     if (!this.preview) { try { this.track(this.projectPath(projectId, "/media"), "POST"); } catch { /* Tracking cannot fail an upload. */ } }
     return normalizePlatformCollections(data);
+  }
+
+  async uploadDirect(projectId, file, ticket, { signal, onProgress }) {
+    const url = new URL(ticket.uploadUrl);
+    if (url.protocol !== "https:" || !/^[a-f0-9]{32}\.r2\.cloudflarestorage\.com$/.test(url.hostname) || ticket.method !== "PUT" || !/^[a-f0-9-]{36}$/.test(ticket.mediaId)) throw new Error("Meadow could not start the upload. Please refresh and try again.");
+    onProgress({ stage: "uploading", loaded: 0, total: file.size });
+    // Only the file and scoped R2 signature cross origins; never a Meadow session token.
+    const result = await this.uploader(ticket.uploadUrl, { body: file, method: "PUT", headers: { "Content-Type": "application/octet-stream", "If-None-Match": "*" }, signal, onProgress });
+    if (!result.ok) throw Object.assign(new Error(`The file could not be uploaded (${result.status}). Please try again.`), { status: result.status });
+    signal?.throwIfAborted();
+    onProgress({ stage: "processing", loaded: file.size, total: file.size });
+    const statusPath = `/media/${ticket.mediaId}`, completePath = `/media/uploads/${ticket.mediaId}/complete`;
+    let data;
+    try { data = await this.project(projectId, completePath, { method: "POST", body: {}, signal }); }
+    catch (error) {
+      if (error.code !== "network_error") throw error;
+      // Completion is idempotent: recover its acknowledgement without sending the file again.
+      data = await this.project(projectId, statusPath, { signal });
+      if (data.media?.status === "uploading") data = await this.project(projectId, completePath, { method: "POST", body: {}, signal });
+    }
+    const deadline = Date.now() + 60 * 60000;
+    while (data.media?.status === "processing") {
+      if (Date.now() >= deadline) throw new Error("Your file is saved, but preparation is taking longer than expected. Check your media library shortly.");
+      await this.waitForPreparation(signal);
+      signal?.throwIfAborted();
+      data = await this.project(projectId, statusPath, { signal });
+    }
+    if (data.media?.status !== "ready") throw new Error(data.media?.error || "The uploaded file could not be prepared. Please try again.");
+    if (!this.preview) { try { this.track(this.projectPath(projectId, "/media"), "POST"); } catch { /* Tracking cannot fail an upload. */ } }
+    return data;
   }
 }
 export const api = new BridgeApi();

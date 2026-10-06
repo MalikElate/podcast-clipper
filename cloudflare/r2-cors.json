@@ -1,0 +1,12 @@
+{
+  "rules": [{
+    "id": "meadow-browser-direct-upload",
+    "allowed": {
+      "origins": ["https://app.findmeadow.com", "https://findmeadow.com", "https://www.findmeadow.com"],
+      "methods": ["PUT"],
+      "headers": ["Content-Type", "If-None-Match"]
+    },
+    "exposeHeaders": ["ETag"],
+    "maxAgeSeconds": 3600
+  }]
+}

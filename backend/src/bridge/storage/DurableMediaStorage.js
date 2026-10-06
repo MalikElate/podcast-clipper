@@ -33,6 +33,19 @@ export class DurableMediaStorage extends LocalMediaStorage {
     return pending.finally(() => { if (this.operations.get(key) === pending) this.operations.delete(key); });
   }
 
+  async directUpload(endpoint, key, bytes) {
+    this.path(key);
+    let response;
+    try {
+      response = await this.fetcher(new URL(endpoint, this.baseUrl), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key, bytes }), redirect: "error", signal: AbortSignal.timeout(150000) });
+    } catch { throw new BridgeError("Media storage is temporarily unavailable. Please try again.", { status: 503, code: "media_storage_unavailable" }); }
+    const data = await response.json().catch(() => ({}));
+    invariant(response.ok, data.error || "The upload could not be saved. Please try again.", { status: response.status, code: data.code || "media_storage_unavailable" });
+    return data;
+  }
+  createDirectUpload(key, { bytes }) { return this.directUpload("/uploads", key, bytes); }
+  completeDirectUpload(key, { bytes }) { return this.exclusive(key, () => this.directUpload("/uploads/complete", key, bytes)); }
+
   async importFile(source, key) {
     await super.importFile(source, key);
     await this.persist(key);
@@ -78,6 +91,7 @@ export class DurableMediaStorage extends LocalMediaStorage {
   }
   async size(key) { await this.ensure(key); return super.size(key); }
   async blob(key, type) { await this.ensure(key); return super.blob(key, type); }
+  evict(key) { return this.exclusive(key, () => super.remove(key)); }
   remove(key) {
     return this.exclusive(key, async () => {
       const response = await this.request(key, { method: "DELETE" });

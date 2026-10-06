@@ -13,7 +13,7 @@ test("uploads authorize first, refresh only the small grant request, then send t
     fetcher: async (path, options) => {
       assert.equal(path, "/api/bridge/projects/project/media/uploads");
       assert.equal(options.method, "POST");
-      assert.deepEqual(JSON.parse(options.body), { bytes: file.size });
+      assert.deepEqual(JSON.parse(options.body), { bytes: file.size, filename: file.name, direct: true });
       requests.push(options.headers.Authorization);
       assert.equal(uploads, 0, "No file bytes may be sent before authorization succeeds");
       return requests.length === 1 ? rejectedSession() : Response.json({ uploadToken: "meadow_upload_fixture", expiresAt: Date.now() + 1800000 }, { status: 201 });
