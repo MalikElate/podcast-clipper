@@ -91,6 +91,7 @@ export class DurableMediaStorage extends LocalMediaStorage {
   }
   async size(key) { await this.ensure(key); return super.size(key); }
   async blob(key, type) { await this.ensure(key); return super.blob(key, type); }
+  evict(key) { return this.exclusive(key, () => super.remove(key)); }
   remove(key) {
     return this.exclusive(key, async () => {
       const response = await this.request(key, { method: "DELETE" });

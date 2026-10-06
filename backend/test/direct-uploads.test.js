@@ -75,6 +75,9 @@ test("completion verifies stored bytes and prepares the original without reuploa
   assert.match(media.url, /^\/media\//);
   assert.equal(h.calls.filter(call => call.method === "PUT").length, 0, "The original is already in R2");
   assert.deepEqual(h.objects.get(record.storageKey), pdf);
+  assert.equal(fs.existsSync(h.storage.path(record.storageKey)), false, "Large originals do not occupy the working disk after preparation");
+  await h.storage.ensure(record.storageKey);
+  assert.deepEqual(fs.readFileSync(h.storage.path(record.storageKey)), pdf, "Publishing can restore the private R2 original lazily");
   assert.equal((await h.complete(ticket)).status, 200);
   assert.equal(h.calls.filter(call => call.pathname === "/uploads/complete").length, 1);
   assert.equal(h.application.media.list("alice", h.project.id).length, 1);

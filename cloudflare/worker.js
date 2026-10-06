@@ -67,6 +67,11 @@ export class PodcastClipperBackend extends Container {
     TIKTOK_DIRECT_POST_PRIVATE_ONLY: env.TIKTOK_DIRECT_POST_PRIVATE_ONLY,
     ZERNIO_API_KEY: env.ZERNIO_API_KEY,
     ZERNIO_PLATFORMS: env.ZERNIO_PLATFORMS,
+    // Swipe or Push downloads creators' own videos through Fast Transcriber's
+    // Cobalt resolver, then yt-dlp (YouTube through the residential proxy).
+    COBALT_API_URL: env.COBALT_API_URL,
+    COBALT_API_KEY: env.COBALT_API_KEY,
+    YTDLP_PROXY: env.YTDLP_PROXY,
     X_CLIENT_ID: env.X_CLIENT_ID,
     X_CLIENT_SECRET: env.X_CLIENT_SECRET,
     LINKEDIN_CLIENT_ID: env.LINKEDIN_CLIENT_ID,

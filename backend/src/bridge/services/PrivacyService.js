@@ -155,6 +155,7 @@ export class PrivacyService {
   removeConnectionData(account) {
     for (const delivery of this.store.list("delivery", { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountId === account.id)) { this.store.removeRateEvent(delivery.id); this.store.remove("delivery", delivery.id); }
     this.store.removeRateEventsForAccount(account.ownerUid, account.id);
+    this.swipe?.removeAccount(account);
     for (const post of this.store.list("post", { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountIds.includes(account.id))) {
       const overrides = { ...post.overrides }; delete overrides[account.id];
       const accountIds = post.accountIds.filter(id => id !== account.id);

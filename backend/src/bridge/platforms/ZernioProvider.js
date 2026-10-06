@@ -45,6 +45,16 @@ function analyticsEntry(post, credentials, platform) {
   return (post.platformAnalytics || post.platforms || []).find(entry => refId(entry.accountId) === credentials.zernioAccountId && entry.platform === platform);
 }
 
+// Zernio reports each post's media type, cover image and media items. Keep only
+// HTTPS URLs; Swipe or Push uses them to preview and re-post a creator's videos.
+function postMedia(post) {
+  const items = (Array.isArray(post.mediaItems) ? post.mediaItems : []).slice(0, 20)
+    .map(item => ({ type: typeof item?.type === "string" ? item.type : null, url: safeUrl(item?.url), thumbnail: safeUrl(item?.thumbnail) }))
+    .filter(item => item.url || item.thumbnail);
+  const type = typeof post.mediaType === "string" ? post.mediaType : null, thumbnailUrl = safeUrl(post.thumbnailUrl);
+  return type || thumbnailUrl || items.length ? { type, thumbnailUrl, items } : null;
+}
+
 function entryMetrics(entry, name) {
   const values = numericMetrics(entry?.analytics);
   const measured = Object.values(values).some(Number.isFinite);
@@ -300,7 +310,7 @@ export function withZernio(Base) {
           if (typeof id !== "string" || !id) continue;
           posts.set(id, { id, externalId: entry.platformPostId || post._id, zernioPostId: post.latePostId || post._id,
             title: typeof post.content === "string" ? post.content.slice(0, 2000) : "Connected account post", publishedAt: Date.parse(post.publishedAt) || null,
-            url: safeUrl(entry.platformPostUrl || post.platformPostUrl), ...entryMetrics(entry, this.capabilities.name) });
+            url: safeUrl(entry.platformPostUrl || post.platformPostUrl), media: postMedia(post), ...entryMetrics(entry, this.capabilities.name) });
         }
         const pages = Number(result.pagination?.pages);
         invariant(Number.isSafeInteger(pages) && pages >= 0, "Zernio returned incomplete analytics pagination. Refresh again shortly.", { status: 502 });

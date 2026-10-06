@@ -107,6 +107,9 @@ export class MediaService {
       Object.assign(record, { mime: type.mime, kind: type.mime.startsWith("image/") ? "image" : type.mime.startsWith("video/") ? "video" : "document" });
       await this.inspect(record);
       invariant(this.store.get("media", record.id)?.status === "processing" && !this.projects.privacy?.blocked(record.ownerUid), "The selected media was removed.");
+      // Large originals stay in R2, rather than filling the container's working disk.
+      await this.storage.evict?.(record.storageKey);
+      invariant(this.store.get("media", record.id)?.status === "processing" && !this.projects.privacy?.blocked(record.ownerUid), "The selected media was removed.");
       this.store.put("media", { ...record, status: "ready", updatedAt: this.clock(), error: undefined });
       await this.store.flush?.();
     } catch (error) {
