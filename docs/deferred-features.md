@@ -10,4 +10,4 @@ That branch contains:
 - the standalone media library interface and bulk-download flow; and
 - bulk composer controls for creating and editing several posts in one batch.
 
-The active application branch keeps the Clipping studio coming-soon page, the single automatically created default workspace, direct media attachment in the composer, and the active publishing features. Restore a deferred feature by bringing its implementation forward from `deferred-features` when it is ready for product and operational review.
+The active application branch keeps the single automatically created default workspace, direct media attachment in the composer, and the active publishing features. Restore a deferred feature by bringing its implementation forward from `deferred-features` when it is ready for product and operational review.

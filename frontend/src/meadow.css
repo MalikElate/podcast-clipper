@@ -14,24 +14,31 @@
   background: linear-gradient(rgba(250, 252, 246, 0.74), rgba(247, 250, 242, 0.82));
 }
 .bridge.bridge[data-theme=light] .bridge-sidebar {
+  --b-nav-ink: #111827;
   background: #e4ebd9;
+  color: var(--b-nav-ink);
 }
 .bridge.bridge[data-theme=light] .bridge-sidebar .bridge-logo,
-.bridge.bridge[data-theme=light] .bridge-sidebar .bridge-logo-dot { color: #233247; }
+.bridge.bridge[data-theme=light] .bridge-sidebar .bridge-logo > span,
+.bridge.bridge[data-theme=light] .bridge-sidebar .bridge-logo-dot { color: var(--b-nav-ink); }
 .bridge.bridge[data-theme=light] .bridge-sidebar .bridge-nav-item,
-.bridge.bridge[data-theme=light] .bridge-sidebar .bridge-nav-sub > a { color: #233247; }
+.bridge.bridge[data-theme=light] .bridge-sidebar .bridge-nav-sub > a,
+.bridge.bridge[data-theme=light] .bridge-sidebar .bridge-nav-parent,
+.bridge.bridge[data-theme=light] .bridge-sidebar .bridge-sidebar-person-text > span,
+.bridge.bridge[data-theme=light] .bridge-sidebar .bridge-person-avatar,
+.bridge.bridge[data-theme=light] .bridge-sidebar .bridge-button.secondary { color: var(--b-nav-ink); }
 .bridge.bridge[data-theme=light] .bridge-sidebar .bridge-nav-item:hover,
 .bridge.bridge[data-theme=light] .bridge-sidebar .bridge-nav-sub > a:hover,
 .bridge.bridge[data-theme=light] .bridge-sidebar .bridge-nav-parent:hover,
 .bridge.bridge[data-theme=light] .bridge-sidebar .bridge-nav-parent[aria-expanded="true"],
 .bridge.bridge[data-theme=light] .bridge-sidebar .bridge-nav-group.active > .bridge-nav-parent {
   background: #dce6d0;
-  color: #233247;
+  color: var(--b-nav-ink);
 }
 .bridge.bridge[data-theme=light] .bridge-sidebar .bridge-nav-item.active,
 .bridge.bridge[data-theme=light] .bridge-sidebar .bridge-nav-sub > a.active {
   background: #e8eeff;
-  color: #345bc4;
+  color: var(--b-nav-ink);
   border-color: #c8d5ff;
 }
 .bridge.bridge[data-theme=light] .bridge-button:not(.secondary):not(.danger) { background: #547af1; border-color: #4169e1; color: #fff; }

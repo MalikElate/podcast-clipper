@@ -17,6 +17,8 @@ test("dashboard paths and legacy OAuth links resolve to the correct view", () =>
   }
   assert.equal(dashboardView("/", "?view=accounts&connection=example"), "accounts");
   assert.equal(dashboardView("/dashboard/unknown"), "compose");
+  assert.equal(dashboardView("/dashboard/clipping-studio"), "compose");
+  assert.equal(dashboardView("/dashboard", "?view=clips"), "compose");
   assert.equal(isDashboardPath("/dashboard/posts/scheduled"), true);
   assert.equal(isDashboardPath("/privacy"), false);
 });
