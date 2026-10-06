@@ -1,0 +1,265 @@
+/*
+ * Developer-tool treatment for the homepage: a ruled page column, full-width
+ * hairlines between sections, flat tiles and ruled grids, monospace details,
+ * and a dot-matrix hero. It reuses Meadow's palette; only structure changes.
+ *
+ * borderless.css clears border colors with zero specificity and !important,
+ * so the rules that draw lines here restate their color with !important.
+ */
+.landing-home {
+  --rule: var(--border);
+  --rail-pad: clamp(18px, 3vw, 40px);
+  --tile-radius: 4px;
+  border-inline: 1px solid var(--rule) !important;
+}
+
+/* Header: flat bar on a hairline, aligned with the page column's content. */
+.landing-home .landing-header {
+  min-height: 64px;
+  padding-inline: calc(max(28px, (100vw - 1280px) / 2) + var(--rail-pad));
+  border-bottom: 1px solid var(--rule) !important;
+}
+.landing-home .landing-nav a { font-weight: 500; }
+.landing-home .site-header .landing-actions .btn-ghost,
+.landing-home .site-header .landing-actions .btn-small-primary { border-radius: 999px; }
+.landing-home .site-header .btn-small-primary { padding: 9px 16px; box-shadow: none; }
+
+/* Sections sit inside the rails and start on a full-width hairline. */
+.landing-home main > section {
+  position: relative;
+  padding-inline: var(--rail-pad);
+}
+.landing-home main > section + section::before,
+.landing-home .site-footer::before {
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  width: 100vw;
+  height: 1px;
+  margin-left: -50vw;
+  background: var(--rule);
+  content: "";
+  pointer-events: none;
+}
+
+/* Headings: tighter scale, normal tracking, left-aligned like a docs page. */
+.landing-home main h2 {
+  font-weight: 600;
+  letter-spacing: -.025em;
+}
+.landing-home .home-platform-heading h2,
+.landing-home .audience-heading h2,
+.landing-home .home-pricing-heading h2,
+.landing-home .home-faq-heading h2 {
+  margin: 0;
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.1;
+}
+.landing-home .scheduling-use-case-copy h2 {
+  font-size: clamp(36px, 4vw, 54px);
+  line-height: 1.04;
+}
+
+/* Hero: dot-matrix field inside the column, with a highlighted headline. */
+.landing-home .home-centered-hero {
+  width: auto;
+  margin-left: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: var(--bg);
+  background-image: radial-gradient(circle, var(--rule) 1.1px, transparent 1.6px);
+  background-position: 0 0;
+  background-size: 6px 6px;
+}
+.landing-home .home-hero-top,
+.landing-home .home-hero-demo-stage { background: transparent; }
+.landing-home .home-hero-top { padding: clamp(64px, 6.5vw, 96px) 0 0; }
+.landing-home .home-centered-hero .landing-title {
+  max-width: 22ch;
+  font-size: clamp(44px, 5vw, 68px);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -.03em;
+}
+.landing-title-mark {
+  padding: .04em .16em .06em;
+  background: #72c991;
+  color: var(--text);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.landing-home .home-centered-hero .landing-subtitle {
+  max-width: 620px;
+  margin-top: 32px;
+  font-size: clamp(18px, 1.6vw, 21px);
+  font-weight: 500;
+  color: var(--text);
+}
+.landing-home .home-centered-hero .landing-cta {
+  min-width: 0;
+  min-height: 48px;
+  padding: 12px 24px;
+  font-size: 17px;
+}
+.landing-home .home-hero-agent-link { font-family: var(--font-mono); font-size: 13px; }
+.landing-home .home-hero-demo-stage {
+  position: relative;
+  padding: 56px var(--rail-pad) clamp(72px, 9vw, 136px);
+}
+.pixel-meadow {
+  position: absolute;
+  inset: auto 0 0;
+  display: block;
+  width: 100%;
+  height: 82%;
+  pointer-events: none;
+}
+.landing-home .home-centered-hero .hero-demo {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 960px);
+  border-radius: 8px;
+  border: 1px solid var(--text) !important;
+  box-shadow: none;
+}
+
+/* Platforms: flat logo tiles on a tight grid. */
+.landing-home .home-platform-section { padding-block: 56px 64px; border: 0; }
+.landing-home .home-platform-heading { margin-bottom: 24px; }
+.landing-home .home-platform-grid { gap: 4px; }
+.landing-home .home-platform-link,
+.landing-home .home-platform-coming-soon {
+  min-height: 92px;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+}
+.landing-home .home-platform-link:hover,
+.landing-home .home-platform-link:focus-visible {
+  transform: none;
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.landing-home .home-platform-icon {
+  width: 32px;
+  height: 32px;
+  flex-basis: 32px;
+  border-radius: 0;
+  background: transparent;
+}
+.landing-home .home-platform-icon .social-brand-icon { width: 28px !important; height: 28px !important; }
+.landing-home .home-platform-coming-soon { border-color: #aac99a !important; }
+
+/* Split feature sections: two ruled cells. */
+.landing-home .scheduling-use-case {
+  gap: 0;
+  padding: 0;
+  align-items: stretch;
+}
+.landing-home .scheduling-use-case > * {
+  max-width: none;
+  padding: clamp(48px, 6vw, 96px) var(--rail-pad);
+}
+.landing-home .scheduling-use-case > :first-child { border-right: 1px solid var(--rule) !important; }
+.landing-home .scheduling-use-case-copy { display: flex; flex-direction: column; justify-content: center; }
+.landing-home .scheduling-use-case-copy h2 { margin-top: 0; }
+.landing-home .scheduling-use-case-visual {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.landing-home .scheduling-use-case-visual > * {
+  border-radius: var(--tile-radius);
+  border: 1px solid var(--border-strong) !important;
+  box-shadow: none;
+}
+
+/* Ruled grids: hairlines between cells instead of floating cards. */
+.landing-home .usage-grid,
+.landing-home .pricing-grid,
+.landing-home .home-faq-grid {
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--rule) !important;
+  border-radius: var(--tile-radius);
+  background: var(--rule);
+}
+.landing-home .usage-card,
+.landing-home .pricing-card { border-radius: 0; box-shadow: none; }
+
+.landing-home .usage-section { text-align: left; padding-block: 72px 88px; }
+.landing-home .usage-section .audience-heading { max-width: none; margin: 0; text-align: left; }
+.landing-home .usage-grid { margin-top: 32px; }
+.landing-home .usage-card-media { border-radius: 0; }
+.landing-home .usage-card-copy { text-align: left; }
+.landing-home .usage-card-copy h3 { font-weight: 600; letter-spacing: -.02em; }
+.landing-home .usage-card-copy li { font-family: var(--font-mono); font-size: 13px; }
+
+.landing-home .home-pricing-section { padding-block: 72px 88px; }
+.landing-home .home-pricing-heading {
+  display: flex;
+  max-width: none;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin: 0 0 32px;
+  text-align: left;
+}
+.landing-home .pricing-cycle { margin-top: 0; border-radius: var(--tile-radius); }
+.landing-home .pricing-cycle button { min-width: 0; padding: 11px 18px; font-size: 16px; }
+.landing-home .pricing-card { min-height: 600px; }
+.landing-home .pricing-card-top h3 { font-weight: 600; letter-spacing: -.02em; }
+.landing-home .pricing-price strong {
+  font-family: var(--font-mono);
+  font-size: 46px;
+  font-weight: 600;
+  letter-spacing: -.04em;
+}
+.landing-home .pricing-billing-note,
+.landing-home .pricing-price span { font-family: var(--font-mono); font-size: 13px; }
+.landing-home .pricing-card li::before { border-radius: 3px; }
+.landing-home .pricing-card > a { border-radius: 999px; }
+
+.landing-home .landing-section.home-faq { padding-block: 72px 88px; }
+.landing-home .home-faq-heading { display: flex; align-items: center; gap: 16px; text-align: left; }
+.landing-home .home-faq-icon { width: 40px; height: 40px; margin: 0; }
+.landing-home .home-faq-grid { margin-top: 32px; }
+.landing-home .home-faq-item { padding: 28px clamp(20px, 2.4vw, 32px) 32px; background: var(--bg); }
+.landing-home .home-faq-item h3 { font-weight: 600; }
+.landing-home .home-faq-item p { font-size: 16px; }
+
+/* Footer: same column, ruled off from the page. */
+.landing-home .site-footer {
+  position: relative;
+  width: auto;
+  max-width: none;
+  margin: 0;
+}
+.landing-home .site-footer-inner { width: auto; padding-inline: var(--rail-pad); }
+.landing-home .footer-brand-row,
+.landing-home .footer-meta-row { border-color: var(--rule) !important; }
+.landing-home .footer-link-group h2 { font-family: var(--font-mono); font-size: 14px; font-weight: 600; }
+.landing-home .footer-meta-row { font-family: var(--font-mono); font-size: 13px; }
+
+@media (max-width: 900px) {
+  .landing-home .scheduling-use-case { grid-template-columns: 1fr; }
+  /* Stacked, the copy always comes first, so it carries the divider. */
+  .landing-home .scheduling-use-case > :first-child { border-right: 0 !important; }
+  .landing-home .scheduling-use-case-copy { border-bottom: 1px solid var(--rule) !important; }
+  .landing-home .agent-publishing-section .scheduling-use-case-visual { max-width: none; }
+}
+
+@media (max-width: 720px) {
+  .marketing-home-app .landing-shell { padding: 0; }
+  .landing-home { border-inline: 0 !important; }
+  .landing-home .landing-header { padding-inline: var(--rail-pad); }
+  .landing-home .home-centered-hero .landing-title { font-size: clamp(36px, 10vw, 52px); }
+  .landing-home .home-hero-demo-stage { padding-top: 40px; }
+  .landing-home .home-pricing-heading { align-items: flex-start; flex-direction: column; }
+}

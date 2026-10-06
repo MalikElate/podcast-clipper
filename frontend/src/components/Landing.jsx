@@ -2,6 +2,7 @@ import { useState } from "react";
 import { SiClaude, SiCursor } from "react-icons/si";
 import { PlatformIcon } from "../bridge/ui.jsx";
 import HeroDemo from "./HeroDemo.jsx";
+import PixelMeadow from "./PixelMeadow.jsx";
 import SchedulingDemo from "./SchedulingDemo.jsx";
 import AgentPublishingDemo from "./AgentPublishingDemo.jsx";
 import { sortPlatforms } from "../bridge/platforms.js";
@@ -165,7 +166,7 @@ function GoalScenarios() {
 export default function Landing({ onGetStarted }) {
   const [yearlyPricing, setYearlyPricing] = useState(true);
   return (
-    <div className="landing landing-v2" id="top">
+    <div className="landing landing-v2 landing-home" id="top">
       <SiteHeader homeHref="#top" onSignIn={onGetStarted} onStartPosting={onGetStarted} />
 
       <main>
@@ -175,14 +176,14 @@ export default function Landing({ onGetStarted }) {
               <div className="home-hero-platforms" aria-label="Supported social platforms">
                 {PLATFORMS.map(platform => <PlatformMark platform={platform} size={32} variant={platform.id === "google_business" ? "hero" : "default"} key={platform.id} />)}
               </div>
-              <h1 className="landing-title">Creator tool kit for agents and developers</h1>
+              <h1 className="landing-title"><span className="landing-title-mark">Creator tool kit for agents and developers</span></h1>
               <p className="landing-subtitle">Plan, tailor, and schedule posts across your social accounts from one Meadow dashboard.</p>
               <div className="hero-actions hero-actions-v2"><a className="btn-primary landing-cta" href={signupHref()}>Try for free <ArrowIcon /></a></div>
               <a className="home-hero-agent-link" href="#ways-to-use">Publishing with an AI agent? Explore API/MCP <ArrowIcon /></a>
               <div className="home-hero-agent-logos" aria-hidden="true">{AGENT_LOGOS.map(agent => <span className={agent.className} key={agent.name}><agent.Icon /></span>)}</div>
             </div>
           </div>
-        <div className="home-hero-demo-stage"><HeroDemo recording={HOMEPAGE_RECORDING} /></div>
+        <div className="home-hero-demo-stage"><PixelMeadow /><HeroDemo recording={HOMEPAGE_RECORDING} /></div>
         </section>
 
         <section className="landing-section home-platform-section" id="platforms" aria-labelledby="home-platforms-title">
