@@ -88,13 +88,13 @@ export class BridgeApi {
   ensureDefaultProject(body, signal) { return this.request("/projects/default", { method: "POST", body, signal }); }
   updateProject(id, body) { return this.request(this.projectPath(id), { method: "PATCH", body }); }
   project(id, path, options) { return this.request(this.projectPath(id, path), options); }
-  async retryUpload(action, signal) {
+  async retryUpload(action, signal, { retryBusy = false } = {}) {
     for (let attempt = 0; ; attempt++) {
       signal?.throwIfAborted();
       try { return await action(); }
       catch (error) {
         signal?.throwIfAborted();
-        const transient = ["network_error", "upload_timeout"].includes(error.code) || error.name === "TypeError" || error.status >= 500 && error.status < 600;
+        const transient = ["network_error", "upload_timeout"].includes(error.code) || error.name === "TypeError" || error.status >= 500 && error.status < 600 || retryBusy && error.status === 409 && error.code === "account_busy";
         if (!transient || attempt >= 2) throw error;
         await this.retryWait(500 * 2 ** attempt, signal);
       }
@@ -134,7 +134,7 @@ export class BridgeApi {
         const data = await this.project(projectId, `${path}/complete`, { method: "POST", body: { parts }, signal, refreshAuth: true });
         if (!data.media?.id) throw networkError(new Error("The upload completion response was incomplete."));
         return data;
-      }, signal);
+      }, signal, { retryBusy: true });
     } catch (error) {
       // The caller's signal may already be cancelled. Abort the remote upload
       // independently; server expiry also cleans up if this request cannot run.

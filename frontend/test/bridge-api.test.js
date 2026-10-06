@@ -321,6 +321,40 @@ test("idempotent completion refreshes rejected authentication and recovers from 
   assert.deepEqual(tokens, [{ skipCache: false }, { skipCache: true }, { skipCache: true }, { skipCache: true }]);
 });
 
+test("direct completion waits through a surviving server lease without replaying parts or aborting the upload", async () => {
+  const file = new File(["part"], "clip.mp4"), bodies = [], waits = [];
+  let sends = 0, completions = 0;
+  const api = new BridgeApi({ getToken: async () => "session", retryWait: async ms => waits.push(ms), fetcher: async (path, options) => {
+    if (path.endsWith("/uploads")) return Response.json(directGrant(file));
+    assert.ok(path.endsWith("/complete"));
+    assert.equal(options.method, "POST", "Recoverable completion must not delete the upload");
+    bodies.push(options.body); completions++;
+    return completions < 3
+      ? Response.json({ code: "account_busy", error: "This upload is still being completed." }, { status: 409 })
+      : Response.json({ media: { id: "uploaded" } });
+  }, partUploader: async () => { sends++; return { ok: true, status: 200, etag: '"etag"' }; } });
+  assert.deepEqual(await api.uploadMedia("project", file), { media: { id: "uploaded" } });
+  assert.equal(sends, 1); assert.equal(completions, 3);
+  assert.equal(new Set(bodies).size, 1);
+  assert.deepEqual(waits, [500, 1000]);
+});
+
+test("an ordinary direct completion conflict remains fatal and cleans up without retrying", async () => {
+  const file = new File(["part"], "clip.mp4");
+  let completions = 0, cleanups = 0;
+  const api = new BridgeApi({ getToken: async () => "session", retryWait: async () => assert.fail("Ordinary conflicts are not transient"), fetcher: async (path, options) => {
+    if (path.endsWith("/uploads")) return Response.json(directGrant(file));
+    if (path.endsWith("/complete")) {
+      completions++;
+      return Response.json({ code: "upload_conflict", error: "The uploaded parts changed." }, { status: 409 });
+    }
+    assert.equal(options.method, "DELETE"); cleanups++;
+    return Response.json({ aborted: true });
+  }, partUploader: async () => ({ ok: true, status: 200, etag: '"etag"' }) });
+  await assert.rejects(api.uploadMedia("project", file), error => error.status === 409 && error.code === "upload_conflict");
+  assert.equal(completions, 1); assert.equal(cleanups, 1);
+});
+
 test("cancelling during direct authorization or a part cleans up and never completes", async () => {
   for (const cancelAt of ["authorization", "part"]) {
     const file = new File(["012345"], "clip.mp4"), controller = new AbortController();
