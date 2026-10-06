@@ -172,6 +172,14 @@ test("Zernio account analytics page through owned published posts and exclude un
   assert.equal(result.partial, false); assert.equal(calls.length, 2);
 });
 
+test("Zernio account analytics keep each post's HTTPS media", async () => {
+  const media = { mediaType: "video", thumbnailUrl: "https://cdn.example.com/cover.jpg", mediaItems: [{ type: "video", url: "https://cdn.example.com/clip.mp4", thumbnail: "https://cdn.example.com/cover.jpg" }, { type: "image", url: "http://insecure.example.com/a.jpg" }, { type: "image", url: "javascript:alert(1)" }] };
+  const { transport } = zernioApi({ [`GET ${accountQuery}1`]: () => [200, { posts: [analyticsPost("native1", media), analyticsPost("text")], pagination: { pages: 1 } }] });
+  const result = await provider(TikTokProvider, transport).accountPostAnalytics({ credentials: analyticsCredentials });
+  assert.deepEqual(result.posts[0].media, { type: "video", thumbnailUrl: "https://cdn.example.com/cover.jpg", items: [{ type: "video", url: "https://cdn.example.com/clip.mp4", thumbnail: "https://cdn.example.com/cover.jpg" }] });
+  assert.equal(result.posts[1].media, null);
+});
+
 test("Zernio account analytics bound pagination and explain partial totals", async () => {
   const routes = Object.fromEntries(Array.from({ length: 5 }, (_, i) => [`GET ${accountQuery}${i + 1}`, () => [200, { posts: [analyticsPost(`native${i}`)], pagination: { pages: 9 } }]]));
   const { calls, transport } = zernioApi(routes);
