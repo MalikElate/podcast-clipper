@@ -1,6 +1,5 @@
 .landing-v2 .agent-publishing-section { padding-top: 24px; }
 .agent-publishing-section .scheduling-use-case-copy h2 { max-width: 13ch; }
-.agent-audience-highlight { color: #5d913f; }
 .agent-demo { position: relative; container-type: inline-size; margin: 0; padding: 0; overflow: hidden; border: 1px solid #dfe5d9; border-radius: 19px; background: #fcfdf9; color: #26372e; box-shadow: 0 28px 58px -42px rgba(28,45,64,.55); }
 .agent-demo-header { display: flex; align-items: center; gap: 11px; padding: 13px 22px; border-bottom: 1px solid #e6eadf; background: #fffefa; }
 .agent-demo-avatar { display: grid; width: 35px; height: 35px; flex: 0 0 35px; place-items: center; color: #26372e; }
