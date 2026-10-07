@@ -27,6 +27,19 @@ function localOrigin(locationLike) {
   return location?.origin && location.origin !== "null" ? location.origin : null;
 }
 
+/** The same-origin page to return to after signing in, or null. Clerk sends
+ * an absolute `redirect_url`, such as the OAuth consent page an MCP client is
+ * waiting on. Other origins are ignored so sign-in cannot become an open
+ * redirect, and sign-in or sign-up pages are ignored so it cannot loop. */
+export function safeReturnPath(value, locationLike) {
+  const origin = localOrigin(locationLike);
+  if (typeof value !== "string" || !value || !origin) return null;
+  let url;
+  try { url = new URL(value, origin); } catch { return null; }
+  if (url.origin !== origin || /^\/sign-(in|up)(\/|$)/.test(url.pathname)) return null;
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 export function appHref(path = "/dashboard", locationLike) {
   const origin = siteSurface(locationLike) === "integrated" ? localOrigin(locationLike) || APP_ORIGIN : APP_ORIGIN;
   return new URL(path, `${origin}/`).href;

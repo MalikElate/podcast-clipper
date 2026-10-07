@@ -9,6 +9,7 @@ import { authContinuation, clerkAuthRedirectProps, normalizeAuthRedirects } from
 const productionKey = "pk_live_Y2xlcmsuZmluZG1lYWRvdy5jb20k";
 const appOrigin = "https://app.findmeadow.com";
 const authorize = "https://clerk.findmeadow.com/oauth/authorize?client_id=codex&state=keep-me&code_challenge=pkce&redirect_uri=http%3A%2F%2F127.0.0.1%3A12345%2Fcallback";
+const continueUrl = "https://clerk.findmeadow.com/oauth/authorize/continue?oauth_authorization=keep-me";
 const location = (value) => new URL(value, appOrigin);
 const signIn = (returnUrl) => location(`/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`);
 
@@ -22,7 +23,8 @@ function normalize(url) {
 
 test("OAuth authorization and same-app continuations retain their full parameters", () => {
   assert.equal(authContinuation(signIn(authorize), productionKey), authorize);
-  for (const target of ["/oauth-consent?client_id=codex&state=preserved", "/dashboard/connections?project=1#accounts", "/pricing?checkout=creator", "/sign-up/complete"]) {
+  assert.equal(authContinuation(signIn(continueUrl), productionKey), continueUrl);
+  for (const target of ["/oauth-consent?client_id=codex&state=preserved", "/dashboard/connections?project=1#accounts", "/pricing?checkout=creator"]) {
     assert.equal(authContinuation(signIn(target), productionKey), location(target).href);
   }
   assert.equal(authContinuation(location("http://localhost:5173/sign-in?redirect_url=%2Fdashboard"), productionKey), "http://localhost:5173/dashboard");
@@ -34,8 +36,9 @@ test("external returns are limited to the exact configured Clerk HTTPS authorize
     "https://clerk.findmeadow.com.evil.example/oauth/authorize", "https://clerk.findmeadow.com@evil.example/oauth/authorize",
     "https://user:pass@clerk.findmeadow.com/oauth/authorize", "https://user@app.findmeadow.com/dashboard",
     "http://clerk.findmeadow.com/oauth/authorize", "https://clerk.findmeadow.com:444/oauth/authorize",
-    "https://clerk.findmeadow.com/oauth/authorize/", "https://clerk.findmeadow.com/oauth/token", "https://clerk.findmeadow.com/dashboard",
-    "https://clerk.findmeadow.com/oauth/authorize#fragment", "/sign-in?redirect_url=%2Fdashboard", "/sign-up/",
+    "https://clerk.findmeadow.com/oauth/authorize/", "https://clerk.findmeadow.com/oauth/authorize/continue/", "https://clerk.findmeadow.com/oauth/authorize/continue/other",
+    "https://clerk.findmeadow.com/oauth/token", "https://clerk.findmeadow.com/dashboard",
+    "https://clerk.findmeadow.com/oauth/authorize#fragment", "/sign-in?redirect_url=%2Fdashboard", "/sign-up/", "/sign-up/complete?redirect_url=%2Fsign-up%2Fcomplete",
     "https://app.findmeadow.com//evil.example", "\\\\evil.example", "\n/dashboard", " /dashboard", "https://[broken",
   ];
   for (const value of rejected) assert.equal(authContinuation(signIn(value), productionKey), "", value);
@@ -78,6 +81,15 @@ test("ordinary navigation is untouched and invalid redirect fields are removed w
   assert.equal(result.href, `${appOrigin}/sign-in?project=1#verify-email?__clerk_status=complete`);
 });
 
+test("OAuth consent and other non-entry routes preserve their exact query and hash", () => {
+  for (const path of ["/oauth-consent", "/sign-up/complete", "/pricing", "/dashboard", "/sign-in/other"]) {
+    const original = location(`${path}?client_id=codex&state=keep&redirect_uri=http%3A%2F%2F127.0.0.1%2Fcallback&redirect_url=%2Fdashboard&sign_in_force_redirect_url=%2Fpricing#callback?sign_up_force_redirect_url=%2Fdashboard`);
+    const before = original.href;
+    assert.equal(normalize(original).writes.length, 0, path);
+    assert.equal(original.href, before);
+  }
+});
+
 test("the installed Clerk redirect resolver keeps continuation through both auth switches", () => {
   const previousWindow = globalThis.window;
   globalThis.window = { location: { origin: appOrigin } };
@@ -110,13 +122,14 @@ test("the installed Clerk redirect resolver keeps continuation through both auth
 });
 
 const appSource = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
-async function surface(name, nextName, url, auth) {
+async function surface(name, nextName, url, auth, overrides = {}) {
   const code = appSource.slice(appSource.indexOf(`function ${name}(`), appSource.indexOf(`function ${nextName}(`));
   const transformed = await transformWithOxc(code, "auth-surface.jsx", { jsx: { runtime: "classic" } });
   const context = {
     React: { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }) },
     Auth: "Auth", DomainRedirect: "DomainRedirect", OpeningMeadow: "OpeningMeadow", localPreview: false,
-    useAuth: () => auth, useEffect: () => {}, authContinuation: () => authContinuation(url, productionKey),
+    useAuth: () => auth, useEffect: () => {}, returnPath: () => authContinuation(url, productionKey),
+    ...overrides,
   };
   return runInNewContext(`${transformed.code}\n${name}();`, context);
 }
@@ -127,11 +140,12 @@ function findAuth(node) {
 
 test("production sign-in and sign-up surfaces resume OAuth for restored and new sessions", async () => {
   for (const [name, nextName] of [["SigninSurface", "OAuthConsentSurface"], ["SignupSurface", "SigninSurface"]]) {
-    const signedIn = await surface(name, nextName, signIn(authorize), { user: { id: "existing" }, loading: false });
+    const signedIn = await surface(name, nextName, signIn(continueUrl), { user: { id: "existing" }, loading: false });
     assert.equal(signedIn.type, "DomainRedirect");
-    assert.equal(signedIn.props.href, authorize);
-    const signedOut = await surface(name, nextName, signIn(authorize), { user: null, loading: false });
-    assert.equal(findAuth(signedOut).props.redirectUrl, authorize);
+    assert.equal(signedIn.props.href, continueUrl);
+    const signedOut = await surface(name, nextName, signIn(continueUrl), { user: null, loading: false });
+    const expected = name === "SignupSurface" ? `/sign-up/complete?redirect_url=${encodeURIComponent(continueUrl)}` : continueUrl;
+    assert.equal(findAuth(signedOut).props.redirectUrl, expected);
     const ordinary = await surface(name, nextName, location("/sign-in"), { user: { id: "existing" }, loading: false });
     assert.equal(ordinary.props.href, "/dashboard");
     const unsafe = await surface(name, nextName, signIn("https://evil.example/"), { user: { id: "existing" }, loading: false });
@@ -139,4 +153,21 @@ test("production sign-in and sign-up surfaces resume OAuth for restored and new 
     const loading = await surface(name, nextName, signIn(authorize), { user: undefined, loading: true });
     assert.equal(loading.type, "OpeningMeadow");
   }
+});
+
+test("signup completion records the existing conversion and resumes OAuth before callback cleanup", async () => {
+  const url = location(`/sign-up/complete?redirect_url=${encodeURIComponent(continueUrl)}`);
+  const events = [];
+  const storage = new Map([["meadow.signup.pending", "1"]]);
+  await surface("SignupComplete", "PricingSurface", url, { user: { id: "new", createdAt: Date.now() }, loading: false }, {
+    useEffect: callback => callback(),
+    sessionStorage: { getItem: key => storage.get(key), removeItem: key => storage.delete(key) },
+    captureMetaRegistration: () => events.push("meta"),
+    captureProductEvent: name => events.push(name),
+    queueGoogleSignup: () => events.push("google"),
+    cleanSignupCallbackReferrer: () => { events.push("clean"); url.search = ""; },
+    window: { location: { replace: target => events.push(target) } },
+  });
+  assert.deepEqual(events, ["meta", "meadow_signup_completed", "google", "clean", continueUrl]);
+  assert.equal(storage.has("meadow.signup.pending"), false);
 });

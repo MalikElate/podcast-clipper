@@ -25,13 +25,12 @@ function safeContinuation(value, locationLike, publishableKey) {
     const url = new URL(value, `${appOrigin}/`);
     if (url.username || url.password || url.pathname.startsWith("//")) return "";
     if (url.origin === appOrigin) {
-      const path = url.pathname.replace(/\/+$/, "") || "/";
       // Returning to an auth entry page would repeat the redirect instead of finishing OAuth.
-      if (path === "/sign-in" || path === "/sign-up") return "";
+      if (/^\/sign-(in|up)(\/|$)/.test(url.pathname)) return "";
       return url.href;
     }
     const clerkHost = clerkFrontendApi(publishableKey);
-    return clerkHost && url.origin === `https://${clerkHost}` && url.pathname === "/oauth/authorize" && !url.hash ? url.href : "";
+    return clerkHost && url.origin === `https://${clerkHost}` && ["/oauth/authorize", "/oauth/authorize/continue"].includes(url.pathname) && !url.hash ? url.href : "";
   } catch {
     return "";
   }
@@ -50,6 +49,7 @@ export function authContinuation(locationLike = globalThis.location, publishable
 // it initializes, keeping only the validated continuation and all non-redirect fields.
 export function normalizeAuthRedirects(locationLike, publishableKey, historyLike) {
   const url = new URL(locationLike.href);
+  if (!["/sign-in", "/sign-up"].includes(url.pathname.replace(/\/+$/, ""))) return;
   const { prefix, params: hash } = hashParameters(url.hash);
   if (!REDIRECT_PARAMETERS.some(name => url.searchParams.has(name) || hash.has(name))) return;
   const continuation = authContinuation(url, publishableKey);
