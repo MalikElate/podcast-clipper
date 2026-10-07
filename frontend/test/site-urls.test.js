@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { APP_ORIGIN, MARKETING_ORIGIN, appHref, isLocalMarketingPreview, marketingHref, signupHref, siteSurface } from "../src/siteUrls.js";
+import { APP_ORIGIN, MARKETING_ORIGIN, appHref, isLocalMarketingPreview, marketingHref, safeReturnPath, signupHref, siteSurface } from "../src/siteUrls.js";
 
 const location = (hostname, origin = `https://${hostname}`) => ({ hostname, origin });
 
@@ -30,4 +30,14 @@ test("development keeps the combined local surface", () => {
   assert.equal(isLocalMarketingPreview(marketingPreview, true), true);
   assert.equal(isLocalMarketingPreview(marketingPreview, false), false);
   assert.equal(isLocalMarketingPreview({ ...location("findmeadow.com"), search: "?surface=marketing" }, true), false);
+});
+
+test("sign-in returns only to Meadow pages, such as the OAuth consent screen", () => {
+  const app = location("app.findmeadow.com");
+  const consent = "https://app.findmeadow.com/oauth-consent?client_id=https%3A%2F%2Fchatgpt.com%2Foauth%2Fcodex%2Fclient.json&scope=meadow%3Aread&state=abc";
+  assert.equal(safeReturnPath(consent, app), "/oauth-consent?client_id=https%3A%2F%2Fchatgpt.com%2Foauth%2Fcodex%2Fclient.json&scope=meadow%3Aread&state=abc");
+  assert.equal(safeReturnPath("/dashboard/swipe#top", app), "/dashboard/swipe#top");
+  for (const unsafe of ["https://evil.example/oauth-consent", "//evil.example/x", "javascript:alert(1)", "https://findmeadow.com/", "/sign-in?redirect_url=/dashboard", "https://app.findmeadow.com/sign-up", "", null, undefined]) {
+    assert.equal(safeReturnPath(unsafe, app), null, String(unsafe));
+  }
 });

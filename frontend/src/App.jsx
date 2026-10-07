@@ -16,7 +16,7 @@ import NotFound from "./components/NotFound.jsx";
 import { PAID_PLANS as PLANS } from "./pricing.js";
 import { api, localPreview } from "./bridge/BridgeApi.js";
 import { isDashboardPath } from "./bridge/dashboardRoutes.js";
-import { appHref, isLocalMarketingPreview, marketingHref, siteSurface } from "./siteUrls.js";
+import { appHref, isLocalMarketingPreview, marketingHref, safeReturnPath, siteSurface } from "./siteUrls.js";
 import { captureMetaRegistration } from "./metaPixel.js";
 import { captureProductEvent } from "./productAnalytics.js";
 import { cleanSignupCallbackReferrer, queueGoogleSignup } from "./googleAnalytics.js";
@@ -74,23 +74,30 @@ function DomainRedirect({ href }) {
   return <OpeningMeadow />;
 }
 
+// Where to go once signed in: Clerk's redirect_url (for example the OAuth
+// consent page Codex or ChatGPT is waiting on) when it is a Meadow page.
+const returnPath = () => safeReturnPath(new URLSearchParams(window.location.search).get("redirect_url"));
+
 function SignupSurface() {
   const { user, loading } = useAuth();
+  const returnTo = returnPath();
   useEffect(() => {
     if (user || loading || localPreview) return;
     try { sessionStorage.setItem("meadow.signup.pending", "1"); } catch { /* Sign-up still works without storage. */ }
   }, [user, loading]);
 
   if (loading && !localPreview) return <OpeningMeadow />;
-  if (user || localPreview) return <DomainRedirect href="/dashboard" />;
-  return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth mode="sign-up" redirectUrl="/sign-up/complete" /></div></div>;
+  if (user || localPreview) return <DomainRedirect href={returnTo || "/dashboard"} />;
+  const completeUrl = returnTo ? `/sign-up/complete?redirect_url=${encodeURIComponent(returnTo)}` : "/sign-up/complete";
+  return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth mode="sign-up" redirectUrl={completeUrl} /></div></div>;
 }
 
 function SigninSurface() {
   const { user, loading } = useAuth();
+  const returnTo = returnPath() || "/dashboard";
   if (loading && !localPreview) return <OpeningMeadow />;
-  if (user || localPreview) return <DomainRedirect href="/dashboard" />;
-  return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth /></div></div>;
+  if (user || localPreview) return <DomainRedirect href={returnTo} />;
+  return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth redirectUrl={returnTo} /></div></div>;
 }
 
 function OAuthConsentSurface() {
@@ -117,10 +124,12 @@ function SignupComplete() {
       captureProductEvent("meadow_signup_completed");
       queueGoogleSignup();
     }
+    // Read the return page before the callback parameters are removed.
+    const next = returnPath() || "/dashboard";
     // Remove Clerk callback parameters before the next document is loaded.
     // The dashboard can then use this safe URL as its GA4 referrer.
     cleanSignupCallbackReferrer();
-    window.location.replace("/dashboard");
+    window.location.replace(next);
   }, [user, loading]);
   return <OpeningMeadow />;
 }
