@@ -64,16 +64,15 @@
   border: 1px solid rgba(24, 69, 44, .22);
   border-radius: 12px;
   background: #316649;
-  box-shadow: 0 18px 34px -18px rgba(28, 78, 51, .9);
+  box-shadow: none;
   color: #fff;
   font-size: 18px;
   font-weight: 800;
-  transition: background .16s ease, transform .16s ease, box-shadow .16s ease;
+  transition: background .16s ease, transform .16s ease;
 }
 
 .ad-funnel-primary:hover {
   background: #28583e;
-  box-shadow: 0 22px 38px -18px rgba(28, 78, 51, .95);
   transform: translateY(-1px);
 }
 
