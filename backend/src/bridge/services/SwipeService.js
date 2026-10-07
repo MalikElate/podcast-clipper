@@ -18,7 +18,8 @@ const kind = "swipeDecision";
 
 const cardMetrics = ["views", "likes", "comments", "shares", "saves"];
 /** The engagement numbers a card shows; missing ones are left out. */
-const videoMetrics = (values = {}) => Object.fromEntries(cardMetrics.map(key => [key, Number(values?.[key])]).filter(([, value]) => Number.isFinite(value) && value >= 0));
+// Unreported numbers stay out; Number(null) would otherwise show them as 0.
+const videoMetrics = (values = {}) => Object.fromEntries(cardMetrics.map(key => [key, values?.[key] === null || values?.[key] === undefined || values?.[key] === "" ? NaN : Number(values[key])]).filter(([, value]) => Number.isFinite(value) && value >= 0));
 
 const cardKey = (accountId, externalId) => createHash("sha256").update(`${accountId}:${externalId}`).digest("base64url").slice(0, 22);
 const clip = (text, limit) => { const characters = [...String(text || "")]; return characters.length > limit ? `${characters.slice(0, limit - 1).join("").trimEnd()}…` : characters.join(""); };
