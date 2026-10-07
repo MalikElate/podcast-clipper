@@ -33,6 +33,8 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
   const [last, setLast] = useState(null);
   const [cameraOn, setCameraOn] = useState(readCameraPreference);
   const [pending, setPending] = useState(null);
+  const [paused, setPaused] = useState(false);
+  const [flash, setFlash] = useState(null);
   const pendingRef = useRef(pending);
   pendingRef.current = pending;
   const cards = (data.cards || []).filter(card => !hidden.includes(card.id));
@@ -103,20 +105,32 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
       return !on;
     });
     setPending(null);
+    setPaused(false);
   }
+
+  // A big SKIP or PUSH flash on the camera confirms each hand swipe.
+  useEffect(() => {
+    if (!flash) return undefined;
+    const timer = setTimeout(() => setFlash(null), 900);
+    return () => clearTimeout(timer);
+  }, [flash]);
 
   // A right swipe in front of the camera starts a short countdown; a left
   // swipe cancels it or skips the card.
   function onGesture(direction) {
+    // A held fist pauses hand control, and another resumes it.
+    if (direction === "fist") { setPaused(value => !value); setPending(null); return; }
+    if (paused) return;
     if (!card || busy || editing) return;
-    if (pending) { if (direction === "left") setPending(null); return; }
-    if (direction === "left") { decide("skip"); return; }
+    if (pending) { if (direction === "left") { setPending(null); setFlash({ kind: "cancel", at: Date.now() }); } return; }
+    if (direction === "left") { setFlash({ kind: "skip", at: Date.now() }); decide("skip"); return; }
     if (!card.pushable) { setError(`Meadow can't download ${platformName(catalog, card.platform)} videos yet. Swipe left to skip it.`); return; }
     if (!settingsReady) { setError("Choose destinations before pushing with your hand."); return; }
     setError("");
+    setFlash({ kind: "push", at: Date.now() });
     setPending({ cardId: card.id });
   }
-  const camera = useHandSwipe({ enabled: cameraOn, onGesture });
+  const camera = useHandSwipe({ enabled: cameraOn, paused, onGesture });
 
   const decideRef = useRef(decide);
   decideRef.current = decide;
@@ -146,7 +160,7 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const handNudge = cameraOn && camera.status === "ready" && camera.handVisible && !pending ? Math.max(-1, Math.min(1, camera.offset / camera.minDistance)) * 80 : 0;
+  const handNudge = cameraOn && camera.status === "ready" && camera.handVisible && !pending && !paused ? Math.max(-1, Math.min(1, camera.offset / camera.minDistance)) * 80 : 0;
 
   const loading = data.cards === null;
   return <div className="swipe-page">
@@ -165,7 +179,7 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
       </div>
     </div>
     <div className={`swipe-layout ${cameraOn ? "camera-mode" : ""}`}>
-      {cameraOn && <CameraStage camera={camera} onStop={toggleCamera}/>}
+      {cameraOn && <CameraStage camera={camera} onStop={toggleCamera} paused={paused} onPause={() => { setPaused(true); setPending(null); }} onResume={() => setPaused(false)} flash={flash}/>}
       <section className="swipe-stage" aria-label="Videos to review">
         {loading && resource.error ? <div className="bridge-panel bridge-empty"><p>Your videos could not be loaded.</p><button type="button" className="bridge-button secondary" onClick={resource.reload} disabled={resource.loading}>Try again</button></div>
           : loading ? <div className="bridge-panel bridge-empty"><p>Loading your videos…</p></div>
@@ -193,22 +207,31 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
 }
 
 // With the camera on, the preview is the main stage: a big mirrored view with
-// a red or green box drawn over each hand (see useHandSwipe).
-function CameraStage({ camera, onStop }) {
+// a red or green box drawn over each hand (see useHandSwipe), full-height
+// SKIP and PUSH bands on either side, and a flash when a swipe lands.
+const FLASH_TEXT = { push: "Pushing →", skip: "← Skipped", cancel: "Push cancelled" };
+
+function CameraStage({ camera, onStop, paused, onPause, onResume, flash }) {
   const ready = camera.status === "ready";
   const strength = Math.min(1, Math.abs(camera.offset) / camera.minDistance);
   const message = camera.status === "error" ? camera.error
     : camera.status === "starting" ? "Starting the camera…"
     : camera.status === "loading" ? "Loading hand tracking. The first time downloads about 11 MB, so it can take a little while."
-    : camera.handVisible ? "Swipe your hand right to push, left to skip." : "Raise a hand so the camera can see it.";
+    : paused ? "Paused. Make a fist to resume."
+    : camera.fist ? "Hold the fist to pause."
+    : camera.handVisible ? "Swipe right to push, left to skip. Make a fist to pause." : "Raise a hand so the camera can see it.";
+  const pull = side => paused ? 0 : (side === "push" ? camera.offset > 0 : camera.offset < 0) ? strength : 0;
   return <section className="swipe-camera-stage" aria-label="Camera">
-    <div className="swipe-camera-frame">
+    <div className={`swipe-camera-frame ${paused ? "is-paused" : ""}`}>
       <video ref={camera.videoRef} muted playsInline aria-hidden="true"/>
       <canvas ref={camera.overlayRef} aria-hidden="true"/>
       {ready && <>
-        <span className="swipe-camera-zone skip" style={{ opacity: camera.offset < 0 ? 0.35 + strength * 0.65 : 0.35 }}><Icon name="close" size={22}/>Skip</span>
-        <span className="swipe-camera-zone push" style={{ opacity: camera.offset > 0 ? 0.35 + strength * 0.65 : 0.35 }}>Push<Icon name="arrow" size={22}/></span>
+        <div className="swipe-camera-band skip" style={{ "--pull": pull("skip") }} aria-hidden="true"><Icon name="close" size={40}/><strong>Skip</strong><span>← swipe left</span></div>
+        <div className="swipe-camera-band push" style={{ "--pull": pull("push") }} aria-hidden="true"><Icon name="arrow" size={40}/><strong>Push</strong><span>swipe right →</span></div>
+        {!paused && <button type="button" className="swipe-camera-pause" onClick={onPause}>✊ Pause</button>}
       </>}
+      {flash && !paused && <div key={flash.at} className={`swipe-camera-flash ${flash.kind}`} role="status">{FLASH_TEXT[flash.kind]}</div>}
+      {paused && <div className="swipe-camera-paused" role="status"><strong>Paused</strong><span>Make a fist to resume</span><button type="button" className="bridge-button" onClick={onResume}>Resume</button></div>}
       <p className={`swipe-camera-status ${camera.status === "error" ? "is-error" : ""}`} role="status">{message}</p>
     </div>
     <p className="bridge-small swipe-camera-privacy">Hand tracking runs on this device. Meadow never receives the camera feed. <button type="button" className="swipe-link" onClick={onStop}>Turn off camera</button></p>

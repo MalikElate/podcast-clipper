@@ -83,3 +83,34 @@ export function handTone({ box, tracked, offset, minDistance }) {
   const push = moving ? offset > 0 : (box.x0 + box.x1) / 2 >= 0.5;
   return { push, strength: tracked ? Math.min(1, Math.abs(offset) / minDistance) : 0 };
 }
+
+const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+/** A closed fist: each of the four fingertips is nearer the wrist than its
+ * middle knuckle. The thumb is ignored because it tucks in many ways. */
+export function isFist(landmarks) {
+  const wrist = landmarks?.[0];
+  if (!wrist) return false;
+  return [[8, 6], [12, 10], [16, 14], [20, 18]].every(([tip, knuckle]) => landmarks[tip] && landmarks[knuckle] && distance(landmarks[tip], wrist) < distance(landmarks[knuckle], wrist));
+}
+
+/** Reports one toggle per held fist: the fist must last `holdMs`, and the hand
+ * must open (or leave the frame) for `releaseMs` before the next toggle. */
+export function createFistToggle({ holdMs = 450, releaseMs = 300 } = {}) {
+  let fistSince = null, openSince = null, armed = true;
+  return {
+    update(now, fist) {
+      if (fist) {
+        openSince = null;
+        fistSince ??= now;
+        if (armed && now - fistSince >= holdMs) { armed = false; return true; }
+        return false;
+      }
+      fistSince = null;
+      openSince ??= now;
+      if (!armed && now - openSince >= releaseMs) armed = true;
+      return false;
+    },
+    reset() { fistSince = null; openSince = null; armed = true; },
+  };
+}
