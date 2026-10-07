@@ -11,10 +11,10 @@ import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 import { SecretVault } from "../src/bridge/core/SecretVault.js";
 import { CONNECTION_PRIVACY_VERSION } from "../src/bridge/platforms/connectionPrivacy.js";
 
-async function setup(t, { localPreview = false, auth = true, stripe, webhookSend, envOverrides = {} } = {}) {
+async function setup(t, { localPreview = false, auth = true, stripe, webhookSend, listUsers, envOverrides = {} } = {}) {
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bridge-api-test-"));
   const dir = path.join(temporaryRoot, ".bridge");
-  const application = new BridgeApplication({ store: new SqliteStore(), stripe, env: { NODE_ENV: localPreview ? "development" : "test", BRIDGE_LOCAL_PREVIEW: localPreview ? "1" : "0", BRIDGE_DATA_DIR: dir, BRIDGE_APP_URL: "http://localhost:5173", BRIDGE_MEDIA_SIGNING_KEY: "test-signing-key", BRIDGE_PUBLISHING_ENABLED: "false", ...envOverrides }, ...(auth ? { authMiddleware: (req, res, next) => { if (!/^Bearer (alice|bob)$/.test(req.headers.authorization || "")) return res.status(401).json({ error: "Sign in required" }); req.uid = req.headers.authorization.split(" ")[1]; next(); } } : {}) });
+  const application = new BridgeApplication({ store: new SqliteStore(), stripe, listUsers, env: { NODE_ENV: localPreview ? "development" : "test", BRIDGE_LOCAL_PREVIEW: localPreview ? "1" : "0", BRIDGE_DATA_DIR: dir, BRIDGE_APP_URL: "http://localhost:5173", BRIDGE_MEDIA_SIGNING_KEY: "test-signing-key", BRIDGE_PUBLISHING_ENABLED: "false", ...envOverrides }, ...(auth ? { authMiddleware: (req, res, next) => { if (!/^Bearer (alice|bob)$/.test(req.headers.authorization || "")) return res.status(401).json({ error: "Sign in required" }); req.uid = req.headers.authorization.split(" ")[1]; next(); } } : {}) });
   if (webhookSend) application.webhooks.send = webhookSend;
   const server = await new Promise((resolve, reject) => { const server = application.app.listen(0, "127.0.0.1", () => resolve(server)); server.on("error", reject); });
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -459,7 +459,7 @@ test("Clerk deletion webhooks verify the raw signature and erase the deleted ide
 });
 
 test("Meadow-wide platform usage is served only to administrators, including through their API key", async t => {
-  const h = await setup(t, { envOverrides: { BRIDGE_ADMIN_UIDS: "alice" } });
+  const h = await setup(t, { envOverrides: { BRIDGE_ADMIN_UIDS: "alice" }, listUsers: async () => [{ uid: "bob", email: "bob@example.com", name: "Bob", signedUpAt: 5, lastActiveAt: 6 }] });
   h.application.store.put("account", { id: "usage-account", ownerUid: "bob", projectId: "bob-project", platform: "youtube", status: "connected" });
   h.application.store.put("delivery", { id: "usage-delivery", ownerUid: "bob", projectId: "bob-project", platform: "youtube", status: "published" });
   assert.equal((await h.request("/api/bridge/admin/platform-usage", { user: null })).status, 401);
@@ -468,6 +468,7 @@ test("Meadow-wide platform usage is served only to administrators, including thr
   const response = await h.request("/api/bridge/admin/platform-usage", { headers: { Authorization: `Bearer ${key}` } });
   assert.equal(response.status, 200);
   const report = await response.json();
-  assert.deepEqual(report.totals, { connectedAccounts: 1, publishedPosts: 1 });
+  assert.deepEqual(report.totals, { users: 1, connectedAccounts: 1, publishedPosts: 1 });
   assert.deepEqual(report.platforms.find(platform => platform.platform === "youtube"), { platform: "youtube", name: "YouTube", connectedAccounts: 1, publishedPosts: 1 });
+  assert.deepEqual(report.users, [{ uid: "bob", email: "bob@example.com", name: "Bob", signedUpAt: 5, lastActiveAt: 6, connectedAccounts: 1, publishedPosts: 1, platforms: [{ platform: "youtube", name: "YouTube", connectedAccounts: 1, publishedPosts: 1 }] }]);
 });

@@ -24,7 +24,7 @@ import { PostService } from "./services/PostService.js";
 import { RateLimitService } from "./services/RateLimitService.js";
 import { AnalyticsService } from "./services/AnalyticsService.js";
 import { AccountViewsService } from "./services/AccountViewsService.js";
-import { PlatformUsageService } from "./services/PlatformUsageService.js";
+import { PlatformUsageService, clerkUserDirectory } from "./services/PlatformUsageService.js";
 import { ApiKeyService } from "./services/ApiKeyService.js";
 import { WebhookService } from "./services/WebhookService.js";
 import { PublishingWorker } from "./services/PublishingWorker.js";
@@ -82,7 +82,7 @@ export function connectionErrorMessage(platform, error) {
 
 /** Composition root. Services, repository, adapters and authentication are replaceable. */
 export class BridgeApplication {
-  constructor({ env = process.env, store, durability, registry, storage, authMiddleware, mcpOAuthKeyResolver, stripe, deleteIdentity, deleteAnalytics, welcomeEmail, webhookSend, downloadMedia = downloadRemoteMedia, videoDownloader, clock = () => Date.now() } = {}) {
+  constructor({ env = process.env, store, durability, registry, storage, authMiddleware, mcpOAuthKeyResolver, stripe, deleteIdentity, deleteAnalytics, listUsers, welcomeEmail, webhookSend, downloadMedia = downloadRemoteMedia, videoDownloader, clock = () => Date.now() } = {}) {
     this.env = env; this.clock = clock; this.downloadMedia = downloadMedia;
     this.localPreview = env.BRIDGE_LOCAL_PREVIEW === "1" && env.NODE_ENV !== "production";
     this.dataDir = path.resolve(env.BRIDGE_DATA_DIR || path.join(backendDir, ".bridge"));
@@ -117,7 +117,8 @@ export class BridgeApplication {
     this.posts = new PostService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, media: this.media, schedules: this.schedules, rates: this.rates, clock, localPreview: this.localPreview });
     this.analytics = new AnalyticsService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, posts: this.posts, clock });
     this.accountViews = new AccountViewsService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, clock });
-    this.platformUsage = new PlatformUsageService({ store: this.store, registry: this.registry, adminUids: env.BRIDGE_ADMIN_UIDS, clock });
+    this.platformUsage = new PlatformUsageService({ store: this.store, registry: this.registry, adminUids: env.BRIDGE_ADMIN_UIDS, clock,
+      listUsers: listUsers || (this.localPreview ? async () => [] : clerkUserDirectory(clerkClient)) });
     this.billing = new BillingService({ store: this.store, env, appUrl: this.appUrl, stripe, locks: this.locks, clock });
     this.welcomeEmail = welcomeEmail || new WelcomeEmailService({ env, appUrl: this.appUrl });
     this.privacy = new PrivacyService({ ...deps, registry: this.registry, storage: this.storage, projects: this.projects, billing: this.billing, clock,
@@ -300,7 +301,7 @@ export class BridgeApplication {
     app.get("/api/bridge/api-keys", route((req, res) => res.json({ apiKeys: this.apiKeys.list(req.uid) })));
     app.post("/api/bridge/api-keys", route((req, res) => res.status(201).json(this.apiKeys.create(req.uid, req.body))));
     app.delete("/api/bridge/api-keys/:id", route((req, res) => res.json(this.apiKeys.remove(req.uid, req.params.id))));
-    app.get("/api/bridge/admin/platform-usage", route((req, res) => res.json(this.platformUsage.report(req.uid))));
+    app.get("/api/bridge/admin/platform-usage", route(async (req, res) => res.json(await this.platformUsage.report(req.uid))));
     app.get("/api/bridge/agent-setup", route((req, res) => res.json({ mcpUrl: new URL("/mcp", this.publicUrl).href, apiUrl: new URL("/api/bridge", this.publicUrl).href, oauthReady: Boolean(this.mcpOAuth) })));
     app.get("/api/bridge/webhooks", route((req, res) => { requireSession(req); res.json(this.webhooks.get(req.uid)); }));
     app.post("/api/bridge/webhooks", route((req, res) => { requireSession(req); res.json(this.webhooks.save(req.uid, req.body)); }));
