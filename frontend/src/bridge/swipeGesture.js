@@ -51,3 +51,35 @@ export function createSwipeDetector({ minDistance = 0.22, windowMs = 500, cooldo
     minDistance,
   };
 }
+
+/** A padded bounding box around one hand, mirrored like the camera preview. */
+export function handBox(landmarks, pad = 0.15) {
+  const xs = landmarks.map(point => 1 - point.x), ys = landmarks.map(point => point.y);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const padX = (x1 - x0) * pad, padY = (y1 - y0) * pad;
+  return { x0: Math.max(0, x0 - padX), y0: Math.max(0, y0 - padY), x1: Math.min(1, x1 + padX), y1: Math.min(1, y1 + padY) };
+}
+
+/** Keep following the same hand when two are visible, so switching between
+ * them never looks like a swipe. Otherwise follow the largest (nearest) hand. */
+export function pickTrackedHand(hands, previous, maxJump = 0.25) {
+  if (!hands.length) return -1;
+  if (previous) {
+    let best = -1, bestDistance = Infinity;
+    hands.forEach((hand, index) => {
+      const distance = Math.hypot(hand.palm.x - previous.x, hand.palm.y - previous.y);
+      if (distance < bestDistance) { best = index; bestDistance = distance; }
+    });
+    if (bestDistance <= maxJump) return best;
+  }
+  const area = box => (box.x1 - box.x0) * (box.y1 - box.y0);
+  return hands.reduce((best, hand, index) => area(hand.box) > area(hands[best].box) ? index : best, 0);
+}
+
+/** Green (push) or red (skip) for a hand box: the tracked hand's movement
+ * decides once it is clearly moving, otherwise the side of the frame it is on. */
+export function handTone({ box, tracked, offset, minDistance }) {
+  const moving = tracked && Math.abs(offset) >= minDistance * 0.2;
+  const push = moving ? offset > 0 : (box.x0 + box.x1) / 2 >= 0.5;
+  return { push, strength: tracked ? Math.min(1, Math.abs(offset) / minDistance) : 0 };
+}

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createSwipeDetector, palmCenter } from "../src/bridge/swipeGesture.js";
+import { createSwipeDetector, handBox, handTone, palmCenter, pickTrackedHand } from "../src/bridge/swipeGesture.js";
 
 // Feed a straight hand movement at 30 frames a second and collect gestures.
 function move(detector, { from, to, start = 0, ms = 300, y = 0.5, yTo = y }) {
@@ -46,4 +46,27 @@ test("a hand that leaves the frame re-arms the detector", () => {
   let t = swipe.end;
   for (let i = 0; i < 40; i++) detector.update(t += 33, null);
   assert.deepEqual(move(detector, { from: 0.7, to: 0.3, start: t + 33 }).gestures, ["left"]);
+});
+
+test("hand boxes are mirrored, padded, and kept inside the frame", () => {
+  const landmarks = [{ x: 0.2, y: 0.3 }, { x: 0.4, y: 0.6 }];
+  const box = handBox(landmarks, 0.1);
+  assert.deepEqual(Object.fromEntries(Object.entries(box).map(([key, value]) => [key, Math.round(value * 100) / 100])), { x0: 0.58, y0: 0.27, x1: 0.82, y1: 0.63 });
+  assert.deepEqual(handBox([{ x: 0, y: 0 }, { x: 0.1, y: 0.1 }]), { x0: 0.885, y0: 0, x1: 1, y1: 0.115 });
+});
+
+test("the tracked hand stays the same when a second hand appears", () => {
+  const hand = (x, size = 0.2) => ({ palm: { x, y: 0.5 }, box: { x0: x - size / 2, y0: 0.4, x1: x + size / 2, y1: 0.6 } });
+  assert.equal(pickTrackedHand([], null), -1);
+  assert.equal(pickTrackedHand([hand(0.2), hand(0.7, 0.4)], null), 1);
+  assert.equal(pickTrackedHand([hand(0.7, 0.4), hand(0.25)], { x: 0.22, y: 0.5 }), 1);
+  assert.equal(pickTrackedHand([hand(0.8)], { x: 0.2, y: 0.5 }), 0);
+});
+
+test("boxes are green on the push side or moving right, red otherwise", () => {
+  const left = { x0: 0.1, y0: 0, x1: 0.3, y1: 0.2 }, right = { x0: 0.6, y0: 0, x1: 0.8, y1: 0.2 };
+  assert.equal(handTone({ box: left, tracked: false, offset: 0, minDistance: 0.22 }).push, false);
+  assert.equal(handTone({ box: right, tracked: false, offset: 0, minDistance: 0.22 }).push, true);
+  assert.deepEqual(handTone({ box: left, tracked: true, offset: 0.11, minDistance: 0.22 }), { push: true, strength: 0.5 });
+  assert.equal(handTone({ box: right, tracked: true, offset: -0.2, minDistance: 0.22 }).push, false);
 });
