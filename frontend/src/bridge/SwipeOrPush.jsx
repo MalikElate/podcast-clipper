@@ -17,6 +17,11 @@ const THRESHOLD = 110;
 // A hand swipe could be accidental, so a camera push waits this long and can be cancelled.
 const CAMERA_PUSH_DELAY_MS = 2000;
 const CAMERA_KEY = "meadow:swipe-camera";
+// How far the card leans while following a hand, and how long a decided card
+// takes to fly off the screen (see .swipe-flight in swipe.css).
+const HAND_LEAN = 150;
+const PENDING_LEAN = 120;
+const FLIGHT_MS = 800;
 const readCameraPreference = () => { try { return window.localStorage.getItem(CAMERA_KEY) === "on"; } catch { return false; } };
 const initial = { cards: null, queue: [], sources: [], settings: { accountIds: [], overrides: {} }, nextSlotAt: null, spacingHours: 8 };
 
@@ -35,6 +40,8 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
   const [pending, setPending] = useState(null);
   const [paused, setPaused] = useState(false);
   const [flash, setFlash] = useState(null);
+  const [flights, setFlights] = useState([]);
+  const deckRef = useRef(null);
   const pendingRef = useRef(pending);
   pendingRef.current = pending;
   const cards = (data.cards || []).filter(card => !hidden.includes(card.id));
@@ -64,16 +71,24 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
     return () => clearInterval(timer);
   }, [working, resource.reload]);
 
-  async function decide(decision) {
+  // `fromX` is where the card already leans, so its flight starts from there.
+  async function decide(decision, fromX = 0) {
     // A skip during a camera countdown cancels the push; any other choice replaces it.
     if (pendingRef.current) { setPending(null); if (decision === "skip") return false; }
     if (!card || busy || editing) return false;
     if (decision === "push" && !card.pushable) return false;
     if (decision === "push" && !settingsReady) { setEditing(true); return false; }
     setBusy(true); setError("");
+    // The card flies off at once and comes back if the decision fails.
+    const rect = deckRef.current?.getBoundingClientRect();
+    const flight = { id: `${card.id}:${Date.now()}`, card, decision, fromX, rect: rect ? { left: rect.left, top: rect.top, width: rect.width } : null };
+    setHidden(current => [...current, card.id]);
+    if (flight.rect) {
+      setFlights(current => [...current, flight]);
+      setTimeout(() => setFlights(current => current.filter(item => item !== flight)), FLIGHT_MS);
+    }
     try {
       const result = await api.project(project.id, "/swipe/decisions", { method: "POST", body: { cardId: card.id, decision } });
-      setHidden(current => [...current, card.id]);
       setLast({ card, decision });
       if (decision === "push") {
         notify(soon(result.decision.slotAt) ? "Pushing now. Meadow is downloading the video." : `Queued. It goes out ${dateTime(result.decision.slotAt, project.timeZone)}.`);
@@ -81,6 +96,8 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
       }
       return true;
     } catch (failure) {
+      setHidden(current => current.filter(id => id !== card.id));
+      setFlights(current => current.filter(item => item !== flight));
       if (failure.code === "swipe_settings_required") setEditing(true);
       setError(failure.message);
       return false;
@@ -123,7 +140,7 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
     if (paused) return;
     if (!card || busy || editing) return;
     if (pending) { if (direction === "left") { setPending(null); setFlash({ kind: "cancel", at: Date.now() }); } return; }
-    if (direction === "left") { setFlash({ kind: "skip", at: Date.now() }); decide("skip"); return; }
+    if (direction === "left") { setFlash({ kind: "skip", at: Date.now() }); decide("skip", -HAND_LEAN); return; }
     if (!card.pushable) { setError(`Meadow can't download ${platformName(catalog, card.platform)} videos yet. Swipe left to skip it.`); return; }
     if (!settingsReady) { setError("Choose destinations before pushing with your hand."); return; }
     setError("");
@@ -142,7 +159,7 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
       if (pendingRef.current?.cardId !== pending.cardId || topCardRef.current !== pending.cardId) return;
       pendingRef.current = null;
       setPending(null);
-      await decideRef.current("push");
+      await decideRef.current("push", PENDING_LEAN);
     }, CAMERA_PUSH_DELAY_MS);
     return () => clearTimeout(timer);
   }, [pending]);
@@ -160,7 +177,7 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const handNudge = cameraOn && camera.status === "ready" && camera.handVisible && !pending && !paused ? Math.max(-1, Math.min(1, camera.offset / camera.minDistance)) * 80 : 0;
+  const handNudge = cameraOn && camera.status === "ready" && camera.handVisible && !pending && !paused ? Math.max(-1, Math.min(1, camera.offset / camera.minDistance)) * HAND_LEAN : 0;
 
   const loading = data.cards === null;
   return <div className="swipe-page">
@@ -181,12 +198,13 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
     <div className={`swipe-layout ${cameraOn ? "camera-mode" : ""}`}>
       {cameraOn && <CameraStage camera={camera} onStop={toggleCamera} paused={paused} onPause={() => { setPaused(true); setPending(null); }} onResume={() => setPaused(false)} flash={flash}/>}
       <section className="swipe-stage" aria-label="Videos to review">
+        {flights.map(flight => <FlyingCard key={flight.id} flight={flight} catalog={catalog} timeZone={project.timeZone}/>)}
         {loading && resource.error ? <div className="bridge-panel bridge-empty"><p>Your videos could not be loaded.</p><button type="button" className="bridge-button secondary" onClick={resource.reload} disabled={resource.loading}>Try again</button></div>
           : loading ? <div className="bridge-panel bridge-empty"><p>Loading your videos…</p></div>
           : !hasSource && accountsReady ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><Icon name="video" size={28}/></div><h2>Connect a video account</h2><p>Swipe or Push uses recent videos from TikTok, YouTube, Instagram, Facebook and Threads.</p><button type="button" className="bridge-button" onClick={onAccounts}>Connect an account</button></div>
           : !card ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><Icon name="check" size={28}/></div><h2>You're all caught up</h2><p>New videos from your connected accounts show up here.</p><button type="button" className="bridge-button secondary" onClick={resource.reload} disabled={resource.loading}>Check again</button></div>
           : <>
-            <div className="swipe-deck">
+            <div className="swipe-deck" ref={deckRef}>
               {cards[1] && <div className="swipe-card swipe-card-behind" aria-hidden="true"/>}
               <SwipeCard key={card.id} card={card} catalog={catalog} timeZone={project.timeZone} disabled={busy || editing || Boolean(pending)} onDecide={decide} nudge={handNudge}
                 pending={pending?.cardId === card.id ? <div className="swipe-pending" role="status"><strong>Pushing in 2 seconds</strong><span>Swipe left or press Esc to cancel.</span><i/><button type="button" className="bridge-button secondary small" onClick={() => setPending(null)}>Cancel</button></div> : null}/>
@@ -259,26 +277,46 @@ function SwipeCard({ card, catalog, timeZone, disabled, onDecide, nudge = 0, pen
     start.current = null;
     const decision = dx > THRESHOLD && card.pushable ? "push" : dx < -THRESHOLD ? "skip" : null;
     if (!decision) { setDrag({ x: 0, active: false }); return; }
-    setDrag({ x: decision === "push" ? 700 : -700, active: false });
-    if (!await onDecide(decision)) setDrag({ x: 0, active: false });
+    setDrag({ x: 0, active: false });
+    await onDecide(decision, dx);
   }
 
-  const x = drag.active || drag.x ? drag.x : pending ? 60 : nudge;
+  const x = drag.active || drag.x ? drag.x : pending ? PENDING_LEAN : nudge;
   const strength = Math.min(1, Math.abs(x) / THRESHOLD);
   return <article className={`swipe-card ${drag.active ? "is-dragging" : ""} ${nudge && !drag.active ? "is-following" : ""}`} style={{ transform: `translateX(${x}px) rotate(${x / 22}deg)` }}
     onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd}>
     <span className="swipe-stamp push" style={{ opacity: pending ? 1 : x > 0 ? strength : 0 }}>Push</span>
     <span className="swipe-stamp skip" style={{ opacity: x < 0 ? strength : 0 }}>Skip</span>
     {pending}
+    <CardBody card={card} name={name} timeZone={timeZone}/>
+  </article>;
+}
+
+function CardBody({ card, name, timeZone, still = false }) {
+  return <>
     <header className="swipe-card-head">
       <PlatformIcon platform={card.platform} size={22}/>
       <div><strong>{card.accountName}</strong><span>{name}{card.publishedAt ? ` · ${dateTime(card.publishedAt, timeZone)}` : ""}</span></div>
-      {card.url && <a href={card.url} target="_blank" rel="noreferrer" aria-label={`Open on ${name}`}><Icon name="external" size={17}/></a>}
+      {card.url && <a href={card.url} target="_blank" rel="noreferrer" aria-label={`Open on ${name}`} tabIndex={still ? -1 : undefined}><Icon name="external" size={17}/></a>}
     </header>
-    <div className={`swipe-media-frame ${card.platform}`}><CardMedia card={card} name={name}/></div>
+    <div className={`swipe-media-frame ${card.platform}`}><CardMedia card={card} name={name} still={still}/></div>
     <CardMetrics metrics={card.metrics}/>
     {(card.title || card.caption) && <p className="swipe-caption">{card.title && card.title !== card.caption ? <strong>{card.title} </strong> : null}{card.caption}</p>}
-  </article>;
+  </>;
+}
+
+/** A decided card flying off the screen: up and away to the right, then
+ * dropping, for a push; the same to the left for a skip. It sits in a fixed
+ * layer over the deck, so it can leave the page without scrollbars. */
+function FlyingCard({ flight, catalog, timeZone }) {
+  const { card, decision, fromX, rect } = flight;
+  const style = { left: rect.left, top: rect.top, width: rect.width, "--from-x": `${fromX}px`, "--from-rot": `${fromX / 22}deg`, "--dir": decision === "push" ? 1 : -1 };
+  return <div className="swipe-flight" style={style} aria-hidden="true">
+    <article className="swipe-card">
+      <span className={`swipe-stamp ${decision}`}>{decision === "push" ? "Push" : "Skip"}</span>
+      <CardBody card={card} name={platformName(catalog, card.platform)} timeZone={timeZone} still/>
+    </article>
+  </div>;
 }
 
 const METRIC_LABELS = [["views", "views"], ["likes", "likes"], ["comments", "comments"], ["shares", "shares"], ["saves", "saves"]];
@@ -292,7 +330,9 @@ function CardMetrics({ metrics = {} }) {
   </dl>;
 }
 
-function CardMedia({ card, name }) {
+function CardMedia({ card, name, still = false }) {
+  // A flying card shows a still frame rather than reloading the player.
+  if (still) return card.thumbnailUrl ? <img className="swipe-media" src={card.thumbnailUrl} alt="" referrerPolicy="no-referrer"/> : <div className="swipe-media swipe-media-empty"><Icon name="video" size={34}/></div>;
   if (card.previewUrl) return <video className="swipe-media" src={card.previewUrl} poster={card.thumbnailUrl || undefined} controls playsInline loop muted preload="metadata" referrerPolicy="no-referrer"/>;
   if (card.embedUrl) return <iframe className="swipe-media" src={card.embedUrl} title={`${name} video`} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen loading="lazy" referrerPolicy="strict-origin-when-cross-origin"/>;
   if (card.thumbnailUrl) return <img className="swipe-media" src={card.thumbnailUrl} alt="" referrerPolicy="no-referrer"/>;

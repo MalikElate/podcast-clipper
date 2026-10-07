@@ -47,6 +47,26 @@
 .swipe-side { display: grid; gap: 16px; }
 .swipe-card.is-following { transition: transform .12s linear; }
 
+/* A decided card is thrown off the screen from where it leaned: it kicks up,
+   swings out to the side (--dir is 1 for a push, -1 for a skip), and falls
+   off the bottom. The side swing eases out and the fall eases in, so it arcs.
+   The next card grows in behind it. */
+.swipe-flight { position: fixed; z-index: 60; pointer-events: none; transform: translateX(var(--from-x)) rotate(var(--from-rot)); animation: swipe-fly-side .8s cubic-bezier(.2, .65, .35, 1) forwards, swipe-fly-drop .8s forwards; }
+.swipe-flight .swipe-card { cursor: default; box-shadow: 0 30px 60px -24px rgba(23, 32, 51, .6); }
+.swipe-flight .swipe-stamp { font-size: 30px; opacity: 1; }
+@keyframes swipe-fly-side {
+  from { transform: translateX(var(--from-x)) rotate(var(--from-rot)); }
+  to { transform: translateX(calc(var(--dir) * 55vw)) rotate(calc(var(--dir) * 60deg)); }
+}
+@keyframes swipe-fly-drop {
+  0% { translate: 0 0; animation-timing-function: cubic-bezier(.3, .7, .5, 1); }
+  18% { translate: 0 -46px; animation-timing-function: cubic-bezier(.6, 0, 1, .55); }
+  85% { opacity: 1; }
+  100% { translate: 0 115vh; opacity: 0; }
+}
+.swipe-deck > .swipe-card:not(.swipe-card-behind) { animation: swipe-card-in .35s cubic-bezier(.2, .8, .3, 1.15); }
+@keyframes swipe-card-in { from { opacity: .3; scale: .9; translate: 0 18px; } to { opacity: 1; scale: 1; translate: 0 0; } }
+
 /* Camera mode: a big mirrored camera stage beside the card, with red and
    green boxes drawn over the hands on a canvas. */
 .swipe-layout.camera-mode { grid-template-columns: minmax(0, 1fr) 330px; }
@@ -118,8 +138,11 @@
   .swipe-camera-band svg { width: 26px; height: 26px; }
   .swipe-camera-status { max-width: calc(100% - 160px); font-size: 12px; }
 }
+@keyframes swipe-fade { to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .swipe-card, .swipe-action, .swipe-camera-band { transition: none; }
   .swipe-camera-flash { animation: none; }
+  .swipe-flight { animation: swipe-fade .2s forwards; }
+  .swipe-deck > .swipe-card:not(.swipe-card-behind) { animation: none; }
   .swipe-pending i { animation: none; }
 }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createFistToggle, createSwipeDetector, handBox, handTone, isFist, palmCenter, pickTrackedHand } from "../src/bridge/swipeGesture.js";
+import { createFistToggle, createHandSwipeTracker, createSwipeDetector, handBox, handKeys, handTone, isFist, palmCenter } from "../src/bridge/swipeGesture.js";
 
 // Feed a straight hand movement at 30 frames a second and collect gestures.
 function move(detector, { from, to, start = 0, ms = 300, y = 0.5, yTo = y }) {
@@ -25,7 +25,7 @@ test("a quick horizontal sweep is a swipe in that direction", () => {
 
 test("small, slow or vertical movements are ignored", () => {
   assert.deepEqual(move(createSwipeDetector(), { from: 0.45, to: 0.55 }).gestures, []);
-  assert.deepEqual(move(createSwipeDetector(), { from: 0.3, to: 0.7, ms: 2000 }).gestures, []);
+  assert.deepEqual(move(createSwipeDetector(), { from: 0.3, to: 0.42, ms: 3000 }).gestures, []);
   assert.deepEqual(move(createSwipeDetector(), { from: 0.4, to: 0.65, y: 0.2, yTo: 0.8 }).gestures, []);
 });
 
@@ -38,6 +38,36 @@ test("the hand swinging back after a swipe is not read as the opposite swipe", (
   let t = back.end;
   for (let i = 0; i < 40; i++) detector.update(t += 33, { x: 0.35, y: 0.5 });
   assert.deepEqual(move(detector, { from: 0.35, to: 0.75, start: t + 33 }).gestures, ["right"]);
+});
+
+// Malik's wave from the clip: the hand rests by the face, drifts to the
+// shoulder over about a second (push), and swings back.
+function rest(detector, x, start, ms = 300) {
+  let t = start;
+  for (let i = 0; i < ms / 33; i++) detector.update(t += 33, { x, y: 0.5 });
+  return t;
+}
+
+test("a slow, gentle wave counts, and the swing back to the start does not", () => {
+  const detector = createSwipeDetector(), gestures = [];
+  let t = rest(detector, 0.5, 0);
+  for (const step of [[0.5, 0.68, 1100], [0.68, 0.5, 700], "rest", [0.5, 0.68, 1100], [0.68, 0.5, 700], "rest", [0.5, 0.3, 800]]) {
+    if (step === "rest") { t = rest(detector, 0.5, t); continue; }
+    const [from, to, ms] = step;
+    const stroke = move(detector, { from, to, ms, start: t + 33 });
+    gestures.push(...stroke.gestures);
+    t = stroke.end;
+  }
+  assert.deepEqual(gestures, ["right", "right", "left"]);
+});
+
+test("resting on the far side and then coming back is not a swipe", () => {
+  const detector = createSwipeDetector();
+  const swipe = move(detector, { from: 0.5, to: 0.68, ms: 1100 });
+  const t = rest(detector, 0.68, swipe.end, 3000);
+  const back = move(detector, { from: 0.68, to: 0.5, ms: 700, start: t + 33 });
+  rest(detector, 0.5, back.end);
+  assert.deepEqual([...swipe.gestures, ...back.gestures], ["right"]);
 });
 
 test("a hand that leaves the frame re-arms the detector", () => {
@@ -55,20 +85,12 @@ test("hand boxes are mirrored, padded, and kept inside the frame", () => {
   assert.deepEqual(handBox([{ x: 0, y: 0 }, { x: 0.1, y: 0.1 }]), { x0: 0.885, y0: 0, x1: 1, y1: 0.115 });
 });
 
-test("the tracked hand stays the same when a second hand appears", () => {
-  const hand = (x, size = 0.2) => ({ palm: { x, y: 0.5 }, box: { x0: x - size / 2, y0: 0.4, x1: x + size / 2, y1: 0.6 } });
-  assert.equal(pickTrackedHand([], null), -1);
-  assert.equal(pickTrackedHand([hand(0.2), hand(0.7, 0.4)], null), 1);
-  assert.equal(pickTrackedHand([hand(0.7, 0.4), hand(0.25)], { x: 0.22, y: 0.5 }), 1);
-  assert.equal(pickTrackedHand([hand(0.8)], { x: 0.2, y: 0.5 }), 0);
-});
-
 test("boxes are green on the push side or moving right, red otherwise", () => {
   const left = { x0: 0.1, y0: 0, x1: 0.3, y1: 0.2 }, right = { x0: 0.6, y0: 0, x1: 0.8, y1: 0.2 };
-  assert.equal(handTone({ box: left, tracked: false, offset: 0, minDistance: 0.22 }).push, false);
-  assert.equal(handTone({ box: right, tracked: false, offset: 0, minDistance: 0.22 }).push, true);
-  assert.deepEqual(handTone({ box: left, tracked: true, offset: 0.11, minDistance: 0.22 }), { push: true, strength: 0.5 });
-  assert.equal(handTone({ box: right, tracked: true, offset: -0.2, minDistance: 0.22 }).push, false);
+  assert.equal(handTone({ box: left, active: false, offset: 0, minDistance: 0.22 }).push, false);
+  assert.equal(handTone({ box: right, active: false, offset: 0, minDistance: 0.22 }).push, true);
+  assert.deepEqual(handTone({ box: left, active: true, offset: 0.11, minDistance: 0.22 }), { push: true, strength: 0.5 });
+  assert.equal(handTone({ box: right, active: true, offset: -0.2, minDistance: 0.22 }).push, false);
 });
 
 // Twenty-one landmarks with the fingertips either extended past or curled
@@ -99,4 +121,39 @@ test("a held fist toggles once and must open before toggling again", () => {
   assert.equal(run(2233, 3000, true), 0);
   assert.equal(run(3033, 3500, false), 0);
   assert.equal(run(3533, 4200, true), 1);
+});
+
+// Frames at 30 a second of a phone held low and still (left hand) while the
+// right hand moves as given.
+function frames(tracker, { from, to, y = 0.4, ms = 330, start = 0, phone = { x: 0.45, y: 0.82 }, fist = false, phoneFist = false }) {
+  const count = Math.round(ms / 33), gestures = [];
+  for (let i = 0; i <= count; i++) {
+    const x = from + (to - from) * (i / count);
+    const { gesture } = tracker.update(start + i * 33, [
+      { key: "Left", palm: phone, fist: phoneFist },
+      { key: "Right", palm: { x, y }, fist },
+    ]);
+    if (gesture) gestures.push(gesture);
+  }
+  return { gestures, end: start + count * 33 };
+}
+
+test("a raised hand swipes even while the other hand holds a phone still", () => {
+  assert.deepEqual(frames(createHandSwipeTracker(), { from: 0.5, to: 0.68 }).gestures, ["right"]);
+  assert.deepEqual(frames(createHandSwipeTracker(), { from: 0.66, to: 0.48 }).gestures, ["left"]);
+});
+
+test("a hand resting low cannot swipe or pause", () => {
+  assert.deepEqual(frames(createHandSwipeTracker(), { from: 0.3, to: 0.7, y: 0.85 }).gestures, []);
+  // Gripping a phone low can look like a fist; it must not pause.
+  assert.deepEqual(frames(createHandSwipeTracker(), { from: 0.5, to: 0.5, ms: 1500, phoneFist: true }).gestures, []);
+});
+
+test("a raised fist pauses once", () => {
+  assert.deepEqual(frames(createHandSwipeTracker(), { from: 0.5, to: 0.5, ms: 1500, fist: true }).gestures, ["fist"]);
+});
+
+test("hand keys stay distinct when both hands get the same label", () => {
+  assert.deepEqual(handKeys(["Left", "Right"]), ["Left", "Right"]);
+  assert.deepEqual(handKeys(["Left", "Left", undefined]), ["Left", "Left-2", "hand-2"]);
 });

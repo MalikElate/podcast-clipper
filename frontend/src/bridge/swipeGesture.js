@@ -11,43 +11,52 @@ export function palmCenter(landmarks) {
   return { x: 1 - x, y };
 }
 
-export function createSwipeDetector({ minDistance = 0.22, windowMs = 500, cooldownMs = 900, maxVerticalRatio = 0.7, lostMs = 300, stillDistance = 0.05, stillMs = 250 } = {}) {
-  let samples = [], lastSeen = -Infinity, coolUntil = 0, armed = true;
-  const span = (since, now) => {
-    const recent = samples.filter(sample => now - sample.t <= since);
-    if (recent.length < 2) return Infinity;
+/** Left and right swipes from a stream of palm positions. A swipe is the hand
+ * travelling `minDistance` sideways within `windowMs`, so a slow, gentle wave
+ * counts. After a swipe the hand swings back to where it started; that return
+ * is ignored, and the detector re-arms once the hand settles back near the
+ * swipe's start (or leaves the frame). Resting on the far side never re-arms
+ * it, so coming back from there is not read as the opposite swipe. */
+export function createSwipeDetector({ minDistance = 0.12, windowMs = 1200, cooldownMs = 600, maxVerticalRatio = 0.7, lostMs = 300, stillDistance = 0.04, stillMs = 200, returnShare = 0.45 } = {}) {
+  // `stroke` is the last swipe ({ from, far, direction }) until the hand is back.
+  let samples = [], lastSeen = -Infinity, coolUntil = 0, stroke = null;
+  const settled = now => {
+    const recent = samples.filter(sample => now - sample.t <= stillMs);
+    if (recent.length < 2 || now - recent[0].t < stillMs * 0.8) return false;
     const xs = recent.map(sample => sample.x);
-    return Math.max(...xs) - Math.min(...xs);
+    return Math.max(...xs) - Math.min(...xs) <= stillDistance;
   };
   return {
     /** Feed one frame. `point` is null when no hand is visible. */
     update(now, point) {
       if (!point) {
-        if (now - lastSeen > lostMs) { samples = []; if (now >= coolUntil) armed = true; }
+        if (now - lastSeen > lostMs) { samples = []; if (now >= coolUntil) stroke = null; }
         return { gesture: null, offset: 0 };
       }
       lastSeen = now;
       samples.push({ t: now, x: point.x, y: point.y });
       samples = samples.filter(sample => now - sample.t <= windowMs);
-      // After a swipe the hand swings back. Wait until it rests or leaves the
-      // frame so the return stroke is not read as the opposite swipe.
-      if (!armed) {
-        if (now >= coolUntil && span(stillMs, now) <= stillDistance) armed = true;
+      if (stroke) {
+        stroke.far = stroke.direction > 0 ? Math.max(stroke.far, point.x) : Math.min(stroke.far, point.x);
+        const back = Math.abs(point.x - stroke.from) <= Math.max(stillDistance, Math.abs(stroke.far - stroke.from) * returnShare);
+        if (now >= coolUntil && back && settled(now)) { stroke = null; samples = [samples.at(-1)]; }
         return { gesture: null, offset: 0 };
       }
       const latest = samples.at(-1);
-      let best = { dx: 0, dy: 0 };
+      let best = { dx: 0, dy: 0, from: latest.x };
       for (const sample of samples) {
         const dx = latest.x - sample.x, dy = latest.y - sample.y;
-        if (Math.abs(dx) > Math.abs(best.dx)) best = { dx, dy };
+        if (Math.abs(dx) > Math.abs(best.dx)) best = { dx, dy, from: sample.x };
       }
       if (Math.abs(best.dx) >= minDistance && Math.abs(best.dy) <= Math.abs(best.dx) * maxVerticalRatio) {
-        samples = []; armed = false; coolUntil = now + cooldownMs;
-        return { gesture: best.dx > 0 ? "right" : "left", offset: best.dx };
+        const direction = Math.sign(best.dx);
+        stroke = { from: best.from, far: latest.x, direction };
+        samples = [latest]; coolUntil = now + cooldownMs;
+        return { gesture: direction > 0 ? "right" : "left", offset: best.dx };
       }
       return { gesture: null, offset: best.dx };
     },
-    reset() { samples = []; armed = true; coolUntil = 0; lastSeen = -Infinity; },
+    reset() { samples = []; stroke = null; coolUntil = 0; lastSeen = -Infinity; },
     minDistance,
   };
 }
@@ -60,28 +69,12 @@ export function handBox(landmarks, pad = 0.15) {
   return { x0: Math.max(0, x0 - padX), y0: Math.max(0, y0 - padY), x1: Math.min(1, x1 + padX), y1: Math.min(1, y1 + padY) };
 }
 
-/** Keep following the same hand when two are visible, so switching between
- * them never looks like a swipe. Otherwise follow the largest (nearest) hand. */
-export function pickTrackedHand(hands, previous, maxJump = 0.25) {
-  if (!hands.length) return -1;
-  if (previous) {
-    let best = -1, bestDistance = Infinity;
-    hands.forEach((hand, index) => {
-      const distance = Math.hypot(hand.palm.x - previous.x, hand.palm.y - previous.y);
-      if (distance < bestDistance) { best = index; bestDistance = distance; }
-    });
-    if (bestDistance <= maxJump) return best;
-  }
-  const area = box => (box.x1 - box.x0) * (box.y1 - box.y0);
-  return hands.reduce((best, hand, index) => area(hand.box) > area(hands[best].box) ? index : best, 0);
-}
-
-/** Green (push) or red (skip) for a hand box: the tracked hand's movement
+/** Green (push) or red (skip) for a hand box: an active hand's movement
  * decides once it is clearly moving, otherwise the side of the frame it is on. */
-export function handTone({ box, tracked, offset, minDistance }) {
-  const moving = tracked && Math.abs(offset) >= minDistance * 0.2;
+export function handTone({ box, active, offset, minDistance }) {
+  const moving = active && Math.abs(offset) >= minDistance * 0.2;
   const push = moving ? offset > 0 : (box.x0 + box.x1) / 2 >= 0.5;
-  return { push, strength: tracked ? Math.min(1, Math.abs(offset) / minDistance) : 0 };
+  return { push, strength: active ? Math.min(1, Math.abs(offset) / minDistance) : 0 };
 }
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -113,4 +106,60 @@ export function createFistToggle({ holdMs = 450, releaseMs = 300 } = {}) {
     },
     reset() { fistSince = null; openSince = null; armed = true; },
   };
+}
+
+/** Swipe and fist tracking across every hand in view. Each hand (keyed by its
+ * handedness) has its own detector, so a still hand, such as one holding a
+ * phone, never masks the hand that is waving. Only a raised hand, with its
+ * palm above `activeBelow` of the frame height, can swipe or pause; a hand
+ * resting low (or gripping a phone) is ignored. */
+export function createHandSwipeTracker({ activeBelow = 0.7, ...detectorOptions } = {}) {
+  const detectors = new Map();
+  const fistToggle = createFistToggle();
+  const detectorFor = key => {
+    if (!detectors.has(key)) detectors.set(key, createSwipeDetector(detectorOptions));
+    return detectors.get(key);
+  };
+  return {
+    minDistance: createSwipeDetector(detectorOptions).minDistance,
+    /** `hands` is [{ key, palm, fist }]. Returns the frame's gesture
+     * ("left", "right", "fist" or null), the strongest offset, and each hand
+     * marked active with its own offset. */
+    update(now, hands) {
+      const seen = new Set();
+      let gesture = null, offset = 0, raisedFist = false;
+      const annotated = hands.map(hand => {
+        seen.add(hand.key);
+        const active = hand.palm.y <= activeBelow;
+        const detector = detectorFor(hand.key);
+        let handOffset = 0;
+        if (!active || hand.fist) {
+          detector.reset();
+          raisedFist ||= active && hand.fist;
+        } else {
+          const result = detector.update(now, hand.palm);
+          handOffset = result.offset;
+          gesture ||= result.gesture;
+        }
+        if (Math.abs(handOffset) > Math.abs(offset)) offset = handOffset;
+        return { ...hand, active, offset: handOffset };
+      });
+      for (const [key, detector] of detectors) if (!seen.has(key)) detector.update(now, null);
+      if (fistToggle.update(now, raisedFist)) gesture = "fist";
+      return { gesture, offset, hands: annotated };
+    },
+    reset() { detectors.clear(); fistToggle.reset(); },
+  };
+}
+
+/** Stable keys for this frame's hands: MediaPipe's handedness label, with a
+ * suffix if both hands get the same label. */
+export function handKeys(handedness) {
+  const used = new Map();
+  return handedness.map((label, index) => {
+    const base = label || `hand-${index}`;
+    const count = (used.get(base) || 0) + 1;
+    used.set(base, count);
+    return count === 1 ? base : `${base}-${count}`;
+  });
 }
