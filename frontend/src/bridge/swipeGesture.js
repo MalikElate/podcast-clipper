@@ -77,34 +77,40 @@ export function handTone({ box, active, offset, minDistance }) {
   return { push, strength: active ? Math.min(1, Math.abs(offset) / minDistance) : 0 };
 }
 
-const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, (a.z || 0) - (b.z || 0));
 
-/** A closed fist: each of the four fingertips is nearer the wrist than its
- * middle knuckle. The thumb is ignored because it tucks in many ways. */
+/** A tightly closed fist: every fingertip is folded back nearer the wrist than
+ * the knuckle it grows from. A relaxed or half-curled hand, as in a wave,
+ * keeps its fingertips beyond the knuckles. Best with MediaPipe's world
+ * landmarks (3D, in metres), so the hand's angle to the camera does not
+ * matter. The thumb is ignored because it tucks in many ways. */
 export function isFist(landmarks) {
   const wrist = landmarks?.[0];
   if (!wrist) return false;
-  return [[8, 6], [12, 10], [16, 14], [20, 18]].every(([tip, knuckle]) => landmarks[tip] && landmarks[knuckle] && distance(landmarks[tip], wrist) < distance(landmarks[knuckle], wrist));
+  return [[8, 5], [12, 9], [16, 13], [20, 17]].every(([tip, knuckle]) => landmarks[tip] && landmarks[knuckle] && distance(landmarks[tip], wrist) < distance(landmarks[knuckle], wrist));
 }
 
-/** Reports one toggle per held fist: the fist must last `holdMs`, and the hand
- * must open (or leave the frame) for `releaseMs` before the next toggle. */
-export function createFistToggle({ holdMs = 450, releaseMs = 300 } = {}) {
-  let fistSince = null, openSince = null, armed = true;
+/** Reports one toggle per held fist: the fist must stay still (within
+ * `maxMove` of where it closed) for `holdMs`, and the hand must open (or leave
+ * the frame) for `releaseMs` before the next toggle. */
+export function createFistToggle({ holdMs = 900, releaseMs = 300, maxMove = 0.05 } = {}) {
+  let fistSince = null, openSince = null, armed = true, anchor = null;
   return {
-    update(now, fist) {
+    update(now, fist, point = null) {
       if (fist) {
         openSince = null;
-        fistSince ??= now;
+        // A fist that moves is part of a wave, not a pause.
+        if (point && anchor && Math.hypot(point.x - anchor.x, point.y - anchor.y) > maxMove) fistSince = null;
+        if (fistSince === null) { fistSince = now; anchor = point; }
         if (armed && now - fistSince >= holdMs) { armed = false; return true; }
         return false;
       }
-      fistSince = null;
+      fistSince = null; anchor = null;
       openSince ??= now;
       if (!armed && now - openSince >= releaseMs) armed = true;
       return false;
     },
-    reset() { fistSince = null; openSince = null; armed = true; },
+    reset() { fistSince = null; openSince = null; armed = true; anchor = null; },
   };
 }
 
@@ -127,16 +133,16 @@ export function createHandSwipeTracker({ activeBelow = 0.7, ...detectorOptions }
      * marked active with its own offset. */
     update(now, hands) {
       const seen = new Set();
-      let gesture = null, offset = 0, raisedFist = false;
+      let gesture = null, offset = 0, fistPalm = null;
       const annotated = hands.map(hand => {
         seen.add(hand.key);
         const active = hand.palm.y <= activeBelow;
         const detector = detectorFor(hand.key);
         let handOffset = 0;
-        if (!active || hand.fist) {
-          detector.reset();
-          raisedFist ||= active && hand.fist;
-        } else {
+        if (!active) detector.reset();
+        else {
+          // A fist still swipes if it sweeps sideways; only a still one pauses.
+          if (hand.fist) fistPalm ||= hand.palm;
           const result = detector.update(now, hand.palm);
           handOffset = result.offset;
           gesture ||= result.gesture;
@@ -145,7 +151,7 @@ export function createHandSwipeTracker({ activeBelow = 0.7, ...detectorOptions }
         return { ...hand, active, offset: handOffset };
       });
       for (const [key, detector] of detectors) if (!seen.has(key)) detector.update(now, null);
-      if (fistToggle.update(now, raisedFist)) gesture = "fist";
+      if (fistToggle.update(now, Boolean(fistPalm), fistPalm)) gesture = "fist";
       return { gesture, offset, hands: annotated };
     },
     reset() { detectors.clear(); fistToggle.reset(); },
@@ -162,4 +168,24 @@ export function handKeys(handedness) {
     used.set(base, count);
     return count === 1 ? base : `${base}-${count}`;
   });
+}
+
+/** Where things are moving between two small grayscale frames (one byte a
+ * pixel): the centre of the changed pixels, mirrored like the preview, or null
+ * when too little moved (still) or too much (the camera moved or the light
+ * changed). Rows below `maxY` are ignored, like a lowered hand. This needs no
+ * model, so swipes work while the hand tracker is still downloading. */
+export function motionPoint(previous, current, width, height, { threshold = 24, maxY = 0.72, minShare = 0.006, maxShare = 0.3 } = {}) {
+  const rows = Math.floor(height * maxY);
+  let count = 0, weight = 0, sumX = 0, sumY = 0;
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < width; x++) {
+      const change = Math.abs(current[y * width + x] - previous[y * width + x]);
+      if (change <= threshold) continue;
+      count++; weight += change; sumX += x * change; sumY += y * change;
+    }
+  }
+  const share = count / (rows * width);
+  if (share < minShare || share > maxShare) return null;
+  return { x: 1 - sumX / weight / (width - 1), y: sumY / weight / (height - 1), share };
 }
