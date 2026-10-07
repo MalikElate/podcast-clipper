@@ -22,6 +22,7 @@ import { captureProductEvent } from "./productAnalytics.js";
 import { cleanSignupCallbackReferrer, queueGoogleSignup } from "./googleAnalytics.js";
 import { getPlatformUseCaseBySlug } from "./platformUseCases.js";
 import { findFreeToolPage } from "./tools/freeToolsCatalog.js";
+import { authContinuation } from "./authRedirects.js";
 const loadBridgeApp = () => import("./bridge/BridgeApp.jsx");
 const BridgeApp = lazy(loadBridgeApp);
 const FreeToolsPage = lazy(() => import("./tools/FreeToolsPage.jsx"));
@@ -76,21 +77,23 @@ function DomainRedirect({ href }) {
 
 function SignupSurface() {
   const { user, loading } = useAuth();
+  const continuation = authContinuation();
   useEffect(() => {
     if (user || loading || localPreview) return;
     try { sessionStorage.setItem("meadow.signup.pending", "1"); } catch { /* Sign-up still works without storage. */ }
   }, [user, loading]);
 
   if (loading && !localPreview) return <OpeningMeadow />;
-  if (user || localPreview) return <DomainRedirect href="/dashboard" />;
-  return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth mode="sign-up" redirectUrl="/sign-up/complete" /></div></div>;
+  if (user || localPreview) return <DomainRedirect href={continuation || "/dashboard"} />;
+  return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth mode="sign-up" redirectUrl={continuation || undefined} /></div></div>;
 }
 
 function SigninSurface() {
   const { user, loading } = useAuth();
+  const continuation = authContinuation();
   if (loading && !localPreview) return <OpeningMeadow />;
-  if (user || localPreview) return <DomainRedirect href="/dashboard" />;
-  return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth /></div></div>;
+  if (user || localPreview) return <DomainRedirect href={continuation || "/dashboard"} />;
+  return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth redirectUrl={continuation || undefined} /></div></div>;
 }
 
 function OAuthConsentSurface() {

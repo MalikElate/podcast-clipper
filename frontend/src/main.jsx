@@ -15,8 +15,9 @@ import "./developerTheme.css";
 import { initProductAnalytics } from "./productAnalytics.js";
 import { initGoogleAnalytics, migrateLegacyGoogleAnalyticsPreference } from "./googleAnalytics.js";
 import { appHref } from "./siteUrls.js";
+import { configuredClerkPublishableKey, normalizeAuthRedirects } from "./authRedirects.js";
 
-const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || globalThis.__MEADOW_CONFIG__?.clerkPublishableKey;
+const clerkPublishableKey = configuredClerkPublishableKey();
 const localPreview = import.meta.env.VITE_BRIDGE_LOCAL_PREVIEW === "true";
 
 if (!clerkPublishableKey && !localPreview) {
@@ -27,6 +28,7 @@ if (!clerkPublishableKey && !localPreview) {
 // alongside the app bundle instead of one after the other.
 const clerkScripts = clerkScriptUrls(clerkPublishableKey);
 const clerkScriptProps = clerkScripts ? { __internal_clerkJSUrl: clerkScripts.clerkJS, __internal_clerkUIUrl: clerkScripts.clerkUI } : {};
+normalizeAuthRedirects(window.location, clerkPublishableKey, window.history);
 
 function Application() {
   return <AuthProvider><App /></AuthProvider>;
