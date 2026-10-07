@@ -40,19 +40,25 @@
 .swipe-side { display: grid; gap: 16px; }
 .swipe-card.is-following { transition: transform .12s linear; }
 
-/* Hand-swipe camera: a mirrored preview with the tracked palm and both targets. */
-.swipe-camera { padding: 14px; }
-.swipe-camera-view { position: relative; overflow: hidden; aspect-ratio: 4 / 3; border-radius: 10px; background: #0b0f17; }
-.swipe-camera-view video { display: block; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-.swipe-camera-zone { position: absolute; top: 50%; display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 999px; color: #fff; font-size: 13px; font-weight: 700; transform: translateY(-50%); transition: opacity .1s linear; }
-.swipe-camera-zone.skip { left: 8px; background: #c2413a; }
-.swipe-camera-zone.push { right: 8px; background: #2f8a57; }
+/* Camera mode: a big mirrored camera stage beside the card, with red and
+   green boxes drawn over the hands on a canvas. */
+.swipe-layout.camera-mode { grid-template-columns: minmax(0, 1fr) 330px; }
+.swipe-camera-stage { display: grid; gap: 8px; min-width: 0; }
+.swipe-camera-frame { position: relative; height: calc(100vh - 230px); min-height: 420px; overflow: hidden; border-radius: 18px; background: #0b0f17; }
+.swipe-camera-frame video { display: block; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.swipe-camera-frame canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.swipe-camera-zone { position: absolute; top: 50%; display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 999px; color: #fff; font-size: 18px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; transform: translateY(-50%); transition: opacity .1s linear; }
+.swipe-camera-zone.skip { left: 16px; background: #ef4444; }
+.swipe-camera-zone.push { right: 16px; background: #22c55e; }
 .swipe-camera-zone.push svg { transform: rotate(-45deg); }
-.swipe-camera-hand { position: absolute; width: 22px; height: 22px; border: 3px solid #fff; border-radius: 50%; background: rgba(65, 105, 225, .75); box-shadow: 0 0 0 4px rgba(65, 105, 225, .3); transform: translate(-50%, -50%); pointer-events: none; }
-.swipe-camera p { margin: 10px 0 0; }
-.swipe-camera-error { color: #c2413a; }
-.swipe-camera-privacy { color: var(--b-muted); font-size: 12px !important; }
+.swipe-camera-status { position: absolute; left: 16px; bottom: 16px; max-width: calc(100% - 32px); margin: 0; padding: 8px 14px; border-radius: 999px; background: rgba(11, 15, 23, .72); color: #fff; font-size: 14px; }
+.swipe-camera-status.is-error { background: #ef4444; }
+.swipe-camera-privacy { margin: 0; color: var(--b-muted); font-size: 12px !important; }
 .swipe-link { padding: 0; border: 0; background: none; color: var(--b-blue); font: inherit; text-decoration: underline; cursor: pointer; }
+.camera-mode .swipe-deck { width: min(100%, 320px); }
+.camera-mode .swipe-media-frame { max-height: min(44vh, 460px); }
+.swipe-below { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.swipe-below .swipe-side { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
 
 /* A camera push counts down for two seconds before it is sent. */
 .swipe-pending { position: absolute; inset: auto 12px 12px; z-index: 3; display: grid; gap: 4px; padding: 12px 14px 16px; overflow: hidden; border-radius: 12px; background: rgba(23, 32, 51, .92); color: #fff; }
@@ -81,8 +87,9 @@
 .swipe-settings-detail { margin: 10px 0 2px 28px; }
 
 @media (max-width: 1000px) {
-  .swipe-layout { grid-template-columns: 1fr; }
+  .swipe-layout, .swipe-layout.camera-mode { grid-template-columns: 1fr; }
   .swipe-side { order: 2; }
+  .swipe-camera-frame { height: 62vh; min-height: 320px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .swipe-card, .swipe-action, .swipe-camera-zone { transition: none; }
