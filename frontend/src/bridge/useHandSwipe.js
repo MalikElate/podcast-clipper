@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import wasmLoaderPath from "@mediapipe/tasks-vision/vision_wasm_internal.js?url";
 import wasmBinaryPath from "@mediapipe/tasks-vision/vision_wasm_internal.wasm?url";
-import { createSwipeDetector, handBox, handTone, palmCenter, pickTrackedHand } from "./swipeGesture.js";
+import { createFistToggle, createSwipeDetector, handBox, handTone, isFist, palmCenter, pickTrackedHand } from "./swipeGesture.js";
 
 // Hand-swipe control for Swipe or Push. MediaPipe's hand landmarker runs in
 // the browser, so camera frames never leave the device. The WebAssembly
@@ -9,6 +9,8 @@ import { createSwipeDetector, handBox, handTone, palmCenter, pickTrackedHand } f
 const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 const PUSH_COLOR = "#22c55e";
 const SKIP_COLOR = "#ef4444";
+const FIST_COLOR = "#f59e0b";
+const PAUSED_COLOR = "#94a3b8";
 
 let landmarkerPromise = null;
 function loadHandLandmarker() {
@@ -33,7 +35,7 @@ function cameraError(error) {
 /** Draw a red or green box over each hand on the overlay canvas. The video is
  * shown with object-fit: cover, so frame coordinates are mapped through the
  * same crop. */
-function drawHands(canvas, video, hands, tracked, offset, minDistance) {
+function drawHands(canvas, video, hands, tracked, offset, minDistance, paused) {
   const width = canvas.clientWidth, height = canvas.clientHeight, ratio = window.devicePixelRatio || 1;
   if (!width || !height) return;
   if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
@@ -48,8 +50,9 @@ function drawHands(canvas, video, hands, tracked, offset, minDistance) {
   const shownWidth = video.videoWidth * scale, shownHeight = video.videoHeight * scale;
   const left = (width - shownWidth) / 2, top = (height - shownHeight) / 2;
   hands.forEach((hand, index) => {
-    const { push, strength } = handTone({ box: hand.box, tracked: index === tracked, offset, minDistance });
-    const color = push ? PUSH_COLOR : SKIP_COLOR;
+    const tone = handTone({ box: hand.box, tracked: index === tracked, offset, minDistance });
+    const strength = hand.fist || paused ? 0 : tone.strength;
+    const color = hand.fist ? FIST_COLOR : paused ? PAUSED_COLOR : tone.push ? PUSH_COLOR : SKIP_COLOR;
     const x = left + hand.box.x0 * shownWidth, y = top + hand.box.y0 * shownHeight;
     const w = (hand.box.x1 - hand.box.x0) * shownWidth, h = (hand.box.y1 - hand.box.y0) * shownHeight;
     context.fillStyle = `${color}${Math.round((0.12 + strength * 0.2) * 255).toString(16).padStart(2, "0")}`;
@@ -57,7 +60,7 @@ function drawHands(canvas, video, hands, tracked, offset, minDistance) {
     context.lineWidth = 3 + strength * 5;
     context.strokeStyle = color;
     context.strokeRect(x, y, w, h);
-    const label = push ? "PUSH →" : "← SKIP";
+    const label = hand.fist ? (paused ? "✊ RESUME" : "✊ PAUSE") : paused ? "PAUSED" : tone.push ? "PUSH →" : "← SKIP";
     context.font = "700 15px system-ui, -apple-system, sans-serif";
     const labelWidth = context.measureText(label).width + 16;
     const labelY = y >= 26 ? y - 26 : y + h;
@@ -72,23 +75,26 @@ const coarse = value => Math.round(value * 20) / 20;
 
 /** Streams the camera into `videoRef`, draws hand boxes on `overlayRef`, and
  * calls `onGesture("left" | "right")`. */
-export function useHandSwipe({ enabled, onGesture }) {
+export function useHandSwipe({ enabled, paused = false, onGesture }) {
   const videoRef = useRef(null);
   const overlayRef = useRef(null);
   const gestureRef = useRef(onGesture);
   gestureRef.current = onGesture;
-  const [state, setState] = useState({ status: "off", error: "", handVisible: false, offset: 0 });
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+  const [state, setState] = useState({ status: "off", error: "", handVisible: false, offset: 0, fist: false });
   const detectorRef = useRef(createSwipeDetector());
 
   useEffect(() => {
-    if (!enabled) { setState({ status: "off", error: "", handVisible: false, offset: 0 }); return undefined; }
-    if (!navigator.mediaDevices?.getUserMedia) { setState({ status: "error", error: "This browser cannot use the camera.", handVisible: false, offset: 0 }); return undefined; }
+    if (!enabled) { setState({ status: "off", error: "", handVisible: false, offset: 0, fist: false }); return undefined; }
+    if (!navigator.mediaDevices?.getUserMedia) { setState({ status: "error", error: "This browser cannot use the camera.", handVisible: false, offset: 0, fist: false }); return undefined; }
     let cancelled = false, stream = null, frame = 0, lastTime = -1, previous = null;
     const detector = detectorRef.current;
     detector.reset();
+    const fistToggle = createFistToggle();
     (async () => {
       try {
-        setState({ status: "starting", error: "", handVisible: false, offset: 0 });
+        setState({ status: "starting", error: "", handVisible: false, offset: 0, fist: false });
         stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } });
         if (cancelled) return;
         const video = videoRef.current;
@@ -104,20 +110,26 @@ export function useHandSwipe({ enabled, onGesture }) {
           if (source && source.readyState >= 2 && source.currentTime !== lastTime) {
             lastTime = source.currentTime;
             const now = performance.now();
-            const hands = (landmarker.detectForVideo(source, now).landmarks || []).map(landmarks => ({ palm: palmCenter(landmarks), box: handBox(landmarks) })).filter(hand => hand.palm);
+            const hands = (landmarker.detectForVideo(source, now).landmarks || []).map(landmarks => ({ palm: palmCenter(landmarks), box: handBox(landmarks), fist: isFist(landmarks) })).filter(hand => hand.palm);
             const tracked = pickTrackedHand(hands, previous);
             previous = tracked >= 0 ? hands[tracked].palm : null;
-            const { gesture, offset } = detector.update(now, previous);
-            if (overlayRef.current) drawHands(overlayRef.current, source, hands, tracked, offset, detector.minDistance);
-            const next = { handVisible: hands.length > 0, offset: coarse(offset) };
-            setState(current => current.handVisible === next.handVisible && current.offset === next.offset ? current : { ...current, ...next });
-            if (gesture) gestureRef.current(gesture);
+            // A fist pauses or resumes, and never counts as a swipe.
+            const fist = tracked >= 0 && hands[tracked].fist;
+            const toggled = fistToggle.update(now, fist);
+            let gesture = null, offset = 0;
+            if (fist) detector.reset();
+            else ({ gesture, offset } = detector.update(now, previous));
+            if (overlayRef.current) drawHands(overlayRef.current, source, hands, tracked, offset, detector.minDistance, pausedRef.current);
+            const next = { handVisible: hands.length > 0, offset: coarse(offset), fist };
+            setState(current => current.handVisible === next.handVisible && current.offset === next.offset && current.fist === next.fist ? current : { ...current, ...next });
+            if (toggled) gestureRef.current("fist");
+            else if (gesture) gestureRef.current(gesture);
           }
           frame = requestAnimationFrame(loop);
         };
         frame = requestAnimationFrame(loop);
       } catch (error) {
-        if (!cancelled) setState({ status: "error", error: cameraError(error), handVisible: false, offset: 0 });
+        if (!cancelled) setState({ status: "error", error: cameraError(error), handVisible: false, offset: 0, fist: false });
       }
     })();
     return () => {

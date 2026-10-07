@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createSwipeDetector, handBox, handTone, palmCenter, pickTrackedHand } from "../src/bridge/swipeGesture.js";
+import { createFistToggle, createSwipeDetector, handBox, handTone, isFist, palmCenter, pickTrackedHand } from "../src/bridge/swipeGesture.js";
 
 // Feed a straight hand movement at 30 frames a second and collect gestures.
 function move(detector, { from, to, start = 0, ms = 300, y = 0.5, yTo = y }) {
@@ -69,4 +69,34 @@ test("boxes are green on the push side or moving right, red otherwise", () => {
   assert.equal(handTone({ box: right, tracked: false, offset: 0, minDistance: 0.22 }).push, true);
   assert.deepEqual(handTone({ box: left, tracked: true, offset: 0.11, minDistance: 0.22 }), { push: true, strength: 0.5 });
   assert.equal(handTone({ box: right, tracked: true, offset: -0.2, minDistance: 0.22 }).push, false);
+});
+
+// Twenty-one landmarks with the fingertips either extended past or curled
+// inside their middle knuckles (wrist at the bottom of the frame).
+function hand({ curled = [true, true, true, true] } = {}) {
+  const points = Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.5 }));
+  points[0] = { x: 0.5, y: 0.9 };
+  [[8, 6, 0.42], [12, 10, 0.48], [16, 14, 0.54], [20, 18, 0.6]].forEach(([tip, knuckle, x], index) => {
+    points[knuckle] = { x, y: 0.55 };
+    points[tip] = curled[index] ? { x, y: 0.7 } : { x, y: 0.35 };
+  });
+  return points;
+}
+
+test("a fist needs all four fingers curled", () => {
+  assert.equal(isFist(hand()), true);
+  assert.equal(isFist(hand({ curled: [false, false, false, false] })), false);
+  assert.equal(isFist(hand({ curled: [false, true, true, true] })), false);
+  assert.equal(isFist([]), false);
+});
+
+test("a held fist toggles once and must open before toggling again", () => {
+  const toggle = createFistToggle({ holdMs: 400, releaseMs: 300 });
+  const run = (from, to, fist) => { let count = 0; for (let t = from; t <= to; t += 33) if (toggle.update(t, fist)) count++; return count; };
+  assert.equal(run(0, 300, true), 0);
+  assert.equal(run(333, 2000, true), 1);
+  assert.equal(run(2033, 2200, false), 0);
+  assert.equal(run(2233, 3000, true), 0);
+  assert.equal(run(3033, 3500, false), 0);
+  assert.equal(run(3533, 4200, true), 1);
 });
