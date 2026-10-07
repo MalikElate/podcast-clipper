@@ -243,3 +243,19 @@ test("TikTok allows the selected public audience after the private-only restrict
   await provider.publish(ctx);
   assert.equal(calls[0].options.json.post_info.privacy_level, "PUBLIC_TO_EVERYONE");
 });
+
+test("TikTok lists the creator's recent public videos for Swipe or Push", async () => {
+  const { provider, calls } = setup(() => ({ data: { videos: [
+    { id: "7400000000000000001", title: "", video_description: "Behind the scenes #meadow", create_time: 1791300000, cover_image_url: "https://p16-sign.tiktokcdn.com/cover.jpeg", share_url: "https://www.tiktok.com/@creator/video/7400000000000000001", view_count: 1200, like_count: 45, comment_count: 3, share_count: 2 },
+    { id: "not-a-video-id", share_url: "https://www.tiktok.com/@creator/video/1" },
+    { id: "7400000000000000002", share_url: "https://evil.example/@creator/video/7400000000000000002" },
+  ] } }));
+  const videos = await provider.recentVideos({ credentials: { accessToken: "token" } });
+  assert.match(calls[0].url, /^https:\/\/open\.tiktokapis\.com\/v2\/video\/list\/\?fields=.*share_url/);
+  assert.deepEqual(calls[0].options.json, { max_count: 20 });
+  assert.deepEqual(videos, [{
+    id: "7400000000000000001", title: "", caption: "Behind the scenes #meadow", publishedAt: 1791300000000,
+    thumbnailUrl: "https://p16-sign.tiktokcdn.com/cover.jpeg", url: "https://www.tiktok.com/@creator/video/7400000000000000001",
+    metrics: { views: 1200, likes: 45, comments: 3, shares: 2 },
+  }]);
+});

@@ -52,7 +52,7 @@ function setup(t) {
   connect("bluesky", "bluesky");
   const tiktokPost = (id, extra = {}) => ({ id, externalId: id, title: `TikTok caption ${id} #meadow`, publishedAt: now - Number(id.at(-1)) * HOUR, url: `https://www.tiktok.com/@creator/video/${id}`, media: { type: "carousel", thumbnailUrl: null, items: [{ type: "image", url: `https://p16.tiktokcdn.com/${id}.webp`, thumbnail: null }] }, values: { views: 973, likes: 31, comments: null, shares: 2, impressions: 5000 }, ...extra });
   app.analytics.syncAccount = async account => account.platform === "tiktok" ? { posts: [tiktokPost("7000000001"), tiktokPost("7000000002"), tiktokPost("7000000003"), { ...tiktokPost("7000000004"), url: "https://www.tiktok.com/@creator/photo/7000000004" }] } : null;
-  return { app, project, downloads, videoDownloader, now: () => now, advance: ms => { now += ms; } };
+  return { app, project, connect, downloads, videoDownloader, now: () => now, advance: ms => { now += ms; } };
 }
 
 test("the deck lists recent videos from connected accounts, newest first", async t => {
@@ -68,6 +68,20 @@ test("the deck lists recent videos from connected accounts, newest first", async
   assert.deepEqual(deck.sources.map(source => [source.platform, source.videos]).sort(), [["tiktok", 3], ["youtube", 1]]);
   assert.equal(deck.spacingHours, 8);
   await assert.rejects(h.app.swipe.deck("bob", h.project.id));
+});
+
+test("natively connected TikTok accounts feed the deck through TikTok's video list", async t => {
+  const h = setup(t);
+  h.connect("tiktok-native", "tiktok", "native-open-id");
+  h.app.registry.get("tiktok").recentVideos = async ({ account, credentials }) => {
+    assert.equal(account.id, "tiktok-native"); assert.equal(credentials.accessToken, "token-tiktok-native");
+    return [{ id: "7400000000000000009", title: "", caption: "Native upload", publishedAt: h.now() - 0.5 * HOUR, metrics: { views: 10 }, thumbnailUrl: "https://p16-sign.tiktokcdn.com/native.jpeg", url: "https://www.tiktok.com/@creator/video/7400000000000000009" }];
+  };
+  const deck = await h.app.swipe.deck("alice", h.project.id);
+  const native = deck.cards.find(card => card.externalId === "7400000000000000009");
+  assert.equal(native.embedUrl, "https://www.tiktok.com/player/v1/7400000000000000009?music_info=0&description=0&rel=0");
+  assert.equal(native.pushable, true);
+  assert.ok(deck.sources.some(source => source.accountId === "tiktok-native" && source.videos === 1));
 });
 
 test("swiping right needs destinations, then queues pushes eight hours apart", async t => {

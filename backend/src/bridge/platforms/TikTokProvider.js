@@ -149,6 +149,15 @@ export class TikTokProvider extends PlatformProvider {
     }
     return { status: "processing", progress: ctx.progress, pollAfterMs: 30000 };
   }
+  /** The creator's latest public videos (video.list), for Swipe or Push. */
+  async recentVideos({ credentials }) {
+    const result = await this.http.request("https://open.tiktokapis.com/v2/video/list/?fields=id,title,video_description,create_time,cover_image_url,share_url,view_count,like_count,comment_count,share_count", { method: "POST", token: credentials.accessToken, json: { max_count: 20 }, safeToRetry: true, timeoutMs: 15000 });
+    return (result.data?.videos || []).filter(video => /^\d+$/.test(String(video.id || "")) && /^https:\/\/(www\.)?tiktok\.com\//.test(video.share_url || "")).map(video => ({
+      id: String(video.id), title: String(video.title || ""), caption: String(video.video_description || video.title || ""),
+      publishedAt: Number.isFinite(video.create_time) ? video.create_time * 1000 : null, thumbnailUrl: video.cover_image_url || null, url: video.share_url,
+      metrics: { views: video.view_count, likes: video.like_count, comments: video.comment_count, shares: video.share_count },
+    }));
+  }
   async metrics({ credentials, delivery }) {
     if (!/^\d+$/.test(delivery.externalId)) return { values: {}, unavailableReason: "TikTok does not expose a public post ID for this private post." };
     const result = await this.http.request("https://open.tiktokapis.com/v2/video/query/?fields=id,view_count,like_count,comment_count,share_count", { method: "POST", token: credentials.accessToken, json: { filters: { video_ids: [delivery.externalId] } }, safeToRetry: true });
