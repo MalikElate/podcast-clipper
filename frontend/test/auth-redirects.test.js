@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
 import { RedirectUrls } from "@clerk/shared/internal/clerk-js/redirectUrls";
+import { createAllowedRedirectOrigins } from "@clerk/shared/internal/clerk-js/url";
 import { transformWithOxc } from "vite";
 import { authContinuation, clerkAuthRedirectProps, normalizeAuthRedirects } from "../src/authRedirects.js";
 
@@ -94,14 +95,21 @@ test("the installed Clerk redirect resolver keeps continuation through both auth
   const previousWindow = globalThis.window;
   globalThis.window = { location: { origin: appOrigin } };
   try {
-    const options = { allowedRedirectOrigins: [appOrigin, "https://clerk.findmeadow.com"] };
+    // Use Clerk's production defaults, as the application does without a provider allowlist.
+    const options = { allowedRedirectOrigins: createAllowedRedirectOrigins(undefined, "clerk.findmeadow.com", "production") };
+    const signupComplete = location(`/sign-up/complete?redirect_url=${encodeURIComponent(authorize)}`).href;
     for (const mode of ["sign-in", "sign-up"]) {
-      const props = clerkAuthRedirectProps(mode, authorize);
+      const props = clerkAuthRedirectProps(mode, mode === "sign-up" ? signupComplete : authorize);
       const clerkProps = mode === "sign-in" ? { ...props, signInForceRedirectUrl: props.forceRedirectUrl } : { ...props, signUpForceRedirectUrl: props.forceRedirectUrl };
       const resolver = new RedirectUrls(options, clerkProps, normalize(signIn(authorize)).url.searchParams);
-      assert.equal(resolver.getAfterSignInUrl(), authorize);
-      assert.equal(resolver.getAfterSignUpUrl(), authorize);
+      assert.equal(resolver.getAfterSignInUrl(), mode === "sign-up" ? signupComplete : authorize);
+      assert.equal(resolver.getAfterSignUpUrl(), signupComplete);
+      assert.equal(new URL(resolver.getAfterSignUpUrl()).searchParams.get("redirect_url"), authorize);
     }
+    const continueProps = clerkAuthRedirectProps("sign-in", continueUrl);
+    const continueResolver = new RedirectUrls(options, { ...continueProps, signInForceRedirectUrl: continueProps.forceRedirectUrl }, normalize(signIn(continueUrl)).url.searchParams);
+    assert.equal(continueResolver.getAfterSignInUrl(), continueUrl);
+    assert.equal(continueResolver.getAfterSignUpUrl(), location(`/sign-up/complete?redirect_url=${encodeURIComponent(continueUrl)}`).href);
     const normalSignIn = clerkAuthRedirectProps("sign-in");
     assert.equal("forceRedirectUrl" in normalSignIn, false);
     const signInResolver = new RedirectUrls(options, { ...normalSignIn, signInFallbackRedirectUrl: normalSignIn.fallbackRedirectUrl });
@@ -139,6 +147,13 @@ function findAuth(node) {
 }
 
 test("production sign-in and sign-up surfaces resume OAuth for restored and new sessions", async () => {
+  const switchedUrl = signIn(continueUrl);
+  switchedUrl.pathname = "/sign-up";
+  switchedUrl.searchParams.set("sign_up_force_redirect_url", continueUrl);
+  const normalizedSwitch = normalize(switchedUrl).url;
+  assert.equal(normalizedSwitch.searchParams.has("sign_up_force_redirect_url"), false);
+  const switchedForm = await surface("SignupSurface", "SigninSurface", normalizedSwitch, { user: null, loading: false });
+  assert.equal(findAuth(switchedForm).props.redirectUrl, `/sign-up/complete?redirect_url=${encodeURIComponent(continueUrl)}`);
   for (const [name, nextName] of [["SigninSurface", "OAuthConsentSurface"], ["SignupSurface", "SigninSurface"]]) {
     const signedIn = await surface(name, nextName, signIn(continueUrl), { user: { id: "existing" }, loading: false });
     assert.equal(signedIn.type, "DomainRedirect");

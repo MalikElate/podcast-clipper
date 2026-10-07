@@ -66,6 +66,6 @@ export function clerkAuthRedirectProps(mode, redirectUrl) {
   const signup = mode === "sign-up";
   const opposite = signup ? "signIn" : "signUp";
   return redirectUrl
-    ? { forceRedirectUrl: redirectUrl, [`${opposite}ForceRedirectUrl`]: redirectUrl }
+    ? { forceRedirectUrl: redirectUrl, [`${opposite}ForceRedirectUrl`]: signup ? redirectUrl : `/sign-up/complete?redirect_url=${encodeURIComponent(redirectUrl)}` }
     : { fallbackRedirectUrl: signup ? "/sign-up/complete" : "/dashboard", [`${opposite}FallbackRedirectUrl`]: signup ? "/dashboard" : "/sign-up/complete" };
 }
