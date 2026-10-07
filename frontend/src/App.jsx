@@ -16,12 +16,13 @@ import NotFound from "./components/NotFound.jsx";
 import { PAID_PLANS as PLANS } from "./pricing.js";
 import { api, localPreview } from "./bridge/BridgeApi.js";
 import { isDashboardPath } from "./bridge/dashboardRoutes.js";
-import { appHref, isLocalMarketingPreview, marketingHref, safeReturnPath, siteSurface } from "./siteUrls.js";
+import { appHref, isLocalMarketingPreview, marketingHref, siteSurface } from "./siteUrls.js";
 import { captureMetaRegistration } from "./metaPixel.js";
 import { captureProductEvent } from "./productAnalytics.js";
 import { cleanSignupCallbackReferrer, queueGoogleSignup } from "./googleAnalytics.js";
 import { getPlatformUseCaseBySlug } from "./platformUseCases.js";
 import { findFreeToolPage } from "./tools/freeToolsCatalog.js";
+import { authContinuation } from "./authRedirects.js";
 const loadBridgeApp = () => import("./bridge/BridgeApp.jsx");
 const BridgeApp = lazy(loadBridgeApp);
 const FreeToolsPage = lazy(() => import("./tools/FreeToolsPage.jsx"));
@@ -74,9 +75,8 @@ function DomainRedirect({ href }) {
   return <OpeningMeadow />;
 }
 
-// Where to go once signed in: Clerk's redirect_url (for example the OAuth
-// consent page Codex or ChatGPT is waiting on) when it is a Meadow page.
-const returnPath = () => safeReturnPath(new URLSearchParams(window.location.search).get("redirect_url"));
+// Clerk may return to Meadow's consent page or its own OAuth continuation endpoint.
+const returnPath = () => authContinuation();
 
 function SignupSurface() {
   const { user, loading } = useAuth();
@@ -88,16 +88,16 @@ function SignupSurface() {
 
   if (loading && !localPreview) return <OpeningMeadow />;
   if (user || localPreview) return <DomainRedirect href={returnTo || "/dashboard"} />;
-  const completeUrl = returnTo ? `/sign-up/complete?redirect_url=${encodeURIComponent(returnTo)}` : "/sign-up/complete";
+  const completeUrl = returnTo ? `/sign-up/complete?redirect_url=${encodeURIComponent(returnTo)}` : undefined;
   return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth mode="sign-up" redirectUrl={completeUrl} /></div></div>;
 }
 
 function SigninSurface() {
   const { user, loading } = useAuth();
-  const returnTo = returnPath() || "/dashboard";
+  const returnTo = returnPath();
   if (loading && !localPreview) return <OpeningMeadow />;
-  if (user || localPreview) return <DomainRedirect href={returnTo} />;
-  return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth redirectUrl={returnTo} /></div></div>;
+  if (user || localPreview) return <DomainRedirect href={returnTo || "/dashboard"} />;
+  return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth redirectUrl={returnTo || undefined} /></div></div>;
 }
 
 function OAuthConsentSurface() {

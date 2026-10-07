@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { SignIn, SignUp } from "@clerk/react";
+import { clerkAuthRedirectProps } from "../authRedirects.js";
 import {
   buildSignupConsentMetadata,
   preventSignupWithoutConsent,
@@ -77,7 +78,7 @@ function SignupAuth({ redirectUrl }) {
       onSubmitCapture={blockSignupWithoutConsent}
     >
       <div className="signup-auth-form">
-        <SignUp forceRedirectUrl={redirectUrl} unsafeMetadata={consentMetadata} />
+        <SignUp {...clerkAuthRedirectProps("sign-up", redirectUrl)} unsafeMetadata={consentMetadata} />
       </div>
 
       {consentHost && createPortal(
@@ -134,8 +135,8 @@ function SignupAuth({ redirectUrl }) {
 
 // Keep authentication owned by Clerk so its native sign-in and sign-up flow,
 // including headings, provider buttons, and recovery screens, remains intact.
-export default function Auth({ redirectUrl = "/dashboard", mode = "sign-in" }) {
+export default function Auth({ redirectUrl, mode = "sign-in" }) {
   return mode === "sign-up"
     ? <SignupAuth redirectUrl={redirectUrl} />
-    : <SignIn forceRedirectUrl={redirectUrl} />;
+    : <SignIn {...clerkAuthRedirectProps("sign-in", redirectUrl)} />;
 }
