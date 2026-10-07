@@ -3,7 +3,7 @@ import { api } from "./BridgeApi.js";
 import { Icon } from "./Icons.jsx";
 import { Alert, Check, Modal, PlatformIcon, dateTime, number, useProjectResource } from "./ui.jsx";
 import { DestinationSettings } from "./DestinationSettings.jsx";
-import { useHandSwipe } from "./useHandSwipe.js";
+import { prefetchHandTracking, useHandSwipe } from "./useHandSwipe.js";
 import "./swipe.css";
 
 // Swipe or Push: review recent videos from connected accounts. Right pushes a
@@ -125,6 +125,21 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
     setPaused(false);
   }
 
+  // Download hand tracking in the background once the page settles, so the
+  // camera is ready in a moment when it is turned on. Skipped on touch
+  // devices and data-saving connections, and it never turns the camera on.
+  useEffect(() => {
+    const connection = navigator.connection;
+    if (connection?.saveData || /2g$/.test(connection?.effectiveType || "") || !window.matchMedia?.("(pointer: fine)").matches) return undefined;
+    const start = () => { prefetchHandTracking().catch(() => {}); };
+    if (window.requestIdleCallback) {
+      const id = window.requestIdleCallback(start, { timeout: 4000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const timer = setTimeout(start, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   // A big SKIP or PUSH flash on the camera confirms each hand swipe.
   useEffect(() => {
     if (!flash) return undefined;
@@ -191,7 +206,7 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
           {sourceAccounts.map(account => <option key={account.id} value={account.id}>{account.label} · {platformName(catalog, account.platform)}</option>)}
         </select>
       </label>}
-      <button type="button" className={`bridge-button small ${cameraOn ? "" : "secondary"}`} onClick={toggleCamera} aria-pressed={cameraOn}><Icon name="camera" size={16}/>{cameraOn ? "Stop camera" : "Swipe with your hand"}</button>
+      <button type="button" className={`bridge-button small ${cameraOn ? "" : "secondary"}`} onClick={toggleCamera} onPointerEnter={() => prefetchHandTracking().catch(() => {})} onFocus={() => prefetchHandTracking().catch(() => {})} aria-pressed={cameraOn}><Icon name="camera" size={16}/>{cameraOn ? "Stop camera" : "Swipe with your hand"}</button>
       <button type="button" className="bridge-button secondary small" onClick={() => setEditing(true)}><Icon name="settings" size={16}/>{settingsReady ? `Pushing to ${data.settings.accountIds.length} ${data.settings.accountIds.length === 1 ? "account" : "accounts"}` : "Choose destinations"}</button>
       </div>
     </div>
@@ -234,10 +249,10 @@ function CameraStage({ camera, onStop, paused, onPause, onResume, flash }) {
   const strength = Math.min(1, Math.abs(camera.offset) / camera.minDistance);
   const message = camera.status === "error" ? camera.error
     : camera.status === "starting" ? "Starting the camera…"
-    : camera.status === "loading" ? "Loading hand tracking. The first time downloads about 11 MB, so it can take a little while."
+    : camera.status === "loading" ? `Getting hand tracking ready… ${Math.round(camera.progress * 100)}%. The buttons and arrow keys work meanwhile.`
     : paused ? "Paused. Make a fist to resume."
-    : camera.fist ? "Hold the fist to pause."
-    : camera.handVisible ? "Swipe right to push, left to skip. Make a fist to pause." : "Raise a hand so the camera can see it.";
+    : camera.fist ? "Keep the fist still to pause."
+    : camera.handVisible ? "Swipe right to push, left to skip. Hold a still fist to pause." : "Raise a hand so the camera can see it.";
   const pull = side => paused ? 0 : (side === "push" ? camera.offset > 0 : camera.offset < 0) ? strength : 0;
   return <section className="swipe-camera-stage" aria-label="Camera">
     <div className={`swipe-camera-frame ${paused ? "is-paused" : ""}`}>
@@ -250,7 +265,7 @@ function CameraStage({ camera, onStop, paused, onPause, onResume, flash }) {
       </>}
       {flash && !paused && <div key={flash.at} className={`swipe-camera-flash ${flash.kind}`} role="status">{FLASH_TEXT[flash.kind]}</div>}
       {paused && <div className="swipe-camera-paused" role="status"><strong>Paused</strong><span>Make a fist to resume</span><button type="button" className="bridge-button" onClick={onResume}>Resume</button></div>}
-      <p className={`swipe-camera-status ${camera.status === "error" ? "is-error" : ""}`} role="status">{message}</p>
+      <p className={`swipe-camera-status ${camera.status === "error" ? "is-error" : ""}`} role="status">{message}{camera.status === "loading" && <i className="swipe-camera-progress" style={{ "--progress": camera.progress }}/>}</p>
     </div>
     <p className="bridge-small swipe-camera-privacy">Hand tracking runs on this device. Meadow never receives the camera feed. <button type="button" className="swipe-link" onClick={onStop}>Turn off camera</button></p>
   </section>;

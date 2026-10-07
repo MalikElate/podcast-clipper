@@ -93,22 +93,25 @@ test("boxes are green on the push side or moving right, red otherwise", () => {
   assert.equal(handTone({ box: right, active: true, offset: -0.2, minDistance: 0.22 }).push, false);
 });
 
-// Twenty-one landmarks with the fingertips either extended past or curled
-// inside their middle knuckles (wrist at the bottom of the frame).
-function hand({ curled = [true, true, true, true] } = {}) {
-  const points = Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.5 }));
-  points[0] = { x: 0.5, y: 0.9 };
-  [[8, 6, 0.42], [12, 10, 0.48], [16, 14, 0.54], [20, 18, 0.6]].forEach(([tip, knuckle, x], index) => {
-    points[knuckle] = { x, y: 0.55 };
-    points[tip] = curled[index] ? { x, y: 0.7 } : { x, y: 0.35 };
+// Twenty-one landmarks for an upright hand (wrist at the bottom), with each
+// finger extended, half-curled as in a relaxed wave, or folded into a fist.
+function hand(fingers = ["fist", "fist", "fist", "fist"]) {
+  const points = Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.5, z: 0 }));
+  points[0] = { x: 0.5, y: 0.9, z: 0 };
+  const tipY = { open: 0.3, half: 0.52, fist: 0.72 };
+  [[8, 6, 5, 0.42], [12, 10, 9, 0.48], [16, 14, 13, 0.54], [20, 18, 17, 0.6]].forEach(([tip, pip, knuckle, x], index) => {
+    points[knuckle] = { x, y: 0.6, z: 0 };
+    points[pip] = { x, y: 0.48, z: 0 };
+    points[tip] = { x, y: tipY[fingers[index]], z: 0 };
   });
   return points;
 }
 
-test("a fist needs all four fingers curled", () => {
+test("only a tightly closed fist counts, not a half-curled wave", () => {
   assert.equal(isFist(hand()), true);
-  assert.equal(isFist(hand({ curled: [false, false, false, false] })), false);
-  assert.equal(isFist(hand({ curled: [false, true, true, true] })), false);
+  assert.equal(isFist(hand(["open", "open", "open", "open"])), false);
+  assert.equal(isFist(hand(["half", "half", "half", "half"])), false);
+  assert.equal(isFist(hand(["fist", "fist", "fist", "half"])), false);
   assert.equal(isFist([]), false);
 });
 
@@ -121,6 +124,17 @@ test("a held fist toggles once and must open before toggling again", () => {
   assert.equal(run(2233, 3000, true), 0);
   assert.equal(run(3033, 3500, false), 0);
   assert.equal(run(3533, 4200, true), 1);
+});
+
+test("a fist must be held still to pause", () => {
+  const toggle = createFistToggle({ holdMs: 900 });
+  let toggles = 0;
+  // Sweeping sideways for two seconds never pauses...
+  for (let t = 0; t <= 2000; t += 33) if (toggle.update(t, true, { x: 0.3 + t / 5000, y: 0.4 })) toggles++;
+  assert.equal(toggles, 0);
+  // ...but stopping and holding it does.
+  for (let t = 2033; t <= 3200; t += 33) if (toggle.update(t, true, { x: 0.7, y: 0.4 })) toggles++;
+  assert.equal(toggles, 1);
 });
 
 // Frames at 30 a second of a phone held low and still (left hand) while the
@@ -151,6 +165,10 @@ test("a hand resting low cannot swipe or pause", () => {
 
 test("a raised fist pauses once", () => {
   assert.deepEqual(frames(createHandSwipeTracker(), { from: 0.5, to: 0.5, ms: 1500, fist: true }).gestures, ["fist"]);
+});
+
+test("a fist sweeping sideways swipes instead of pausing", () => {
+  assert.deepEqual(frames(createHandSwipeTracker(), { from: 0.5, to: 0.68, fist: true }).gestures, ["right"]);
 });
 
 test("hand keys stay distinct when both hands get the same label", () => {
