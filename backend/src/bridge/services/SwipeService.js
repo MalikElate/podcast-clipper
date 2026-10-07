@@ -76,7 +76,8 @@ export class SwipeService {
     let result;
     try {
       const videos = await this.accounts.withCredentials(account, credentials => provider.recentVideos({ account, credentials }));
-      result = { videos: videos.map(video => ({ externalId: video.id, caption: video.caption || video.title, title: video.title, publishedAt: video.publishedAt, url: video.url, directUrl: null, metrics: videoMetrics(video.metrics), thumbnailUrl: video.thumbnailUrl, embedUrl: `https://www.youtube.com/embed/${video.id}` })), error: null };
+      result = { videos: videos.map(video => ({ externalId: video.id, caption: video.caption || video.title, title: video.title, publishedAt: video.publishedAt, url: video.url, directUrl: null, metrics: videoMetrics(video.metrics), thumbnailUrl: video.thumbnailUrl,
+        embedUrl: account.platform === "tiktok" ? tiktokEmbed(video.url) : `https://www.youtube.com/embed/${video.id}` })), error: null };
     } catch (error) { result = { videos: [], error: publicError(error).error }; }
     this.videoCache.set(account.id, { at: this.clock(), authorizationId: account.authorizationId, result });
     return result;

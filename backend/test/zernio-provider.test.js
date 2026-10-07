@@ -6,7 +6,9 @@ import { PinterestProvider } from "../src/bridge/platforms/PinterestProvider.js"
 import { HttpTransport } from "../src/bridge/platforms/HttpTransport.js";
 import { PlatformProvider } from "../src/bridge/platforms/PlatformProvider.js";
 
-const env = { ZERNIO_API_KEY: "sk_test", TIKTOK_DIRECT_POST_PRIVATE_ONLY: "true" };
+// Production no longer routes TikTok through Zernio, but the Zernio adapter
+// still supports it, so these tests opt TikTok in explicitly.
+const env = { ZERNIO_API_KEY: "sk_test", ZERNIO_PLATFORMS: "tiktok,snapchat,facebook,instagram,threads,pinterest", TIKTOK_DIRECT_POST_PRIVATE_ONLY: "true" };
 const video = { id: "video1", filename: "clip.mp4", kind: "video", mime: "video/mp4", status: "ready", bytes: 500, durationSec: 30 };
 
 function memoryStore() {
@@ -209,7 +211,7 @@ test("All Zernio platforms support post analytics while native grants retain the
 
 test("Zernio routing is enabled only with an API key and for supported platforms", () => {
   assert.deepEqual([...zernioPlatforms({})], []);
-  assert.deepEqual([...zernioPlatforms({ ZERNIO_API_KEY: "sk" })], ["tiktok", "snapchat", "facebook", "instagram", "threads", "pinterest"]);
+  assert.deepEqual([...zernioPlatforms({ ZERNIO_API_KEY: "sk" })], ["snapchat", "facebook", "instagram", "threads", "pinterest"]);
   assert.deepEqual([...zernioPlatforms({ ZERNIO_API_KEY: "sk", ZERNIO_PLATFORMS: "tiktok, youtube,pinterest" })], ["tiktok", "pinterest"]);
 });
 
