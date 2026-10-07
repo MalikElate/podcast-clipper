@@ -16,6 +16,10 @@ const STALE_DOWNLOAD_MS = 30 * 60000;
 const sourcePlatforms = new Set(["tiktok", "youtube", "instagram", "facebook", "threads"]);
 const kind = "swipeDecision";
 
+const cardMetrics = ["views", "likes", "comments", "shares", "saves"];
+/** The engagement numbers a card shows; missing ones are left out. */
+const videoMetrics = (values = {}) => Object.fromEntries(cardMetrics.map(key => [key, Number(values?.[key])]).filter(([, value]) => Number.isFinite(value) && value >= 0));
+
 const cardKey = (accountId, externalId) => createHash("sha256").update(`${accountId}:${externalId}`).digest("base64url").slice(0, 22);
 const clip = (text, limit) => { const characters = [...String(text || "")]; return characters.length > limit ? `${characters.slice(0, limit - 1).join("").trimEnd()}…` : characters.join(""); };
 
@@ -58,7 +62,7 @@ export class SwipeService {
         // Zernio labels TikTok videos by their cover, so the post URL decides.
         const isVideo = account.platform === "tiktok" ? /\/video\/\d+/.test(post.url || "") : post.media?.type === "video" || Boolean(directUrl);
         if (!isVideo || !post.url) continue;
-        videos.push({ externalId: String(post.externalId || post.id), caption: post.title || "", title: "", publishedAt: post.publishedAt || null, url: post.url, directUrl,
+        videos.push({ externalId: String(post.externalId || post.id), caption: post.title || "", title: "", publishedAt: post.publishedAt || null, url: post.url, directUrl, metrics: videoMetrics(post.values),
           thumbnailUrl: post.media?.thumbnailUrl || items.find(item => item.thumbnail)?.thumbnail || items.find(item => item.type === "image")?.url || null,
           embedUrl: account.platform === "tiktok" ? tiktokEmbed(post.url) : null });
       }
@@ -71,7 +75,7 @@ export class SwipeService {
     let result;
     try {
       const videos = await this.accounts.withCredentials(account, credentials => provider.recentVideos({ account, credentials }));
-      result = { videos: videos.map(video => ({ externalId: video.id, caption: video.caption || video.title, title: video.title, publishedAt: video.publishedAt, url: video.url, directUrl: null, thumbnailUrl: video.thumbnailUrl, embedUrl: `https://www.youtube.com/embed/${video.id}` })), error: null };
+      result = { videos: videos.map(video => ({ externalId: video.id, caption: video.caption || video.title, title: video.title, publishedAt: video.publishedAt, url: video.url, directUrl: null, metrics: videoMetrics(video.metrics), thumbnailUrl: video.thumbnailUrl, embedUrl: `https://www.youtube.com/embed/${video.id}` })), error: null };
     } catch (error) { result = { videos: [], error: publicError(error).error }; }
     this.videoCache.set(account.id, { at: this.clock(), authorizationId: account.authorizationId, result });
     return result;
@@ -84,8 +88,10 @@ export class SwipeService {
     // Never offer the copies Swipe or Push itself published.
     const pushedPosts = new Set(decisions.map(item => item.postId).filter(Boolean));
     const pushedCopies = new Set(this.store.list("delivery", { projectId, limit: null }).filter(item => pushedPosts.has(item.postId) && item.externalId).map(item => String(item.externalId)));
+    const settings = this.settings(uid, projectId), chosen = new Set(settings.sourceAccountIds);
     const sources = [], cards = [];
-    for (const account of this.connectedAccounts(uid, projectId).filter(item => sourcePlatforms.has(item.platform))) {
+    // Read only the channels picked as the input feed, or every channel.
+    for (const account of this.connectedAccounts(uid, projectId).filter(item => sourcePlatforms.has(item.platform) && (!chosen.size || chosen.has(item.id)))) {
       const { videos, error } = await this.sourceVideos(account);
       sources.push({ accountId: account.id, platform: account.platform, accountName: account.label, videos: videos.length, error });
       for (const video of videos) {
@@ -98,7 +104,7 @@ export class SwipeService {
     this.decks.set(`${uid}:${projectId}`, { at: this.clock(), cards });
     return {
       cards: cards.slice(0, 50).map(({ directUrl, ...card }) => ({ ...card, previewUrl: directUrl })),
-      sources, settings: this.settings(uid, projectId), queue: this.queue(uid, projectId), nextSlotAt: this.nextSlot(projectId), spacingHours: PUSH_SPACING_MS / 3600000,
+      sources, settings, queue: this.queue(uid, projectId), nextSlotAt: this.nextSlot(projectId), spacingHours: PUSH_SPACING_MS / 3600000,
     };
   }
 
@@ -116,24 +122,44 @@ export class SwipeService {
     this.projects.require(uid, projectId);
     const saved = this.store.get("swipeSettings", projectId);
     const connected = new Set(this.connectedAccounts(uid, projectId).map(account => account.id));
-    const accountIds = (saved?.ownerUid === uid ? saved.accountIds : []).filter(id => connected.has(id));
-    return { accountIds, overrides: Object.fromEntries(Object.entries(saved?.overrides || {}).filter(([id]) => accountIds.includes(id))), updatedAt: saved?.updatedAt || null };
+    const own = saved?.ownerUid === uid ? saved : null;
+    const accountIds = (own?.accountIds || []).filter(id => connected.has(id));
+    const sourceAccountIds = (own?.sourceAccountIds || []).filter(id => connected.has(id));
+    return { accountIds, sourceAccountIds, overrides: Object.fromEntries(Object.entries(own?.overrides || {}).filter(([id]) => accountIds.includes(id))), updatedAt: own?.updatedAt || null };
   }
 
+  /** Save destinations (accountIds and overrides), the input channels
+   * (sourceAccountIds, empty for every channel), or both. Omitted parts keep
+   * their saved values. */
   saveSettings(uid, projectId, input = {}) {
     this.projects.require(uid, projectId);
-    const accountIds = input.accountIds;
-    invariant(Array.isArray(accountIds) && accountIds.length <= 100 && new Set(accountIds).size === accountIds.length && accountIds.every(id => typeof id === "string" && id.length <= 200), "Choose where pushed videos go.");
-    accountIds.forEach(id => invariant(this.accounts.require(uid, projectId, id).status === "connected", "Reconnect this account before pushing videos to it."));
-    const overrides = {};
-    for (const [id, value] of Object.entries(input.overrides || {})) {
-      if (!accountIds.includes(id)) continue;
-      invariant(value && typeof value === "object" && !Array.isArray(value) && (value.settings === undefined || value.settings && typeof value.settings === "object" && !Array.isArray(value.settings)), "Invalid destination settings.");
-      invariant(JSON.stringify(value.settings || {}).length <= 10000, "Destination settings are too large.");
-      overrides[id] = { settings: value.settings || {} };
-    }
+    invariant(input.accountIds !== undefined || input.sourceAccountIds !== undefined, "Choose where videos come from or where they go.");
     const previous = this.store.get("swipeSettings", projectId);
-    this.store.put("swipeSettings", { id: projectId, projectId, ownerUid: uid, accountIds, overrides, createdAt: previous?.createdAt || this.clock(), updatedAt: this.clock() });
+    const own = previous?.ownerUid === uid ? previous : null;
+    const idList = (value, message) => {
+      invariant(Array.isArray(value) && value.length <= 100 && new Set(value).size === value.length && value.every(id => typeof id === "string" && id.length <= 200), message);
+      return value;
+    };
+    let accountIds = own?.accountIds || [], overrides = own?.overrides || {}, sourceAccountIds = own?.sourceAccountIds || [];
+    if (input.accountIds !== undefined) {
+      accountIds = idList(input.accountIds, "Choose where pushed videos go.");
+      accountIds.forEach(id => invariant(this.accounts.require(uid, projectId, id).status === "connected", "Reconnect this account before pushing videos to it."));
+      overrides = {};
+      for (const [id, value] of Object.entries(input.overrides || {})) {
+        if (!accountIds.includes(id)) continue;
+        invariant(value && typeof value === "object" && !Array.isArray(value) && (value.settings === undefined || value.settings && typeof value.settings === "object" && !Array.isArray(value.settings)), "Invalid destination settings.");
+        invariant(JSON.stringify(value.settings || {}).length <= 10000, "Destination settings are too large.");
+        overrides[id] = { settings: value.settings || {} };
+      }
+    }
+    if (input.sourceAccountIds !== undefined) {
+      sourceAccountIds = idList(input.sourceAccountIds, "Choose which channels supply videos.");
+      sourceAccountIds.forEach(id => {
+        const account = this.accounts.require(uid, projectId, id);
+        invariant(account.status === "connected" && sourcePlatforms.has(account.platform), "Choose a connected TikTok, YouTube, Instagram, Facebook or Threads channel.");
+      });
+    }
+    this.store.put("swipeSettings", { id: projectId, projectId, ownerUid: uid, accountIds, sourceAccountIds, overrides, createdAt: previous?.createdAt || this.clock(), updatedAt: this.clock() });
     return this.settings(uid, projectId);
   }
 
@@ -260,9 +286,9 @@ export class SwipeService {
   removeAccount(account) {
     for (const record of this.store.list(kind, { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountId === account.id)) this.store.remove(kind, record.id);
     const saved = this.store.get("swipeSettings", account.projectId);
-    if (saved?.accountIds?.includes(account.id)) {
+    if (saved?.accountIds?.includes(account.id) || saved?.sourceAccountIds?.includes(account.id)) {
       const overrides = { ...saved.overrides }; delete overrides[account.id];
-      this.store.put("swipeSettings", { ...saved, accountIds: saved.accountIds.filter(id => id !== account.id), overrides, updatedAt: this.clock() });
+      this.store.put("swipeSettings", { ...saved, accountIds: (saved.accountIds || []).filter(id => id !== account.id), sourceAccountIds: (saved.sourceAccountIds || []).filter(id => id !== account.id), overrides, updatedAt: this.clock() });
     }
     this.videoCache.delete(account.id);
   }

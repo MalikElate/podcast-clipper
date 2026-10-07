@@ -37,7 +37,7 @@ function setup(t) {
   };
   const youtube = new FakeProvider("youtube", {
     validate(content) { const errors = PlatformProvider.prototype.validate.call(this, content); if (!content.settings?.privacy) errors.push("Choose a YouTube visibility setting."); return errors; },
-    recentVideos: async () => [{ id: "ytVideo0001", title: "Studio tour", caption: "Studio tour\nFull description", publishedAt: now - 2.5 * HOUR, thumbnailUrl: "https://i.ytimg.com/vi/ytVideo0001/hq.jpg", url: "https://www.youtube.com/watch?v=ytVideo0001" }] });
+    recentVideos: async () => [{ id: "ytVideo0001", title: "Studio tour", caption: "Studio tour\nFull description", publishedAt: now - 2.5 * HOUR, metrics: { views: 1520, likes: 84, comments: NaN }, thumbnailUrl: "https://i.ytimg.com/vi/ytVideo0001/hq.jpg", url: "https://www.youtube.com/watch?v=ytVideo0001" }] });
   const app = new BridgeApplication({
     store: new SqliteStore(), clock: () => now, videoDownloader,
     registry: new ProviderRegistry([new FakeProvider("tiktok"), youtube, new FakeProvider("x"), new FakeProvider("bluesky")]),
@@ -50,7 +50,7 @@ function setup(t) {
   connect("youtube", "youtube", "UC123");
   connect("x", "x");
   connect("bluesky", "bluesky");
-  const tiktokPost = (id, extra = {}) => ({ id, externalId: id, title: `TikTok caption ${id} #meadow`, publishedAt: now - Number(id.at(-1)) * HOUR, url: `https://www.tiktok.com/@creator/video/${id}`, media: { type: "carousel", thumbnailUrl: null, items: [{ type: "image", url: `https://p16.tiktokcdn.com/${id}.webp`, thumbnail: null }] }, values: {}, ...extra });
+  const tiktokPost = (id, extra = {}) => ({ id, externalId: id, title: `TikTok caption ${id} #meadow`, publishedAt: now - Number(id.at(-1)) * HOUR, url: `https://www.tiktok.com/@creator/video/${id}`, media: { type: "carousel", thumbnailUrl: null, items: [{ type: "image", url: `https://p16.tiktokcdn.com/${id}.webp`, thumbnail: null }] }, values: { views: 973, likes: 31, comments: null, shares: 2, impressions: 5000 }, ...extra });
   app.analytics.syncAccount = async account => account.platform === "tiktok" ? { posts: [tiktokPost("7000000001"), tiktokPost("7000000002"), tiktokPost("7000000003"), { ...tiktokPost("7000000004"), url: "https://www.tiktok.com/@creator/photo/7000000004" }] } : null;
   return { app, project, downloads, videoDownloader, now: () => now, advance: ms => { now += ms; } };
 }
@@ -153,4 +153,30 @@ test("removing a connection clears its videos and destination from Swipe or Push
   h.app.privacy.removeConnectionData(h.app.store.get("account", "tiktok"));
   assert.equal(h.app.store.list("swipeDecision").length, 0);
   assert.deepEqual(h.app.store.get("swipeSettings", h.project.id).accountIds, ["x"]);
+});
+
+test("cards carry each video's analytics", async t => {
+  const h = setup(t);
+  const { cards } = await h.app.swipe.deck("alice", h.project.id);
+  assert.deepEqual(cards.find(card => card.platform === "tiktok").metrics, { views: 973, likes: 31, shares: 2 });
+  assert.deepEqual(cards.find(card => card.platform === "youtube").metrics, { views: 1520, likes: 84 });
+});
+
+test("the input feed can be limited to chosen channels without losing destinations", async t => {
+  const h = setup(t);
+  h.app.swipe.saveSettings("alice", h.project.id, { accountIds: ["x"], overrides: { x: { settings: {} } } });
+  const settings = h.app.swipe.saveSettings("alice", h.project.id, { sourceAccountIds: ["youtube"] });
+  assert.deepEqual(settings.sourceAccountIds, ["youtube"]);
+  assert.deepEqual(settings.accountIds, ["x"]);
+  const youtubeOnly = await h.app.swipe.deck("alice", h.project.id);
+  assert.deepEqual(youtubeOnly.cards.map(card => card.platform), ["youtube"]);
+  assert.deepEqual(youtubeOnly.sources.map(source => source.accountId), ["youtube"]);
+
+  // Destinations saved later keep the chosen input channel.
+  assert.deepEqual(h.app.swipe.saveSettings("alice", h.project.id, { accountIds: ["x", "bluesky"] }).sourceAccountIds, ["youtube"]);
+  assert.throws(() => h.app.swipe.saveSettings("alice", h.project.id, { sourceAccountIds: ["x"] }), /TikTok, YouTube/);
+  assert.throws(() => h.app.swipe.saveSettings("alice", h.project.id, {}), /Choose where/);
+
+  assert.deepEqual(h.app.swipe.saveSettings("alice", h.project.id, { sourceAccountIds: [] }).sourceAccountIds, []);
+  assert.equal((await h.app.swipe.deck("alice", h.project.id)).cards.length, 4);
 });

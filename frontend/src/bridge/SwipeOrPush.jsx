@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./BridgeApi.js";
 import { Icon } from "./Icons.jsx";
-import { Alert, Check, Modal, PlatformIcon, dateTime, useProjectResource } from "./ui.jsx";
+import { Alert, Check, Modal, PlatformIcon, dateTime, number, useProjectResource } from "./ui.jsx";
 import { DestinationSettings } from "./DestinationSettings.jsx";
 import { useHandSwipe } from "./useHandSwipe.js";
 import "./swipe.css";
@@ -39,7 +39,21 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
   const card = cards[0];
   const settingsReady = data.settings.accountIds.length > 0;
   const working = data.queue.some(item => ["queued", "downloading"].includes(item.status));
-  const hasSource = accounts.some(account => SOURCE_PLATFORMS.includes(account.platform) && account.status === "connected");
+  const sourceAccounts = accounts.filter(account => SOURCE_PLATFORMS.includes(account.platform) && account.status === "connected");
+  const hasSource = sourceAccounts.length > 0;
+  const [savingSource, setSavingSource] = useState(false);
+
+  // Pick the channel whose videos fill the deck, or every channel.
+  async function chooseSource(accountId) {
+    setSavingSource(true); setError("");
+    try {
+      const result = await api.project(project.id, "/swipe/settings", { method: "POST", body: { sourceAccountIds: accountId ? [accountId] : [] } });
+      resource.setData(current => ({ ...current, cards: null, settings: result.settings }));
+      setPending(null);
+      resource.reload();
+    } catch (failure) { setError(failure.message); }
+    finally { setSavingSource(false); }
+  }
 
   // Follow pushes while Meadow downloads and schedules them.
   useEffect(() => {
@@ -140,6 +154,12 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
     <div className="swipe-toolbar">
       <p className="bridge-small">Swipe right to push a video to your other accounts, or left to skip it. The first push goes out now, then one every {data.spacingHours} hours.</p>
       <div className="swipe-toolbar-actions">
+      {sourceAccounts.length > 1 && <label className="swipe-source-picker"><span>Videos from</span>
+        <select value={data.settings.sourceAccountIds?.[0] || ""} disabled={savingSource} onChange={event => chooseSource(event.target.value)}>
+          <option value="">All channels</option>
+          {sourceAccounts.map(account => <option key={account.id} value={account.id}>{account.label} · {platformName(catalog, account.platform)}</option>)}
+        </select>
+      </label>}
       <button type="button" className={`bridge-button small ${cameraOn ? "" : "secondary"}`} onClick={toggleCamera} aria-pressed={cameraOn}><Icon name="camera" size={16}/>{cameraOn ? "Stop camera" : "Swipe with your hand"}</button>
       <button type="button" className="bridge-button secondary small" onClick={() => setEditing(true)}><Icon name="settings" size={16}/>{settingsReady ? `Pushing to ${data.settings.accountIds.length} ${data.settings.accountIds.length === 1 ? "account" : "accounts"}` : "Choose destinations"}</button>
       </div>
@@ -233,8 +253,20 @@ function SwipeCard({ card, catalog, timeZone, disabled, onDecide, nudge = 0, pen
       {card.url && <a href={card.url} target="_blank" rel="noreferrer" aria-label={`Open on ${name}`}><Icon name="external" size={17}/></a>}
     </header>
     <div className={`swipe-media-frame ${card.platform}`}><CardMedia card={card} name={name}/></div>
+    <CardMetrics metrics={card.metrics}/>
     {(card.title || card.caption) && <p className="swipe-caption">{card.title && card.title !== card.caption ? <strong>{card.title} </strong> : null}{card.caption}</p>}
   </article>;
+}
+
+const METRIC_LABELS = [["views", "views"], ["likes", "likes"], ["comments", "comments"], ["shares", "shares"], ["saves", "saves"]];
+
+/** The video's numbers on its platform, as last reported. */
+function CardMetrics({ metrics = {} }) {
+  const shown = METRIC_LABELS.filter(([key]) => Number.isFinite(metrics[key]));
+  if (!shown.length) return <p className="swipe-metrics is-empty">No analytics reported for this video yet.</p>;
+  return <dl className="swipe-metrics" aria-label="Video analytics">
+    {shown.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{number(metrics[key])}</dd></div>)}
+  </dl>;
 }
 
 function CardMedia({ card, name }) {

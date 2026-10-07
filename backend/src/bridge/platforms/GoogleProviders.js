@@ -47,10 +47,18 @@ export class YouTubeProvider extends GoogleProvider {
     const uploads = channels.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
     if (!uploads) return [];
     const list = await this.http.request(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails,status&maxResults=25&playlistId=${encodeURIComponent(uploads)}`, { token: credentials.accessToken });
-    return (list.items || []).filter(item => ["public", "unlisted"].includes(item.status?.privacyStatus) && /^[\w-]{6,20}$/.test(item.contentDetails?.videoId || "")).map(item => {
-      const id = item.contentDetails.videoId, thumbnails = item.snippet?.thumbnails || {};
+    const items = (list.items || []).filter(item => ["public", "unlisted"].includes(item.status?.privacyStatus) && /^[\w-]{6,20}$/.test(item.contentDetails?.videoId || ""));
+    // One videos.list call (1 quota unit) adds each upload's public counts.
+    const statistics = new Map();
+    if (items.length) {
+      const result = await this.http.request(`https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${items.map(item => item.contentDetails.videoId).join(",")}`, { token: credentials.accessToken });
+      for (const video of result.items || []) statistics.set(video.id, video.statistics || {});
+    }
+    return items.map(item => {
+      const id = item.contentDetails.videoId, thumbnails = item.snippet?.thumbnails || {}, counts = statistics.get(id) || {};
       return { id, title: String(item.snippet?.title || ""), caption: String(item.snippet?.description || ""), publishedAt: Date.parse(item.contentDetails.videoPublishedAt || item.snippet?.publishedAt) || null,
-        thumbnailUrl: (thumbnails.high || thumbnails.medium || thumbnails.default)?.url || null, url: `https://www.youtube.com/watch?v=${id}` };
+        thumbnailUrl: (thumbnails.high || thumbnails.medium || thumbnails.default)?.url || null, url: `https://www.youtube.com/watch?v=${id}`,
+        metrics: { views: Number(counts.viewCount), likes: Number(counts.likeCount), comments: Number(counts.commentCount) } };
     });
   }
   async accounts(credentials) {
