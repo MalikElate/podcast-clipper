@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import wasmLoaderPath from "@mediapipe/tasks-vision/vision_wasm_internal.js?url";
 import wasmBinaryPath from "@mediapipe/tasks-vision/vision_wasm_internal.wasm?url";
-import { createHandSwipeTracker, handBox, handKeys, handTone, isFist, palmCenter } from "./swipeGesture.js";
+import { createHandMatcher, createHandSwipeTracker, handBox, handTone, isFist, palmCenter, palmSize } from "./swipeGesture.js";
 
 // Hand-swipe control for Swipe or Push. MediaPipe's hand landmarker runs in
 // the browser, so camera frames never leave the device. The WebAssembly
@@ -93,7 +93,7 @@ function cameraError(error) {
 /** Draw a red or green box over each hand on the overlay canvas. The video is
  * shown with object-fit: cover, so frame coordinates are mapped through the
  * same crop. */
-function drawHands(canvas, video, hands, minDistance, paused) {
+function drawHands(canvas, video, hands, paused) {
   const width = canvas.clientWidth, height = canvas.clientHeight, ratio = window.devicePixelRatio || 1;
   if (!width || !height) return;
   if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
@@ -108,7 +108,7 @@ function drawHands(canvas, video, hands, minDistance, paused) {
   const shownWidth = video.videoWidth * scale, shownHeight = video.videoHeight * scale;
   const left = (width - shownWidth) / 2, top = (height - shownHeight) / 2;
   hands.forEach(hand => {
-    const tone = handTone({ box: hand.box, active: hand.active, offset: hand.offset, minDistance });
+    const tone = handTone({ box: hand.box, active: hand.active, pull: hand.pull });
     const fist = hand.fist && hand.active;
     const strength = fist || paused ? 0 : tone.strength;
     const color = fist ? FIST_COLOR : paused ? PAUSED_COLOR : tone.push ? PUSH_COLOR : SKIP_COLOR;
@@ -144,7 +144,7 @@ export function useHandSwipe({ enabled, paused = false, onGesture }) {
   gestureRef.current = onGesture;
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
-  const [state, setState] = useState({ status: "off", error: "", handVisible: false, offset: 0, fist: false });
+  const [state, setState] = useState({ status: "off", error: "", handVisible: false, pull: 0, fist: false });
   const trackerRef = useRef(createHandSwipeTracker());
   const [progress, setProgress] = useState(modelProgress);
 
@@ -158,17 +158,18 @@ export function useHandSwipe({ enabled, paused = false, onGesture }) {
   }, [enabled]);
 
   useEffect(() => {
-    if (!enabled) { setState({ status: "off", error: "", handVisible: false, offset: 0, fist: false }); return undefined; }
-    if (!navigator.mediaDevices?.getUserMedia) { setState({ status: "error", error: "This browser cannot use the camera.", handVisible: false, offset: 0, fist: false }); return undefined; }
+    if (!enabled) { setState({ status: "off", error: "", handVisible: false, pull: 0, fist: false }); return undefined; }
+    if (!navigator.mediaDevices?.getUserMedia) { setState({ status: "error", error: "This browser cannot use the camera.", handVisible: false, pull: 0, fist: false }); return undefined; }
     let cancelled = false, stream = null, frame = 0, lastTime = -1;
     const tracker = trackerRef.current;
     tracker.reset();
+    const matchHands = createHandMatcher();
     // Hand tracking downloads while the camera starts, not after it.
     const landmarkerReady = loadHandLandmarker();
     landmarkerReady.catch(() => {});
     (async () => {
       try {
-        setState({ status: "starting", error: "", handVisible: false, offset: 0, fist: false });
+        setState({ status: "starting", error: "", handVisible: false, pull: 0, fist: false });
         stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } });
         if (cancelled) return;
         const video = videoRef.current;
@@ -185,22 +186,23 @@ export function useHandSwipe({ enabled, paused = false, onGesture }) {
             lastTime = source.currentTime;
             const now = performance.now();
             const result = landmarker.detectForVideo(source, now);
-            const landmarkSets = result.landmarks || [];
-            const keys = handKeys(landmarkSets.map((_, index) => result.handedness?.[index]?.[0]?.categoryName));
             // World landmarks are 3D, so a fist reads the same at any angle.
-            const found = landmarkSets.map((landmarks, index) => ({ key: keys[index], palm: palmCenter(landmarks), box: handBox(landmarks), fist: isFist(result.worldLandmarks?.[index] || landmarks) })).filter(hand => hand.palm);
+            const aspect = source.videoHeight / source.videoWidth || 9 / 16;
+            const detected = (result.landmarks || []).map((landmarks, index) => ({ palm: palmCenter(landmarks), size: palmSize(landmarks, aspect), box: handBox(landmarks), fist: isFist(result.worldLandmarks?.[index] || landmarks) })).filter(hand => hand.palm);
+            const keys = matchHands(detected.map(hand => hand.palm), now);
+            const found = detected.map((hand, index) => ({ ...hand, key: keys[index] }));
             // Every raised hand is tracked on its own; a fist pauses or resumes.
-            const { gesture, offset, hands } = tracker.update(now, found);
-            if (overlayRef.current) drawHands(overlayRef.current, source, hands, tracker.minDistance, pausedRef.current);
-            const next = { handVisible: hands.some(hand => hand.active), offset: coarse(offset), fist: hands.some(hand => hand.active && hand.fist) };
-            setState(current => current.handVisible === next.handVisible && current.offset === next.offset && current.fist === next.fist ? current : { ...current, ...next });
+            const { gesture, pull, hands } = tracker.update(now, found);
+            if (overlayRef.current) drawHands(overlayRef.current, source, hands, pausedRef.current);
+            const next = { handVisible: hands.some(hand => hand.active), pull: coarse(pull), fist: hands.some(hand => hand.active && hand.fist) };
+            setState(current => current.handVisible === next.handVisible && current.pull === next.pull && current.fist === next.fist ? current : { ...current, ...next });
             if (gesture) gestureRef.current(gesture);
           }
           frame = requestAnimationFrame(loop);
         };
         frame = requestAnimationFrame(loop);
       } catch (error) {
-        if (!cancelled) setState({ status: "error", error: cameraError(error), handVisible: false, offset: 0, fist: false });
+        if (!cancelled) setState({ status: "error", error: cameraError(error), handVisible: false, pull: 0, fist: false });
       }
     })();
     return () => {
@@ -213,5 +215,5 @@ export function useHandSwipe({ enabled, paused = false, onGesture }) {
     };
   }, [enabled]);
 
-  return { videoRef, overlayRef, minDistance: trackerRef.current.minDistance, progress, ...state };
+  return { videoRef, overlayRef, progress, ...state };
 }

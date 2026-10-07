@@ -97,8 +97,6 @@
 .swipe-camera-status.is-error { background: #ef4444; }
 .swipe-camera-status:has(.swipe-camera-progress) { overflow: hidden; padding-bottom: 11px; }
 .swipe-camera-progress { position: absolute; left: 0; bottom: 0; width: 100%; height: 4px; background: #22c55e; transform: scaleX(var(--progress, 0)); transform-origin: left; transition: transform .2s linear; }
-.swipe-camera-privacy { margin: 0; color: var(--b-muted); font-size: 12px !important; }
-.swipe-link { padding: 0; border: 0; background: none; color: var(--b-blue); font: inherit; text-decoration: underline; cursor: pointer; }
 .camera-mode .swipe-deck { width: min(100%, 320px); }
 .camera-mode .swipe-media-frame { max-height: min(44vh, 460px); }
 .swipe-below { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }

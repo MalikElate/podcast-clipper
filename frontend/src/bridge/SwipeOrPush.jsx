@@ -192,7 +192,7 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const handNudge = cameraOn && camera.status === "ready" && camera.handVisible && !pending && !paused ? Math.max(-1, Math.min(1, camera.offset / camera.minDistance)) * HAND_LEAN : 0;
+  const handNudge = cameraOn && camera.status === "ready" && camera.handVisible && !pending && !paused ? Math.max(-1, Math.min(1, camera.pull)) * HAND_LEAN : 0;
 
   const loading = data.cards === null;
   return <div className="swipe-page">
@@ -211,7 +211,7 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
       </div>
     </div>
     <div className={`swipe-layout ${cameraOn ? "camera-mode" : ""}`}>
-      {cameraOn && <CameraStage camera={camera} onStop={toggleCamera} paused={paused} onPause={() => { setPaused(true); setPending(null); }} onResume={() => setPaused(false)} flash={flash}/>}
+      {cameraOn && <CameraStage camera={camera} paused={paused} onPause={() => { setPaused(true); setPending(null); }} onResume={() => setPaused(false)} flash={flash}/>}
       <section className="swipe-stage" aria-label="Videos to review">
         {flights.map(flight => <FlyingCard key={flight.id} flight={flight} catalog={catalog} timeZone={project.timeZone}/>)}
         {loading && resource.error ? <div className="bridge-panel bridge-empty"><p>Your videos could not be loaded.</p><button type="button" className="bridge-button secondary" onClick={resource.reload} disabled={resource.loading}>Try again</button></div>
@@ -229,7 +229,7 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
               {last && <button type="button" className="bridge-button secondary small swipe-undo" onClick={undo} disabled={busy}>Undo {last.decision === "push" ? "push" : "skip"}</button>}
               <button type="button" className="swipe-action push" onClick={() => decide("push")} disabled={busy || !card.pushable} aria-label="Push this video"><Icon name="arrow" size={26}/></button>
             </div>
-            <p className="swipe-hint bridge-small">{card.pushable ? "Use ← and → on your keyboard too." : `Meadow can't download ${platformName(catalog, card.platform)} videos yet, so this one can only be skipped.`} {cards.length - 1 > 0 ? `${cards.length - 1} more after this.` : "This is the last one."}</p>
+            {!card.pushable && <p className="swipe-hint bridge-small">Meadow can't download {platformName(catalog, card.platform)} videos yet, so this one can only be skipped.</p>}
           </>}
       </section>
       {!cameraOn && <div className="swipe-side-column"><PushQueue queue={data.queue} nextSlotAt={data.nextSlotAt} sources={data.sources} catalog={catalog} timeZone={project.timeZone}/></div>}
@@ -244,16 +244,16 @@ export default function SwipeOrPush({ project, catalog, accounts, accountsReady,
 // SKIP and PUSH bands on either side, and a flash when a swipe lands.
 const FLASH_TEXT = { push: "Pushing →", skip: "← Skipped", cancel: "Push cancelled" };
 
-function CameraStage({ camera, onStop, paused, onPause, onResume, flash }) {
+function CameraStage({ camera, paused, onPause, onResume, flash }) {
   const ready = camera.status === "ready";
-  const strength = Math.min(1, Math.abs(camera.offset) / camera.minDistance);
+  const strength = Math.min(1, Math.abs(camera.pull));
   const message = camera.status === "error" ? camera.error
     : camera.status === "starting" ? "Starting the camera…"
     : camera.status === "loading" ? `Getting hand tracking ready… ${Math.round(camera.progress * 100)}%. The buttons and arrow keys work meanwhile.`
     : paused ? "Paused. Make a fist to resume."
     : camera.fist ? "Keep the fist still to pause."
     : camera.handVisible ? "Swipe right to push, left to skip. Hold a still fist to pause." : "Raise a hand so the camera can see it.";
-  const pull = side => paused ? 0 : (side === "push" ? camera.offset > 0 : camera.offset < 0) ? strength : 0;
+  const pull = side => paused ? 0 : (side === "push" ? camera.pull > 0 : camera.pull < 0) ? strength : 0;
   return <section className="swipe-camera-stage" aria-label="Camera">
     <div className={`swipe-camera-frame ${paused ? "is-paused" : ""}`}>
       <video ref={camera.videoRef} muted playsInline aria-hidden="true"/>
@@ -267,7 +267,6 @@ function CameraStage({ camera, onStop, paused, onPause, onResume, flash }) {
       {paused && <div className="swipe-camera-paused" role="status"><strong>Paused</strong><span>Make a fist to resume</span><button type="button" className="bridge-button" onClick={onResume}>Resume</button></div>}
       <p className={`swipe-camera-status ${camera.status === "error" ? "is-error" : ""}`} role="status">{message}{camera.status === "loading" && <i className="swipe-camera-progress" style={{ "--progress": camera.progress }}/>}</p>
     </div>
-    <p className="bridge-small swipe-camera-privacy">Hand tracking runs on this device. Meadow never receives the camera feed. <button type="button" className="swipe-link" onClick={onStop}>Turn off camera</button></p>
   </section>;
 }
 

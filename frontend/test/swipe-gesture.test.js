@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
-import { createFistToggle, createHandSwipeTracker, createSwipeDetector, handBox, handKeys, handTone, isFist, palmCenter } from "../src/bridge/swipeGesture.js";
+import { createFistToggle, createHandMatcher, createHandSwipeTracker, createSwipeDetector, handBox, handTone, isFist, palmCenter, palmSize } from "../src/bridge/swipeGesture.js";
 
 // Feed a straight hand movement at 30 frames a second and collect gestures.
 function move(detector, { from, to, start = 0, ms = 300, y = 0.5, yTo = y }) {
@@ -40,34 +41,44 @@ test("the hand swinging back after a swipe is not read as the opposite swipe", (
   assert.deepEqual(move(detector, { from: 0.35, to: 0.75, start: t + 33 }).gestures, ["right"]);
 });
 
-// Malik's wave from the clip: the hand rests by the face, drifts to the
-// shoulder over about a second (push), and swings back.
 function rest(detector, x, start, ms = 300) {
   let t = start;
   for (let i = 0; i < ms / 33; i++) detector.update(t += 33, { x, y: 0.5 });
   return t;
 }
 
-test("a slow, gentle wave counts, and the swing back to the start does not", () => {
-  const detector = createSwipeDetector(), gestures = [];
-  let t = rest(detector, 0.5, 0);
-  for (const step of [[0.5, 0.68, 1100], [0.68, 0.5, 700], "rest", [0.5, 0.68, 1100], [0.68, 0.5, 700], "rest", [0.5, 0.3, 800]]) {
-    if (step === "rest") { t = rest(detector, 0.5, t); continue; }
-    const [from, to, ms] = step;
-    const stroke = move(detector, { from, to, ms, start: t + 33 });
-    gestures.push(...stroke.gestures);
-    t = stroke.end;
-  }
-  assert.deepEqual(gestures, ["right", "right", "left"]);
-});
-
 test("resting on the far side and then coming back is not a swipe", () => {
   const detector = createSwipeDetector();
-  const swipe = move(detector, { from: 0.5, to: 0.68, ms: 1100 });
+  const swipe = move(detector, { from: 0.5, to: 0.68 });
   const t = rest(detector, 0.68, swipe.end, 3000);
-  const back = move(detector, { from: 0.68, to: 0.5, ms: 700, start: t + 33 });
+  const back = move(detector, { from: 0.68, to: 0.5, start: t + 33 });
   rest(detector, 0.5, back.end);
   assert.deepEqual([...swipe.gestures, ...back.gestures], ["right"]);
+});
+
+test("a swing back that carries on past the start is a swipe the other way", () => {
+  const detector = createSwipeDetector();
+  const swipe = move(detector, { from: 0.5, to: 0.68 });
+  const t = rest(detector, 0.68, swipe.end, 300);
+  assert.deepEqual([...swipe.gestures, ...move(detector, { from: 0.68, to: 0.3, ms: 400, start: t + 33 }).gestures], ["right", "left"]);
+});
+
+test("the detector never gets stuck: another swipe the same way always counts", () => {
+  const detector = createSwipeDetector();
+  const first = move(detector, { from: 0.4, to: 0.6 });
+  const t = rest(detector, 0.75, first.end, 2000);
+  assert.deepEqual([...first.gestures, ...move(detector, { from: 0.75, to: 0.92, start: t + 33 }).gestures], ["right", "right"]);
+});
+
+test("the swipe distance follows the size of the hand on screen", () => {
+  // A far-away hand (palm 0.08 of the frame) swipes with a small movement...
+  const far = createSwipeDetector(), gestures = [];
+  for (let i = 0; i <= 9; i++) { const { gesture } = far.update(i * 33, { x: 0.5 + i * 0.008, y: 0.5, size: 0.08 }); if (gesture) gestures.push(gesture); }
+  assert.deepEqual(gestures, ["right"]);
+  // ...that a close one (palm 0.25) does not.
+  const near = createSwipeDetector();
+  for (let i = 0; i <= 9; i++) assert.equal(near.update(i * 33, { x: 0.5 + i * 0.008, y: 0.5, size: 0.25 }).gesture, null);
+  assert.ok(Math.abs(palmSize([{ x: 0.5, y: 0.8 }, ...Array(8).fill({ x: 0, y: 0 }), { x: 0.5, y: 0.6 }], 0.5) - 0.1) < 1e-9);
 });
 
 test("a hand that leaves the frame re-arms the detector", () => {
@@ -87,10 +98,10 @@ test("hand boxes are mirrored, padded, and kept inside the frame", () => {
 
 test("boxes are green on the push side or moving right, red otherwise", () => {
   const left = { x0: 0.1, y0: 0, x1: 0.3, y1: 0.2 }, right = { x0: 0.6, y0: 0, x1: 0.8, y1: 0.2 };
-  assert.equal(handTone({ box: left, active: false, offset: 0, minDistance: 0.22 }).push, false);
-  assert.equal(handTone({ box: right, active: false, offset: 0, minDistance: 0.22 }).push, true);
-  assert.deepEqual(handTone({ box: left, active: true, offset: 0.11, minDistance: 0.22 }), { push: true, strength: 0.5 });
-  assert.equal(handTone({ box: right, active: true, offset: -0.2, minDistance: 0.22 }).push, false);
+  assert.equal(handTone({ box: left, active: false, pull: 0 }).push, false);
+  assert.equal(handTone({ box: right, active: false, pull: 0 }).push, true);
+  assert.deepEqual(handTone({ box: left, active: true, pull: 0.5 }), { push: true, strength: 0.5 });
+  assert.equal(handTone({ box: right, active: true, pull: -0.9 }).push, false);
 });
 
 // Twenty-one landmarks for an upright hand (wrist at the bottom), with each
@@ -171,7 +182,35 @@ test("a fist sweeping sideways swipes instead of pausing", () => {
   assert.deepEqual(frames(createHandSwipeTracker(), { from: 0.5, to: 0.68, fist: true }).gestures, ["right"]);
 });
 
-test("hand keys stay distinct when both hands get the same label", () => {
-  assert.deepEqual(handKeys(["Left", "Right"]), ["Left", "Right"]);
-  assert.deepEqual(handKeys(["Left", "Left", undefined]), ["Left", "Left-2", "hand-2"]);
+test("each hand keeps its key by position, whatever order the hands come in", () => {
+  const match = createHandMatcher();
+  const [phone, wave] = match([{ x: 0.45, y: 0.82 }, { x: 0.5, y: 0.45 }], 0);
+  assert.notEqual(phone, wave);
+  // Next frame lists the hands the other way round, and the waving hand moved.
+  assert.deepEqual(match([{ x: 0.55, y: 0.46 }, { x: 0.46, y: 0.81 }], 33), [wave, phone]);
+  // A hand that blurs out of tracking during a fast sweep keeps its key.
+  match([{ x: 0.46, y: 0.81 }], 66);
+  assert.deepEqual(match([{ x: 0.46, y: 0.81 }, { x: 0.3, y: 0.5 }], 300), [phone, wave]);
+  // A hand that turns up somewhere else is a new hand.
+  const [, other] = match([{ x: 0.46, y: 0.81 }, { x: 0.95, y: 0.05 }], 333);
+  assert.ok(other !== phone && other !== wave);
+});
+
+// Malik's real hand path, recorded from his clip by MediaPipe (phone held low
+// in one hand, the other waving). His swipes are a left sweep near 1.2s and
+// 10s, right flicks near 4.5s, 6.9s and 11.3s, and a face-to-shoulder move
+// near 2.6s. The swing back after the first sweep (1.4s-2.3s) is not a swipe.
+test("Malik's recorded swipes are read correctly", () => {
+  const { frames } = JSON.parse(readFileSync(new URL("./fixtures/malik-wave.json", import.meta.url), "utf8"));
+  const tracker = createHandSwipeTracker(), match = createHandMatcher(), events = [];
+  for (const [t, hands] of frames) {
+    const keys = match(hands.map(([x, y]) => ({ x, y })), t);
+    const { gesture } = tracker.update(t, hands.map(([x, y, size, fist], index) => ({ key: keys[index], palm: { x, y }, size, fist: Boolean(fist) })));
+    if (gesture) events.push([t / 1000, gesture]);
+  }
+  const near = (gesture, at) => events.some(([t, g]) => g === gesture && Math.abs(t - at) <= 0.4);
+  assert.ok(near("left", 1.2) && near("right", 4.5) && near("right", 6.9) && near("left", 10) && near("right", 11.3), JSON.stringify(events));
+  assert.ok(!events.some(([t, g]) => g === "right" && t > 1.3 && t < 2.4), "the swing back is not a push");
+  assert.ok(!events.some(([, g]) => g === "fist"), "no pause");
+  assert.ok(events.length <= 6, JSON.stringify(events));
 });
