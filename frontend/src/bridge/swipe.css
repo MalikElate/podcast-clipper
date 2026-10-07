@@ -27,7 +27,7 @@
 .swipe-stamp.skip { right: 18px; color: #c2413a; transform: rotate(12deg); }
 
 .swipe-actions { display: flex; align-items: center; justify-content: center; gap: 22px; }
-.swipe-action { display: grid; place-items: center; width: 64px; height: 64px; border: 1px solid var(--b-line); border-radius: 999px; background: var(--b-panel); box-shadow: 0 10px 24px -16px rgba(23, 32, 51, .6); cursor: pointer; transition: transform .12s ease, background .12s ease; }
+.swipe-action { display: grid; place-items: center; width: 64px; height: 64px; border: 1px solid var(--b-line); border-radius: 999px; background: var(--b-panel); box-shadow: none; cursor: pointer; transition: transform .12s ease, background .12s ease; }
 .swipe-action:hover:not(:disabled) { transform: translateY(-2px); }
 .swipe-action:disabled { cursor: not-allowed; opacity: .45; }
 .swipe-action.skip { color: #c2413a; }

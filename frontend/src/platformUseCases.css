@@ -41,7 +41,7 @@
 .is-platform-themed .platform-use-case-copy h1 span { display: block; white-space: nowrap; }
 .is-platform-themed .platform-use-case-copy > p { margin-inline: auto; color: var(--platform-muted); }
 .is-platform-themed .platform-use-case-actions { justify-content: center; }
-.is-platform-themed .platform-use-case-actions .btn-primary { border-color: var(--platform-action); background: var(--platform-action); box-shadow: 0 16px 32px -20px color-mix(in srgb,var(--platform-action) 75%,transparent); }
+.is-platform-themed .platform-use-case-actions .btn-primary { border-color: var(--platform-action); background: var(--platform-action); box-shadow: none; }
 .is-platform-themed .platform-use-case-actions .btn-primary:hover { border-color: var(--platform-action-hover); background: var(--platform-action-hover); }
 .is-platform-themed .platform-use-case-secondary { color: var(--platform-secondary); }
 
