@@ -20,6 +20,13 @@
 .swipe-media-frame.youtube { aspect-ratio: 16 / 9; }
 .swipe-media { display: block; width: 100%; height: 100%; border: 0; object-fit: contain; background: #0b0f17; }
 .swipe-media-empty { display: grid; place-items: center; color: #8a96ab; }
+.swipe-metrics { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 10px 14px 0; }
+.swipe-metrics div { display: grid; }
+.swipe-metrics dt { order: 2; color: var(--b-muted); font-size: 11px; text-transform: lowercase; }
+.swipe-metrics dd { margin: 0; color: var(--b-text); font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.swipe-metrics.is-empty { color: var(--b-muted); font-size: 12px; }
+.swipe-source-picker { display: inline-flex; align-items: center; gap: 8px; color: var(--b-muted); font-size: 13px; }
+.swipe-source-picker select { max-width: 240px; padding: 6px 10px; border: 1px solid var(--b-line); border-radius: 8px; background: var(--b-panel); color: var(--b-text); font: inherit; font-size: 14px; }
 .swipe-caption { display: -webkit-box; margin: 0; padding: 12px 14px 16px; overflow: hidden; color: var(--b-text); font-size: 14px; line-height: 1.45; white-space: pre-line; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
 
 .swipe-stamp { position: absolute; top: 64px; z-index: 2; padding: 6px 14px; border: 3px solid currentColor; border-radius: 8px; background: rgba(255, 255, 255, .9); font-size: 22px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; pointer-events: none; transition: opacity .12s ease; }

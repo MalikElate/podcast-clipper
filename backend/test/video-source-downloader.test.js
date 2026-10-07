@@ -81,13 +81,15 @@ test("YouTube lists a channel's recent public and unlisted uploads", async () =>
   const http = new HttpTransport({ fetcher: async url => {
     requests.push(url);
     if (url.includes("/channels?")) return Response.json({ items: [{ contentDetails: { relatedPlaylists: { uploads: "UU123" } } }] });
+    if (url.includes("/videos?")) return Response.json({ items: [{ id: "publicVid01", statistics: { viewCount: "1520", likeCount: "84", commentCount: "6" } }] });
     return Response.json({ items: [
       { contentDetails: { videoId: "publicVid01", videoPublishedAt: "2026-10-01T10:00:00Z" }, snippet: { title: "Launch", description: "Full caption", thumbnails: { high: { url: "https://i.ytimg.com/vi/publicVid01/hq.jpg" } } }, status: { privacyStatus: "public" } },
       { contentDetails: { videoId: "privateVid1" }, snippet: { title: "Secret" }, status: { privacyStatus: "private" } },
     ] });
   } });
   const videos = await new YouTubeProvider({ transport: http, env: {} }).recentVideos({ account: { remoteId: "UC123" }, credentials: { accessToken: "token" } });
-  assert.deepEqual(videos, [{ id: "publicVid01", title: "Launch", caption: "Full caption", publishedAt: Date.parse("2026-10-01T10:00:00Z"), thumbnailUrl: "https://i.ytimg.com/vi/publicVid01/hq.jpg", url: "https://www.youtube.com/watch?v=publicVid01" }]);
+  assert.deepEqual(videos, [{ id: "publicVid01", title: "Launch", caption: "Full caption", publishedAt: Date.parse("2026-10-01T10:00:00Z"), thumbnailUrl: "https://i.ytimg.com/vi/publicVid01/hq.jpg", url: "https://www.youtube.com/watch?v=publicVid01", metrics: { views: 1520, likes: 84, comments: 6 } }]);
   assert.match(requests[0], /channels\?part=contentDetails&id=UC123/);
   assert.match(requests[1], /playlistId=UU123/);
+  assert.match(requests[2], /videos\?part=statistics&id=publicVid01$/);
 });
