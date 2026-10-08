@@ -554,12 +554,9 @@ export function registerMeadowMcpRoutes(application) {
         req.authType = "api_key";
       } else if (oauth) {
         const token = /^Bearer ([^\s]+)$/i.exec(req.headers.authorization || "")?.[1];
-        if (!token) {
-          // Public protocol discovery contains only tool/schema descriptions.
-          // Every tool handler requires a verified identity before domain access.
-          if (!req.headers.authorization && req.method === "POST") return next();
-          return jsonRpcError(res, 401, -32001, "Sign in to Meadow to continue.", { "WWW-Authenticate": challenge() });
-        }
+        // MCP clients start OAuth only on an HTTP 401 challenge, so anonymous
+        // requests, including initialize, must receive one.
+        if (!token) return jsonRpcError(res, 401, -32001, "Sign in to Meadow to continue.", { "WWW-Authenticate": challenge() });
         const verified = await oauth.verify(token);
         req.uid = verified.uid;
         req.mcpScopes = verified.scopes;
@@ -585,9 +582,8 @@ export function registerMeadowMcpRoutes(application) {
     handler: (req, res) => jsonRpcError(res, 429, -32002, "Too many MCP requests. Please wait a moment."),
   });
 
-  // Signed-in clients may send base64 media inline; anonymous discovery stays small.
-  const largeBody = express.json({ limit: "16mb" }), smallBody = express.json({ limit: "2mb" });
-  const body = (req, res, next) => (req.uid ? largeBody : smallBody)(req, res, next);
+  // Signed-in clients may send base64 media inline.
+  const body = express.json({ limit: "16mb" });
 
   application.app.post("/mcp", authenticate, limiter, body, async (req, res) => {
     const server = createMeadowMcpServer(application, req.uid, { authType: req.authType, scopes: req.mcpScopes });
