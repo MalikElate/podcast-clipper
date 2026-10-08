@@ -281,3 +281,10 @@
 .bridge-badge.awaiting_publish{background:#322d1e;color:#ead7a6;border-color:#5a4e2a;text-transform:none}.bridge-calendar-event.awaiting_publish{border-color:#d9bd76;background:#322d1e}.bridge[data-theme=light] .bridge-badge.awaiting_publish{background:#fff7e4;color:#80672c;border-color:#ead9a4}.bridge[data-theme=light] .bridge-calendar-event.awaiting_publish{background:#fff7e4;border-color:#b79849}
 
 .bridge-destination-refresh{display:inline-flex;align-items:center;gap:6px;margin:0 13px 13px}
+.bridge-agent-prompt{margin:18px 0 22px;padding:18px;border:1px solid var(--b-line);border-radius:10px;background:var(--b-raised)}
+.bridge-agent-prompt>p{margin:0 0 14px;font-size:calc(.84rem + 3px);line-height:1.6}
+.bridge-agent-guide h3.bridge-agent-manual{margin-top:4px}
+.bridge-connect-agent{max-width:620px;padding:25px}
+.bridge-connect-agent h2{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.bridge-connect-agent>p{margin:0 0 12px;line-height:1.6}
+.bridge-connect-agent code{padding:2px 6px;border-radius:4px;background:var(--b-raised);letter-spacing:.06em}

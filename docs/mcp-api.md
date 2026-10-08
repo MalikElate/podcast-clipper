@@ -8,6 +8,16 @@ Authorization: Bearer br_live_…
 
 Keys have the same workspace access as their owner, are displayed once, and can be revoked immediately. Keep them in a secret manager. API keys remain suitable for private clients that can supply a fixed bearer header; public ChatGPT connections use OAuth instead.
 
+## Agent sign-in (setup prompt)
+
+The dashboard's **Agents & API keys** page has a **Copy setup prompt** button. The prompt works in any agent that can make HTTP requests, including remote and cloud agents with no browser, and gives it its own API key for MCP and the REST API without the user copying a key:
+
+1. The agent calls `POST /api/agent-login` with `{"agentName": "..."}` (1–60 characters). The response contains a secret `deviceCode`, a `userCode` such as `BCDF-GHJK`, a `verificationUrlComplete` link to `/dashboard/connect-agent?code=…` on the app origin, `expiresIn` (600 seconds) and `interval` (5 seconds).
+2. The agent shows the user the link and code. The user signs in to Meadow, checks the agent name and code, and approves or denies. Only a signed-in browser session can view, approve or deny a request; API keys get `403 session_required`.
+3. The agent polls `POST /api/agent-login/poll` with `{"deviceCode": "..."}`: `202` while pending, `200` with `apiKey` once approved, `403 access_denied` if denied, `410 expired_token` if expired, unknown or already collected.
+
+The key is created only when the agent collects it, so no key is stored while waiting. It is named after the agent, appears in the user's API key list, counts toward the 20-key limit, and can be revoked like any other key. Starting is limited to 30 requests per 10 minutes per IP address, and polling to 120 per minute.
+
 ## OAuth sign-in
 
 The public metadata endpoint is `https://findmeadow.com/.well-known/oauth-protected-resource/mcp`; the root `/.well-known/oauth-protected-resource` is an alias. Metadata identifies `https://findmeadow.com/mcp` as the resource and the configured Clerk issuer as the authorization server. Clerk handles sign-in, explicit consent, S256 PKCE, authorization-code exchange, and refresh tokens.

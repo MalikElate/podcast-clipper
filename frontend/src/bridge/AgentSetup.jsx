@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { SiClaude, SiCursor, SiGooglegemini } from "react-icons/si";
 import { api } from "./BridgeApi.js";
 import { Icon } from "./Icons.jsx";
-import { AGENT_CLIENTS, agentInstructions } from "./agentSetup.js";
+import { AGENT_CLIENTS, agentInstructions, agentSetupPrompt } from "./agentSetup.js";
 import { Alert } from "./ui.jsx";
 
 export default function AgentSetup({ onCopy }) {
@@ -17,6 +17,12 @@ export default function AgentSetup({ onCopy }) {
   return <section className="bridge-panel bridge-agent-guide">
     <h2>Connect an AI agent</h2>
     <p>Connect your preferred agent to read your workspace, check analytics, upload media, and draft, schedule or publish posts.</p>
+    {configuration && <div className="bridge-agent-prompt">
+      <h3>Copy a setup prompt</h3>
+      <p>Paste it into any agent that can make web requests, including remote and cloud agents. The agent shows you a code, you approve it in Meadow, and it gets its own API key for MCP and the REST API. No key to copy.</p>
+      <button type="button" className="bridge-button" onClick={() => onCopy(agentSetupPrompt(configuration))}><Icon name="copy" size={16}/> Copy setup prompt</button>
+    </div>}
+    <h3 className="bridge-agent-manual">Or set up a specific app</h3>
     <div className="bridge-agent-tabs" role="tablist" aria-label="Agent setup">
       {AGENT_CLIENTS.map(item => { const Logo = logos[item.id]; return <button key={item.id} type="button" role="tab" id={`agent-tab-${item.id}`} aria-selected={client === item.id} aria-controls="agent-setup-panel" tabIndex={client === item.id ? 0 : -1} onClick={() => setClient(item.id)} onKeyDown={event => { const offset = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0; if (!offset && !["Home", "End"].includes(event.key)) return; event.preventDefault(); const index = event.key === "Home" ? 0 : event.key === "End" ? AGENT_CLIENTS.length - 1 : (AGENT_CLIENTS.findIndex(agent => agent.id === client) + offset + AGENT_CLIENTS.length) % AGENT_CLIENTS.length; setClient(AGENT_CLIENTS[index].id); document.getElementById(`agent-tab-${AGENT_CLIENTS[index].id}`)?.focus(); }}>{Logo && <Logo size={17} aria-hidden="true"/>}{item.name}</button>; })}
     </div>

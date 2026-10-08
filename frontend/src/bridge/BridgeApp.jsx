@@ -13,6 +13,7 @@ import Analytics from "./Analytics.jsx";
 import SwipeOrPush from "./SwipeOrPush.jsx";
 import ConfigurationSettings from "./ConfigurationSettings.jsx";
 import ApiKeys from "./ApiKeys.jsx";
+import ConnectAgent from "./ConnectAgent.jsx";
 import Billing from "./Billing.jsx";
 import { DeletionReceipt, readDeletionReceipt } from "./PrivacyAccount.jsx";
 import { dashboardPath, dashboardView, dashboardSearch } from "./dashboardRoutes.js";
@@ -41,9 +42,11 @@ export const configurationModules = [
   { id: "billing", name: "Billing", title: "Billing & plans", icon: "billing" },
 ];
 
-const allModules = [...modules, ...postModules, ...configurationModules];
+// Reached only from an agent's sign-in link, so it has no navigation entry.
+const linkedModules = [{ id: "connect-agent", name: "Connect an agent", icon: "key" }];
+const allModules = [...modules, ...postModules, ...configurationModules, ...linkedModules];
 const postViewIds = new Set(postModules.map(item => item.id));
-const configurationViewIds = new Set(configurationModules.map(item => item.id));
+const configurationViewIds = new Set([...configurationModules, ...linkedModules].map(item => item.id));
 export default function BridgeApp() {
   const { user, signOut } = useAuth();
   const [deletion, setDeletion] = useState(readDeletionReceipt);
@@ -180,6 +183,7 @@ function ConfigurationWorkspace({ billingSearch, user, project, config, view }) 
   return <>
     {view === "settings" && <ConfigurationSettings user={user} project={project}/>}
     {view === "api-keys" && <ApiKeys timeZone={project?.timeZone}/>}
+    {view === "connect-agent" && <ConnectAgent/>}
     {view === "billing" && <Billing key={billingSearch} returnSearch={billingSearch} localPreview={config.localPreview}/>}
   </>;
 }
