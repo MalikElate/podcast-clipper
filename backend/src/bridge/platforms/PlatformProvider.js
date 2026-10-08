@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { BridgeError, invariant, ProviderError } from "../core/errors.js";
 import { inferFormat, platformCatalog } from "./catalog.js";
 import { HttpTransport } from "./HttpTransport.js";
+import { videoCoverErrors } from "./videoCover.js";
 
 function tokenSeconds(value) {
   if (!["number", "string"].includes(typeof value) || String(value).trim() === "") return undefined;
@@ -68,7 +69,7 @@ export class PlatformProvider {
   validate(content) {
     const caps = this.capabilities;
     const format = content.format === "auto" || !content.format ? inferFormat(content.media) : content.format;
-    const messages = [];
+    const messages = videoCoverErrors(this.id, content);
     if (!caps.formats.includes(format)) messages.push(`${caps.name} does not support this ${format} format through Meadow.`);
     const caption = content.caption || "";
     const length = ["bluesky", "kick"].includes(this.id) ? [...new Intl.Segmenter("en", { granularity: "grapheme" }).segment(caption)].length : [...caption].length;

@@ -1,4 +1,5 @@
 import { PlatformProvider } from "./PlatformProvider.js";
+import { videoCoverTimestamp } from "./videoCover.js";
 import { invariant, ProviderError } from "../core/errors.js";
 
 class GoogleProvider extends PlatformProvider {
@@ -74,16 +75,27 @@ export class YouTubeProvider extends GoogleProvider {
     return errors;
   }
   async setThumbnail(ctx, videoId) {
-    if (!ctx.content.thumbnail || ctx.progress.thumbnailSet) return;
-    const asset = await ctx.media.prepare(ctx.content.thumbnail, "jpeg");
-    await this.http.request(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${encodeURIComponent(videoId)}&uploadType=media`, {
-      method: "POST", token: ctx.credentials.accessToken, body: ctx.media.storage.stream(asset.key),
-      headers: { "Content-Type": asset.mime, "Content-Length": String(asset.bytes) }, timeoutMs: 5 * 60000,
-    });
+    const coverTimestamp = videoCoverTimestamp(this.id, ctx.content);
+    if ((!ctx.content.thumbnail && coverTimestamp === undefined) || ctx.progress.thumbnailSet) return;
+    const asset = coverTimestamp !== undefined
+      ? await ctx.media.prepareVideoCover(ctx.content.media[0], coverTimestamp)
+      : await ctx.media.prepare(ctx.content.thumbnail, "jpeg");
+    try {
+      await this.http.request(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${encodeURIComponent(videoId)}&uploadType=media`, {
+        method: "POST", token: ctx.credentials.accessToken, body: ctx.media.storage.stream(asset.key),
+        headers: { "Content-Type": asset.mime, "Content-Length": String(asset.bytes) }, timeoutMs: 5 * 60000,
+      });
+    } catch (error) {
+      if (error.retryable || error.reconnect || error.code === "rate_limited") throw error;
+      throw new ProviderError("YouTube received the video, but could not apply its cover. Check the existing video in YouTube Studio and confirm the channel allows custom thumbnails before retrying.", { code: "thumbnail_rejected", uncertain: true });
+    }
     await ctx.checkpoint({ thumbnailSet: true });
   }
   async publish(ctx) {
     const { content, credentials, progress, checkpoint } = ctx;
+    if (progress.videoId) return this.poll(ctx);
+    const coverTimestamp = videoCoverTimestamp(this.id, content);
+    if (coverTimestamp !== undefined) await ctx.media.prepareVideoCover(content.media[0], coverTimestamp);
     const asset = await ctx.media.prepare(content.media[0], "mp4");
     let uploadUrl = progress.uploadUrl;
     if (!uploadUrl) {
@@ -94,13 +106,16 @@ export class YouTubeProvider extends GoogleProvider {
       invariant(uploadUrl && new URL(uploadUrl).hostname === "www.googleapis.com", "YouTube did not return a valid upload session.");
       await checkpoint({ phase: "upload", uploadUrl, key: asset.key, bytes: asset.bytes, mime: asset.mime });
     }
+    let confirmedVideoId;
     try {
       const video = await this.http.request(uploadUrl, { method: "PUT", token: credentials.accessToken, body: ctx.media.storage.stream(asset.key), headers: { "Content-Type": asset.mime, "Content-Length": String(asset.bytes) }, timeoutMs: 30 * 60000 });
       invariant(video.id, "YouTube did not return a video identifier.", { code: "unconfirmed_publication" });
+      confirmedVideoId = video.id;
       await checkpoint({ phase: "video_processing", videoId: video.id });
       await this.setThumbnail(ctx, video.id);
       return { status: "processing", externalId: video.id, progress: { phase: "video_processing", videoId: video.id } };
     } catch (error) {
+      if (confirmedVideoId) throw error;
       if (error.uncertain) return { status: "processing", progress: { phase: "upload", uploadUrl, key: asset.key, bytes: asset.bytes, mime: asset.mime }, pollAfterMs: 15000 };
       throw error;
     }

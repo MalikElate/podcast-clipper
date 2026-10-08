@@ -191,26 +191,36 @@ export class MediaService {
     return this.locks.withLock(`media:${record.id}:${variant}`, () => this.prepareVariant(record, variant), { waitMs: 31 * 60000, leaseMs: 90000 });
   }
 
+  async prepareVideoCover(record, timestampMs) {
+    invariant(record?.kind === "video" && Number.isSafeInteger(timestampMs) && timestampMs >= 0
+      && Number.isFinite(record.durationSec) && timestampMs < record.durationSec * 1000, "Choose a cover frame within the video’s duration.");
+    return this.prepare(record, `cover-${timestampMs}`);
+  }
+
   async prepareVariant(record, variant) {
     record = this.store.get("media", record.id);
     invariant(record?.status === "ready", "The selected media is unavailable.");
+    const coverMatch = /^cover-(\d+)$/.exec(variant), coverTimestamp = coverMatch ? Number(coverMatch[1]) : null;
+    const isCover = coverTimestamp !== null, isJpeg = variant === "jpeg" || isCover;
+    invariant(["original", "jpeg", "mp4"].includes(variant) || isCover && record.kind === "video"
+      && Number.isSafeInteger(coverTimestamp) && coverTimestamp < record.durationSec * 1000, "Unsupported media conversion.");
     if (variant === "original" || variant === "jpeg" && record.mime === "image/jpeg" || variant === "mp4" && record.mime === "video/mp4" && record.videoCodec === "h264") {
       await this.storage.ensure?.(record.storageKey);
       return { ...record, key: record.storageKey, variant: "original" };
     }
     if (!record.variants?.[variant]) {
-      const key = `${record.id}-${variant}.${variant === "jpeg" ? "jpg" : "mp4"}`;
-      const args = variant === "jpeg" ? ["-frames:v", "1", "-q:v", "3", "-vf", "scale='min(4096,iw)':-2"] : ["-c:v", "libx264", "-preset", "fast", "-crf", "22", "-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-c:a", "aac", "-movflags", "+faststart"];
-      invariant(["jpeg", "mp4"].includes(variant), "Unsupported media conversion.");
+      const key = `${record.id}-${variant}.${isJpeg ? "jpg" : "mp4"}`;
+      const args = isCover ? ["-frames:v", "1", "-q:v", "4", "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,setsar=1"] : variant === "jpeg" ? ["-frames:v", "1", "-q:v", "3", "-vf", "scale='min(4096,iw)':-2"] : ["-c:v", "libx264", "-preset", "fast", "-crf", "22", "-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-c:a", "aac", "-movflags", "+faststart"];
       await this.storage.ensure?.(record.storageKey);
-      await this.runner.run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-i", this.storage.path(record.storageKey), ...args, this.storage.path(key)], { timeoutMs: 30 * 60000 });
+      await this.runner.run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...(isCover ? ["-ss", String(coverTimestamp / 1000)] : []), "-i", this.storage.path(record.storageKey), ...args, this.storage.path(key)], { timeoutMs: 30 * 60000 });
       record = this.store.get("media", record.id);
       if (record?.status !== "ready") { await this.storage.remove(key); throw new BridgeError("The selected media was removed."); }
       await this.storage.persist?.(key);
       const bytes = await this.storage.size(key);
       record = this.store.get("media", record.id);
       if (record?.status !== "ready") { await this.storage.remove(key); throw new BridgeError("The selected media was removed."); }
-      record.variants = { ...record.variants, [variant]: { key, mime: variant === "jpeg" ? "image/jpeg" : "video/mp4", bytes } };
+      invariant(bytes > 0, "The cover frame could not be read. Choose an earlier frame.");
+      record.variants = { ...record.variants, [variant]: { key, mime: isJpeg ? "image/jpeg" : "video/mp4", bytes } };
       this.store.put("media", record);
       await this.store.flush?.();
     }
