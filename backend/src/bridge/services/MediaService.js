@@ -197,12 +197,51 @@ export class MediaService {
     return this.prepare(record, `cover-${timestampMs}`);
   }
 
+  async prepareTikTokCover(video, image) {
+    invariant(video?.kind === "video" && image?.kind === "image" && video.projectId === image.projectId
+      && video.ownerUid === image.ownerUid && /^[\w-]{1,200}$/.test(image.id), "Choose a cover image from this project.");
+    const variant = `tiktok-cover-${image.id}`;
+    return this.locks.withLock(`media:${video.id}:${variant}`, async () => {
+      let record = this.store.get("media", video.id);
+      invariant(record?.status === "ready" && this.store.get("media", image.id)?.status === "ready", "The selected video or cover is unavailable.");
+      if (!record.variants?.[variant]) {
+        const source = await this.prepare(record, "mp4"), cover = await this.prepare(image, "video-thumbnail");
+        const probe = JSON.parse(await this.runner.run("ffprobe", ["-v", "error", "-show_streams", "-of", "json", this.storage.path(source.key)]));
+        const visual = probe.streams?.find(stream => stream.codec_type === "video");
+        invariant(visual?.width && visual?.height, "The video dimensions could not be read.");
+        const rotation = Number(visual.side_data_list?.find(item => item.rotation !== undefined)?.rotation ?? visual.tags?.rotate ?? 0);
+        const rotated = Math.abs(rotation) % 180 === 90;
+        const width = Math.floor((rotated ? visual.height : visual.width) / 2) * 2, height = Math.floor((rotated ? visual.width : visual.height) / 2) * 2;
+        const key = `${video.id}-${variant}.mp4`;
+        // TikTok's native API accepts only a video frame. Replace the first frame
+        // in a separate version, keeping the duration, audio timing, and original.
+        const filter = `[0:v]scale=${width}:${height},setsar=1[base];[1:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1[cover];[base][cover]overlay=0:0:enable='eq(n,0)'[out]`;
+        try {
+          await this.runner.run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-i", this.storage.path(source.key), "-i", this.storage.path(cover.key), "-filter_complex", filter, "-map", "[out]", "-map", "0:a?", "-c:v", "libx264", "-preset", "fast", "-crf", "22", "-pix_fmt", "yuv420p", "-c:a", "aac", "-movflags", "+faststart", this.storage.path(key)], { timeoutMs: 30 * 60000 });
+          record = this.store.get("media", video.id);
+          invariant(record?.status === "ready" && this.store.get("media", image.id)?.status === "ready", "The selected video or cover was removed.");
+          await this.storage.persist?.(key);
+          const bytes = await this.storage.size(key);
+          record = this.store.get("media", video.id);
+          invariant(bytes > 0 && record?.status === "ready" && this.store.get("media", image.id)?.status === "ready", "The selected video or cover is unavailable.");
+          record.variants = { ...record.variants, [variant]: { key, mime: "video/mp4", bytes } };
+          this.store.put("media", record); await this.store.flush?.();
+        } catch (error) {
+          if (!this.store.get("media", video.id)?.variants?.[variant]) await this.storage.remove(key);
+          throw error;
+        }
+      }
+      await this.storage.ensure?.(record.variants[variant].key);
+      return { ...record, ...record.variants[variant], variant };
+    }, { waitMs: 31 * 60000, leaseMs: 90000 });
+  }
+
   async prepareVariant(record, variant) {
     record = this.store.get("media", record.id);
     invariant(record?.status === "ready", "The selected media is unavailable.");
     const coverMatch = /^cover-(\d+)$/.exec(variant), coverTimestamp = coverMatch ? Number(coverMatch[1]) : null;
-    const isCover = coverTimestamp !== null, isJpeg = variant === "jpeg" || isCover;
-    invariant(["original", "jpeg", "mp4"].includes(variant) || isCover && record.kind === "video"
+    const isCover = coverTimestamp !== null, isThumbnail = variant === "video-thumbnail", isJpeg = variant === "jpeg" || isThumbnail || isCover;
+    invariant(["original", "jpeg", "mp4"].includes(variant) || isThumbnail && record.kind === "image" || isCover && record.kind === "video"
       && Number.isSafeInteger(coverTimestamp) && coverTimestamp < record.durationSec * 1000, "Unsupported media conversion.");
     if (variant === "original" || variant === "jpeg" && record.mime === "image/jpeg" || variant === "mp4" && record.mime === "video/mp4" && record.videoCodec === "h264") {
       await this.storage.ensure?.(record.storageKey);
@@ -210,7 +249,7 @@ export class MediaService {
     }
     if (!record.variants?.[variant]) {
       const key = `${record.id}-${variant}.${isJpeg ? "jpg" : "mp4"}`;
-      const args = isCover ? ["-frames:v", "1", "-q:v", "4", "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,setsar=1"] : variant === "jpeg" ? ["-frames:v", "1", "-q:v", "3", "-vf", "scale='min(4096,iw)':-2"] : ["-c:v", "libx264", "-preset", "fast", "-crf", "22", "-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-c:a", "aac", "-movflags", "+faststart"];
+      const args = isCover ? ["-frames:v", "1", "-q:v", "4", "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,setsar=1"] : isThumbnail ? ["-frames:v", "1", "-q:v", "3", "-vf", "scale=1280:1280:force_original_aspect_ratio=decrease,setsar=1"] : variant === "jpeg" ? ["-frames:v", "1", "-q:v", "3", "-vf", "scale='min(4096,iw)':-2"] : ["-c:v", "libx264", "-preset", "fast", "-crf", "22", "-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-c:a", "aac", "-movflags", "+faststart"];
       await this.storage.ensure?.(record.storageKey);
       await this.runner.run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...(isCover ? ["-ss", String(coverTimestamp / 1000)] : []), "-i", this.storage.path(record.storageKey), ...args, this.storage.path(key)], { timeoutMs: 30 * 60000 });
       record = this.store.get("media", record.id);
@@ -232,8 +271,9 @@ export class MediaService {
     const record = this.require(uid, projectId, id);
     const projectDeliveries = this.store.list("delivery", { projectId });
     const used = this.store.list("post", { projectId }).some(post => {
-      if (!post.mediaIds?.includes(id)) return false;
       const deliveries = projectDeliveries.filter(delivery => delivery.postId === post.id);
+      const referenced = post.mediaIds?.includes(id) || Object.values(post.overrides || {}).some(override => override.settings?.thumbnailMediaId === id);
+      if (!referenced) return deliveries.some(delivery => !["published", "awaiting_publish", "cancelled"].includes(delivery.status) && delivery.contentSnapshot?.thumbnailMediaId === id);
       return !deliveries.length || deliveries.some(delivery => !["published", "awaiting_publish", "cancelled"].includes(delivery.status));
     });
     invariant(!used, "This file is used by an active post. Remove it from that post or cancel the post first.", { status: 409 });

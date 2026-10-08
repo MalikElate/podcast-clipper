@@ -1,5 +1,5 @@
 import { PlatformProvider } from "./PlatformProvider.js";
-import { videoCoverTimestamp } from "./videoCover.js";
+import { videoCoverTimestamp, customVideoCover } from "./videoCover.js";
 import { BridgeError, invariant, ProviderError } from "../core/errors.js";
 import { inferFormat } from "./catalog.js";
 
@@ -241,6 +241,11 @@ export function withZernio(Base) {
         mediaItems.push({ type: item.kind, url: ctx.media.url(item, { variant: asset.variant, external: true }) });
       }
       const { content, data } = this.postFields(format, ctx.content);
+      const customCover = customVideoCover(this.id, ctx.content);
+      if (customCover && ["tiktok", "instagram"].includes(this.id)) {
+        const asset = await ctx.media.prepare(customCover, "video-thumbnail");
+        data[this.id === "tiktok" ? "videoCoverImageUrl" : "instagramThumbnail"] = ctx.media.url(customCover, { variant: asset.variant, external: true });
+      }
       // A short delay keeps long video uploads out of this request; Meadow polls for the result.
       const result = await this.zernio("posts", { method: "POST", safeToRetry: Boolean(ctx.delivery?.id), headers: ctx.delivery?.id ? { "Idempotency-Key": `meadow-${ctx.delivery.id}` } : {},
         json: { content, mediaItems, platforms: [{ platform: this.zernioPlatform, accountId: ctx.credentials.zernioAccountId, platformSpecificData: data }], scheduledFor: new Date(this.clock() + 30000).toISOString(), ...(ctx.delivery?.id ? { metadata: { meadowDeliveryId: ctx.delivery.id } } : {}) } });

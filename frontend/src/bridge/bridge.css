@@ -289,3 +289,5 @@
 .bridge-connect-agent>p{margin:0 0 12px;line-height:1.6}
 .bridge-connect-agent code{padding:2px 6px;border-radius:4px;background:var(--b-raised);letter-spacing:.06em}
 .bridge-video-cover{margin-top:18px;padding-top:16px;border-top:1px solid var(--b-line);min-width:0}.bridge-video-cover>.bridge-small{margin:8px 0}.bridge-cover-frame{margin:12px 0;min-width:0}.bridge-cover-frame video{display:block;width:100%;max-height:240px;object-fit:contain;background:#121614;border-radius:8px}.bridge-cover-modal .bridge-cover-frame video{max-height:38vh}.bridge-cover-modal input[type=range]{width:100%;padding:12px 0;accent-color:#7398ff}.bridge-cover-modal .bridge-modal-actions{margin-top:16px}
+
+.bridge-cover-image{display:block;width:100%;max-height:240px;object-fit:contain;background:#121614;border-radius:8px;margin-top:12px}

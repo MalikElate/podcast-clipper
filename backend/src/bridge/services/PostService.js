@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { BridgeError, invariant } from "../core/errors.js";
 import { SecretVault } from "../core/SecretVault.js";
 import { isPendingDelivery } from "./RateLimitService.js";
+import { customCoverImageErrors } from "../platforms/videoCover.js";
 
 const terminal = new Set(["published", "awaiting_publish", "cancelled"]);
 const hasSentChat = item => (item.progress?.chat?.sent?.length || item.chatMessagesSent || 0) > 0;
@@ -45,7 +46,9 @@ export class PostService {
       if (override.settings?.thumbnailMediaId !== undefined) {
         invariant(typeof override.settings.thumbnailMediaId === "string" && override.settings.thumbnailMediaId.length <= 200, "Invalid thumbnail media item.");
         const thumbnail = this.media.require(uid, projectId, override.settings.thumbnailMediaId);
-        invariant(thumbnail.kind === "image", "Choose an image for the video thumbnail.");
+        const errors = customCoverImageErrors(thumbnail);
+        invariant(!errors.length, errors[0]);
+        invariant(override.settings.thumbnailVideoId === undefined || typeof override.settings.thumbnailVideoId === "string" && mediaIds.includes(override.settings.thumbnailVideoId), "Choose a cover for the selected video.");
       }
       invariant(override.localDateTime === undefined || typeof override.localDateTime === "string" && override.localDateTime.length <= 40, "Invalid destination time.");
     }

@@ -15,7 +15,7 @@ const settingLabels = {
   brandedContent: "Paid partnership", consent: "TikTok music confirmation", deliveryMode: "TikTok delivery", languageCode: "Post language",
   link: "Destination link", madeForKids: "Made for kids", messageType: "Chat message type", ownBrand: "Own brand promotion",
   privacy: "Visibility or audience", replies: "Follow-up messages", replyToMessageId: "Reply to message", syntheticMedia: "Altered or synthetic content",
-  thumbnailMediaId: "Video thumbnail", uploadConsent: "TikTok upload confirmation", videoCover: "Video cover",
+  thumbnailMediaId: "Custom video cover", uploadConsent: "TikTok upload confirmation", videoCover: "Video cover",
 };
 
 function SettingValue({ name, value, media }) {
@@ -60,7 +60,7 @@ function DestinationContent({ source, post, media, snapshot = false }) {
   const captionChanged = source.caption !== undefined && source.caption !== post.caption;
   const formatChanged = source.format && source.format !== post.format;
   const mediaChanged = Array.isArray(source.mediaIds) && source.mediaIds.join("\0") !== (post.mediaIds || []).join("\0");
-  const settings = Object.entries(source.settings || {});
+  const settings = Object.entries(source.settings || {}).filter(([name]) => name !== "thumbnailVideoId");
   if (!titleChanged && !captionChanged && !formatChanged && !mediaChanged && !settings.length && !source.localDateTime) return null;
   const mediaById = new Map([...media, ...(post.media || [])].map(item => [item.id, item]));
   return <div className="bridge-post-destination-content"><strong>{snapshot ? "Saved delivery content" : "Custom destination content"}</strong>
