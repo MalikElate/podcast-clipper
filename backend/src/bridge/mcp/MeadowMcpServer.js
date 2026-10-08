@@ -16,7 +16,7 @@ const remoteRead = { readOnlyHint: true, destructiveHint: false, openWorldHint: 
 const additive = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 const mediaImport = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true };
 const uploadGrant = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
-const publishing = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true };
+const publishing = { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true };
 
 // Tools that act beyond reading need a second OAuth scope. API keys keep their
 // owner's full access, as they do on the REST API.
