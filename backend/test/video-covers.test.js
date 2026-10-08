@@ -176,6 +176,8 @@ test("draft normalization requires an owned, ready cover and keeps it separate f
   const service = new PostService({ projects: {}, accounts: { require: () => ({ id: "yt" }) }, media: { require(uid, projectId, id) { assert.equal(uid, "alice"); assert.equal(projectId, "project"); if (id === "other-owner") throw new Error("Media not found"); return id === video.id ? video : covers.get(id); } } });
   const post = { mediaIds: [video.id], accountIds: ["yt"], overrides: { yt: { settings: customContent().settings } } };
   assert.deepEqual(service.normalizeFields("alice", "project", post).record.mediaIds, [video.id]);
+  const completed = { ...post, overrides: { yt: { settings: { ...customContent().settings, thumbnailVideoId: "original-completed-video" } } } };
+  assert.equal(service.normalizeFields("alice", "project", completed).record.overrides.yt.settings.thumbnailVideoId, "original-completed-video", "normalization preserves completed destination settings; providers validate only pending destinations");
   assert.throws(() => service.normalizeFields("alice", "project", { ...post, overrides: { yt: { settings: { thumbnailMediaId: "other-owner" } } } }), /not found/);
   covers.set(image.id, { ...image, status: "processing" });
   assert.throws(() => service.normalizeFields("alice", "project", post), /ready image/);

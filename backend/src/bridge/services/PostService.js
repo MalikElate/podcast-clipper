@@ -48,7 +48,9 @@ export class PostService {
         const thumbnail = this.media.require(uid, projectId, override.settings.thumbnailMediaId);
         const errors = customCoverImageErrors(thumbnail);
         invariant(!errors.length, errors[0]);
-        invariant(override.settings.thumbnailVideoId === undefined || typeof override.settings.thumbnailVideoId === "string" && mediaIds.includes(override.settings.thumbnailVideoId), "Choose a cover for the selected video.");
+        // Completed destinations retain their original source association when
+        // another destination is edited. Providers check the active selection.
+        invariant(override.settings.thumbnailVideoId === undefined || typeof override.settings.thumbnailVideoId === "string" && override.settings.thumbnailVideoId.length <= 200, "Invalid cover video item.");
       }
       invariant(override.localDateTime === undefined || typeof override.localDateTime === "string" && override.localDateTime.length <= 40, "Invalid destination time.");
     }
