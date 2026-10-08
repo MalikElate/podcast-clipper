@@ -8,8 +8,13 @@ export function supportsVideoCover(platform, content) {
 }
 
 export function videoCoverErrors(platform, content) {
+  if (!supportsVideoCover(platform, content)) return [];
+  if (content.settings?.thumbnailMediaId) {
+    if (content.settings.thumbnailVideoId && content.settings.thumbnailVideoId !== content.media[0].id) return ["Choose a cover for the selected video."];
+    return customCoverImageErrors(content.thumbnail);
+  }
   const cover = content.settings?.videoCover;
-  if (cover === undefined || !supportsVideoCover(platform, content)) return [];
+  if (cover === undefined) return [];
   const video = content.media[0];
   if (!cover || typeof cover !== "object" || Array.isArray(cover) || cover.mediaId !== video.id) return ["Choose a cover from the selected video."];
   if (!Number.isSafeInteger(cover.timestampMs) || cover.timestampMs < 0 || cover.timestampMs > 2147483647
@@ -18,6 +23,17 @@ export function videoCoverErrors(platform, content) {
 }
 
 export function videoCoverTimestamp(platform, content) {
-  return supportsVideoCover(platform, content) && !videoCoverErrors(platform, content).length
+  return !content.settings?.thumbnailMediaId && supportsVideoCover(platform, content) && !videoCoverErrors(platform, content).length
     ? content.settings?.videoCover?.timestampMs : undefined;
+}
+
+export function customCoverImageErrors(image) {
+  if (!image || image.kind !== "image" || image.status !== "ready") return ["Upload a ready image for the video cover."];
+  if (!["image/jpeg", "image/png", "image/webp"].includes(image.mime)) return ["Choose a JPG, PNG, or WebP cover image."];
+  if (!(image.bytes > 0 && image.bytes <= 10 * 1024 ** 2)) return ["Choose a cover image of up to 10 MB."];
+  return [];
+}
+
+export function customVideoCover(platform, content) {
+  return content.settings?.thumbnailMediaId && supportsVideoCover(platform, content) && !videoCoverErrors(platform, content).length ? content.thumbnail : null;
 }

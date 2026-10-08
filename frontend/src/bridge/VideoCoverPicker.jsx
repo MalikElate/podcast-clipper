@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Alert, Field, Modal } from "./ui.jsx";
-import { coverTime, selectedCover } from "./videoCover.js";
+import { coverTime, selectedCover, selectedCoverImage, coverImageError } from "./videoCover.js";
+import UploadProgress from "./UploadProgress.jsx";
 
 function CoverFrame({ video, timestampMs, onReady }) {
   const ref = useRef(null), [error, setError] = useState("");
@@ -41,20 +42,49 @@ export function CoverDialog({ video, initialTimestamp = 0, accountLabel, onClose
   </Modal>;
 }
 
-export default function VideoCoverPicker({ account, video, settings = {}, onChange }) {
+export default function VideoCoverPicker({ account, video, settings = {}, media = [], onChange, onUpload, onBusyChange, disabled = false }) {
   const [open, setOpen] = useState(false), cover = selectedCover(settings, video);
-  const container = useRef(null);
+  const [uploading, setUploading] = useState(false), [progress, setProgress] = useState(null), [error, setError] = useState("");
+  const image = selectedCoverImage(settings, video, media);
+  const container = useRef(null), fileInput = useRef(null), controller = useRef(null), busy = useRef(false), alive = useRef(true);
+  const latest = useRef({ settings, onChange, onBusyChange }); latest.current = { settings, onChange, onBusyChange };
+  function finishBusy() { if (busy.current) { busy.current = false; latest.current.onBusyChange?.(-1); } }
+  useEffect(() => { alive.current = true; return () => { alive.current = false; controller.current?.abort(); finishBusy(); }; }, []);
   function save(videoCover) {
-    const next = { ...settings, videoCover }; delete next.thumbnailMediaId;
+    const next = { ...settings, videoCover }; delete next.thumbnailMediaId; delete next.thumbnailVideoId;
     onChange(next); setOpen(false);
   }
-  function clear() { const next = { ...settings }; delete next.videoCover; onChange(next); }
+  function clear() { const next = { ...settings }; delete next.videoCover; delete next.thumbnailMediaId; delete next.thumbnailVideoId; onChange(next); setError(""); }
+  async function upload(file) {
+    if (busy.current || disabled || !onUpload) return;
+    const invalid = coverImageError(file); setError(invalid); if (invalid) return;
+    const request = new AbortController(); controller.current = request;
+    busy.current = true; latest.current.onBusyChange?.(1); setUploading(true); setProgress(null);
+    let uploadError = "";
+    try {
+      const uploaded = await onUpload([file], event => { uploadError = event.error || uploadError; if (alive.current) setProgress(event); }, { signal: request.signal });
+      if (!alive.current || request.signal.aborted) return;
+      const item = uploaded[0];
+      if (!item) throw new Error(uploadError || "The cover could not be uploaded. Please try again.");
+      if (item.kind !== "image" || item.status !== "ready") throw new Error("Choose a ready cover image.");
+      const invalidImage = coverImageError({ type: item.mime, size: item.bytes });
+      if (invalidImage) throw new Error(invalidImage);
+      const next = { ...latest.current.settings, thumbnailMediaId: item.id, thumbnailVideoId: video.id }; delete next.videoCover;
+      latest.current.onChange(next);
+    } catch (failure) { if (alive.current && !request.signal.aborted) setError(failure.message); }
+    finally { finishBusy(); controller.current = null; if (alive.current) { setUploading(false); setProgress(null); } }
+  }
   return <div ref={container} className="bridge-video-cover">
     <strong>Video cover</strong>
-    {cover && <CoverFrame key={`${video.id}:${cover.timestampMs}`} video={video} timestampMs={cover.timestampMs}/>}
-    <p className="bridge-small">{cover ? `Selected frame at ${coverTime(cover.timestampMs)}` : "The platform will choose a cover unless you select a frame."}</p>
+    {image ? <img className="bridge-cover-image" src={image.url} alt={`Custom video cover for ${account.label}`}/> : cover && <CoverFrame key={`${video.id}:${cover.timestampMs}`} video={video} timestampMs={cover.timestampMs}/>}
+    <p className="bridge-small">{image ? image.filename : cover ? `Selected frame at ${coverTime(cover.timestampMs)}` : "The platform will choose a cover unless you select a frame or upload an image."}</p>
+    {onUpload && <p className="bridge-small">Cover images: JPG, PNG, or WebP, up to 10 MB.</p>}
+    {account.platform === "tiktok" && onUpload && <p className="bridge-small">For TikTok, an uploaded cover may briefly appear as the first frame of the video.</p>}
     {account.platform === "youtube" && <p className="bridge-small">Your YouTube channel must allow custom thumbnails.</p>}
-    <div className="bridge-inline-actions"><button type="button" className="bridge-button secondary small" onClick={() => setOpen(true)}>{cover ? "Change cover" : "Choose cover"}</button>{cover && <button type="button" className="bridge-text-button" onClick={clear}>Use automatic cover</button>}</div>
+    <input ref={fileInput} type="file" hidden accept="image/jpeg,image/png,image/webp" aria-label={`Upload cover image for ${account.label}`} onChange={event => { const file = event.target.files[0]; event.target.value = ""; if (file) upload(file); }}/>
+    <Alert message={error}/>
+    {uploading && <UploadProgress progress={progress} onCancel={() => controller.current?.abort()}/>}
+    <div className="bridge-inline-actions"><button type="button" className="bridge-button secondary small" disabled={disabled || uploading} onClick={() => setOpen(true)}>{cover || image ? "Change cover" : "Choose cover"}</button>{onUpload && <button type="button" className="bridge-button secondary small" disabled={disabled || uploading} onClick={() => fileInput.current?.click()}>Upload cover image</button>}{(cover || image) && <button type="button" className="bridge-text-button" disabled={disabled || uploading} onClick={clear}>Use automatic cover</button>}</div>
     {open && createPortal(<CoverDialog key={video.id} video={video} initialTimestamp={cover?.timestampMs || 0} accountLabel={account.label} onClose={() => setOpen(false)} onSave={save}/>, container.current.closest(".bridge") || document.body)}
   </div>;
 }

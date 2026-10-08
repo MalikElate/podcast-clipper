@@ -1,5 +1,5 @@
 import { PlatformProvider } from "./PlatformProvider.js";
-import { videoCoverTimestamp } from "./videoCover.js";
+import { videoCoverTimestamp, customVideoCover } from "./videoCover.js";
 import { tiktokAccountAnalytics } from "./accountAnalytics.js";
 import { tiktokStatusFailure } from "./tiktokErrors.js";
 import { invariant, ProviderError } from "../core/errors.js";
@@ -113,14 +113,15 @@ export class TikTokProvider extends PlatformProvider {
     invariant(inbox || !this.directPostPrivateOnly || s.privacy === "SELF_ONLY", privateOnlyMessage, { code: "tiktok_private_only" });
     if (inbox) this.assertValid(ctx.content);
     const photos = ctx.content.media[0].kind === "image";
+    const customCover = customVideoCover(this.id, ctx.content);
     const urls = [];
     for (const item of ctx.content.media) {
-      const asset = await ctx.media.prepare(item, photos ? "jpeg" : "mp4");
+      const asset = customCover ? await ctx.media.prepareTikTokCover(item, customCover) : await ctx.media.prepare(item, photos ? "jpeg" : "mp4");
       invariant(asset.bytes <= this.capabilities[`${item.kind}MaxBytes`], "The converted file exceeds TikTok's media limit.");
       urls.push(ctx.media.url(item, { variant: asset.variant, external: true }));
     }
     const postInfo = { privacy_level: s.privacy, disable_comment: s.allowComments !== true, brand_content_toggle: s.brandedContent === true, brand_organic_toggle: s.ownBrand === true };
-    const coverTimestamp = videoCoverTimestamp(this.id, ctx.content);
+    const coverTimestamp = customCover ? 0 : videoCoverTimestamp(this.id, ctx.content);
     const body = photos ? { media_type: "PHOTO", post_mode: "DIRECT_POST", post_info: { ...postInfo, title: ctx.content.title, description: ctx.content.caption, auto_add_music: s.autoMusic === true }, is_aigc: s.aiGenerated === true, source_info: { source: "PULL_FROM_URL", photo_images: urls, photo_cover_index: 0 } } : { post_info: { ...postInfo, title: ctx.content.caption, disable_duet: s.allowDuet !== true, disable_stitch: s.allowStitch !== true, is_aigc: s.aiGenerated === true, ...(coverTimestamp !== undefined ? { video_cover_timestamp_ms: coverTimestamp } : {}) }, source_info: { source: "PULL_FROM_URL", video_url: urls[0] } };
     const inboxBody = photos ? { media_type: "PHOTO", post_mode: "MEDIA_UPLOAD", post_info: { title: ctx.content.title || "", description: ctx.content.caption || "" }, source_info: body.source_info } : { source_info: body.source_info };
     let result;

@@ -79,7 +79,7 @@ export class YouTubeProvider extends GoogleProvider {
     if ((!ctx.content.thumbnail && coverTimestamp === undefined) || ctx.progress.thumbnailSet) return;
     const asset = coverTimestamp !== undefined
       ? await ctx.media.prepareVideoCover(ctx.content.media[0], coverTimestamp)
-      : await ctx.media.prepare(ctx.content.thumbnail, "jpeg");
+      : await ctx.media.prepare(ctx.content.thumbnail, "video-thumbnail");
     try {
       await this.http.request(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${encodeURIComponent(videoId)}&uploadType=media`, {
         method: "POST", token: ctx.credentials.accessToken, body: ctx.media.storage.stream(asset.key),
@@ -96,6 +96,7 @@ export class YouTubeProvider extends GoogleProvider {
     if (progress.videoId) return this.poll(ctx);
     const coverTimestamp = videoCoverTimestamp(this.id, content);
     if (coverTimestamp !== undefined) await ctx.media.prepareVideoCover(content.media[0], coverTimestamp);
+    else if (content.thumbnail) await ctx.media.prepare(content.thumbnail, "video-thumbnail");
     const asset = await ctx.media.prepare(content.media[0], "mp4");
     let uploadUrl = progress.uploadUrl;
     if (!uploadUrl) {

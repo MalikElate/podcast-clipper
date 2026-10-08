@@ -13,11 +13,27 @@ export function selectedCover(settings, video) {
     && cover.timestampMs < video.durationSec * 1000 ? cover : null;
 }
 
+export const COVER_IMAGE_MAX_BYTES = 10 * 1024 ** 2;
+export function coverImageError(file) {
+  if (!file || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) return "Choose a JPG, PNG, or WebP cover image.";
+  if (!file.size || file.size > COVER_IMAGE_MAX_BYTES) return "Choose a cover image of up to 10 MB.";
+  return "";
+}
+
+export function selectedCoverImage(settings, video, media) {
+  if (settings.thumbnailVideoId && settings.thumbnailVideoId !== video.id) return null;
+  return media.find(item => item.id === settings.thumbnailMediaId && item.kind === "image" && item.status === "ready") || null;
+}
+
 export function removeStaleCovers(overrides, mediaIds, frozenAccountIds = []) {
   let next = overrides;
   for (const [id, override] of Object.entries(overrides || {})) {
-    if (!frozenAccountIds.includes(id) && override.settings?.videoCover && !mediaIds.includes(override.settings.videoCover.mediaId)) {
-      const settings = { ...override.settings }; delete settings.videoCover;
+    const staleFrame = override.settings?.videoCover && !mediaIds.includes(override.settings.videoCover.mediaId);
+    const staleImage = override.settings?.thumbnailVideoId && !mediaIds.includes(override.settings.thumbnailVideoId);
+    if (!frozenAccountIds.includes(id) && (staleFrame || staleImage)) {
+      const settings = { ...override.settings };
+      if (staleFrame) delete settings.videoCover;
+      if (staleImage) { delete settings.thumbnailMediaId; delete settings.thumbnailVideoId; }
       next = { ...next, [id]: { ...override, settings } };
     }
   }
