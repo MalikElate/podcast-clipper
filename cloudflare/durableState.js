@@ -1,5 +1,6 @@
 // The Container filesystem is temporary. This repository lives in its existing
 // Durable Object and atomically replaces the committed SQLite snapshot.
+import { parseNextWakeHeader, validWakeAt } from "./publishingWake.js";
 const CHUNK_BYTES = 64 * 1024;
 export const MAX_SNAPSHOT_BYTES = 32 * 1024 * 1024;
 const META_KEY = "meadow:database:metadata";
@@ -17,7 +18,7 @@ export class DurableState {
   constructor(storage) { this.storage = storage; }
   async status() {
     const meta = await this.storage.get(META_KEY);
-    return meta ? { initialized: Boolean(meta.sha256), mode: meta.mode, generation: meta.generation, sequence: meta.sequence, bytes: meta.bytes, sha256: meta.sha256, updatedAt: meta.updatedAt, migration: meta.migration || null } : { initialized: false, mode: "legacy" };
+    return meta ? { initialized: Boolean(meta.sha256), mode: meta.mode, generation: meta.generation, sequence: meta.sequence, bytes: meta.bytes, sha256: meta.sha256, updatedAt: meta.updatedAt, migration: meta.migration || null, ...(meta.nextWakeAt !== undefined ? { nextWakeAt: meta.nextWakeAt } : {}) } : { initialized: false, mode: "legacy" };
   }
   async setMaintenance() {
     return this.storage.transaction(async tx => {
@@ -83,7 +84,8 @@ export class DurableState {
     if (bytes.byteLength < 100 || bytes.byteLength > MAX_SNAPSHOT_BYTES) throw new DurableStateError("durable_snapshot_size", 413);
     if (new TextDecoder().decode(bytes.slice(0, 16)) !== "SQLite format 3\0") throw new DurableStateError("durable_snapshot_invalid", 400);
   }
-  async commit(bytes, generation, sequence, expectedHash) {
+  async commit(bytes, generation, sequence, expectedHash, metadata = {}) {
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata) || metadata.nextWakeAt !== undefined && !validWakeAt(metadata.nextWakeAt)) throw new DurableStateError("durable_wake_invalid", 400);
     this.validateSize(bytes);
     const sha256 = await snapshotHash(bytes);
     if (sha256 !== expectedHash) throw new DurableStateError("durable_snapshot_checksum", 400);
@@ -91,8 +93,11 @@ export class DurableState {
       const old = await tx.get(META_KEY);
       if (!old || generation !== old.generation || !["ready", "restoring"].includes(old.mode)) throw new DurableStateError("durable_generation_expired", 409);
       if (!Number.isSafeInteger(sequence) || sequence < 1 || sequence < old.sequence || (sequence === old.sequence && old.sha256 !== sha256)) throw new DurableStateError("durable_sequence_conflict", 409);
-      if (sequence === old.sequence) return old;
-      return this.writeSnapshot(tx, old, bytes, { sequence, sha256 });
+      if (sequence === old.sequence) {
+        if (metadata.nextWakeAt !== undefined && metadata.nextWakeAt !== old.nextWakeAt) throw new DurableStateError("durable_sequence_conflict", 409);
+        return old;
+      }
+      return this.writeSnapshot(tx, old, bytes, { sequence, sha256, ...(metadata.nextWakeAt !== undefined ? { nextWakeAt: metadata.nextWakeAt } : {}) });
     });
   }
   async ready(generation) {
@@ -113,8 +118,11 @@ export class DurableState {
       if (request.method === "POST" && url.pathname === "/snapshot") {
         const length = Number(request.headers.get("Content-Length"));
         if (length > MAX_SNAPSHOT_BYTES) throw new DurableStateError("durable_snapshot_size", 413);
-        const meta = await this.commit(new Uint8Array(await request.arrayBuffer()), Number(request.headers.get("X-Meadow-Generation")), Number(request.headers.get("X-Meadow-Sequence")), request.headers.get("X-Meadow-Sha256"));
-        return Response.json({ generation: meta.generation, sequence: meta.sequence, sha256: meta.sha256 });
+        let nextWakeAt;
+        try { nextWakeAt = parseNextWakeHeader(request.headers.get("X-Meadow-Next-Wake-At")); }
+        catch { throw new DurableStateError("durable_wake_invalid", 400); }
+        const meta = await this.commit(new Uint8Array(await request.arrayBuffer()), Number(request.headers.get("X-Meadow-Generation")), Number(request.headers.get("X-Meadow-Sequence")), request.headers.get("X-Meadow-Sha256"), { nextWakeAt });
+        return Response.json({ generation: meta.generation, sequence: meta.sequence, sha256: meta.sha256, ...(meta.nextWakeAt !== undefined ? { nextWakeAt: meta.nextWakeAt } : {}) });
       }
       if (request.method === "POST" && url.pathname === "/migration/snapshot") {
         if ((await this.status()).mode !== "migration") throw new DurableStateError("durable_migration_not_paused", 409);

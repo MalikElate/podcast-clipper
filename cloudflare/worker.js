@@ -5,6 +5,7 @@ import { Container } from "@cloudflare/containers";
 import { env } from "cloudflare:workers";
 import { timingSafeEqual } from "node:crypto";
 import { DurableState } from "./durableState.js";
+import { createPublishingWake } from "./publishingWake.js";
 import { migrationScript } from "./migrationScript.js";
 import { appDomainRedirect, dashboardShellUrl } from "./domainRouting.js";
 import { handlePosthogProxy, isPosthogProxyPath } from "./posthogProxy.js";
@@ -101,7 +102,29 @@ export class PodcastClipperBackend extends Container {
   });
 
   get durableState() { return new DurableState(this.ctx.storage); }
-  async durableStorage(request) { return this.durableState.handle(request); }
+  get publishingWake() {
+    if (!this.publishingWakeScheduler) this.publishingWakeScheduler = createPublishingWake({
+      readStatus: () => this.durableState.status(),
+      listSchedules: name => this.listSchedules(name),
+      deleteSchedules: name => this.deleteSchedules(name),
+      schedule: (when, name, payload) => this.schedule(when, name, payload),
+      // The scheduler has already gated legacy/migration modes. Use the base
+      // fetch so restoring health failures retain their startup_failed code.
+      health: () => super.fetch(new Request("http://backend/health")),
+      stopFailedRestore: () => this.stop(),
+    });
+    return this.publishingWakeScheduler;
+  }
+  async durableStorage(request) {
+    const response = await this.durableState.handle(request);
+    const path = new URL(request.url).pathname;
+    if (response.ok && request.method === "POST" && ["/snapshot", "/ready"].includes(path)) {
+      try { await this.publishingWake.reconcile(); }
+      catch { return Response.json({ code: "durable_wake_unavailable" }, { status: 503 }); }
+    }
+    return response;
+  }
+  async wakePublishing(payload) { return this.publishingWake.wake(payload); }
   async fetch(request) {
     const { mode } = await this.durableState.status();
     if (["migration", "restoring", "resuming"].includes(mode)) {

@@ -29,13 +29,20 @@ export class DurableDatabase {
     }
     throw lastError?.code?.startsWith("durable_") ? lastError : failure("durable_storage_unavailable");
   }
-  async persist(bytes, sequence) {
+  async persist(bytes, sequence, { nextWakeAt } = {}) {
     const sha256 = hash(bytes);
-    const response = await this.request("/snapshot", { method: "POST", headers: { "Content-Type": "application/vnd.sqlite3", "X-Meadow-Generation": String(this.generation), "X-Meadow-Sequence": String(sequence), "X-Meadow-Sha256": sha256 }, body: bytes });
+    invariantWake(nextWakeAt);
+    const response = await this.request("/snapshot", { method: "POST", headers: { "Content-Type": "application/vnd.sqlite3", "X-Meadow-Generation": String(this.generation), "X-Meadow-Sequence": String(sequence), "X-Meadow-Sha256": sha256,
+      ...(nextWakeAt !== undefined ? { "X-Meadow-Next-Wake-At": nextWakeAt === null ? "none" : String(nextWakeAt) } : {}) }, body: bytes });
     const committed = await response.json();
     if (committed.generation !== this.generation || committed.sequence !== sequence || committed.sha256 !== sha256) throw failure("durable_snapshot_unconfirmed");
+    if (nextWakeAt !== undefined && committed.nextWakeAt !== nextWakeAt) throw failure("durable_wake_unconfirmed");
   }
   async ready() { await this.request("/ready", { method: "POST", headers: { "X-Meadow-Generation": String(this.generation) } }); }
+}
+
+function invariantWake(nextWakeAt) {
+  if (nextWakeAt !== undefined && nextWakeAt !== null && (!Number.isSafeInteger(nextWakeAt) || nextWakeAt <= 0)) throw failure("durable_wake_invalid");
 }
 
 /** Restore before opening the application's database or starting any workers. */

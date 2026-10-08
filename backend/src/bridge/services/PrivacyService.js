@@ -156,6 +156,7 @@ export class PrivacyService {
     for (const delivery of this.store.list("delivery", { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountId === account.id)) { this.store.removeRateEvent(delivery.id); this.store.remove("delivery", delivery.id); }
     this.store.removeRateEventsForAccount(account.ownerUid, account.id);
     this.swipe?.removeAccount(account);
+    this.dropper?.removeAccount(account);
     for (const post of this.store.list("post", { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountIds.includes(account.id))) {
       const overrides = { ...post.overrides }; delete overrides[account.id];
       const accountIds = post.accountIds.filter(id => id !== account.id);
@@ -249,6 +250,7 @@ export class PrivacyService {
       await this.store.flush?.();
       for (const key of job.fileKeys) await this.storage.remove(key);
       this.store.removeOwner(job.ownerUid, { keepKinds: ["erasure", "revocation", "billing", "checkout_session", "processor_erasure"] });
+      this.dropper?.removeOwner(job.ownerUid);
       job = this.store.put("erasure", { ...job, localDone: true, fileKeys: null });
       this.pruneBlueskySessions();
       this.store.checkpointDeletedData();

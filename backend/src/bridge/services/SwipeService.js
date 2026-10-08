@@ -3,6 +3,7 @@ import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { Temporal } from "@js-temporal/polyfill";
 import { invariant, publicError } from "../core/errors.js";
+import { clipVideoText as clip, prepareVideoPush } from "./VideoPush.js";
 
 // Swipe or Push: a deck of the user's recent videos from their connected
 // accounts. Swiping right downloads the video and publishes it to the user's
@@ -22,17 +23,11 @@ const cardMetrics = ["views", "likes", "comments", "shares", "saves"];
 const videoMetrics = (values = {}) => Object.fromEntries(cardMetrics.map(key => [key, values?.[key] === null || values?.[key] === undefined || values?.[key] === "" ? NaN : Number(values[key])]).filter(([, value]) => Number.isFinite(value) && value >= 0));
 
 const cardKey = (accountId, externalId) => createHash("sha256").update(`${accountId}:${externalId}`).digest("base64url").slice(0, 22);
-const clip = (text, limit) => { const characters = [...String(text || "")]; return characters.length > limit ? `${characters.slice(0, limit - 1).join("").trimEnd()}…` : characters.join(""); };
 
 // TikTok's embed player shows just the video, which fits a 9:16 card.
 function tiktokEmbed(url) {
   const id = /\/video\/(\d+)/.exec(url || "")?.[1];
   return id ? `https://www.tiktok.com/player/v1/${id}?music_info=0&description=0&rel=0` : null;
-}
-
-function videoTitle(source) {
-  const line = String(source.title || source.caption || "").split("\n").map(value => value.trim()).find(Boolean) || "Video";
-  return clip(line.replace(/[<>]/g, ""), 100);
 }
 
 /** A minute-precision local time at or after `epochMs` in `timeZone`. */
@@ -266,21 +261,13 @@ export class SwipeService {
     const uid = decision.ownerUid, settings = this.settings(uid, project.id);
     const accountIds = this.destinationsFor(uid, project.id, decision.accountId);
     invariant(accountIds.length, "Choose where pushed videos go.", { code: "swipe_settings_required" });
-    const caption = decision.source.caption || "";
-    const overrides = Object.fromEntries(accountIds.map(id => {
-      const account = this.store.get("account", id), limit = this.registry.get(account.platform)?.capabilities?.captionLimit;
-      return [id, { ...(settings.overrides[id]?.settings ? { settings: settings.overrides[id].settings } : {}), ...(limit && [...caption].length > limit ? { caption: clip(caption, limit) } : {}) }];
-    }));
     const slotAt = Math.max(decision.slotAt, this.clock());
     const schedule = slotAt <= this.clock() + 60000 ? { mode: "now", timeZone: project.timeZone } : { mode: "scheduled", timeZone: project.timeZone, localDateTime: localDateTime(slotAt, project.timeZone) };
-    const item = { caption, title: videoTitle(decision.source), mediaIds: [media.id], accountIds, overrides, format: "auto", schedule };
     // Send the video only to destinations that accept it, and report the rest.
-    const preview = await this.posts.preview(uid, project.id, { items: [item] });
-    const rejected = preview.rows[0].destinations.filter(destination => destination.errors.length).map(destination => ({ accountId: destination.accountId, accountName: destination.accountName, platform: destination.platform, errors: destination.errors.slice(0, 3) }));
-    const accepted = accountIds.filter(id => !rejected.some(entry => entry.accountId === id));
-    invariant(accepted.length, `No destination accepted this video. ${rejected.map(entry => `${entry.accountName}: ${entry.errors[0]}`).join(" ")}`.trim(), { code: "invalid_content" });
+    const { item, rejected } = await prepareVideoPush({ store: this.store, registry: this.registry, posts: this.posts, uid, projectId: project.id, source: decision.source, media, accountIds, overrides: settings.overrides, schedule });
+    invariant(item.accountIds.length, `No destination accepted this video. ${rejected.map(entry => `${entry.accountName}: ${entry.errors[0]}`).join(" ")}`.trim(), { code: "invalid_content" });
     const requestId = `swipe-${createHash("sha256").update(decision.id).digest("hex").slice(0, 32)}`;
-    const result = await this.posts.submit(uid, project.id, { requestId, items: [{ ...item, accountIds: accepted, overrides: Object.fromEntries(accepted.map(id => [id, overrides[id]])) }] });
+    const result = await this.posts.submit(uid, project.id, { requestId, items: [item] });
     return { postId: result.posts[0].id, rejected };
   }
 

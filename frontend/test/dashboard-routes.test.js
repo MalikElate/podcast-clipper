@@ -9,6 +9,7 @@ test("every dashboard view has a unique readable path", () => {
   assert.equal(dashboardPath("accounts"), "/dashboard/connections");
   assert.equal(dashboardPath("api-keys"), "/dashboard/api-keys");
   assert.equal(dashboardPath("swipe"), "/dashboard/swipe");
+  assert.equal(dashboardPath("dropper"), "/dashboard/dropper");
   assert.ok(paths.every(path => path === "/dashboard" || path.startsWith("/dashboard/")));
 });
 

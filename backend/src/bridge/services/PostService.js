@@ -154,7 +154,7 @@ export class PostService {
     return preview;
   }
 
-  async submit(uid, projectId, body) {
+  async submit(uid, projectId, body, { beforeCommit } = {}) {
     invariant(!this.localPreview, "Live publishing is disabled in local preview.", { status: 409, code: "preview_mode" });
     invariant(typeof body?.requestId === "string" && /^[\w-]{16,100}$/.test(body.requestId), "A submission identifier is required.");
     const draftId = body.draftId;
@@ -185,6 +185,9 @@ export class PostService {
         invariant(duplicate.fingerprint === fingerprint, "This submission identifier was already used for different content.", { status: 409 });
         return { posts: duplicate.postIds.map(id => this.get(uid, projectId, id)), duplicate: true };
       }
+      // Internal queue callers can stop work while remote account options load.
+      // This synchronous guard shares the transaction that creates deliveries.
+      beforeCommit?.();
       let savedDraft = null;
       if (draftId !== undefined) {
         savedDraft = this.store.get("post", draftId);

@@ -17,6 +17,7 @@ import { ScheduleService } from "./services/ScheduleService.js";
 import { MediaService } from "./services/MediaService.js";
 import { downloadRemoteMedia } from "./services/RemoteMedia.js";
 import { SwipeService } from "./services/SwipeService.js";
+import { DropperService } from "./services/DropperService.js";
 import { VideoSourceDownloader } from "./services/VideoSourceDownloader.js";
 import { UploadTokenService } from "./services/UploadTokenService.js";
 import { AccountService } from "./services/AccountService.js";
@@ -137,6 +138,11 @@ export class BridgeApplication {
     this.swipe = new SwipeService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, analytics: this.analytics, posts: this.posts, media: this.media,
       downloader: videoDownloader || new VideoSourceDownloader({ env }), incomingDirectory: incoming, privacy: this.privacy, clock, enabled: !this.localPreview && env.BRIDGE_PUBLISHING_ENABLED !== "false" });
     this.privacy.swipe = this.swipe;
+    this.dropper = new DropperService({ store: this.store, projects: this.projects, accounts: this.accounts, registry: this.registry, posts: this.posts, media: this.media,
+      swipe: this.swipe, incomingDirectory: incoming, privacy: this.privacy, clock, enabled: !this.localPreview && env.BRIDGE_PUBLISHING_ENABLED !== "false" });
+    this.privacy.dropper = this.dropper;
+    const backgroundPublishingEnabled = !this.localPreview && env.BRIDGE_PUBLISHING_ENABLED !== "false";
+    this.store.nextBackgroundWakeAt = () => backgroundPublishingEnabled ? this.dropper.nextWakeAt() : null;
     this.upload = multer({ dest: incoming, limits: { fileSize: this.media.maxBytes, files: 1, fields: 0 } });
     this.receiveUpload = (req, res, next) => {
       const upload = req.uploadGrant ? multer({ dest: incoming, limits: { fileSize: req.uploadGrant.bytes, files: 1, fields: 0 } }) : this.upload;
@@ -370,6 +376,10 @@ export class BridgeApplication {
     app.post(`${root}/swipe/settings`, route((req, res) => res.json({ settings: this.swipe.saveSettings(req.uid, req.params.projectId, req.body) })));
     app.post(`${root}/swipe/decisions`, route(async (req, res) => res.status(201).json(await this.swipe.decide(req.uid, req.params.projectId, req.body))));
     app.delete(`${root}/swipe/decisions/:cardId`, route((req, res) => res.json(this.swipe.undo(req.uid, req.params.projectId, req.params.cardId))));
+    app.get(`${root}/dropper`, route(async (req, res) => res.json(await this.dropper.deck(req.uid, req.params.projectId))));
+    app.post(`${root}/dropper/settings`, route((req, res) => res.json({ settings: this.dropper.saveSettings(req.uid, req.params.projectId, req.body) })));
+    app.post(`${root}/dropper/start`, route(async (req, res) => res.status(201).json(await this.dropper.start(req.uid, req.params.projectId, req.body))));
+    app.post(`${root}/dropper/stop`, route((req, res) => res.json(this.dropper.stop(req.uid, req.params.projectId))));
     app.get(`${root}/analytics`, route((req, res) => res.json(this.analytics.report(req.uid, req.params.projectId))));
     app.get(`${root}/analytics/account-views`, route(async (req, res) => res.json(await this.accountViews.report(req.uid, req.params.projectId, { days: req.query.days ?? 180, refresh: req.query.refresh === "true", ...(req.query.accountIds !== undefined ? { accountIds: typeof req.query.accountIds === "string" ? req.query.accountIds.split(",") : [] } : {}) }))));
     app.post(`${root}/analytics/refresh`, route(async (req, res) => res.json(await this.analytics.refresh(req.uid, req.params.projectId, req.body))));
@@ -385,6 +395,9 @@ export class BridgeApplication {
     this.privacyTimer.unref?.();
     this.swipeTimer = setInterval(() => this.swipe.enabled && this.swipe.tick().catch(error => console.error("Swipe or Push worker:", error.code || error.name)), 15000);
     this.swipeTimer.unref?.();
+    this.dropper.kick();
+    this.dropperTimer = setInterval(() => this.dropper.enabled && this.dropper.tick().catch(error => console.error("Dropper worker:", error.code || error.name)), 15000);
+    this.dropperTimer.unref?.();
     if (!this.localPreview) {
       // Twitch requires validation on every process start and at least hourly.
       for (const account of this.store.list("account", { status: "connected", limit: null }).filter(item => item.platform === "twitch")) this.store.put("account", { ...account, maintenanceDueAt: 0 });
@@ -395,11 +408,11 @@ export class BridgeApplication {
       this.analyticsTimer.unref?.();
     }
   }
-  stopWorkers() { this.media.stop(); this.worker.stop(); this.webhooks.stop(); clearInterval(this.analyticsTimer); clearInterval(this.privacyTimer); clearInterval(this.connectionTimer); clearInterval(this.swipeTimer); if (this.swipe) this.swipe.enabled = false; }
+  stopWorkers() { this.media.stop(); this.worker.stop(); this.webhooks.stop(); clearInterval(this.analyticsTimer); clearInterval(this.privacyTimer); clearInterval(this.connectionTimer); clearInterval(this.swipeTimer); clearInterval(this.dropperTimer); if (this.swipe) this.swipe.enabled = false; if (this.dropper) this.dropper.enabled = false; }
   async shutdown({ timeoutMs = 25000 } = {}) {
     this.stopWorkers();
     const deadline = Date.now() + timeoutMs;
-    while (this.media.directProcessing || this.worker.running || this.webhooks.running || this.analytics.running || this.privacy.running || this.accounts.running || this.swipe.running) {
+    while (this.media.directProcessing || this.worker.running || this.webhooks.running || this.analytics.running || this.privacy.running || this.accounts.running || this.swipe.running || this.dropper.running) {
       if (Date.now() >= deadline) return false;
       await new Promise(resolve => setTimeout(resolve, 50));
     }

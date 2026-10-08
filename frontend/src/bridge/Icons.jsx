@@ -12,6 +12,7 @@ export function Icon({ name, size = 20, ...props }) {
     calendar: <><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18"/></>,
     camera: <><path d="M3 8a2 2 0 0 1 2-2h2.5l1.5-2h6l1.5 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><circle cx="12" cy="13" r="3.5"/></>,
     swipe: <><rect x="6" y="3" width="12" height="18" rx="2.5" transform="rotate(-8 12 12)"/><path d="m18.5 9.5 3 2.5-3 2.5M5.5 9.5l-3 2.5 3 2.5"/></>,
+    dropper: <><path d="M12 3v5m-3-3 3 3 3-3M4 17v4h6v-4m4 0v4h6v-4"/><circle cx="8" cy="11" r=".7"/><circle cx="16" cy="11" r=".7"/><circle cx="5" cy="15" r=".7"/><circle cx="12" cy="15" r=".7"/><circle cx="19" cy="15" r=".7"/></>,
     all: <><path d="M10 6h11M10 12h11M10 18h11"/><rect x="3" y="4" width="3" height="3" rx=".5"/><rect x="3" y="10" width="3" height="3" rx=".5"/><rect x="3" y="16" width="3" height="3" rx=".5"/></>,
     scheduled: <><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h10"/><circle cx="16" cy="16" r="4"/><path d="M16 14v2l1.5 1"/></>,
     posted: <><rect x="4" y="3" width="16" height="18" rx="3"/><path d="m8 12 2.5 2.5L16 9"/></>,

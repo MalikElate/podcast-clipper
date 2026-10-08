@@ -6,7 +6,7 @@ import os from "node:os";
 import Database from "better-sqlite3";
 import express from "express";
 import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
-import { restoreDurableDatabase, durableResponseBarrier } from "../src/bridge/storage/DurableDatabase.js";
+import { DurableDatabase, restoreDurableDatabase, durableResponseBarrier } from "../src/bridge/storage/DurableDatabase.js";
 import { DurableState } from "../../cloudflare/durableState.js";
 
 class MemoryStorage {
@@ -121,4 +121,56 @@ test("HTTP redirects wait for persistence and failures never acknowledge success
   const failed = await fetch(`http://127.0.0.1:${server.address().port}/connect`, { redirect: "manual" });
   assert.equal(failed.status, 503); assert.equal(failed.headers.get("Location"), null);
   assert.equal((await failed.json()).code, "durable_storage_unavailable");
+});
+
+test("snapshot bytes and wake metadata represent the same state before asynchronous persistence", async t => {
+  let release, began;
+  const wait = new Promise(resolve => { release = resolve; });
+  const started = new Promise(resolve => { began = resolve; });
+  const snapshots = [];
+  const store = new SqliteStore(":memory:", { durability: { async persist(bytes, sequence, metadata) { snapshots.push({ bytes, metadata }); if (sequence === 1) { began(); await wait; } } } });
+  t.after(() => store.close());
+  store.nextBackgroundWakeAt = () => {
+    const items = store.list("dropperItem", { status: "queued" });
+    return items.length ? Math.min(...items.map(item => item.slotAt)) : null;
+  };
+  store.put("dropperItem", { id: "later", status: "queued", slotAt: 2000 });
+  const first = store.flush(); await started;
+  store.put("dropperItem", { id: "earlier", status: "queued", slotAt: 1000 });
+  const second = store.flush(); release();
+  await Promise.all([first, second]);
+  assert.deepEqual(snapshots.map(item => item.metadata.nextWakeAt), [2000, 1000]);
+  for (const snapshot of snapshots) {
+    const database = openSnapshot(snapshot.bytes);
+    const minimum = database.prepare("SELECT MIN(json_extract(data,'$.slotAt')) AS deadline FROM entities WHERE kind='dropperItem'").get().deadline;
+    assert.equal(snapshot.metadata.nextWakeAt, minimum);
+    database.close();
+  }
+  store.remove("dropperItem", "earlier");
+  store.remove("dropperItem", "later");
+  await store.flush();
+  assert.equal(snapshots.at(-1).metadata.nextWakeAt, null);
+});
+
+test("durable wake headers distinguish a deadline, an idle queue, and a legacy caller", async () => {
+  const calls = [];
+  const database = new DurableDatabase({ url: "http://meadow.storage", generation: 3, fetchImpl: async (url, init) => {
+    calls.push(init);
+    const wake = init.headers["X-Meadow-Next-Wake-At"];
+    return Response.json({ generation: 3, sequence: Number(init.headers["X-Meadow-Sequence"]), sha256: init.headers["X-Meadow-Sha256"], ...(wake !== undefined ? { nextWakeAt: wake === "none" ? null : Number(wake) } : {}) });
+  } });
+  await database.persist(Buffer.from("fixture"), 1, { nextWakeAt: 1791504000000 });
+  await database.persist(Buffer.from("fixture"), 2, { nextWakeAt: null });
+  await database.persist(Buffer.from("fixture"), 3);
+  assert.equal(calls[0].headers["X-Meadow-Next-Wake-At"], "1791504000000");
+  assert.equal(calls[1].headers["X-Meadow-Next-Wake-At"], "none");
+  assert.equal(Object.hasOwn(calls[2].headers, "X-Meadow-Next-Wake-At"), false);
+  await assert.rejects(database.persist(Buffer.from("fixture"), 4, { nextWakeAt: "tomorrow" }), error => error.code === "durable_wake_invalid");
+  assert.equal(calls.length, 3);
+});
+
+test("explicit wake deadlines are not acknowledged unless durable storage confirms them", async () => {
+  const database = new DurableDatabase({ url: "http://meadow.storage", generation: 1, fetchImpl: async (url, init) => Response.json({ generation: 1, sequence: 1, sha256: init.headers["X-Meadow-Sha256"] }) });
+  await assert.rejects(database.persist(Buffer.from("fixture"), 1, { nextWakeAt: 1791504000000 }), error => error.code === "durable_wake_unconfirmed");
+  await assert.rejects(database.persist(Buffer.from("fixture"), 1, { nextWakeAt: null }), error => error.code === "durable_wake_unconfirmed");
 });
