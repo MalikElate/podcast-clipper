@@ -26,6 +26,7 @@ import { AnalyticsService } from "./services/AnalyticsService.js";
 import { AccountViewsService } from "./services/AccountViewsService.js";
 import { PlatformUsageService, clerkUserDirectory } from "./services/PlatformUsageService.js";
 import { ApiKeyService } from "./services/ApiKeyService.js";
+import { AgentLoginService } from "./services/AgentLoginService.js";
 import { WebhookService } from "./services/WebhookService.js";
 import { PublishingWorker } from "./services/PublishingWorker.js";
 import { BillingService } from "./services/BillingService.js";
@@ -125,6 +126,7 @@ export class BridgeApplication {
       deleteIdentity: deleteIdentity || (async uid => { if (this.localPreview) return; try { await clerkClient.users.deleteUser(uid); } catch (error) { if (error.status !== 404) throw error; } }),
       deleteAnalytics: deleteAnalytics || (uid => this.localPreview ? Promise.resolve(true) : new AnalyticsErasureService({ store: this.store, env }).deleteForOwner(uid)) });
     this.projects.privacy = this.privacy; this.accounts.privacy = this.privacy; this.privacy.accounts = this.accounts; this.privacy.media = this.media;
+    this.agentLogins = new AgentLoginService({ store: this.store, apiKeys: this.apiKeys, privacy: this.privacy, appUrl: this.appUrl, clock });
     this.metaPrivacy = new MetaPrivacyService({ ...deps, privacy: this.privacy, clock });
     this.accounts.metaPrivacy = this.metaPrivacy; this.privacy.metaPrivacy = this.metaPrivacy;
     this.webhooks = new WebhookService({ store: this.store, vault: this.vault, locks: this.locks, privacy: this.privacy, send: webhookSend, clock, enabled: !this.localPreview });
@@ -249,6 +251,16 @@ export class BridgeApplication {
       invariant(provider.verifyWebhook(req.headers["x-telegram-bot-api-secret-token"]), "Invalid Telegram webhook signature.", { status: 401 });
       res.json(await this.accounts.telegramWebhook(req.body));
     }));
+    // Agents start and collect a browser-approved sign-in without a session.
+    const agentLoginStart = rateLimit({ windowMs: 600000, limit: 30, standardHeaders: "draft-7", legacyHeaders: false, message: { error: "Too many sign-in requests. Please wait a few minutes.", code: "rate_limited" } });
+    const agentLoginPoll = rateLimit({ windowMs: 60000, limit: 120, standardHeaders: "draft-7", legacyHeaders: false, message: { error: "Polling too quickly. Wait the returned interval between checks.", code: "slow_down" } });
+    const noStore = (req, res, next) => { res.setHeader("Cache-Control", "no-store"); next(); };
+    app.post("/api/agent-login", noStore, agentLoginStart, route((req, res) => res.status(201).json(this.agentLogins.start(req.body))));
+    app.post("/api/agent-login/poll", noStore, agentLoginPoll, route(async (req, res) => {
+      const result = this.agentLogins.poll(req.body);
+      if (result.status === "approved") await this.store.flush?.();
+      res.status(result.status === "pending" ? 202 : 200).json(result);
+    }));
     app.get("/oauth/bluesky/client-metadata.json", route(async (req, res) => res.json((await this.registry.get("bluesky").client()).clientMetadata)));
     app.get("/oauth/bluesky/jwks.json", route(async (req, res) => res.json((await this.registry.get("bluesky").client()).jwks)));
     app.get("/oauth/:platform/callback", route(async (req, res) => {
@@ -302,7 +314,10 @@ export class BridgeApplication {
     app.post("/api/bridge/api-keys", route((req, res) => res.status(201).json(this.apiKeys.create(req.uid, req.body))));
     app.delete("/api/bridge/api-keys/:id", route((req, res) => res.json(this.apiKeys.remove(req.uid, req.params.id))));
     app.get("/api/bridge/admin/platform-usage", route(async (req, res) => res.json(await this.platformUsage.report(req.uid))));
-    app.get("/api/bridge/agent-setup", route((req, res) => res.json({ mcpUrl: new URL("/mcp", this.publicUrl).href, apiUrl: new URL("/api/bridge", this.publicUrl).href, oauthReady: Boolean(this.mcpOAuth) })));
+    app.get("/api/bridge/agent-logins/:code", route((req, res) => { requireSession(req); res.json(this.agentLogins.describe(req.params.code)); }));
+    app.post("/api/bridge/agent-logins/:code/approve", route((req, res) => { requireSession(req); res.json(this.agentLogins.approve(req.uid, req.params.code)); }));
+    app.post("/api/bridge/agent-logins/:code/deny", route((req, res) => { requireSession(req); res.json(this.agentLogins.deny(req.params.code)); }));
+    app.get("/api/bridge/agent-setup", route((req, res) => res.json({ mcpUrl: new URL("/mcp", this.publicUrl).href, apiUrl: new URL("/api/bridge", this.publicUrl).href, agentLoginUrl: new URL("/api/agent-login", this.publicUrl).href, oauthReady: Boolean(this.mcpOAuth) })));
     app.get("/api/bridge/webhooks", route((req, res) => { requireSession(req); res.json(this.webhooks.get(req.uid)); }));
     app.post("/api/bridge/webhooks", route((req, res) => { requireSession(req); res.json(this.webhooks.save(req.uid, req.body)); }));
     app.delete("/api/bridge/webhooks", route((req, res) => { requireSession(req); res.json(this.webhooks.remove(req.uid)); }));

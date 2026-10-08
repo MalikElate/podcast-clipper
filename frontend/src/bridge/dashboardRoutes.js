@@ -12,6 +12,7 @@ export const DASHBOARD_PATHS = Object.freeze({
   settings: "/dashboard/settings",
   "api-keys": "/dashboard/api-keys",
   billing: "/dashboard/billing",
+  "connect-agent": "/dashboard/connect-agent",
 });
 
 const VIEW_BY_PATH = new Map(Object.entries(DASHBOARD_PATHS).map(([view, path]) => [path, view]));
@@ -45,6 +46,10 @@ export function dashboardSearch(view, search = "") {
   if (view === "compose") {
     const draft = source.get("draft")?.trim();
     if (draft) kept.set("draft", draft);
+  }
+  if (view === "connect-agent") {
+    const code = source.get("code")?.trim();
+    if (code) kept.set("code", code);
   }
   if (view === "billing") {
     for (const key of ["checkout", "session_id", "portal_return"]) if (source.has(key)) kept.set(key, source.get(key));
