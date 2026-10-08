@@ -5,6 +5,7 @@ import { canCancelRemaining, isTikTokInbox, tiktokProcessingMessage } from "./de
 import { failed, pending } from "./postListOrder.js";
 import { cardPostDate } from "./postListFilters.js";
 import { canDeletePost, deleteUnavailableReason } from "./postBulkDelete.js";
+import { coverTime } from "./videoCover.js";
 
 const postTitle = post => post.title || (post.media?.length ? "Media post" : post.caption ? "Text post" : "Untitled post");
 const formatLabel = format => FORMAT_LABELS[format] || (format === "auto" ? "Automatic" : format || "Automatic");
@@ -14,10 +15,11 @@ const settingLabels = {
   brandedContent: "Paid partnership", consent: "TikTok music confirmation", deliveryMode: "TikTok delivery", languageCode: "Post language",
   link: "Destination link", madeForKids: "Made for kids", messageType: "Chat message type", ownBrand: "Own brand promotion",
   privacy: "Visibility or audience", replies: "Follow-up messages", replyToMessageId: "Reply to message", syntheticMedia: "Altered or synthetic content",
-  thumbnailMediaId: "Video thumbnail", uploadConsent: "TikTok upload confirmation",
+  thumbnailMediaId: "Video thumbnail", uploadConsent: "TikTok upload confirmation", videoCover: "Video cover",
 };
 
 function SettingValue({ name, value, media }) {
+  if (name === "videoCover") return `Video frame at ${coverTime(value.timestampMs)}`;
   if (name === "thumbnailMediaId") {
     const item = media.find(entry => entry.id === value);
     return item ? <a href={item.url} target="_blank" rel="noreferrer">{item.filename}</a> : "Media no longer available";

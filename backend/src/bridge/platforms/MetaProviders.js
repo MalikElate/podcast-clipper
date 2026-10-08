@@ -1,6 +1,7 @@
 import { PlatformProvider } from "./PlatformProvider.js";
 import { invariant, ProviderError } from "../core/errors.js";
 import { inferFormat } from "./catalog.js";
+import { videoCoverTimestamp } from "./videoCover.js";
 
 class GraphProvider extends PlatformProvider {
   async graph(path, credentials, { method = "GET", body, ...options } = {}) {
@@ -55,6 +56,8 @@ export class InstagramProvider extends GraphProvider {
     } else {
       const item = ctx.content.media[0], { url } = await this.externalAsset(ctx, item);
       body = { ...(item.kind === "video" ? { media_type: format === "story" ? "STORIES" : "REELS", video_url: url, ...(format !== "story" ? { share_to_feed: true } : {}) } : { image_url: url, ...(format === "story" ? { media_type: "STORIES" } : {}) }), ...(format !== "story" ? { caption: ctx.content.caption } : {}) };
+      const coverTimestamp = videoCoverTimestamp(this.id, ctx.content);
+      if (coverTimestamp !== undefined) body.thumb_offset = coverTimestamp;
     }
     const container = await this.graph(`${ctx.account.remoteId}/media`, ctx.credentials, { method: "POST", body, safeToRetry: true });
     invariant(container.id, "Instagram did not create a media container.");

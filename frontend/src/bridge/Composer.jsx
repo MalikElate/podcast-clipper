@@ -11,6 +11,8 @@ import { dashboardPath } from "./dashboardRoutes.js";
 import { useAccountOptions } from "./useAccountOptions.js";
 import { deliveryMix, isDeliveryComplete, isTikTokInbox, submissionLabel } from "./deliveryPresentation.js";
 import { submitComposerPosts } from "./composerSubmission.js";
+import VideoCoverPicker from "./VideoCoverPicker.jsx";
+import { coverVideo, removeStaleCovers } from "./videoCover.js";
 
 
 export const makePost = (project, mediaIds = [], accountIds = [], scheduledDate = "") => ({ key: crypto.randomUUID(), caption: "", title: "", mediaIds, accountIds, format: "auto", overrides: {}, schedule: { mode: scheduledDate ? "scheduled" : "now", timeZone: project.timeZone, localDateTime: scheduledDate ? `${scheduledDate}T09:00` : "" } });
@@ -101,6 +103,10 @@ export function PostEditor({ post, onChange, accounts, accountsReady = true, med
   const draggedMedia = useRef("");
   const update = patch => onChange(current => ({ ...current, ...patch }));
   const setOverride = (id, patch) => update({ overrides: { ...post.overrides, [id]: { ...post.overrides[id], ...patch } } });
+  useEffect(() => {
+    const overrides = removeStaleCovers(post.overrides, post.mediaIds, (post.deliveries || []).filter(isDeliveryComplete).map(delivery => delivery.accountId));
+    if (overrides !== post.overrides) update({ overrides });
+  }, [post.mediaIds.join(","), post.overrides]);
   const toggleAccount = id => {
     const selected = post.accountIds.includes(id);
     const overrides = { ...post.overrides }; if (selected) delete overrides[id];
@@ -179,6 +185,7 @@ export function PostEditor({ post, onChange, accounts, accountsReady = true, med
           {capability?.titleLimit && !inboxVideo && <Field label={capability.titleRequired ? `${capability.name} title (required)` : `${capability.name} title (optional)`}><input value={override.title ?? ""} maxLength={capability.titleLimit} placeholder={`Up to ${capability.titleLimit} characters`} onChange={event => setOverride(account.id, { title: event.target.value })}/></Field>}
           {!inboxVideo && <details><summary>Customize caption for this account</summary><Field label={`Caption · ${capability?.captionLimit?.toLocaleString() || "—"} character limit`}><textarea rows={3} value={override.caption ?? post.caption} onChange={event => setOverride(account.id, { caption: event.target.value })}/></Field><button className="bridge-text-button" onClick={() => { const next = { ...override }; delete next.caption; update({ overrides: { ...post.overrides, [account.id]: next } }); }}>Use shared caption</button></details>}
           <DestinationSettings account={account} settings={override.settings} onChange={settings => setOverride(account.id, { settings })} hasVideo={chosen.some(item => item.kind === "video")} hasImages={chosen.some(item => item.kind === "image")}/>
+          {coverVideo(account.platform, override.format && override.format !== "auto" ? override.format : type, override.settings, chosen) && <VideoCoverPicker account={account} video={chosen[0]} settings={override.settings} onChange={settings => setOverride(account.id, { settings })}/>}
         </div>}
       </div>; })}
     </div>

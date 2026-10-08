@@ -1,4 +1,5 @@
 import { PlatformProvider } from "./PlatformProvider.js";
+import { videoCoverTimestamp } from "./videoCover.js";
 import { BridgeError, invariant, ProviderError } from "../core/errors.js";
 import { inferFormat } from "./catalog.js";
 
@@ -216,13 +217,14 @@ export function withZernio(Base) {
 
     postFields(format, content) {
       const s = content.settings || {}, caption = content.caption || "", title = content.title || "";
+      const coverTimestamp = videoCoverTimestamp(this.id, content);
       if (this.id === "tiktok") {
         const photos = content.media[0]?.kind === "image", inbox = s.deliveryMode === "inbox";
         const commercial = s.brandedContent && s.ownBrand ? { isBrandOrganicPost: true, brandPartnerPromote: true } : { commercialContentType: s.brandedContent ? "brand_content" : s.ownBrand ? "brand_organic" : "none" };
         return { content: photos ? title : caption, data: { ...(s.privacy ? { privacy_level: s.privacy } : {}), allow_comment: s.allowComments === true, content_preview_confirmed: true, express_consent_given: (inbox ? s.uploadConsent : s.consent) === true, ...commercial,
-          ...(photos ? { media_type: "photo", description: caption, auto_add_music: s.autoMusic === true } : { allow_duet: s.allowDuet === true, allow_stitch: s.allowStitch === true, video_made_with_ai: s.aiGenerated === true }), ...(inbox ? { draft: true } : {}) } };
+          ...(photos ? { media_type: "photo", description: caption, auto_add_music: s.autoMusic === true } : { allow_duet: s.allowDuet === true, allow_stitch: s.allowStitch === true, video_made_with_ai: s.aiGenerated === true, ...(coverTimestamp !== undefined ? { videoCoverTimestampMs: coverTimestamp } : {}) }), ...(inbox ? { draft: true } : {}) } };
       }
-      if (this.id === "instagram") return { content: caption, data: format === "story" ? { contentType: "story" } : {} };
+      if (this.id === "instagram") return { content: caption, data: format === "story" ? { contentType: "story" } : coverTimestamp !== undefined ? { thumbOffset: coverTimestamp } : {} };
       if (this.id === "facebook") return { content: caption, data: format === "story" ? { contentType: "story" } : format === "reel" ? { contentType: "reel", ...(title ? { title } : {}) } : {} };
       if (this.id === "snapchat") return { content: caption, data: { contentType: format === "story" ? "story" : content.media[0]?.kind === "video" ? "spotlight" : "saved_story" } };
       if (this.id === "pinterest") return { content: caption, data: { boardId: s.boardId, ...(title ? { title } : {}), ...(s.link ? { link: s.link } : {}) } };
