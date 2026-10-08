@@ -214,6 +214,7 @@ test("OAuth discovery is public and anonymous MCP requests receive a 401 sign-in
     });
     assert.equal(response.status, 401, method);
     assert.match(response.headers.get("www-authenticate"), /resource_metadata="http:\/\/localhost:8787\/\.well-known\/oauth-protected-resource\/mcp"/);
+    assert.match(response.headers.get("www-authenticate"), /scope="meadow:read meadow:draft meadow:media meadow:publish"/);
   }
   await assert.rejects(h.oauthClient());
   assert.equal(h.application.store.list("post").length, 0);

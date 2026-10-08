@@ -544,7 +544,9 @@ export function registerMeadowMcpRoutes(application) {
     res.setHeader("Cache-Control", "public, max-age=300");
     res.json(oauth.metadata);
   });
-  const challenge = error => oauth ? oauth.challenge({ error }) : 'Bearer realm="Meadow MCP"';
+  // Clients such as Claude request exactly the scopes in this challenge and do
+  // not act on later per-tool scope errors, so sign-in asks for every scope.
+  const challenge = error => oauth ? oauth.challenge({ error, scopes: Object.values(meadowMcpScopes) }) : 'Bearer realm="Meadow MCP"';
   const authenticate = async (req, res, next) => {
     res.setHeader("Cache-Control", "no-store");
     const key = application.apiKeys.token(req.headers.authorization);
