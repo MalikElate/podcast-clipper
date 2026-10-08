@@ -196,7 +196,7 @@ async function oauthSetup(t, options = {}) {
   return h;
 }
 
-test("OAuth discovery is public but anonymous tools return a linking challenge without workspace data", async t => {
+test("OAuth discovery is public and anonymous MCP requests receive a 401 sign-in challenge", async t => {
   const h = await oauthSetup(t);
   const url = new URL("/.well-known/oauth-protected-resource/mcp", h.endpoint);
   const metadata = await fetch(url);
@@ -206,12 +206,16 @@ test("OAuth discovery is public but anonymous tools return a linking challenge w
   const challenge = await fetch(h.endpoint);
   assert.equal(challenge.status, 401);
   assert.match(challenge.headers.get("www-authenticate"), /resource_metadata=/);
-  const anonymous = await h.oauthClient();
-  assert.equal((await anonymous.listTools()).tools.length, 13);
-  const result = await anonymous.callTool({ name: "list_projects", arguments: {} });
-  assert.equal(result.isError, true);
-  assert.equal(result.structuredContent, undefined);
-  assert.match(result._meta["mcp/www_authenticate"][0], /error_description=/);
+  for (const method of ["initialize", "tools/list", "tools/call"]) {
+    const response = await fetch(h.endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: method === "tools/call" ? { name: "list_projects", arguments: {} } : {} }),
+    });
+    assert.equal(response.status, 401, method);
+    assert.match(response.headers.get("www-authenticate"), /resource_metadata="http:\/\/localhost:8787\/\.well-known\/oauth-protected-resource\/mcp"/);
+  }
+  await assert.rejects(h.oauthClient());
   assert.equal(h.application.store.list("post").length, 0);
 });
 
