@@ -175,7 +175,7 @@ function Workspace({ user, signOut }) {
       </div>
     </aside>
     <main className="bridge-main"><header className="bridge-topbar"><button className="bridge-icon-button bridge-menu-toggle" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Icon name="menu"/></button></header>
-      <div className="bridge-content"><Alert message={error}/><Alert message={notice} success/><div className="bridge-page-heading"><h1>{activeModule?.title || activeModule?.name}</h1></div>
+      <div className="bridge-content"><Alert message={error}/>{view !== "dropper" && <Alert message={notice} success/>}{view === "dropper" ? <h1 className="sr-only">{activeModule?.title || activeModule?.name}</h1> : <div className="bridge-page-heading"><h1>{activeModule?.title || activeModule?.name}</h1></div>}
         {!config ? <div className="bridge-panel bridge-empty"><p>{error ? "Meadow could not load. Check your connection and refresh this page." : ""}</p></div> : isConfigurationView ? <ConfigurationWorkspace billingSearch={billingSearch} user={user} project={project} config={config} view={view}/> : !project ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Meadow is getting ready</h2><p>Your publishing account is not available yet.</p></div> : <ProjectWorkspace key={project.id} userId={user?.id} project={project} config={config} view={view} navigate={navigate} compose={compose} draftId={draftId} onComposeDirty={setComposerDirty} onComposeBusy={setComposerBusy} scheduledDate={scheduledDate} clearScheduledDate={() => setScheduledDate("")} draftVersion={draftVersion} connectionId={connectionId} clearConnection={() => setConnectionId("")} notify={setNotice}/>}
       </div>
     </main>
@@ -250,7 +250,7 @@ function ProjectWorkspace({ userId, project, config, view, navigate, compose, dr
     {["posts", "scheduled", "posted", "drafts", "failed"].includes(view) && <PostsQueue {...common} section={view} onCreate={() => compose()} onEditDraft={post => compose("", post.id)} onUpload={upload}/>}
     {view === "analytics" && <Analytics {...common}/>}
     {view === "swipe" && <SwipeOrPush {...common} notify={notify} onAccounts={() => navigate("accounts")}/>}
-    {view === "dropper" && <AccountDropper {...common} notify={notify} onAccounts={() => navigate("accounts")}/>}
+    {view === "dropper" && <AccountDropper {...common} onAccounts={() => navigate("accounts")}/>}
     {showWelcome && <Modal title="Welcome to Meadow ✨" className="bridge-welcome-modal" onClose={dismissWelcome}>
       <p>Let&apos;s get your publishing workspace ready. Connect your first social account, then you can create, schedule, and publish from one place.</p>
       <div className="bridge-welcome-actions"><button type="button" className="bridge-button" onClick={connectFirstAccount}>Connect your first account <Icon name="arrow" size={17}/></button><button type="button" className="bridge-welcome-later" onClick={dismissWelcome}>Maybe later</button></div>
