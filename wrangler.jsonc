@@ -8,7 +8,7 @@
     "directory": "./frontend/dist",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/dashboard", "/dashboard/*", "/runtime-config.js", "/sprout", "/sprout/*", "/api/*", "/media/*", "/oauth/*", "/mcp", "/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/*", "/health"]
+    "run_worker_first": ["/.well-known/openai-apps-challenge", "/dashboard", "/dashboard/*", "/runtime-config.js", "/sprout", "/sprout/*", "/api/*", "/media/*", "/oauth/*", "/mcp", "/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/*", "/health"]
   },
   "containers": [
     {
@@ -58,7 +58,8 @@
     "FACEBOOK_LOGIN_CONFIG_ID": "1758250408777427",
     "TIKTOK_DIRECT_POST_PRIVATE_ONLY": "false",
     "ZERNIO_PLATFORMS": "snapchat,facebook,instagram,threads,pinterest",
-    "TELEGRAM_BOT_USERNAME": "FindMeadowAppBot"
+    "TELEGRAM_BOT_USERNAME": "FindMeadowAppBot",
+    "OPENAI_APPS_CHALLENGE": "bnC39f1bsMKQfScNoNMZ11F4P3Bq9uJDOuzPloPVxE8"
   },
   "routes": [
     { "pattern": "findmeadow.com", "custom_domain": true },

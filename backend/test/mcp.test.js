@@ -110,6 +110,9 @@ test("MCP requires an API key and exposes Meadow's initial tool contract", async
   assert.equal(listed.tools.find(tool => tool.name === "get_analytics").annotations.readOnlyHint, true);
   assert.equal(listed.tools.find(tool => tool.name === "preview_post").annotations.readOnlyHint, true);
   assert.equal(listed.tools.find(tool => tool.name === "publish_post").annotations.openWorldHint, true);
+  for (const name of ["publish_post", "publish_draft"]) {
+    assert.equal(listed.tools.find(tool => tool.name === name).annotations.destructiveHint, true);
+  }
   assert.deepEqual(listed.tools.find(tool => tool.name === "upload_media")._meta["openai/fileParams"], ["file"]);
   const extra = { create_draft: "meadow:draft", upload_media: "meadow:media", create_upload_url: "meadow:media", publish_post: "meadow:publish", publish_draft: "meadow:publish" };
   for (const tool of listed.tools) {
