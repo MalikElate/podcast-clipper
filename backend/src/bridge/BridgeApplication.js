@@ -3,7 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import multer from "multer";
 import fs from "node:fs";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { rateLimit } from "express-rate-limit";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,7 +15,7 @@ import { ProjectService } from "./services/ProjectService.js";
 import { WelcomeEmailService, clerkSignupContact } from "./services/WelcomeEmailService.js";
 import { ScheduleService } from "./services/ScheduleService.js";
 import { MediaService } from "./services/MediaService.js";
-import { downloadRemoteMedia, remoteMediaUrl } from "./services/RemoteMedia.js";
+import { downloadRemoteMedia } from "./services/RemoteMedia.js";
 import { SwipeService } from "./services/SwipeService.js";
 import { DropperService } from "./services/DropperService.js";
 import { VideoSourceDownloader } from "./services/VideoSourceDownloader.js";
@@ -343,21 +343,6 @@ export class BridgeApplication {
     app.get(`${root}/accounts/:id/options`, route(async (req, res) => res.json({ options: await this.accounts.options(req.uid, req.params.projectId, req.params.id, { force: req.query.refresh === "1" }) })));
     app.delete(`${root}/accounts/:id`, route((req, res) => res.status(202).json(this.privacy.requestConnection(req.uid, req.params.projectId, req.params.id))));
     app.get(`${root}/media`, route((req, res) => res.json({ media: this.media.list(req.uid, req.params.projectId) })));
-    app.post(`${root}/media/import`, route(async (req, res) => {
-      this.projects.require(req.uid, req.params.projectId);
-      invariant(this.media.signingKey, "Media storage is not configured on this server.", { status: 503 });
-      const url = remoteMediaUrl(req.body?.url).href;
-      const filename = req.body?.filename;
-      invariant(filename === undefined || typeof filename === "string" && filename.trim().length > 0 && filename.length <= 180, "Enter a filename of up to 180 characters.");
-      const target = path.join(this.incomingDirectory, `import-${randomUUID()}`);
-      try {
-        const downloaded = await this.downloadMedia(url, target, { maxBytes: this.media.maxBytes });
-        const record = await this.media.ingest(req.uid, req.params.projectId, { path: target, originalname: filename || downloaded.filename }, { source: "web_import", imageOnly: true });
-        res.status(201).json({ media: this.media.toPublic(record) });
-      } finally {
-        await fs.promises.unlink(target).catch(() => {});
-      }
-    }));
     app.post(`${root}/media/uploads`, route(async (req, res) => {
       invariant(this.media.signingKey, "Media storage is not configured on this server.", { status: 503 });
       res.status(201).json(req.body?.direct === true && this.storage.createDirectUpload ? await this.media.createDirectUpload(req.uid, req.params.projectId, req.body) : this.uploadTokens.create(req.uid, req.params.projectId, req.body));
