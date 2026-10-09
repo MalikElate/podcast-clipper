@@ -13,12 +13,13 @@ export class MediaService {
     this.locks = locks;
   }
 
-  async ingest(uid, projectId, file, { source = "upload", metadata = {} } = {}) {
+  async ingest(uid, projectId, file, { source = "upload", metadata = {}, imageOnly = false } = {}) {
     this.projects.require(uid, projectId);
     const stat = await fs.promises.stat(file.path);
     invariant(stat.size > 0 && stat.size <= this.maxBytes, `Upload a file smaller than ${Math.round(this.maxBytes / 1024 ** 2)} MB.`);
     const type = await fileTypeFromFile(file.path);
     invariant(type && accepted.has(type.mime), "This file type cannot be posted. Upload an image, video, PDF, Word document, or PowerPoint file.", { status: 415, code: "unsupported_media" });
+    invariant(!imageOnly || type.mime.startsWith("image/"), "Choose a JPEG, PNG, WebP, or GIF image to import.", { status: 415, code: "unsupported_media" });
     const kind = type.mime.startsWith("image/") ? "image" : type.mime.startsWith("video/") ? "video" : "document";
     const id = randomUUID(), storageKey = `${id}.${type.ext}`;
     const filename = String(file.originalname || file.filename || `media.${type.ext}`).replace(/[\x00-\x1f/\\]/g, "_").slice(0, 180);

@@ -6,7 +6,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
 import { BridgeApplication, connectionErrorMessage } from "../src/bridge/BridgeApplication.js";
-import { ProviderError } from "../src/bridge/core/errors.js";
+import { BridgeError, ProviderError } from "../src/bridge/core/errors.js";
 import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 import { SecretVault } from "../src/bridge/core/SecretVault.js";
 import { CONNECTION_PRIVACY_VERSION } from "../src/bridge/platforms/connectionPrivacy.js";
@@ -163,6 +163,106 @@ test("video upload probes the file and produces a usable preview thumbnail", asy
   const response = await h.request(`${h.root}/media`, { method: "POST", body: fileForm(fs.readFileSync(source), "video.mp4", "video/mp4") });
   assert.equal(response.status, 201); const { media } = await response.json(); assert.equal(media.kind, "video"); assert.equal(media.width, 320); assert.equal(media.height, 180); assert.ok(media.durationSec >= 1);
   const image = await h.request(media.thumbnailUrl, { user: null }); assert.equal(image.status, 200); assert.match(image.headers.get("content-type"), /image\/jpeg/); assert.ok((await image.arrayBuffer()).byteLength > 100);
+});
+
+function importImage(h) {
+  const source = path.join(h.dir, "import-source.png");
+  execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "color=c=blue:s=64x48", "-frames:v", "1", source]);
+  return fs.readFileSync(source);
+}
+
+test("public image import returns owned, ready media with the requested filename", async t => {
+  const h = await setup(t), bytes = importImage(h), downloads = [];
+  h.application.downloadMedia = async (url, destination, options) => {
+    downloads.push(url);
+    assert.equal(options.maxBytes, h.application.media.maxBytes);
+    await fs.promises.writeFile(destination, bytes);
+    return { filename: "remote.png", bytes: bytes.length };
+  };
+  const response = await h.request(`${h.root}/media/import`, { method: "POST", body: { url: "https://cdn.example.com/image.png", filename: "capture.png" } });
+  assert.equal(response.status, 201);
+  const { media } = await response.json();
+  assert.equal(media.filename, "capture.png");
+  assert.equal(media.kind, "image");
+  assert.equal(media.status, "ready");
+  assert.equal(media.width, 64); assert.equal(media.height, 48);
+  assert.equal(media.source, "web_import");
+  assert.ok(!("storageKey" in media));
+  assert.deepEqual(downloads, ["https://cdn.example.com/image.png"]);
+  assert.equal(h.application.media.list("alice", h.project.id).length, 1);
+  assert.equal((await h.request(`${h.root}/media/${media.id}`, { user: "bob" })).status, 404);
+  const download = await h.request(media.downloadUrl, { user: null });
+  assert.deepEqual(Buffer.from(await download.arrayBuffer()), bytes);
+  assert.deepEqual(fs.readdirSync(h.application.incomingDirectory), []);
+});
+
+test("image import requires authentication, project ownership and configured storage before downloading", async t => {
+  const h = await setup(t);
+  let downloads = 0;
+  h.application.downloadMedia = async () => { downloads += 1; throw new Error("unexpected download"); };
+  const body = { url: "https://cdn.example.com/image.png" };
+  assert.equal((await h.request(`${h.root}/media/import`, { method: "POST", body, user: null })).status, 401);
+  assert.equal((await h.request(`${h.root}/media/import`, { method: "POST", body, user: "bob" })).status, 404);
+  h.application.media.signingKey = null;
+  assert.equal((await h.request(`${h.root}/media/import`, { method: "POST", body })).status, 503);
+  assert.equal(downloads, 0);
+  assert.equal(h.application.store.list("media").length, 0);
+});
+
+test("image import rejects invalid, private or credentialed URLs and invalid filenames before downloading", async t => {
+  const h = await setup(t);
+  let downloads = 0;
+  h.application.downloadMedia = async () => { downloads += 1; throw new Error("unexpected download"); };
+  const valid = "https://cdn.example.com/image.png";
+  const bodies = [
+    {}, { url: null }, { url: 42 }, { url: "not a URL" }, { url: "https://cdn.example.com/" + "x".repeat(4096) },
+    { url: "file:///tmp/image.png" }, { url: "https://alice:password@cdn.example.com/image.png" },
+    { url: "http://127.0.0.1/image.png" }, { url: "http://localhost/image.png" }, { url: "http://media.internal/image.png" },
+    { url: "https://cdn.example.com:8443/image.png" },
+    ...[null, 42, "", "   ", "x".repeat(181)].map(filename => ({ url: valid, filename })),
+  ];
+  for (const body of bodies) {
+    const response = await h.request(`${h.root}/media/import`, { method: "POST", body });
+    assert.equal(response.status, 400, JSON.stringify(body));
+  }
+  assert.equal(downloads, 0);
+  assert.equal(h.application.store.list("media").length, 0);
+  assert.deepEqual(fs.readdirSync(h.application.incomingDirectory), []);
+});
+
+test("image import rejects a non-image before creating media and cleans the temporary download", async t => {
+  const h = await setup(t);
+  h.application.downloadMedia = async (_url, destination) => {
+    await fs.promises.writeFile(destination, pdf);
+    return { filename: "pretend.png", bytes: pdf.length };
+  };
+  const response = await h.request(`${h.root}/media/import`, { method: "POST", body: { url: "https://cdn.example.com/pretend.png" } });
+  assert.equal(response.status, 415);
+  assert.equal((await response.json()).code, "unsupported_media");
+  assert.equal(h.application.store.list("media").length, 0);
+  assert.deepEqual(fs.readdirSync(h.application.storage.root), []);
+  assert.deepEqual(fs.readdirSync(h.application.incomingDirectory), []);
+});
+
+test("image import cleans partial downloads and rolls back failed media processing", async t => {
+  const h = await setup(t);
+  h.application.downloadMedia = async (_url, destination) => {
+    await fs.promises.writeFile(destination, "partial download");
+    throw new BridgeError("The media URL could not be downloaded.", { status: 422, code: "media_download_failed" });
+  };
+  const body = { url: "https://cdn.example.com/image.png" };
+  const interrupted = await h.request(`${h.root}/media/import`, { method: "POST", body });
+  assert.equal(interrupted.status, 422);
+  assert.equal((await interrupted.json()).code, "media_download_failed");
+  assert.deepEqual(fs.readdirSync(h.application.incomingDirectory), []);
+  const bytes = importImage(h);
+  h.application.downloadMedia = async (_url, destination) => { await fs.promises.writeFile(destination, bytes); return { filename: "image.png" }; };
+  h.application.media.inspect = async () => { throw new BridgeError("The image could not be decoded.", { status: 415, code: "unsupported_media" }); };
+  const rejected = await h.request(`${h.root}/media/import`, { method: "POST", body });
+  assert.equal(rejected.status, 415);
+  assert.equal(h.application.store.list("media").length, 0);
+  assert.deepEqual(fs.readdirSync(h.application.storage.root), []);
+  assert.deepEqual(fs.readdirSync(h.application.incomingDirectory), []);
 });
 
 test("local preview requires an explicit header and rejects unrecognized origins and live publishing", async t => {
