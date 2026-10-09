@@ -1,10 +1,77 @@
 import { useState } from "react";
 import { SiClaude, SiCursor } from "react-icons/si";
 import OpenAILogo from "./OpenAILogo.jsx";
+import { PlatformIcon } from "../bridge/ui.jsx";
+import HeroDemo from "./HeroDemo.jsx";
+import PixelMeadow from "./PixelMeadow.jsx";
+import SchedulingDemo from "./SchedulingDemo.jsx";
+import AgentPublishingDemo from "./AgentPublishingDemo.jsx";
+import { sortPlatforms } from "../bridge/platforms.js";
 import { PLANS, planHref, planBillingNote } from "../pricing.js";
+import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
 import SiteHeader from "./SiteHeader.jsx";
+import { signupHref } from "../siteUrls.js";
 import { homepageSchema, schemaScriptProps } from "../siteSchema.js";
+
+const HOMEPAGE_RECORDING = {
+  asset: "/marketing/meadow-landing-demo-caption-v4-20260929",
+  width: 1776,
+  height: 1080,
+  description: "How to use Meadow: a narrated tour showing the homepage, social account connections, and the post composer with its supported content formats. Use the player controls to play, pause, seek, or adjust the sound.",
+};
+
+const PLATFORMS = [
+  ...sortPlatforms(PLATFORM_USE_CASES.filter(platform => !platform.chatOnly)),
+  ...sortPlatforms(PLATFORM_USE_CASES.filter(platform => platform.chatOnly)),
+];
+
+const GOALS = [
+  {
+    id: "grow",
+    tab: "Grow your audience",
+    title: "Make every release feel like a launch.",
+    text: "Plan one coordinated campaign, tailor the message for each channel, and keep every post moving from draft to published.",
+    noteA: "Turn one release, announcement, or idea into a coordinated social rollout.",
+    noteB: "Keep every message, format, and destination aligned in one campaign.",
+    badge: "Launch week",
+    accent: "blue",
+    posts: ["Teaser", "Launch post", "Follow-up"],
+  },
+  {
+    id: "consistent",
+    tab: "Create consistently",
+    title: "Keep your calendar full without losing the thread.",
+    text: "See what is ready, what needs attention, and what is scheduled next in one clear publishing workspace.",
+    noteA: "Build a repeatable weekly plan around the content that matters most.",
+    noteB: "See drafts, scheduled posts, and upcoming campaign moments together.",
+    badge: "This week",
+    accent: "green",
+    posts: ["Behind the scenes", "Quick tip", "Weekly recap"],
+  },
+  {
+    id: "repurpose",
+    tab: "Repurpose content",
+    title: "Give strong content more places to work.",
+    text: "Organize platform-ready versions of the same idea together, with the right caption, media, and timing for every destination.",
+    noteA: "Organize every version around one strong source idea.",
+    noteB: "Adjust the caption, format, and timing for each destination.",
+    badge: "Content series",
+    accent: "violet",
+    posts: ["Main story", "Short clip", "Visual recap"],
+  },
+  {
+    id: "promote",
+    tab: "Promote what matters",
+    title: "Put the right message on every channel.",
+    text: "Prepare the campaign once, preview each destination, and publish now or choose the exact time it should go live.",
+    noteA: "Coordinate launches, events, updates, and time-sensitive moments.",
+    noteB: "Preview every destination before publishing now or scheduling later.",
+    badge: "Campaign ready",
+    accent: "orange",
+    posts: ["Announcement", "Product story", "Last call"],
+  },
+];
 
 function ArrowIcon() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
@@ -16,6 +83,14 @@ const AGENT_LOGOS = [
   { name: "Codex", Icon: OpenAILogo, className: "is-codex" },
   { name: "Cursor", Icon: SiCursor, className: "is-cursor" },
 ];
+
+function PlatformMark({ platform, className = "", variant = "default", size }) {
+  return (
+    <span className={`landing-platform-mark ${className}`} style={{ "--platform-color": platform.color }} role="img" aria-label={platform.name} title={platform.name}>
+      <PlatformIcon platform={platform.id} size={size ?? (variant === "hero" ? 32 : 24)} variant={variant} />
+    </span>
+  );
+}
 
 function N8nAutomationBoard() {
   return (
@@ -42,6 +117,46 @@ function N8nAutomationBoard() {
   );
 }
 
+function ScenarioVisual({ goal }) {
+  const previewPlatforms = ["instagram", "tiktok", "linkedin"].map((id) => PLATFORMS.find((platform) => platform.id === id)).filter(Boolean);
+  return (
+    <div className={`scenario-visual accent-${goal.accent}`} aria-label={`${goal.tab} example workflow`}>
+      <div className="scenario-topline"><span>{goal.badge}</span><strong>3 posts</strong></div>
+      <div className="scenario-calendar">
+        {goal.posts.map((post, index) => {
+          const platform = previewPlatforms[index % previewPlatforms.length];
+          return (
+            <article key={post} className="scenario-post">
+              <div className="scenario-time"><strong>{["TUE", "THU", "SAT"][index]}</strong><span>{["09:00", "12:30", "17:00"][index]}</span></div>
+              <div className="scenario-thumb"><span /><span /></div>
+              <div className="scenario-post-copy"><strong>{post}</strong><span>{index === 0 ? "Ready to publish" : index === 1 ? "Scheduled" : "Draft saved"}</span></div>
+              {platform && <PlatformMark platform={platform} />}
+            </article>
+          );
+        })}
+      </div>
+      <div className="scenario-progress"><span /><small>Campaign prepared</small><strong>76%</strong></div>
+    </div>
+  );
+}
+
+function GoalScenarios() {
+  return (
+    <section className="landing-section goals-section scheduling-use-case" id="workflows" aria-labelledby="goals-title">
+      <div className="scheduling-use-case-copy">
+        <h2 id="goals-title">Cross-platform posting</h2>
+        <p>Turn one idea into channel-ready posts, tailor each version for its destination, and schedule every connected platform from one Meadow campaign.</p>
+        <div className="scheduling-use-case-actions">
+          <a className="scheduling-use-case-primary" href={signupHref()}>Try for free <ArrowIcon /></a>
+        </div>
+      </div>
+      <div className="scheduling-use-case-visual">
+        <SchedulingDemo />
+      </div>
+    </section>
+  );
+}
+
 export default function Landing({ onGetStarted }) {
   const [yearlyPricing, setYearlyPricing] = useState(true);
   return (
@@ -49,9 +164,57 @@ export default function Landing({ onGetStarted }) {
       <SiteHeader homeHref="#top" onSignIn={onGetStarted} onStartPosting={onGetStarted} />
 
       <main>
+        <section className="landing-hero landing-hero-v2 home-centered-hero" style={{ "--demo-ratio": HOMEPAGE_RECORDING.height / HOMEPAGE_RECORDING.width }}>
+          <PixelMeadow />
+          <div className="home-hero-top">
+            <div className="hero-copy">
+              <div className="home-hero-platforms" aria-label="Supported social platforms and AI agents">
+                {PLATFORMS.map(platform => <PlatformMark platform={platform} size={32} variant={platform.id === "google_business" ? "hero" : "default"} key={platform.id} />)}
+                {AGENT_LOGOS.map(agent => <span className={`home-hero-agent-mark ${agent.className}`} role="img" aria-label={agent.name} title={agent.name} key={agent.name}><agent.Icon /></span>)}
+              </div>
+              <h1 className="landing-title">Creator tools for your AI</h1>
+              <p className="landing-subtitle">Plan, tailor, and schedule posts across your social accounts from one Meadow dashboard.</p>
+              <div className="hero-actions hero-actions-v2"><a className="btn-primary landing-cta" href={signupHref()}>Try for free <ArrowIcon /></a></div>
+            </div>
+          </div>
+        <div className="home-hero-demo-stage"><HeroDemo recording={HOMEPAGE_RECORDING} /></div>
+        </section>
+
+        <section className="landing-section home-platform-section" id="platforms" aria-labelledby="home-platforms-title">
+          <div className="home-platform-heading">
+            <div><h2 id="home-platforms-title">Show up for every audience.</h2></div>
+          </div>
+          <div className="home-platform-grid" aria-label="Meadow platforms">
+            {PLATFORMS.map(platform => (
+              <a className="home-platform-link" key={platform.id} href={`/${platform.slug}/`} aria-label={`Learn about ${platform.name} publishing`} style={{ "--platform-color": platform.color }}>
+                <span className="home-platform-icon"><PlatformIcon platform={platform.id} size={40} variant={platform.id === "google_business" ? "hero" : "default"} /></span>
+                <span>{platform.name}</span>
+              </a>
+            ))}
+            <div className="home-platform-coming-soon">
+              <span>More coming soon</span>
+            </div>
+          </div>
+        </section>
+
+        <GoalScenarios />
+
+        <section className="landing-section scheduling-use-case agent-publishing-section" id="publish-with-an-agent" aria-labelledby="agent-publishing-title">
+          <div className="scheduling-use-case-visual">
+            <AgentPublishingDemo />
+          </div>
+          <div className="scheduling-use-case-copy">
+            <h2 id="agent-publishing-title">use from your assistant</h2>
+            <p>Tell your AI assistant what you want to share. Let it prepare posts for your connected channels, review the details, and give the go-ahead. Meadow takes care of publishing.</p>
+            <div className="scheduling-use-case-actions">
+              <a className="scheduling-use-case-primary" href={signupHref()}>Try for free <ArrowIcon /></a>
+            </div>
+          </div>
+        </section>
+
         <section className="landing-section audience-section usage-section" id="ways-to-use" aria-labelledby="usage-title">
           <div className="audience-heading">
-            <h1 id="usage-title">However you work, publish with Meadow.</h1>
+            <h2 id="usage-title">However you work, publish with Meadow.</h2>
           </div>
           <div className="usage-grid">
             <article className="usage-card usage-creator">

@@ -13,7 +13,7 @@ const platformName = (catalog, platform) => catalog.find(item => item.id === pla
 const optionPlatforms = new Set(["tiktok", "pinterest"]);
 const destinationSettingsPlatforms = new Set(["tiktok", "youtube", "pinterest", "bluesky", "google_business"]);
 
-export default function AccountDropper({ project, catalog, accounts, accountsReady, notify, onAccounts }) {
+export default function AccountDropper({ project, catalog, accounts, accountsReady, onAccounts }) {
   const resource = useProjectResource(project.id, "/dropper", initial, { refreshOnFocus: true });
   const { data } = resource;
   const [editing, setEditing] = useState(false);
@@ -99,7 +99,6 @@ export default function AccountDropper({ project, catalog, accounts, accountsRea
       resource.setData(current => ({ ...current, settings: result.settings, ...(changedSource ? { cards: null, sources: [] } : {}) }));
       if (changedSource) setSelected([]);
       setEditing(false);
-      notify("Dropper setup saved.");
     });
   }
 
@@ -109,7 +108,6 @@ export default function AccountDropper({ project, catalog, accounts, accountsRea
       await mutate("start", { cardIds: selectedCards.map(card => card.id) }, result => {
         resource.setData(current => ({ ...current, ...result }));
         setSelected([]);
-        notify(`Dropper started. The first video begins now, then one every ${intervalLabel(data.settings.intervalMinutes)}.`);
       });
     } catch { /* The action error is shown above the board. */ }
   }
@@ -119,7 +117,6 @@ export default function AccountDropper({ project, catalog, accounts, accountsRea
     try {
       await mutate("stop", {}, result => {
         resource.setData(current => ({ ...current, ...result }));
-        notify(`Dropper stopped. ${result.cancelled || 0} ${(result.cancelled || 0) === 1 ? "video was" : "videos were"} cancelled before being added to Posts. Videos already in Posts keep their status.`);
       });
     } catch { /* The action error is shown above the board. */ }
   }
@@ -130,10 +127,6 @@ export default function AccountDropper({ project, catalog, accounts, accountsRea
 
   const settingSummary = displayedSetup.sourceAccountId && displayedSetup.accountIds.length ? `Every video goes to ${displayedSetup.accountIds.length} ${displayedSetup.accountIds.length === 1 ? "account" : "accounts"}, one video every ${intervalLabel(displayedSetup.intervalMinutes)}.` : "Choose a source account, destination accounts, and your posting interval.";
   return <div className="dropper">
-    <div className="dropper-intro">
-      <p>Drop videos from one account into the others. Choose the videos and set the pace.</p>
-      <button type="button" className="bridge-button secondary small" disabled={locked || !accountsReady || Boolean(resource.error) || data.cards === null && resource.loading} onClick={() => setEditing(true)}><Icon name="settings" size={17}/>{data.settings.sourceAccountId ? "Edit setup" : "Set up dropper"}</button>
-    </div>
     <Alert message={error || resource.error}/>
     {resource.error && <button type="button" className="bridge-button secondary small" disabled={resource.loading} onClick={resource.reload}>Try again</button>}
     {hasUnavailable && <p className="bridge-notice" role="status">A saved account is unavailable. Choose connected accounts in Edit setup before starting another batch.</p>}
@@ -145,8 +138,11 @@ export default function AccountDropper({ project, catalog, accounts, accountsRea
           <p>{settingSummary}</p>
           {Boolean(data.running || data.inFlight) && <span role="status">{preparing.length ? "Preparing a video for your destinations." : waiting.length && data.nextSlotAt ? `Next video begins ${dateTime(data.nextSlotAt, project.timeZone)}.` : "Checking the queue…"}</span>}
         </div>
-        {(data.running || data.inFlight) ? <button type="button" className="bridge-button secondary" disabled={Boolean(busy) || rechecking || resource.loading} onClick={stop}><Icon name="close" size={17}/>{busy === "stop" ? "Stopping…" : "Stop dropper"}</button>
-          : <button type="button" className="bridge-button" disabled={!ready || !selectedCards.length || locked || resource.loading || Boolean(resource.error)} onClick={start}><Icon name="dropper" size={18}/>{busy === "start" ? "Starting…" : `Start dropper${selectedCards.length ? ` · ${selectedCards.length} ${selectedCards.length === 1 ? "video" : "videos"}` : ""}`}</button>}
+        <div className="dropper-board-actions">
+          {(data.running || data.inFlight) ? <button type="button" className="bridge-button secondary" disabled={Boolean(busy) || rechecking || resource.loading} onClick={stop}><Icon name="close" size={17}/>{busy === "stop" ? "Stopping…" : "Stop dropper"}</button>
+            : <button type="button" className="bridge-button" disabled={!ready || !selectedCards.length || locked || resource.loading || Boolean(resource.error)} onClick={start}><Icon name="dropper" size={18}/>{busy === "start" ? "Starting…" : `Start dropper${selectedCards.length ? ` · ${selectedCards.length} ${selectedCards.length === 1 ? "video" : "videos"}` : ""}`}</button>}
+          <button type="button" className="bridge-button secondary small" disabled={locked || !accountsReady || Boolean(resource.error) || data.cards === null && resource.loading} onClick={() => setEditing(true)}><Icon name="settings" size={17}/>{data.settings.sourceAccountId ? "Edit setup" : "Set up dropper"}</button>
+        </div>
       </div>
       <p className="dropper-start-note">The first video begins immediately. Later videos follow your interval. Stop cancels videos that haven’t been added to Posts; manage videos already added from <a href={dashboardPath("posts")}>Posts</a>.</p>
     </section>
