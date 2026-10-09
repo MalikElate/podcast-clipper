@@ -1,8 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { BridgeApi } from "../src/bridge/BridgeApi.js";
+import { checkoutExpectation } from "../src/pricing.js";
 
 const rejectedSession = () => Response.json({ error: "Authentication required.", code: "authentication_required" }, { status: 401 });
+
+test("checkout sends the quote the visitor reviewed with plan and cycle", async () => {
+  const quote = { countryCode: "CM", currency: "XAF", plans: { starter: { monthlyMinor: 5000, yearlyMinor: 50000 } } };
+  const api = new BridgeApi({ getToken: async () => "session", track: () => {}, fetcher: async (path, options) => {
+    assert.equal(path, "/api/bridge/billing/checkout");
+    assert.deepEqual(JSON.parse(options.body), {
+      planId: "starter", cycle: "yearly", expectedCountryCode: "CM", expectedCurrency: "XAF", expectedAmountMinor: 50000,
+    });
+    return Response.json({ url: "https://checkout.stripe.com/test" });
+  } });
+  assert.equal((await api.createCheckout("starter", "yearly", checkoutExpectation(quote, "starter", "yearly"))).url, "https://checkout.stripe.com/test");
+});
 
 test("uploads authorize first, refresh only the small grant request, then send the file once with its grant", async () => {
   const tokens = [], requests = [], progress = [];

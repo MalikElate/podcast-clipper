@@ -55,7 +55,7 @@ exist.
 | Authentication | Meadow API key as `Authorization: Bearer`, or OAuth for clients that support it |
 | Scopes | `meadow:read` for the eight read tools, plus `meadow:draft` for `create_draft`, `meadow:media` for `upload_media` and `create_upload_url`, and `meadow:publish` for `publish_post` and `publish_draft` |
 | Tools | `get_profile`, `list_projects`, `list_accounts`, `list_posts`, `get_post`, `get_account_options`, `preview_post`, `get_analytics`, `create_draft`, `upload_media`, `create_upload_url`, `publish_post`, `publish_draft` |
-| Pricing | Free plan with 5 connected accounts; paid plans from $29/month |
+| Pricing | Free plan; paid prices and currencies vary by visitor location. See `https://findmeadow.com/pricing/` for the current local quote. |
 | Docs | `https://findmeadow.com/developers/` |
 | Support | hello@findmeadow.com |
 

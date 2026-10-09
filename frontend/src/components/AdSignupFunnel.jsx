@@ -1,4 +1,5 @@
 import { appHref, marketingHref, signupHref } from "../siteUrls.js";
+import { usePricingQuote } from "../pricingQuote.js";
 import BrandLogo from "./BrandLogo.jsx";
 
 function SignupLink({ children, className = "" }) {
@@ -6,6 +7,7 @@ function SignupLink({ children, className = "" }) {
 }
 
 export default function AdSignupFunnel() {
+  const { quote } = usePricingQuote();
   return (
     <div className="ad-funnel">
       <header className="ad-funnel-header">
@@ -22,7 +24,7 @@ export default function AdSignupFunnel() {
             Create your post once. Tailor, schedule, and track it across your connected social accounts from one workspace.
           </p>
           <SignupLink className="ad-funnel-primary">Start Posting for Free</SignupLink>
-          <p className="ad-funnel-free-note">No credit card required. Start with 5 social accounts.</p>
+          <p className="ad-funnel-free-note">No credit card required. {quote ? `Start with ${quote.freeAccounts} social accounts.` : "Connect social accounts on the free plan."}</p>
           <div className="ad-funnel-benefits" aria-label="Meadow benefits">
             <span>One post, every channel</span>
             <span>Schedule from one place</span>

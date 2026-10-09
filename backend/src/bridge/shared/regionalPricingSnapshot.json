@@ -1,0 +1,1236 @@
+{
+  "asOf": "2026-10-09",
+  "source": "https://api.frankfurter.dev/v2/rates?base=EUR&expand=providers",
+  "sourceTerms": "https://frankfurter.dev/license/",
+  "referenceMonthlyXaf": [
+    5000,
+    10000,
+    23000
+  ],
+  "xafPerEurPeg": 655.957,
+  "annualMonthlyMultiple": 10,
+  "unsupportedNativeCurrencyFallback": "EUR",
+  "fallbackMonthlyMinor": [
+    750,
+    1500,
+    3500
+  ],
+  "fallbackYearlyMinor": [
+    7500,
+    15000,
+    35000
+  ],
+  "currencies": {
+    "AOA": {
+      "eurRate": 1028.31,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BCCCD",
+        "BDI",
+        "BNA",
+        "CBKKW",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 100,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        7800,
+        15700,
+        36100
+      ],
+      "monthlyMinor": [
+        780000,
+        1570000,
+        3610000
+      ],
+      "yearlyMinor": [
+        7800000,
+        15700000,
+        36100000
+      ]
+    },
+    "BIF": {
+      "eurRate": 3368.37,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BCCCD",
+        "BDI",
+        "BNRRW",
+        "BOTA",
+        "BRB",
+        "CBK",
+        "CBKKW",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 500,
+      "stripeAmountMultiplier": 1,
+      "monthlyMajor": [
+        25500,
+        51500,
+        118000
+      ],
+      "monthlyMinor": [
+        25500,
+        51500,
+        118000
+      ],
+      "yearlyMinor": [
+        255000,
+        515000,
+        1180000
+      ]
+    },
+    "BWP": {
+      "eurRate": 15.2286,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "BM",
+        "BNA",
+        "BOB",
+        "BOTA",
+        "CBKKW",
+        "IMF",
+        "NBP",
+        "RBM",
+        "SARB"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        115,
+        230,
+        535
+      ],
+      "monthlyMinor": [
+        11500,
+        23000,
+        53500
+      ],
+      "yearlyMinor": [
+        115000,
+        230000,
+        535000
+      ]
+    },
+    "CDF": {
+      "eurRate": 2571.36,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BCCCD",
+        "BDI",
+        "BNA",
+        "CBKKW",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 100,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        19600,
+        39200,
+        90200
+      ],
+      "monthlyMinor": [
+        1960000,
+        3920000,
+        9020000
+      ],
+      "yearlyMinor": [
+        19600000,
+        39200000,
+        90200000
+      ]
+    },
+    "CVE": {
+      "eurRate": 110.26,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "BNA",
+        "CBKKW",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 10,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        840,
+        1680,
+        3870
+      ],
+      "monthlyMinor": [
+        84000,
+        168000,
+        387000
+      ],
+      "yearlyMinor": [
+        840000,
+        1680000,
+        3870000
+      ]
+    },
+    "DJF": {
+      "eurRate": 199.08,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "BFM",
+        "CBKKW",
+        "LB",
+        "NBE",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 50,
+      "stripeAmountMultiplier": 1,
+      "monthlyMajor": [
+        1500,
+        3050,
+        7000
+      ],
+      "monthlyMinor": [
+        1500,
+        3050,
+        7000
+      ],
+      "yearlyMinor": [
+        15000,
+        30500,
+        70000
+      ]
+    },
+    "ERN": {
+      "eurRate": 17.0045,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "CBKKW",
+        "NBP"
+      ],
+      "stripePresentmentSupported": false,
+      "roundingStepMajor": 5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": null,
+      "monthlyMinor": null,
+      "yearlyMinor": null
+    },
+    "ETB": {
+      "eurRate": 180.98,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "BNA",
+        "CBKKW",
+        "CBO",
+        "CBR",
+        "LB",
+        "NBE",
+        "NBP",
+        "RBM"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 50,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        1400,
+        2750,
+        6350
+      ],
+      "monthlyMinor": [
+        140000,
+        275000,
+        635000
+      ],
+      "yearlyMinor": [
+        1400000,
+        2750000,
+        6350000
+      ]
+    },
+    "EUR": {
+      "eurRate": 1,
+      "rateDate": "2026-10-09",
+      "providerKeys": [],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 0.5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        7.5,
+        15,
+        35
+      ],
+      "monthlyMinor": [
+        750,
+        1500,
+        3500
+      ],
+      "yearlyMinor": [
+        7500,
+        15000,
+        35000
+      ]
+    },
+    "GBP": {
+      "eurRate": 0.84762,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "AMCM",
+        "BAM",
+        "BANXICO",
+        "BCB",
+        "BCBO",
+        "BCC",
+        "BCCCD",
+        "BCCH",
+        "BCEAO",
+        "BCP",
+        "BCRA",
+        "BCT",
+        "BCU",
+        "BDI",
+        "BDL",
+        "BFM",
+        "BI",
+        "BM",
+        "BNA",
+        "BNM",
+        "BNR",
+        "BNRRW",
+        "BOB",
+        "BOC",
+        "BOE",
+        "BOI",
+        "BOJA",
+        "BOM",
+        "BOMU",
+        "BOT",
+        "BOTA",
+        "BOZ",
+        "BRB",
+        "CBA",
+        "CBAR",
+        "CBBH",
+        "CBC",
+        "CBE",
+        "CBG",
+        "CBI",
+        "CBK",
+        "CBKKW",
+        "CBM",
+        "CBN",
+        "CBO",
+        "CBR",
+        "CBS",
+        "CBSL",
+        "CBSSC",
+        "CBTT",
+        "CBU",
+        "CBVS",
+        "CFETS",
+        "CNB",
+        "DAB",
+        "DNB",
+        "ECB",
+        "FBIL",
+        "FRED",
+        "HNB",
+        "IMF",
+        "LB",
+        "MAS",
+        "MNB",
+        "NB",
+        "NBC",
+        "NBE",
+        "NBG",
+        "NBK",
+        "NBKR",
+        "NBM",
+        "NBP",
+        "NBRB",
+        "NBRM",
+        "NBT",
+        "NBU",
+        "NRB",
+        "NRBT",
+        "PMA",
+        "RB",
+        "RBA",
+        "RBF",
+        "RBM",
+        "RBV",
+        "SARB",
+        "SBI",
+        "TCMB"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 0.5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        6.5,
+        13,
+        30
+      ],
+      "monthlyMinor": [
+        650,
+        1300,
+        3000
+      ],
+      "yearlyMinor": [
+        6500,
+        13000,
+        30000
+      ]
+    },
+    "GHS": {
+      "eurRate": 13.1573,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "CBG",
+        "CBKKW",
+        "CBSL",
+        "NBP"
+      ],
+      "stripePresentmentSupported": false,
+      "roundingStepMajor": 5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": null,
+      "monthlyMinor": null,
+      "yearlyMinor": null
+    },
+    "GMD": {
+      "eurRate": 82.09,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "CBG",
+        "CBKKW",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 10,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        630,
+        1250,
+        2880
+      ],
+      "monthlyMinor": [
+        63000,
+        125000,
+        288000
+      ],
+      "yearlyMinor": [
+        630000,
+        1250000,
+        2880000
+      ]
+    },
+    "GNF": {
+      "eurRate": 9862,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "CBG",
+        "CBKKW",
+        "LB",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 500,
+      "stripeAmountMultiplier": 1,
+      "monthlyMajor": [
+        75000,
+        150500,
+        346000
+      ],
+      "monthlyMinor": [
+        75000,
+        150500,
+        346000
+      ],
+      "yearlyMinor": [
+        750000,
+        1505000,
+        3460000
+      ]
+    },
+    "KES": {
+      "eurRate": 145.45,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "BNA",
+        "BNRRW",
+        "BOTA",
+        "BRB",
+        "CBK",
+        "CBKKW",
+        "CBM",
+        "CBO",
+        "CBSL",
+        "LB",
+        "NBE",
+        "NBP",
+        "RBM",
+        "SARB"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 50,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        1100,
+        2200,
+        5100
+      ],
+      "monthlyMinor": [
+        110000,
+        220000,
+        510000
+      ],
+      "yearlyMinor": [
+        1100000,
+        2200000,
+        5100000
+      ]
+    },
+    "KMF": {
+      "eurRate": 492.24,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "CBKKW",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 50,
+      "stripeAmountMultiplier": 1,
+      "monthlyMajor": [
+        3750,
+        7500,
+        17250
+      ],
+      "monthlyMinor": [
+        3750,
+        7500,
+        17250
+      ],
+      "yearlyMinor": [
+        37500,
+        75000,
+        172500
+      ]
+    },
+    "LRD": {
+      "eurRate": 191.64,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "CBKKW",
+        "CBLLR",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 50,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        1450,
+        2900,
+        6700
+      ],
+      "monthlyMinor": [
+        145000,
+        290000,
+        670000
+      ],
+      "yearlyMinor": [
+        1450000,
+        2900000,
+        6700000
+      ]
+    },
+    "LSL": {
+      "eurRate": 18.5823,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "BNA",
+        "CBKKW",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        140,
+        285,
+        650
+      ],
+      "monthlyMinor": [
+        14000,
+        28500,
+        65000
+      ],
+      "yearlyMinor": [
+        140000,
+        285000,
+        650000
+      ]
+    },
+    "MGA": {
+      "eurRate": 5011,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "BFM",
+        "CBKKW",
+        "LB",
+        "NBP",
+        "RBM"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 500,
+      "stripeAmountMultiplier": 1,
+      "monthlyMajor": [
+        38000,
+        76500,
+        175500
+      ],
+      "monthlyMinor": [
+        38000,
+        76500,
+        175500
+      ],
+      "yearlyMinor": [
+        380000,
+        765000,
+        1755000
+      ]
+    },
+    "MRU": {
+      "eurRate": 44.92,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BAM",
+        "BCT",
+        "BDI",
+        "CBKKW",
+        "NBP"
+      ],
+      "stripePresentmentSupported": false,
+      "roundingStepMajor": 5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": null,
+      "monthlyMinor": null,
+      "yearlyMinor": null
+    },
+    "MUR": {
+      "eurRate": 53.24,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "BFM",
+        "BM",
+        "BOMU",
+        "CBKKW",
+        "CBSL",
+        "IMF",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        405,
+        810,
+        1865
+      ],
+      "monthlyMinor": [
+        40500,
+        81000,
+        186500
+      ],
+      "yearlyMinor": [
+        405000,
+        810000,
+        1865000
+      ]
+    },
+    "MWK": {
+      "eurRate": 1943.42,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "BM",
+        "BOTA",
+        "CBKKW",
+        "NBP",
+        "RBM",
+        "SARB"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 100,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        14800,
+        29600,
+        68100
+      ],
+      "monthlyMinor": [
+        1480000,
+        2960000,
+        6810000
+      ],
+      "yearlyMinor": [
+        14800000,
+        29600000,
+        68100000
+      ]
+    },
+    "MZN": {
+      "eurRate": 71.438,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "BM",
+        "BNA",
+        "CBKKW",
+        "LB",
+        "NBP",
+        "RBM"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 10,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        540,
+        1090,
+        2500
+      ],
+      "monthlyMinor": [
+        54000,
+        109000,
+        250000
+      ],
+      "yearlyMinor": [
+        540000,
+        1090000,
+        2500000
+      ]
+    },
+    "NAD": {
+      "eurRate": 18.6179,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "BNA",
+        "BOTA",
+        "CBKKW",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        140,
+        285,
+        655
+      ],
+      "monthlyMinor": [
+        14000,
+        28500,
+        65500
+      ],
+      "yearlyMinor": [
+        140000,
+        285000,
+        655000
+      ]
+    },
+    "NGN": {
+      "eurRate": 1490.97,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "BNA",
+        "BOTA",
+        "CBG",
+        "CBKKW",
+        "CBN",
+        "CBR",
+        "CBSL",
+        "NBC",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 100,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        11400,
+        22700,
+        52300
+      ],
+      "monthlyMinor": [
+        1140000,
+        2270000,
+        5230000
+      ],
+      "yearlyMinor": [
+        11400000,
+        22700000,
+        52300000
+      ]
+    },
+    "RWF": {
+      "eurRate": 1653.85,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BCCCD",
+        "BDI",
+        "BNRRW",
+        "BOTA",
+        "BRB",
+        "CBK",
+        "CBKKW",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 100,
+      "stripeAmountMultiplier": 1,
+      "monthlyMajor": [
+        12600,
+        25200,
+        58000
+      ],
+      "monthlyMinor": [
+        12600,
+        25200,
+        58000
+      ],
+      "yearlyMinor": [
+        126000,
+        252000,
+        580000
+      ]
+    },
+    "SCR": {
+      "eurRate": 16.0822,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "CBKKW",
+        "CBSL",
+        "CBSSC",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        125,
+        245,
+        565
+      ],
+      "monthlyMinor": [
+        12500,
+        24500,
+        56500
+      ],
+      "yearlyMinor": [
+        125000,
+        245000,
+        565000
+      ]
+    },
+    "SHP": {
+      "eurRate": 0.84762,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 0.5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        6.5,
+        13,
+        30
+      ],
+      "monthlyMinor": [
+        650,
+        1300,
+        3000
+      ],
+      "yearlyMinor": [
+        6500,
+        13000,
+        30000
+      ]
+    },
+    "SLE": {
+      "eurRate": 26.72,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "CBG",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        205,
+        405,
+        935
+      ],
+      "monthlyMinor": [
+        20500,
+        40500,
+        93500
+      ],
+      "yearlyMinor": [
+        205000,
+        405000,
+        935000
+      ]
+    },
+    "SOS": {
+      "eurRate": 640.36,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "CBKKW",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 50,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        4900,
+        9750,
+        22450
+      ],
+      "monthlyMinor": [
+        490000,
+        975000,
+        2245000
+      ],
+      "yearlyMinor": [
+        4900000,
+        9750000,
+        22450000
+      ]
+    },
+    "SSP": {
+      "eurRate": 6446,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "NBP"
+      ],
+      "stripePresentmentSupported": false,
+      "roundingStepMajor": 500,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": null,
+      "monthlyMinor": null,
+      "yearlyMinor": null
+    },
+    "STN": {
+      "eurRate": 24.417,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "BNA",
+        "NBP"
+      ],
+      "stripePresentmentSupported": false,
+      "roundingStepMajor": 5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": null,
+      "monthlyMinor": null,
+      "yearlyMinor": null
+    },
+    "SZL": {
+      "eurRate": 18.5794,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "BM",
+        "CBKKW",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        140,
+        285,
+        650
+      ],
+      "monthlyMinor": [
+        14000,
+        28500,
+        65000
+      ],
+      "yearlyMinor": [
+        140000,
+        285000,
+        650000
+      ]
+    },
+    "TZS": {
+      "eurRate": 2955.3,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BCCCD",
+        "BDI",
+        "BM",
+        "BNA",
+        "BNRRW",
+        "BOTA",
+        "BRB",
+        "CBK",
+        "CBKKW",
+        "CBO",
+        "LB",
+        "NBP",
+        "RBM"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 500,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        22500,
+        45000,
+        103500
+      ],
+      "monthlyMinor": [
+        2250000,
+        4500000,
+        10350000
+      ],
+      "yearlyMinor": [
+        22500000,
+        45000000,
+        103500000
+      ]
+    },
+    "UGX": {
+      "eurRate": 4564.05,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BCCCD",
+        "BDI",
+        "BNRRW",
+        "BOTA",
+        "BRB",
+        "CBK",
+        "CBKKW",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 500,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        35000,
+        69500,
+        160000
+      ],
+      "monthlyMinor": [
+        3500000,
+        6950000,
+        16000000
+      ],
+      "yearlyMinor": [
+        35000000,
+        69500000,
+        160000000
+      ]
+    },
+    "XAF": {
+      "eurRate": 655.96,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BCCCD",
+        "BDI",
+        "BNA",
+        "LB",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": null,
+      "stripeAmountMultiplier": 1,
+      "monthlyMajor": [
+        5000,
+        10000,
+        23000
+      ],
+      "monthlyMinor": [
+        5000,
+        10000,
+        23000
+      ],
+      "yearlyMinor": [
+        50000,
+        100000,
+        230000
+      ]
+    },
+    "XOF": {
+      "eurRate": 655.96,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BAM",
+        "BCEAO",
+        "BDI",
+        "CBG",
+        "CBN",
+        "LB",
+        "NBP"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": null,
+      "stripeAmountMultiplier": 1,
+      "monthlyMajor": [
+        5000,
+        10000,
+        23000
+      ],
+      "monthlyMinor": [
+        5000,
+        10000,
+        23000
+      ],
+      "yearlyMinor": [
+        50000,
+        100000,
+        230000
+      ]
+    },
+    "ZAR": {
+      "eurRate": 18.5685,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BAM",
+        "BCCCD",
+        "BCEAO",
+        "BCP",
+        "BCRA",
+        "BCU",
+        "BDI",
+        "BFM",
+        "BM",
+        "BNA",
+        "BNR",
+        "BNRRW",
+        "BOB",
+        "BOC",
+        "BOE",
+        "BOI",
+        "BOM",
+        "BOMU",
+        "BOTA",
+        "BOZ",
+        "BRB",
+        "CBG",
+        "CBK",
+        "CBKKW",
+        "CBM",
+        "CBN",
+        "CBO",
+        "CBR",
+        "CBSL",
+        "CBU",
+        "CFETS",
+        "CNB",
+        "DNB",
+        "ECB",
+        "FRED",
+        "LB",
+        "MNB",
+        "NB",
+        "NBC",
+        "NBE",
+        "NBG",
+        "NBK",
+        "NBP",
+        "NBRM",
+        "NBU",
+        "RB",
+        "RBM",
+        "SARB",
+        "SBI"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        140,
+        285,
+        650
+      ],
+      "monthlyMinor": [
+        14000,
+        28500,
+        65000
+      ],
+      "yearlyMinor": [
+        140000,
+        285000,
+        650000
+      ]
+    },
+    "ZMW": {
+      "eurRate": 22.321,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BCCCD",
+        "BDI",
+        "BM",
+        "BOTA",
+        "BOZ",
+        "CBKKW",
+        "CBSL",
+        "NBP",
+        "RBM",
+        "SARB"
+      ],
+      "stripePresentmentSupported": true,
+      "roundingStepMajor": 5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": [
+        170,
+        340,
+        785
+      ],
+      "monthlyMinor": [
+        17000,
+        34000,
+        78500
+      ],
+      "yearlyMinor": [
+        170000,
+        340000,
+        785000
+      ]
+    },
+    "ZWG": {
+      "eurRate": 30.196,
+      "rateDate": "2026-10-09",
+      "providerKeys": [
+        "BDI",
+        "NBP"
+      ],
+      "stripePresentmentSupported": false,
+      "roundingStepMajor": 5,
+      "stripeAmountMultiplier": 100,
+      "monthlyMajor": null,
+      "monthlyMinor": null,
+      "yearlyMinor": null
+    }
+  }
+}

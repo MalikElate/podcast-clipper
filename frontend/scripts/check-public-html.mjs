@@ -41,7 +41,7 @@ const funnelHtml = await readFile("dist/start/index.html", "utf8");
 assert.ok(funnelHtml.includes("Create once."), "The ad funnel must render its promise without JavaScript");
 assert.ok(funnelHtml.includes("Publish everywhere."), "The ad funnel must render its cross-platform outcome without JavaScript");
 assert.ok(funnelHtml.includes("Start Posting for Free"), "The ad funnel must present a free-signup action");
-assert.ok(funnelHtml.includes("Start with 5 social accounts"), "The ad funnel must explain the free offer");
+assert.ok(funnelHtml.includes("Connect social accounts on the free plan"), "The ad funnel must explain the free offer without claiming a regional limit");
 assert.ok(funnelHtml.includes('href="https://app.findmeadow.com/sign-up"'), "The ad funnel must link directly to account creation");
 assert.ok(funnelHtml.includes('<meta name="robots" content="noindex, follow" />'), "The paid landing page must stay out of the sitemap and search results");
 assert.ok(!funnelHtml.includes('<link rel="canonical"'), "The paid landing page must not claim an indexed canonical URL");
@@ -107,7 +107,12 @@ assert.ok(landingHtml.includes('href="/developers/"'), "The developer page must 
 for (const type of ["Organization", "WebSite", "SoftwareApplication"]) {
   assert.ok(landingHtml.includes(`"@type":"${type}"`), `The homepage must describe itself as a ${type}`);
 }
-assert.ok(landingHtml.includes('"priceCurrency":"USD"'), "The homepage must price its plans in the currency the pricing page charges");
+assert.ok(!landingHtml.includes('"priceCurrency":"USD"'), "Static schema must not advertise one currency to every region");
+for (const path of ["index.html", "pricing/index.html", ...GENERAL_PAGES.map(page => `${page.path.slice(1)}/index.html`)]) {
+  const html = path === "index.html" ? landingHtml : await readFile(`dist/${path}`, "utf8");
+  assert.ok(html.includes("Checking local prices…"), `${path} must wait for the server pricing quote`);
+  assert.doesNotMatch(html, /Billed \$\d+ yearly/, `${path} must not prerender global dollar prices`);
+}
 for (const unearned of ["aggregateRating", "reviewCount", "ratingValue"]) {
   assert.ok(!landingHtml.includes(unearned), `The homepage must not claim ${unearned}`);
 }

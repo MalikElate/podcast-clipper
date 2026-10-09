@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { checkoutNotice, billingWarning, SUBSCRIPTION_STATUSES } from "../src/bridge/billingState.js";
+import { checkoutNotice, billingWarning, billingPlanQuote, SUBSCRIPTION_STATUSES } from "../src/bridge/billingState.js";
 
 test("only confirmed, paid, active checkout shows payment confirmation", () => {
   for (const result of [{}, { checkoutStatus: "complete", paymentStatus: "unpaid", billing: { status: "active" } }, { checkoutStatus: "open", paymentStatus: "paid", billing: { status: "active" } }, { checkoutStatus: "complete", paymentStatus: "paid", billing: { status: "incomplete" } }]) {
@@ -19,6 +19,18 @@ test("zero-charge trials, expired checkouts, and failed payments are distinguish
   assert.equal(billingWarning("active"), "");
   assert.equal(SUBSCRIPTION_STATUSES.has("paused"), true);
   assert.equal(SUBSCRIPTION_STATUSES.has("canceled"), false);
+});
+
+test("active subscribers never see new-visitor prices for a different billing region or currency", () => {
+  const global = { region: "global", currency: "USD" };
+  const regional = { region: "ssa", currency: "XAF" };
+  assert.equal(billingPlanQuote({ status: "free" }, regional), regional);
+  assert.equal(billingPlanQuote({ status: "active", region: "global", currency: "USD" }, regional), null);
+  assert.equal(billingPlanQuote({ status: "active", region: null, currency: null }, regional), null);
+  assert.equal(billingPlanQuote({ status: "active", region: "ssa", currency: "XAF" }, global), null);
+  assert.equal(billingPlanQuote({ status: "active", region: "ssa", currency: "XOF" }, regional), null);
+  assert.equal(billingPlanQuote({ status: "active", region: "ssa", currency: "XAF" }, regional), regional);
+  assert.equal(billingPlanQuote({ status: "active", region: null, currency: null }, global), global);
 });
 
 

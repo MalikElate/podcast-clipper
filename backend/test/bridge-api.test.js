@@ -28,6 +28,20 @@ async function setup(t, { localPreview = false, auth = true, stripe, webhookSend
 }
 const pdf = Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF");
 
+test("public pricing trusts the visitor country only behind an opted-in edge", async t => {
+  const untrusted = await setup(t);
+  const ignored = await untrusted.request("/api/pricing", { user: null, headers: { "x-meadow-visitor-country": "CM" } });
+  assert.equal(ignored.headers.get("cache-control"), "private, no-store");
+  assert.equal((await ignored.json()).region, "global");
+
+  const trusted = await setup(t, { envOverrides: { BRIDGE_TRUST_COUNTRY_HEADER: "1" } });
+  const regional = await trusted.request("/api/pricing", { user: null, headers: { "x-meadow-visitor-country": "CM" } });
+  const quote = await regional.json();
+  assert.equal(quote.region, "ssa");
+  assert.equal(quote.currency, "XAF");
+  assert.equal(quote.freeAccounts, 2);
+});
+
 test("webhook routes require a session, isolate owners, keep secrets private and send signed tests", async t => {
   const sent = [];
   const h = await setup(t, { envOverrides: { BRIDGE_ENCRYPTION_KEY: randomBytes(32).toString("base64"), BRIDGE_PUBLIC_URL: "https://meadow.example" }, webhookSend: async (url, body, headers) => { sent.push({ url, body, headers }); return 204; } });
@@ -230,7 +244,7 @@ test("Stripe checkout, webhooks, subscription state, and billing portal stay lin
   } });
 
   const before = await (await h.request("/api/bridge/billing")).json();
-  assert.deepEqual(before, { configured: true, planId: null, cycle: null, status: "free", cancelAtPeriodEnd: false, currentPeriodEnd: null, canManage: false });
+  assert.deepEqual(before, { configured: true, planId: null, cycle: null, status: "free", region: null, currency: null, cancelAtPeriodEnd: false, currentPeriodEnd: null, canManage: false });
   const checkout = await h.request("/api/bridge/billing/checkout", { method: "POST", body: { planId: "creator", cycle: "yearly", trybeVisitorId: "ignore-client-body" }, headers: { Cookie: "ugc_vid_store-123=visitor-123" } });
   assert.equal(checkout.status, 200); assert.equal((await checkout.json()).url, "https://checkout.stripe.test/session");
   assert.equal(calls.checkout[0].line_items[0].price, "price_creator_yearly");

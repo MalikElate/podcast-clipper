@@ -7,7 +7,9 @@ import PixelMeadow from "./PixelMeadow.jsx";
 import SchedulingDemo from "./SchedulingDemo.jsx";
 import AgentPublishingDemo from "./AgentPublishingDemo.jsx";
 import { sortPlatforms } from "../bridge/platforms.js";
-import { PLANS, planHref, planBillingNote } from "../pricing.js";
+import { PLANS, planHref, planBillingNote, planMonthlyPrice, planAccounts, currencyLabel } from "../pricing.js";
+import { usePricingQuote } from "../pricingQuote.js";
+import PricingQuoteStatus from "./PricingQuoteStatus.jsx";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import SiteFooter from "./SiteFooter.jsx";
 import SiteHeader from "./SiteHeader.jsx";
@@ -159,6 +161,7 @@ function GoalScenarios() {
 
 export default function Landing({ onGetStarted }) {
   const [yearlyPricing, setYearlyPricing] = useState(true);
+  const { quote, status, retry } = usePricingQuote();
   return (
     <div className="landing landing-v2 landing-home" id="top">
       <SiteHeader homeHref="#top" onSignIn={onGetStarted} onStartPosting={onGetStarted} />
@@ -240,11 +243,11 @@ export default function Landing({ onGetStarted }) {
 
         <section className="landing-section home-pricing-section" id="pricing" aria-labelledby="home-pricing-title">
           <div className="home-pricing-heading"><h2 id="home-pricing-title">Pricing</h2><div className="pricing-cycle" role="group" aria-label="Billing frequency"><button className={!yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(false)}>Monthly</button><button className={yearlyPricing ? "active" : ""} onClick={() => setYearlyPricing(true)}>Yearly <span>Save up to 17%</span></button></div></div>
+          <PricingQuoteStatus quote={quote} status={status} retry={retry} />
           <div className="pricing-grid" aria-label="Meadow plans">
             {PLANS.map((plan) => {
-              const price = yearlyPricing ? plan.yearly : plan.monthly;
               const cycle = yearlyPricing ? "yearly" : "monthly";
-              return <article className={`pricing-card ${plan.popular ? "featured" : ""}`} key={plan.id}><div className="pricing-card-top"><div><h3>{plan.name}</h3><p>{plan.description}</p></div></div><div className="pricing-price"><strong>${price}</strong><span>/month</span></div><p className="pricing-billing-note">{planBillingNote(plan, yearlyPricing)}</p><div className="pricing-card-divider" aria-hidden="true" /><ul><li className="pricing-account">{plan.accounts}</li>{plan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul><a className={plan.popular ? "btn-primary" : "pricing-button"} href={planHref(plan, cycle)}>{plan.id === "free" ? "Try for free" : `Choose ${plan.name}`} <ArrowIcon /></a></article>;
+              return <article className={`pricing-card ${plan.popular ? "featured" : ""}`} key={plan.id}><div className="pricing-card-top"><div><h3>{plan.name}</h3><p>{plan.description}</p></div></div><div className="pricing-price"><strong>{planMonthlyPrice(plan, yearlyPricing, quote)}</strong>{quote && <span>{currencyLabel(quote)}/month</span>}</div><p className="pricing-billing-note">{planBillingNote(plan, yearlyPricing, quote)}</p><div className="pricing-card-divider" aria-hidden="true" /><ul><li className="pricing-account">{planAccounts(plan, quote)}</li>{plan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul><a className={plan.popular ? "btn-primary" : "pricing-button"} href={plan.id !== "free" && !quote ? "/pricing/" : planHref(plan, cycle)}>{plan.id === "free" ? "Try for free" : `Choose ${plan.name}`} <ArrowIcon /></a></article>;
             })}
           </div>
         </section>
