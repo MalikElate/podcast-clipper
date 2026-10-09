@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "FindMeadow — Save ideas for social posts",
+  "short_name": "FindMeadow",
+  "version": "1.0.0",
+  "description": "Clip a page, selected text, or an image. Edit your caption and turn it into a Meadow draft, ready to share on your social accounts.",
+  "minimum_chrome_version": "127",
+  "homepage_url": "https://findmeadow.com",
+  "permissions": ["activeTab", "scripting", "contextMenus", "storage"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": {
+    "default_title": "Create a Meadow draft",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" }
+  },
+  "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; connect-src 'none'; img-src 'self'" }
+}

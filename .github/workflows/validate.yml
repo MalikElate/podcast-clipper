@@ -43,5 +43,9 @@ jobs:
         run: npm test --prefix frontend
       - name: Backend tests
         run: npm test --prefix backend
+      - name: Chrome extension tests and package
+        run: |
+          npm test --prefix extension
+          npm run build --prefix extension
       - name: Production frontend and public HTML
         run: npm run build --prefix frontend

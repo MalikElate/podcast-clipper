@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FindMeadow · Create a draft</title>
+  <link rel="stylesheet" href="popup.css">
+  <script type="module" src="popup.js"></script>
+</head>
+<body>
+  <main>
+    <header><a class="brand" href="https://findmeadow.com" target="_blank" rel="noreferrer"><img src="icons/48.png" alt="" width="34" height="34"><span>meadow<span class="brand-dot">.</span></span></a><span class="header-label">For Chrome</span></header>
+    <section id="welcome" hidden>
+      <h1>Your next post<br>starts here.</h1>
+      <p class="intro">Keep an idea from a page, highlight a passage, or right-click an image. Make it a Meadow draft when you’re ready.</p>
+      <div class="disclosure"><strong>You choose what gets clipped.</strong><p>FindMeadow reads only the page address, title, selected text, or image address you choose to clip. Your clip stays in this browser session until you send it to Meadow.</p><p>Meadow receives that content when you click “Continue in Meadow.” It is used to prepare your post.</p></div>
+      <button id="enable" class="primary" type="button">Enable clipping</button>
+      <p class="fine">A Meadow account is needed to save and publish posts.</p>
+    </section>
+    <section id="editor" hidden>
+      <div class="heading-row"><h1>Create a draft</h1><button id="clear" class="text-button" type="button">Clear</button></div>
+      <p class="intro">Bring a good idea back to your audience.</p>
+      <div class="capture-actions"><button id="page" class="secondary" type="button">Use current page</button><button id="selection" class="secondary" type="button">Use selected text</button></div>
+      <div id="source" class="source" hidden><span class="field-label">Clipped from</span><strong id="source-title"></strong><span id="source-url"></span></div>
+      <label class="field-label" for="caption">Post text</label>
+      <textarea id="caption" maxlength="20000" placeholder="Write a caption, or clip something from the page…" spellcheck="true"></textarea>
+      <div class="text-meta"><span id="count">0 / 20,000</span><span>Kept locally for up to 1 hour</span></div>
+      <div id="image" class="image-choice" hidden><div><span class="field-label">Selected image</span><span id="image-url"></span></div><button id="remove-image" class="text-button" type="button">Remove</button></div>
+      <p class="disclosure compact">Only this caption, its source address and title, and any selected image address go to Meadow when you continue. Review and save the draft there.</p>
+      <button id="continue" class="primary" type="button">Continue in Meadow <span aria-hidden="true">↗</span></button>
+      <p class="fine">Choose accounts and publishing time in Meadow.</p>
+    </section>
+    <p id="status" class="status" role="status" aria-live="polite" hidden></p>
+    <footer><a href="https://findmeadow.com/privacy/#privacy-chrome-extension" target="_blank" rel="noreferrer">Privacy</a><a href="https://findmeadow.com/contact/" target="_blank" rel="noreferrer">Help</a><button id="disable" class="text-button" type="button" hidden>Turn off clipping</button></footer>
+  </main>
+</body>
+</html>
