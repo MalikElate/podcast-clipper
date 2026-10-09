@@ -8,6 +8,7 @@ import { DurableState } from "./durableState.js";
 import { migrationScript } from "./migrationScript.js";
 import { appDomainRedirect, dashboardShellUrl } from "./domainRouting.js";
 import { handlePosthogProxy, isPosthogProxyPath } from "./posthogProxy.js";
+import { OPENAI_APPS_CHALLENGE_PATH, openaiAppsChallengeResponse } from "./openaiAppsChallenge.js";
 import { handleDirectUpload, stagingKey } from "./directUploads.js";
 export { ContainerProxy } from "@cloudflare/containers";
 
@@ -232,6 +233,7 @@ export default {
   async fetch(request, workerEnv, ctx) {
     const url = new URL(request.url);
     if (isPosthogProxyPath(url.pathname)) return handlePosthogProxy(request);
+    if (url.pathname === OPENAI_APPS_CHALLENGE_PATH) return openaiAppsChallengeResponse(workerEnv.OPENAI_APPS_CHALLENGE);
     if (url.pathname === "/api/tools/tiktok-roast") return handleTikTokRoast(request, workerEnv, ctx);
     if (url.pathname.startsWith("/api/free-tools/")) return handleFreeTools(request, workerEnv, ctx);
     const appRedirect = appDomainRedirect(url);
