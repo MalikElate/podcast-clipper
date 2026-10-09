@@ -1,27 +1,34 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import vm from "node:vm";
+import { dashboardPath } from "../src/routes.js";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const manifest = JSON.parse(await fs.readFile(path.join(root, "manifest.json"), "utf8"));
-
-test("the extension is MV3 with only user-invoked clipping permissions", () => {
+const manifest = JSON.parse(await fs.readFile(new URL("../manifest.json", import.meta.url), "utf8"));
+test("MV3 cross-posting needs storage and only Meadow network access", () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.deepEqual(manifest.permissions.toSorted(), ["activeTab", "contextMenus", "scripting", "storage"]);
-  assert.equal(manifest.host_permissions, undefined);
+  assert.deepEqual(manifest.permissions, ["storage"]);
+  assert.deepEqual(manifest.host_permissions, ["https://findmeadow.com/*"]);
   assert.equal(manifest.content_scripts, undefined);
   assert.equal(manifest.externally_connectable, undefined);
+  assert.equal(manifest.action.default_popup, undefined);
   assert.ok(manifest.description.length <= 132);
-  assert.match(manifest.content_security_policy.extension_pages, /connect-src 'none'/);
+  assert.match(manifest.content_security_policy.extension_pages, /script-src 'self';/);
+  assert.doesNotMatch(manifest.content_security_policy.extension_pages, /unsafe-eval/);
 });
-
-test("packaged popup uses local scripts and renders user content as text", async () => {
-  const html = await fs.readFile(path.join(root, "src/popup.html"), "utf8");
-  const source = await fs.readFile(path.join(root, "src/popup.js"), "utf8");
-  assert.equal((html.match(/<script/g) || []).length, 1);
-  assert.match(html, /src="popup.js"/);
-  assert.doesNotMatch(source, /innerHTML|outerHTML|insertAdjacentHTML|\beval\s*\(|\bfetch\s*\(/);
-  for (const match of source.matchAll(/byId\("([^"]+)"\)/g)) assert.ok(html.includes(`id="${match[1]}"`), `Missing popup element ${match[1]}`);
+test("toolbar opens packaged composer without reading the active tab", async () => {
+  const source = await fs.readFile(new URL("../src/background.js", import.meta.url), "utf8");
+  let listener; const opened = [];
+  vm.runInNewContext(source, { chrome: {
+    action: { onClicked: { addListener(fn) { listener = fn; } } },
+    runtime: { getURL: file => "chrome-extension://test/" + file },
+    tabs: { create: options => opened.push(options) },
+  } });
+  assert.equal(opened.length, 0);
+  listener();
+  assert.equal(opened[0].url, "chrome-extension://test/app.html");
+});
+test("shared composer links always use the Meadow app origin", () => {
+  assert.equal(dashboardPath("accounts"), "https://app.findmeadow.com/dashboard/connections");
+  assert.equal(dashboardPath("https://evil.example"), "https://app.findmeadow.com/dashboard");
 });

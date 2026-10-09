@@ -1,18 +1,18 @@
 {
   "manifest_version": 3,
-  "name": "FindMeadow — Save ideas for social posts",
+  "name": "FindMeadow — Cross-post to social media",
   "short_name": "FindMeadow",
   "version": "1.0.0",
-  "description": "Clip a page, selected text, or an image. Edit your caption and turn it into a Meadow draft, ready to share on your social accounts.",
-  "minimum_chrome_version": "127",
+  "description": "Write once, choose your social accounts, and publish or schedule with Meadow. Share text, images, videos, and carousels from Chrome.",
+  "minimum_chrome_version": "120",
   "homepage_url": "https://findmeadow.com",
-  "permissions": ["activeTab", "scripting", "contextMenus", "storage"],
+  "permissions": ["storage"],
+  "host_permissions": ["https://findmeadow.com/*"],
   "background": { "service_worker": "background.js", "type": "module" },
   "action": {
-    "default_title": "Create a Meadow draft",
-    "default_popup": "popup.html",
+    "default_title": "Cross-post with Meadow",
     "default_icon": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" }
   },
   "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
-  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; connect-src 'none'; img-src 'self'" }
+  "content_security_policy": { "extension_pages": "default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; style-src 'self' 'unsafe-inline'; connect-src https://findmeadow.com; img-src 'self' data: blob: https://findmeadow.com; media-src 'self' blob: https://findmeadow.com; frame-src 'none'" }
 }

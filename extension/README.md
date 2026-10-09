@@ -1,41 +1,55 @@
 # FindMeadow for Chrome
 
-Clip a web page, highlighted text, a link, or a public image; edit its caption; and continue to Meadow to review and save a draft. Publishing remains in Meadow’s normal composer with the user’s choice of social accounts and settings.
+A Manifest V3 extension for cross-posting only. Clicking its toolbar icon opens a persistent, packaged composer tab. It reuses Meadow's existing post editor, format checks, destination settings, preview-before-submission flow, and delivery statuses. It does not include the wider dashboard, clipping tools, swipe actions, or waterfall.
 
-## Build and test
+## Build
 
-Use Node 22.12+ and Python 3 (ZIP packaging uses only Python’s standard library).
+Use Node 22.12+ (22 series) and Python 3, with the repository's locked frontend dependencies installed:
 
 ```sh
+npm ci --prefix frontend
 npm test --prefix extension
 npm run build --prefix extension
 ```
 
-Load `extension/dist/findmeadow` as an unpacked extension in Chrome 127 or newer. The Chrome Web Store upload is `extension/dist/findmeadow-chrome-1.0.0.zip`.
+Outputs: `dist/findmeadow/` (unpacked), `dist/findmeadow-chrome-1.0.0.zip` (store upload, manifest at archive root). Build output is ignored by Git.
 
-The build uses Meadow’s existing flower assets. Executable code is bundled in the ZIP. There are no external dependencies or remote scripts in the extension.
+For local Chrome testing, open chrome://extensions, enable Developer mode, and use Load unpacked with the output directory. A Chrome Web Store installation should be used for normal distribution.
 
-## User flow
+## What it does
 
-1. Open the extension and read the clipping disclosure, then enable clipping.
-2. Use the current page or highlighted text, or use a Meadow item in the page’s right-click menu.
-3. Edit the caption and remove an unwanted image. Images are represented by their address; opening the editor does not download them.
-4. Continue in Meadow. The user’s chosen content is carried in the URL fragment to `https://app.findmeadow.com/dashboard/import`, then consumed by that page.
-5. Sign in to Meadow if necessary, review the content, and choose **Save draft**. This creates an unpublished draft with no social accounts selected.
+- Compose text, image, video, and carousel posts.
+- Choose the connected social accounts supported for the chosen format.
+- Customize captions, titles, audience/privacy, and other destination settings.
+- Save a Meadow draft, publish now, or schedule in the workspace time zone.
+- Upload selected files (up to 90 MiB each in this version); use Meadow's web app for larger files.
+- Show accepted delivery statuses and refresh them without automatically resubmitting.
 
-Browser pages, local files, `data:`/`blob:` images, and URLs containing embedded credentials cannot be clipped. Public image import can also fail if the image host requires a login or blocks downloads; the user can exclude the image and save the text.
+A Meadow account is required. Social connections are managed on Meadow's website. Platform support, limits, and plan requirements remain the same as Meadow.
 
-## Data and permissions
+## Authentication and data
 
-- `activeTab`: access the current page only after a user invokes the extension.
-- `scripting`: read highlighted text in the active page after **Use selected text**. No content script runs automatically.
-- `contextMenus`: page/text/link/image clipping actions, registered only after the user enables clipping.
-- `storage`: a local on/off preference and a single clip in `chrome.storage.session`. Clips expire after one hour and do not sync. **Clear** removes the clip; **Turn off clipping** removes it and the context menus.
+The extension discloses its data use before connecting. User-approved device sign-in creates a dedicated revocable Meadow key. The key is stored in this Chrome profile's local extension storage, restricted to trusted extension contexts, and is only transmitted over HTTPS to findmeadow.com. Disconnect clears the local credential; revoke the dedicated key in Meadow's API Keys settings to invalidate server-side access.
 
-The extension does not make API requests, read cookies or browsing history, store login tokens, track usage, or publish social posts. It does not request host permissions. The selected content goes to Meadow only on **Continue in Meadow**, where the app’s normal signed-in session handles saving it. Read the live privacy notice at `https://findmeadow.com/privacy/#privacy-chrome-extension`.
+Only storage and https://findmeadow.com/* permissions are requested. There are no content scripts, activeTab/history/cookie/clipboard permissions, remote executable code, trackers, or credentials bundled in the ZIP. Files upload when selected; captions and publishing settings are sent when saving/submitting. Unsaved editor content lives in the tab, with an unload warning. Only explicit user actions submit posts. Preview validation is mandatory.
+
+The packaged build aliases the shared composer's API and dashboard-link imports to extension-specific adapters. It does not import the website's Clerk scripts, analytics entrypoint, or other dashboard modules.
 
 ## Release checklist
 
-Automated tests cover the handoff contract, input limits, restricted URLs, clip expiry, consent-gated context menus, safe failure/fallback behavior, manifest permissions, and packaged script restrictions. Before store submission, run the complete clipping → sign-in → draft workflow in Chrome, test the image-error recovery, and capture screenshots of the real UI. Do not represent unit tests as Chrome integration testing.
+Automated validation:
+- Extension auth, API, lifecycle, permissions, and packaging checks.
+- Existing frontend/backend tests and production website build.
 
-Chrome Web Store submission also requires a developer account, store listing, accurate privacy declarations, required store images, and Google review. The store listing must not claim a post was published when only a draft was saved.
+Before store submission:
+- Load the actual ZIP's unpacked build in Chrome and check runtime/CSP errors.
+- Complete device sign-in using a dedicated reviewer/test Meadow account.
+- Verify workspace/account loading, text/image/video/carousel composition, media ordering, settings, draft save, validation errors, and scheduled-time display.
+- Verify no posts are sent until the explicit Publish/Schedule action; use an approved test account for any actual publishing.
+- Verify cancellation, reload/close warnings, expired/revoked connection recovery, and disconnect.
+- Capture real 1280×800 or 640×400 screenshots in Chrome. The promotional tile is a designed graphic, not a screenshot.
+- Provide reviewer access privately when needed, not in the source tree.
+- Complete Chrome Web Store registration/privacy/trader fields, upload, and submit for Google review.
+- Record the listing ID, review outcome, and public URL only after verified.
+
+Current build work does not itself establish Chrome Web Store publication.
