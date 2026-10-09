@@ -28,6 +28,7 @@ export function buildConfig() {
       } },
     ],
     resolve: { alias: {
+      "/meadow-flower-mark-v2.webp": path.join(root, "../frontend/public/meadow-flower-mark-v2.webp"),
       "react-dom": path.join(root, "../frontend/node_modules/react-dom"),
       "react": path.join(root, "../frontend/node_modules/react"),
     } },
