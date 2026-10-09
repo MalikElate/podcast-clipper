@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { OAuthConsent } from "@clerk/react";
 import { useAuth } from "./AuthContext.jsx";
 import Auth from "./components/Auth.jsx";
@@ -13,7 +13,8 @@ import DevelopersPage from "./components/DevelopersPage.jsx";
 import { findMarketingPage } from "./marketing/generalPages.js";
 import TikTokRoast from "./tools/TikTokRoast.jsx";
 import NotFound from "./components/NotFound.jsx";
-import { PAID_PLANS as PLANS } from "./pricing.js";
+import { PAID_PLANS as PLANS, checkoutExpectation } from "./pricing.js";
+import { usePricingQuote } from "./pricingQuote.js";
 import { api, localPreview } from "./bridge/BridgeApi.js";
 import { isDashboardPath } from "./bridge/dashboardRoutes.js";
 import { appHref, isLocalMarketingPreview, marketingHref, siteSurface } from "./siteUrls.js";
@@ -136,61 +137,58 @@ function SignupComplete() {
 
 function PricingSurface({ marketing = false }) {
   const { user, loading } = useAuth();
+  const pricingQuoteState = usePricingQuote();
+  const { quote, retry: retryPricing } = pricingQuoteState;
   const params = new URLSearchParams(window.location.search);
   const requestedCheckout = params.get("checkout") || "";
   const checkoutPlan = PLANS.some(plan => plan.id === requestedCheckout) ? requestedCheckout : "";
   const checkoutCycle = params.get("cycle") === "monthly" ? "monthly" : "yearly";
-  const [showAuth, setShowAuth] = useState(Boolean(checkoutPlan));
-  const [pending, setPending] = useState(checkoutPlan ? { planId: checkoutPlan, cycle: checkoutCycle } : null);
+  const [showAuth, setShowAuth] = useState(false);
   const [busyPlan, setBusyPlan] = useState("");
   const [error, setError] = useState("");
-  const started = useRef(false);
 
   async function beginCheckout(planId, cycle) {
     setError("");
     if (localPreview) { setError("Stripe checkout is unavailable in local preview."); return; }
+    if (!quote) { setError("Local prices are still loading. Please try again in a moment."); return; }
     if (!user) {
-      const next = { planId, cycle };
-      setPending(next); setShowAuth(true);
+      setShowAuth(true);
       window.history.replaceState({}, "", `/pricing?checkout=${encodeURIComponent(planId)}&cycle=${encodeURIComponent(cycle)}`);
       return;
     }
     setBusyPlan(planId);
     try {
-      const { url } = await api.createCheckout(planId, cycle);
+      const { url } = await api.createCheckout(planId, cycle, checkoutExpectation(quote, planId, cycle));
       window.location.assign(url);
     } catch (checkoutError) {
       if (checkoutError.code === "subscription_exists") {
         try { const { url } = await api.createBillingPortal(); window.location.assign(url); return; }
         catch (portalError) { checkoutError = portalError; }
       }
-      started.current = false;
-      setBusyPlan(""); setError(checkoutError.message);
+      if (checkoutError.code === "pricing_changed") {
+        retryPricing();
+        setError("Your local price changed. Review the updated prices and choose a plan again.");
+      } else setError(checkoutError.message);
+      setBusyPlan("");
     }
   }
-
-  useEffect(() => {
-    if (marketing || !user || !pending || started.current) return;
-    started.current = true;
-    beginCheckout(pending.planId, pending.cycle);
-  }, [marketing, user, pending]);
 
   if (marketing && checkoutPlan) {
     return <DomainRedirect href={appHref(`/pricing?checkout=${encodeURIComponent(checkoutPlan)}&cycle=${encodeURIComponent(checkoutCycle)}`)} />;
   }
 
   if (marketing) {
-    return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><Pricing onSignIn={() => window.location.assign(appHref("/dashboard"))} onChoosePlan={(planId, cycle) => window.location.assign(appHref(`/pricing?checkout=${encodeURIComponent(planId)}&cycle=${encodeURIComponent(cycle)}`))} cancelled={requestedCheckout === "cancelled"} /></div></div>;
+    return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><Pricing onSignIn={() => window.location.assign(appHref("/dashboard"))} onChoosePlan={(planId, cycle) => window.location.assign(appHref(`/pricing?checkout=${encodeURIComponent(planId)}&cycle=${encodeURIComponent(cycle)}`))} cancelled={requestedCheckout === "cancelled"} pricingQuoteState={pricingQuoteState} /></div></div>;
   }
 
   if (loading && showAuth && !localPreview) return <OpeningMeadow />;
 
   if (showAuth && !user && !localPreview) {
-    const redirectUrl = pending ? `/pricing?checkout=${encodeURIComponent(pending.planId)}&cycle=${encodeURIComponent(pending.cycle)}` : "/";
+    const redirectUrl = checkoutPlan ? `/pricing?checkout=${encodeURIComponent(checkoutPlan)}&cycle=${encodeURIComponent(checkoutCycle)}` : "/";
     return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell"><Auth redirectUrl={redirectUrl} /></div></div>;
   }
 
-  return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><Pricing onSignIn={() => { if (user || localPreview) window.location.assign("/"); else setShowAuth(true); }} onChoosePlan={beginCheckout} busyPlan={busyPlan} error={error} cancelled={requestedCheckout === "cancelled"} /></div></div>;
+  return <div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><Pricing onSignIn={() => { if (user || localPreview) window.location.assign("/"); else setShowAuth(true); }} onChoosePlan={beginCheckout} busyPlan={busyPlan} error={error} cancelled={requestedCheckout === "cancelled"} pricingQuoteState={pricingQuoteState} initialYearly={checkoutCycle === "yearly"} checkoutPrompt={checkoutPlan ? "Review the prices for your location, then choose a plan to continue." : ""} /></div></div>;
 }
 
 function AppSurface({ appOnly = false }) {

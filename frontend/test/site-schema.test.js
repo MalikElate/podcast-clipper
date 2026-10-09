@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { homepageSchema, softwareApplicationSchema } from "../src/siteSchema.js";
-import { PLANS } from "../src/pricing.js";
 import { CONTACT_EMAIL, CONTACT_PHONE } from "../src/siteContact.js";
 
 const graph = homepageSchema()["@graph"];
@@ -25,15 +24,9 @@ test("the site and product point back at one organization record", () => {
   assert.equal(byType("SoftwareApplication").publisher["@id"], id);
 });
 
-test("every advertised price is a price the pricing page charges", () => {
-  const offers = softwareApplicationSchema.offers;
-  assert.equal(offers.length, PLANS.length);
-  for (const plan of PLANS) {
-    const offer = offers.find(item => item.name === plan.name);
-    assert.ok(offer, `${plan.name} must be offered`);
-    assert.equal(offer.price, String(plan.monthly), `${plan.name} must advertise the price the page shows`);
-    assert.equal(offer.priceCurrency, "USD");
-  }
+test("static schema does not claim one regional price for every visitor", () => {
+  assert.equal(softwareApplicationSchema.offers, undefined);
+  assert.ok(!JSON.stringify(softwareApplicationSchema).includes("USD"));
 });
 
 // Structured data is a claim made to search engines, and an unearned claim is

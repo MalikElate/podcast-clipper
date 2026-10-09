@@ -3,6 +3,7 @@ import SiteFooter from "./SiteFooter.jsx";
 import SiteHeader from "./SiteHeader.jsx";
 import { appHref, marketingHref } from "../siteUrls.js";
 import { DEVELOPERS_DESCRIPTION, DEVELOPERS_TITLE } from "../siteContact.js";
+import { usePricingQuote } from "../pricingQuote.js";
 
 // Every claim here is checked against docs/mcp-api.md and docs/webhooks.md.
 // Overclaiming would send developers to an endpoint that cannot do what the
@@ -38,6 +39,7 @@ function Code({ children }) {
 }
 
 export default function DevelopersPage({ onGetStarted }) {
+  const { quote } = usePricingQuote();
   useEffect(() => {
     document.title = DEVELOPERS_TITLE;
     const description = document.querySelector('meta[name="description"]');
@@ -102,7 +104,7 @@ export default function DevelopersPage({ onGetStarted }) {
         <section className="landing-cta-section">
           <div className="landing-cta-content">
             <h2>Start with a free workspace</h2>
-            <p>Create an account, connect a destination, and issue a key from Settings. The free plan covers five connected accounts.</p>
+            <p>Create an account, connect a destination, and issue a key from Settings. {quote ? `The free plan covers ${quote.freeAccounts} connected accounts.` : "See pricing for your local free account limit."}</p>
             <div className="landing-cta-actions">
               <a className="landing-cta-primary" href={appHref("/sign-up")}>Create a free account</a>
               <a className="landing-cta-secondary" href={marketingHref("/#ways-to-use")}>See how teams use it</a>

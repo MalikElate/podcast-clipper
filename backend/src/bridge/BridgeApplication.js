@@ -55,6 +55,7 @@ import { verifyWebhook } from "@clerk/express/webhooks";
 import { requireAuth } from "../lib/clerkAuth.js";
 import { registerMeadowMcpRoutes } from "./mcp/MeadowMcpServer.js";
 import { createMeadowMcpOAuth } from "./mcp/MeadowMcpOAuth.js";
+import { pricingForCountry } from "./shared/regionalPricing.js";
 
 const backendDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 export const route = fn => (req, res, next) => Promise.resolve().then(() => fn(req, res)).catch(next).finally(() => req.privacyRelease?.());
@@ -149,6 +150,10 @@ export class BridgeApplication {
       upload.single("file")(req, res, next);
     };
     this.app = express(); this.app.disable("x-powered-by");
+    // The Cloudflare container is private and receives this header only after
+    // the Worker replaces any visitor-supplied value. Other deployments must
+    // explicitly opt in when their own trusted edge does the same.
+    this.visitorCountry = req => env.BRIDGE_TRUST_COUNTRY_HEADER === "1" ? req.headers["x-meadow-visitor-country"] : null;
     if (durability) this.app.use(durableResponseBarrier(this.store));
     if (env.BRIDGE_TRUST_PROXY) this.app.set("trust proxy", Number(env.BRIDGE_TRUST_PROXY));
     this.app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } }));
@@ -252,6 +257,10 @@ export class BridgeApplication {
 
   registerPublicRoutes() {
     const app = this.app;
+    app.get("/api/pricing", route((req, res) => {
+      res.setHeader("Cache-Control", "private, no-store");
+      res.json(pricingForCountry(this.visitorCountry(req)));
+    }));
     app.post("/api/telegram/webhook", route(async (req, res) => {
       const provider = this.registry.get("telegram");
       invariant(provider.verifyWebhook(req.headers["x-telegram-bot-api-secret-token"]), "Invalid Telegram webhook signature.", { status: 401 });
@@ -272,7 +281,7 @@ export class BridgeApplication {
     app.get("/oauth/:platform/callback", route(async (req, res) => {
       const target = new URL("/dashboard/connections", this.appUrl);
       try {
-        const result = await this.accounts.callback(req.params.platform, new URL(req.originalUrl, this.publicUrl).searchParams);
+        const result = await this.accounts.callback(req.params.platform, new URL(req.originalUrl, this.publicUrl).searchParams, { countryCode: this.visitorCountry(req) });
         target.searchParams.set("project", result.projectId);
         if (result.connectionId) target.searchParams.set("connection", result.connectionId);
       } catch (error) {
@@ -313,7 +322,7 @@ export class BridgeApplication {
     app.delete("/api/bridge/privacy/account", route((req, res) => { requireSession(req); res.status(202).json(this.privacy.requestAccount(req.uid, req.body)); }));
     app.get("/api/bridge/config", route((req, res) => res.json({ name: "Meadow", localPreview: this.localPreview, platforms: this.registry.catalog().map(platform => ({ ...platform, privacyDisclosure: Boolean(connectionDisclosure(platform.id)) })), maxBatchSize: 100, maxUploadBytes: this.media.maxBytes, features: { analytics: true, publishing: this.worker.enabled }, connectionsReady: this.vault.configured, mediaReady: Boolean(this.media.signingKey) })));
     app.get("/api/bridge/billing", route(async (req, res) => res.json(await this.billing.record(req.uid, req.query.refresh === "1"))));
-    app.post("/api/bridge/billing/checkout", route(async (req, res) => res.json(await this.billing.checkout(req.uid, req.userEmail, req.body, req.headers["sec-gpc"] === "1" || req.headers.dnt === "1" ? undefined : req.headers.cookie))));
+    app.post("/api/bridge/billing/checkout", route(async (req, res) => res.json(await this.billing.checkout(req.uid, req.userEmail, req.body, req.headers["sec-gpc"] === "1" || req.headers.dnt === "1" ? undefined : req.headers.cookie, { countryCode: this.visitorCountry(req) }))));
     app.post("/api/bridge/billing/checkout/confirm", route(async (req, res) => res.json(await this.billing.confirmCheckout(req.uid, req.body?.sessionId))));
     app.post("/api/bridge/billing/portal", route(async (req, res) => res.json(await this.billing.portal(req.uid))));
     app.get("/api/bridge/api-keys", route((req, res) => res.json({ apiKeys: this.apiKeys.list(req.uid) })));
@@ -336,10 +345,10 @@ export class BridgeApplication {
     app.get(`${root}/accounts`, route(async (req, res) => res.json({ accounts: await this.accounts.listFresh(req.uid, req.params.projectId) })));
     app.post(`${root}/accounts/connect/:platform`, route(async (req, res) => {
       if (connectionDisclosure(req.params.platform)) requireSession(req);
-      res.json(await this.accounts.start(req.uid, req.params.projectId, req.params.platform, req.body));
+      res.json(await this.accounts.start(req.uid, req.params.projectId, req.params.platform, req.body, { countryCode: this.visitorCountry(req) }));
     }));
     app.get(`${root}/connections/:id`, route(async (req, res) => res.json(await this.accounts.pending(req.uid, req.params.projectId, req.params.id))));
-    app.post(`${root}/connections/:id`, route((req, res) => res.json({ accounts: this.accounts.attach(req.uid, req.params.projectId, req.params.id, req.body.selectedIds) })));
+    app.post(`${root}/connections/:id`, route((req, res) => res.json({ accounts: this.accounts.attach(req.uid, req.params.projectId, req.params.id, req.body.selectedIds, { countryCode: this.visitorCountry(req) }) })));
     app.get(`${root}/accounts/:id/options`, route(async (req, res) => res.json({ options: await this.accounts.options(req.uid, req.params.projectId, req.params.id, { force: req.query.refresh === "1" }) })));
     app.delete(`${root}/accounts/:id`, route((req, res) => res.status(202).json(this.privacy.requestConnection(req.uid, req.params.projectId, req.params.id))));
     app.get(`${root}/media`, route((req, res) => res.json({ media: this.media.list(req.uid, req.params.projectId) })));

@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
+import { isSubSaharanCountry, normalizeCountryCode } from "../shared/geography.js";
 import { invariant, ProviderError } from "../core/errors.js";
 import { SecretVault } from "../core/SecretVault.js";
 
@@ -7,6 +8,8 @@ const authorizationFamily = platform => ["youtube", "google_business"].includes(
 const sameTokens = (left, right) => left.accessToken === right.accessToken && left.refreshToken === right.refreshToken && left.did === right.did;
 const isAttached = account => !["deleting", "disconnected"].includes(account.status);
 const sameIdentity = (account, candidate) => account.remoteId === candidate.remoteId || Boolean(account.identityKey && account.identityKey === candidate.identityKey);
+// Checkout attempts and subscriptions awaiting payment are not paid access.
+const PAID_ENTITLEMENT_STATUSES = new Set(["active", "trialing"]);
 
 export class AccountService {
   constructor({ store, projects, registry, vault, locks, clock = () => Date.now(), localPreview = false }) {
@@ -35,7 +38,7 @@ export class AccountService {
   }
   require(uid, projectId, accountId) { return this.projects.requireRecord(uid, projectId, "account", accountId); }
 
-  async start(uid, projectId, platform, { handle, consent } = {}) {
+  async start(uid, projectId, platform, { handle, consent } = {}, { countryCode: visitorCountry } = {}) {
     this.projects.require(uid, projectId);
     this.privacy?.assertConnectionAvailable(uid, platform);
     invariant(!this.localPreview, "Live account connections are disabled in local preview.", { status: 409, code: "preview_mode" });
@@ -44,7 +47,7 @@ export class AccountService {
     const privacyConsent = this.privacy?.connectionConsent(platform, consent) || null;
     const state = randomBytes(32).toString("base64url");
     const verifier = randomBytes(48).toString("base64url");
-    this.store.saveState(SecretVault.hash(state), { uid, projectId, platform, verifier, privacyConsent, authorizationBarrier: this.privacy?.connectionBarrierSnapshot(uid, platform), createdAt: this.clock() }, this.clock() + 10 * 60000);
+    this.store.saveState(SecretVault.hash(state), { uid, projectId, platform, verifier, privacyConsent, countryCode: normalizeCountryCode(visitorCountry), authorizationBarrier: this.privacy?.connectionBarrierSnapshot(uid, platform), createdAt: this.clock() }, this.clock() + 10 * 60000);
     return { url: await provider.authorizationUrl({ state, verifier, handle, uid, projectId }) };
   }
 
@@ -114,7 +117,7 @@ export class AccountService {
       profileUrl: chat.username ? `https://t.me/${chat.username}` : undefined,
       credentials: { chatId: remoteId, chatType: chat.type },
     };
-    this.store.put("connection", { id: connectionId, ownerUid: saved.uid, projectId: saved.projectId, platform: "telegram", privacyConsent: saved.privacyConsent || null, authorizationBarrier: saved.authorizationBarrier, authorizationStartedAt: saved.createdAt, createdAt: this.clock(), expiresAt: this.clock() + 10 * 60000,
+    this.store.put("connection", { id: connectionId, ownerUid: saved.uid, projectId: saved.projectId, platform: "telegram", privacyConsent: saved.privacyConsent || null, countryCode: saved.countryCode || null, authorizationBarrier: saved.authorizationBarrier, authorizationStartedAt: saved.createdAt, createdAt: this.clock(), expiresAt: this.clock() + 10 * 60000,
       encrypted: this.vault.encrypt([candidate], `connection:${connectionId}`) });
     const [account] = this.attach(saved.uid, saved.projectId, connectionId, [remoteId]);
     if (telegramUserId != null) this.store.remove("telegramLink", String(telegramUserId));
@@ -122,12 +125,12 @@ export class AccountService {
     return account;
   }
 
-  async callback(platform, params) {
+  async callback(platform, params, context = {}) {
     this.pendingCallbacks = (this.pendingCallbacks || 0) + 1;
-    try { return await this.finishCallback(platform, params); }
+    try { return await this.finishCallback(platform, params, context); }
     finally { this.pendingCallbacks--; }
   }
-  async finishCallback(platform, params) {
+  async finishCallback(platform, params, { countryCode: visitorCountry } = {}) {
     const provider = this.registry.get(platform);
     let saved, credentials, candidates;
     if (provider.finishAuthorization) {
@@ -163,7 +166,7 @@ export class AccountService {
     this.privacy?.assertConnectionAvailable(saved.uid, platform);
     this.metaPrivacy?.assertAuthorization(platform, candidates, saved.createdAt || 0);
     const id = randomUUID();
-    this.store.put("connection", { id, ownerUid: saved.uid, projectId: saved.projectId, platform, privacyConsent: saved.privacyConsent || null, authorizationBarrier: saved.authorizationBarrier, authorizationStartedAt: saved.createdAt, createdAt: this.clock(), expiresAt: this.clock() + 10 * 60000,
+    this.store.put("connection", { id, ownerUid: saved.uid, projectId: saved.projectId, platform, privacyConsent: saved.privacyConsent || null, countryCode: normalizeCountryCode(visitorCountry) || saved.countryCode || null, authorizationBarrier: saved.authorizationBarrier, authorizationStartedAt: saved.createdAt, createdAt: this.clock(), expiresAt: this.clock() + 10 * 60000,
       encrypted: this.vault.encrypt(candidates.map(candidate => ({ ...(platform === "pinterest" ? { remoteId: candidate.remoteId, label: "Pinterest account" } : candidate), credentials: { ...credentials, ...(candidate.credentials || {}) } })), `connection:${id}`) });
     if (candidates.length === 1) {
       const accounts = this.attach(saved.uid, saved.projectId, id, [candidates[0].remoteId]);
@@ -210,7 +213,7 @@ export class AccountService {
     }
   }
 
-  attach(uid, projectId, connectionId, selectedIds) {
+  attach(uid, projectId, connectionId, selectedIds, { countryCode: visitorCountry } = {}) {
     const connection = this.projects.requireRecord(uid, projectId, "connection", connectionId);
     this.privacy?.requireConnectionConsent(connection.platform, connection.privacyConsent);
     invariant(connection.expiresAt > this.clock(), "This connection has expired. Connect the account again.");
@@ -222,6 +225,10 @@ export class AccountService {
     this.metaPrivacy?.assertAuthorization(connection.platform, candidates, connection.authorizationStartedAt || connection.createdAt);
     return this.store.transaction(() => {
       const accounts = [];
+      const billing = this.store.get("billing", uid);
+      const regionalFree = isSubSaharanCountry(normalizeCountryCode(visitorCountry) || connection.countryCode)
+        && !(billing?.planId && PAID_ENTITLEMENT_STATUSES.has(billing.status));
+      let attachedCount = regionalFree ? this.store.list("account", { ownerUid: uid, limit: null }).filter(isAttached).length : 0;
       // The transaction serializes simultaneous callbacks and selections. The
       // owner boundary is intentional: another Meadow user may use this channel.
       const selected = [...new Map(candidates.filter(candidate => selectedIds.includes(candidate.remoteId)).map(candidate => [candidate.remoteId, candidate])).values()];
@@ -233,11 +240,13 @@ export class AccountService {
         invariant(!matches.some(account => account.projectId !== projectId), "This account is already connected in another workspace on your Meadow account. Use its existing connection.", { status: 409, code: "account_already_connected" });
         const existing = matches.find(account => account.remoteId === candidate.remoteId) || matches[0];
         invariant(!existing || existing.remoteId === candidate.remoteId, "This account is already connected through another integration. Use its existing connection.", { status: 409, code: "account_already_connected" });
+        invariant(!regionalFree || existing || attachedCount < 2, "The Free plan allows two connected social accounts in Sub-Saharan Africa. Upgrade or disconnect an account to add another.", { status: 409, code: "account_limit_reached" });
         const id = existing?.id || randomUUID();
         const { credentials, ...profile } = candidate;
         const account = this.store.put("account", { ...existing, ...profile, id, ownerUid: uid, projectId, platform: connection.platform, status: "connected", rateKey: `${connection.platform}:${candidate.remoteId}`,
           encryptedCredentials: this.vault.encrypt(credentials, `account:${id}`), authorizationId: connectionId, authorizationStartedAt: connection.authorizationStartedAt || connection.createdAt, authorizationGrantedAt: connection.createdAt, privacyConsent: connection.privacyConsent || null, profileUpdatedAt: this.clock(), createdAt: existing?.createdAt || this.clock(), updatedAt: this.clock(), options: null, optionsUpdatedAt: null, lastError: null, maintenanceDueAt: null, maintenanceAttempts: 0 });
         accounts.push(this.toPublic(account));
+        if (!existing) attachedCount++;
         for (const delivery of this.store.list("delivery", { projectId, status: "needs_account" }).filter(item => item.accountId === id)) {
           this.store.put("delivery", { ...delivery, status: delivery.resumeStatus === "processing" ? "processing" : "queued", resumeStatus: null, dueAt: Math.max(this.clock(), delivery.requestedAt), error: null, updatedAt: this.clock() });
         }

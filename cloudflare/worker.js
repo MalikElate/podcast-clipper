@@ -11,6 +11,8 @@ import { appDomainRedirect, dashboardShellUrl } from "./domainRouting.js";
 import { handlePosthogProxy, isPosthogProxyPath } from "./posthogProxy.js";
 import { OPENAI_APPS_CHALLENGE_PATH, openaiAppsChallengeResponse } from "./openaiAppsChallenge.js";
 import { handleDirectUpload, stagingKey } from "./directUploads.js";
+import { pricingForCountry } from "../backend/src/bridge/shared/regionalPricing.js";
+import { withVisitorCountry } from "./visitorCountry.js";
 export { ContainerProxy } from "@cloudflare/containers";
 
 const definedEnv = values => Object.fromEntries(
@@ -42,6 +44,7 @@ export class PodcastClipperBackend extends Container {
     BRIDGE_DISABLED_PLATFORMS: env.BRIDGE_DISABLED_PLATFORMS,
     BRIDGE_ADMIN_UIDS: env.BRIDGE_ADMIN_UIDS,
     BRIDGE_PUBLISHING_ENABLED: env.BRIDGE_PUBLISHING_ENABLED,
+    BRIDGE_TRUST_COUNTRY_HEADER: "1",
     STRIPE_SECRET_KEY: env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: env.STRIPE_WEBHOOK_SECRET,
     TRYBE_ORDERS_API_KEY: env.TRYBE_ORDERS_API_KEY,
@@ -265,6 +268,9 @@ export default {
       const config = JSON.stringify({ clerkPublishableKey: workerEnv.CLERK_PUBLISHABLE_KEY || "" });
       return new Response(`globalThis.__MEADOW_CONFIG__=${config};`, { headers: { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "no-store" } });
     }
+    if (url.pathname === "/api/pricing" && request.method === "GET") {
+      return Response.json(pricingForCountry(request.cf?.country), { headers: { "Cache-Control": "private, no-store", Vary: "CF-IPCountry" } });
+    }
     if (url.pathname === "/api/internal/durable-migration") {
       if (!migrationAuthorized(request, workerEnv)) return new Response("Not found", { status: 404 });
       try {
@@ -275,7 +281,7 @@ export default {
     const backendPath = ["/mcp", "/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"].includes(url.pathname) || ["/api/", "/media/", "/oauth/"].some(prefix => url.pathname.startsWith(prefix));
     if (backendPath || url.pathname === "/health") {
       const backend = workerEnv.BACKEND.getByName("primary");
-      return backend.fetch(request);
+      return backend.fetch(withVisitorCountry(request));
     }
     const dashboardShell = dashboardShellUrl(url);
     if (dashboardShell) return workerEnv.ASSETS.fetch(new Request(dashboardShell, request));

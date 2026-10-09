@@ -1,10 +1,9 @@
-import { PLANS } from "./pricing.js";
 import { CONTACT_EMAIL, CONTACT_PHONE, LEGAL_ENTITY } from "./siteContact.js";
 import { MARKETING_ORIGIN } from "./siteUrls.js";
 
 // What search engines are told about Meadow. Every value here is already stated
-// somewhere on the site: the plans come from pricing.js and the contact details
-// from siteContact.js. Nothing is asserted that a visitor cannot also read, and
+// somewhere on the site. Regional prices and Free limits are fetched at runtime,
+// so static structured data must not advertise a single global amount. Nothing is asserted that a visitor cannot also read, and
 // no rating, review or user count is claimed, because none exist.
 const ORGANIZATION_ID = `${MARKETING_ORIGIN}/#organization`;
 const WEBSITE_ID = `${MARKETING_ORIGIN}/#website`;
@@ -29,8 +28,6 @@ export const websiteSchema = {
   publisher: { "@id": ORGANIZATION_ID },
 };
 
-// One offer per plan, priced monthly because that is the figure each plan leads
-// with. The free plan is a real $0 offer rather than a trial.
 export const softwareApplicationSchema = {
   "@type": "SoftwareApplication",
   "@id": `${MARKETING_ORIGIN}/#software`,
@@ -40,14 +37,6 @@ export const softwareApplicationSchema = {
   operatingSystem: "Web browser",
   url: `${MARKETING_ORIGIN}/`,
   publisher: { "@id": ORGANIZATION_ID },
-  offers: PLANS.map(plan => ({
-    "@type": "Offer",
-    name: plan.name,
-    price: String(plan.monthly),
-    priceCurrency: "USD",
-    category: plan.monthly === 0 ? "free" : "subscription",
-    url: `${MARKETING_ORIGIN}/pricing/`,
-  })),
 };
 
 export function homepageSchema() {

@@ -2,12 +2,20 @@ import { PLANS } from "../pricing.js";
 
 export const SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "past_due", "unpaid", "incomplete", "paused"]);
 
+export function billingPlanQuote(billing, quote) {
+  if (!quote || !SUBSCRIPTION_STATUSES.has(billing?.status)) return quote;
+  if (quote.region !== (billing.region || "global")) return null;
+  if (billing.currency && quote.currency !== billing.currency.toUpperCase()) return null;
+  return quote;
+}
+
 export function billingPlanAction(planId, billing) {
   const plan = PLANS.find(item => item.id === planId);
   if (!billing || !plan) return { current: false, action: "none", label: "Choose a plan" };
   const active = SUBSCRIPTION_STATUSES.has(billing.status);
   const current = active ? billing.planId === planId : planId === "free";
   if (planId === "free") return { current, action: active ? "portal" : "none", label: active ? "Manage subscription" : "Current plan" };
+  if (active && billing.region === "ssa") return { current, action: "portal", label: "Manage billing" };
   return { current, action: active ? "portal" : "checkout", label: active ? current ? "Manage current plan" : `Switch to ${plan.name}` : `Choose ${plan.name}` };
 }
 
