@@ -6,7 +6,7 @@ import { GENERAL_PAGES } from "../src/marketing/generalPages.js";
 import { FREE_TOOL_PAGES, FREE_TOOLS, MEDIA_GUIDES, schedulerFor } from "../src/tools/freeToolsCatalog.js";
 import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_DISPLAY, LEGAL_ENTITY } from "../src/siteContact.js";
 
-for (const [path, heading] of [["tiktok-roast/index.html", "TikTok <span>Niche or Not"], ["index.html", "However you work, publish with Meadow."], ["404.html", ">404<"], ["pricing/index.html", "<h1>Pricing</h1>"], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
+for (const [path, heading] of [["tiktok-roast/index.html", "TikTok <span>Niche or Not"], ["index.html", "Creator tools for your AI"], ["404.html", ">404<"], ["pricing/index.html", "<h1>Pricing</h1>"], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
   const html = await readFile(`dist/${path}`, "utf8");
   assert.match(html, /<h1/);
   assert.ok(html.includes(heading), `${path} must contain its own content without JavaScript`);
@@ -111,29 +111,37 @@ assert.ok(landingHtml.includes('"priceCurrency":"USD"'), "The homepage must pric
 for (const unearned of ["aggregateRating", "reviewCount", "ratingValue"]) {
   assert.ok(!landingHtml.includes(unearned), `The homepage must not claim ${unearned}`);
 }
+for (const id of ["workflows", "publish-with-an-agent"]) {
+  const section = landingHtml.match(new RegExp(`<section\\b[^>]*id="${id}"[\\s\\S]*?<\\/section>`))?.[0];
+  assert.ok(section, `Homepage must retain the ${id} section`);
+  const actions = section.match(/<div class="scheduling-use-case-actions">([\s\S]*?)<\/div>/)?.[1];
+  assert.ok(actions, `${id} must have a signup action`);
+  assert.equal([...actions.matchAll(/<(?:a|button)\b/g)].length, 1, `${id} must have only one action`);
+  assert.ok(actions.includes('href="https://app.findmeadow.com/sign-up">Try for free '), `${id} must link directly to free signup`);
+}
 assert.ok(landingHtml.includes(`href="tel:${CONTACT_PHONE}"><strong>${CONTACT_PHONE_DISPLAY}</strong></a>`), "Homepage navbar must offer the phone contact");
 assert.ok(!landingHtml.includes('platform-mega-menu'), "Homepage navbar must not render the old platform dropdown");
-assert.ok(landingHtml.includes('id="ways-to-use"'), "Homepage must retain the usage section");
-for (const removed of ["Creator tools for your AI", "Show up for every audience.", "Cross-platform posting", "use from your assistant"]) {
-  assert.ok(!landingHtml.includes(removed), `Homepage must remove the earlier ${removed} content`);
-}
-for (const retained of ["Stay hands-on from idea to delivery", "Save drafts and review every destination", "Keep your publishing calendar clear"]) {
-  assert.ok(landingHtml.includes(retained), `Homepage must keep the creator feature ${retained}`);
-}
+assert.ok(landingHtml.includes("Show up for every audience."), "Homepage platform section must use the requested heading");
+assert.ok(!landingHtml.includes("Go where your audience is."), "Homepage platform section must not use the old heading");
+assert.ok(landingHtml.indexOf('class="home-hero-platforms"') < landingHtml.indexOf('Creator tools for your AI'), "Homepage platform logos must appear above the headline");
+assert.ok(landingHtml.indexOf('Creator tools for your AI') < landingHtml.indexOf('class="hero-demo"'), "Homepage demo must appear below the hero copy");
+assert.ok(!landingHtml.includes("Free plan includes 5 connections."), "Homepage hero must not show the free connection count");
 assert.ok(landingHtml.indexOf('class="footer-brand-row"') < landingHtml.indexOf('class="footer-columns"'), "Footer brand must appear above its link columns");
 for (const removed of ["footer-network-row", "footer-disclaimer", "footer-legal-row", "footer-help-link", "footer-locale"]) {
   assert.ok(!landingHtml.includes(`class="${removed}"`), `Footer must not render ${removed}`);
 }
-for (const retained of ["For creators and teams", "For agent-assisted publishing", "For custom workflows"]) {
-  assert.ok(landingHtml.includes(retained), `Homepage must keep the ${retained} card`);
-}
-assert.ok(!landingHtml.includes('class="home-platform-grid"'), "Homepage must remove the earlier platform section");
-assert.ok(!landingHtml.includes('class="hero-demo"'), "Homepage must remove the earlier product walkthrough");
+assert.ok(!landingHtml.includes("Platform features, formats, and connection availability can vary by destination."));
+assert.ok(landingHtml.includes('aria-label="Learn about Telegram publishing"'), "Homepage must include Telegram in its platform grid");
+assert.ok(landingHtml.includes("all these platforms"), "Homepage must introduce its current platform list");
+assert.ok(landingHtml.includes('>More coming soon</span>'), "Homepage platform grid must include its coming-soon tile");
+assert.ok(!landingHtml.includes('class="upcoming-platforms"'), "Upcoming logos belong in the existing platform sections");
+for (const id of ["twitch", "kick"]) assert.ok(landingHtml.includes(`data-platform="${id}"`), `${id} must appear in the homepage logo showcase`);
 for (const platform of PLATFORM_USE_CASES) {
   const html = await readFile(`dist/${platform.slug}/index.html`, "utf8");
   assert.ok(html.includes(`<title>${platform.title}</title>`), `${platform.slug} must have a platform-specific title`);
   assert.ok(html.includes(`content="${platform.description}"`), `${platform.slug} must have a platform-specific description`);
   assert.ok(html.includes(platform.headline), `${platform.slug} must render its own heading without JavaScript`);
+  assert.ok(landingHtml.includes(`href="/${platform.slug}/"`), `${platform.slug} must be linked from the homepage`);
   assert.ok(html.includes(`<meta property="og:url" content="https://findmeadow.com/${platform.slug}/" />`), `${platform.slug} must declare its own link preview URL`);
   assert.ok(html.includes(`<link rel="canonical" href="https://findmeadow.com/${platform.slug}/" />`), `${platform.slug} must name its own canonical address`);
   assert.ok(sitemapUrls.includes(`https://findmeadow.com/${platform.slug}/`), `${platform.slug} must appear in the sitemap`);

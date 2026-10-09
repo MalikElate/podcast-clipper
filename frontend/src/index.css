@@ -2231,7 +2231,7 @@ input[type="range"]::-moz-range-thumb {
 
 .goals-section { padding-top: 124px; }
 .goals-heading, .audience-heading { max-width: 770px; margin: 0 auto; text-align: center; }
-.goals-heading h2, .audience-heading h1, .audience-heading h2 { margin: 15px auto 16px; color: var(--text); font-size: clamp(45px,5.7vw,69px); line-height: .99; letter-spacing: -.055em; text-wrap: balance; }
+.goals-heading h2, .audience-heading h2 { margin: 15px auto 16px; color: var(--text); font-size: clamp(45px,5.7vw,69px); line-height: .99; letter-spacing: -.055em; text-wrap: balance; }
 .goals-heading p, .audience-heading p { max-width: 660px; margin: 0 auto; color: var(--text-muted); font-size: 19px; line-height: 1.65; }
 .goal-tabs { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; margin-top: 44px; padding: 7px; border-radius: 18px; background: #edf2f6; }
 .goal-tabs button { min-height: 54px; padding: 11px 14px; border: 0; border-radius: 12px; background: transparent; color: #667687; font-size: 16px; font-weight: 700; }
@@ -2348,7 +2348,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (max-width: 460px) {
-  .goals-heading h2, .audience-heading h1, .audience-heading h2 { font-size: 43px; }
+  .goals-heading h2, .audience-heading h2 { font-size: 43px; }
   .goal-panel { padding: 30px 18px; }.goal-panel-copy h3 { font-size: 37px; }
   .scenario-post { grid-template-columns: 38px 44px minmax(0,1fr); }.scenario-post > .landing-platform-mark { display: none; }
   .scenario-progress small { display: none; }
@@ -2416,7 +2416,6 @@ input[type="range"]::-moz-range-thumb {
 /* Section headings now begin without eyebrow or overline labels. */
 .landing-hero-v2 .landing-title,
 .goals-heading h2,
-.audience-heading h1,
 .audience-heading h2,
 .goal-panel-copy h3,
 .section-heading h2,
