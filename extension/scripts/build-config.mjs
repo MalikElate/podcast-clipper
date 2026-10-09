@@ -11,9 +11,10 @@ export function buildConfig() {
     base: "./",
     publicDir: false,
     plugins: [
-      { name: "extension-api-and-routes", enforce: "pre", resolveId(id) {
+      { name: "extension-api-and-routes", enforce: "pre", resolveId(id, importer) {
         if (id.endsWith("/BridgeApi.js")) return path.join(root, "src/api.js");
         if (id.endsWith("/dashboardRoutes.js")) return path.join(root, "src/routes.js");
+        if (id.endsWith("/composerSubmission.js") && importer !== path.join(root, "src/submission.js")) return path.join(root, "src/submission.js");
       } },
       react(),
       { name: "cross-posting-only", generateBundle(_options, bundle) {
