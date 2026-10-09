@@ -10,6 +10,7 @@ Meadow is a publishing workspace for creating, scheduling, and analyzing social 
 - Saved social connections survive sign-out and container replacement, with proactive token renewal. Provider revocation, expired grants, or changed permissions can still require reconnection.
 - Media upload inside the composer, destination-specific formats and settings, validation, and queue preview.
 - Single-post composition with manual date, time, and timezone scheduling.
+- Account Dropper: review recent videos from one connected source account, select destination accounts, and send a batch at a chosen posting interval.
 - Durable deliveries for every account, automatic quota overflow queues, queue editing, deletion, reordering, and independent retries.
 - Per-post and per-account analytics, combined totals, post comparisons, and best-performing posts. Missing metrics remain unavailable instead of becoming zero.
 - Public pricing, Stripe subscription Checkout, webhook-backed billing status, and Stripe Customer Portal management.

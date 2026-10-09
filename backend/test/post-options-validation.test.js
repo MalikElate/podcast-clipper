@@ -9,7 +9,7 @@ import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 import { ProviderRegistry } from "../src/bridge/platforms/ProviderRegistry.js";
 import { TikTokProvider } from "../src/bridge/platforms/TikTokProvider.js";
 import { withZernio } from "../src/bridge/platforms/ZernioProvider.js";
-import { ProviderError } from "../src/bridge/core/errors.js";
+import { BridgeError, ProviderError } from "../src/bridge/core/errors.js";
 
 const optionsFailure = "TikTok creator settings could not be loaded from the publishing provider.";
 const privacyOptions = ["PUBLIC_TO_EVERYONE", "SELF_ONLY"];
@@ -90,4 +90,27 @@ test("successful options preserve public Zernio publishing and native TikTok's p
   assert.equal(h.app.store.get("account", "zernio").options.tiktokDirectPostPrivateOnly, false);
   assert.equal(h.app.store.get("account", "native").options.tiktokDirectPostPrivateOnly, true);
   assert.equal(h.calls.length, 2);
+});
+
+test("an internal queue stop guard prevents writes after asynchronous creator settings and preserves duplicate recovery", async t => {
+  const h = setup(t, { failZernio: false });
+  const options = h.app.accounts.options.bind(h.app.accounts);
+  let stopped = false;
+  h.app.accounts.options = async (...args) => {
+    const result = await options(...args);
+    stopped = true;
+    return result;
+  };
+  const body = { requestId: "dropper-commit-guard-submission-123", items: [h.item()] };
+  const beforeCommit = () => { if (stopped) throw new BridgeError("Dropper was stopped.", { code: "dropper_stopped" }); };
+  await assert.rejects(h.app.posts.submit("alice", h.project.id, body, { beforeCommit }), error => error.code === "dropper_stopped");
+  for (const kind of ["post", "delivery", "submission"]) assert.deepEqual(h.app.store.list(kind), []);
+  h.app.accounts.options = options;
+  stopped = false;
+  const submitted = await h.app.posts.submit("alice", h.project.id, body, { beforeCommit });
+  stopped = true;
+  const recovered = await h.app.posts.submit("alice", h.project.id, body, { beforeCommit });
+  assert.equal(recovered.duplicate, true);
+  assert.equal(recovered.posts[0].id, submitted.posts[0].id);
+  for (const kind of ["post", "delivery", "submission"]) assert.equal(h.app.store.list(kind).length, 1);
 });

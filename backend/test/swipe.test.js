@@ -194,3 +194,29 @@ test("the input feed can be limited to chosen channels without losing destinatio
   assert.deepEqual(h.app.swipe.saveSettings("alice", h.project.id, { sourceAccountIds: [] }).sourceAccountIds, []);
   assert.equal((await h.app.swipe.deck("alice", h.project.id)).cards.length, 4);
 });
+
+test("Dropper uses its own selected source and frozen interval without changing Swipe preferences", async t => {
+  const h = setup(t);
+  h.app.swipe.saveSettings("alice", h.project.id, { accountIds: ["bluesky"], sourceAccountIds: ["youtube"] });
+  h.app.dropper.saveSettings("alice", h.project.id, { sourceAccountId: "tiktok", accountIds: ["x", "youtube"], intervalMinutes: 30, overrides: { youtube: { settings: { privacy: "public", madeForKids: false } } } });
+  const deck = await h.app.dropper.deck("alice", h.project.id);
+  assert.deepEqual(deck.cards.map(card => card.platform), ["tiktok", "tiktok", "tiktok"]);
+  const cardIds = deck.cards.map(card => card.id);
+  await h.app.dropper.start("alice", h.project.id, { cardIds });
+  await h.app.dropper.tick();
+  assert.equal(h.downloads.length, 1);
+  const first = h.app.dropper.state("alice", h.project.id).queue[0];
+  assert.equal(first.status, "scheduled", first.error);
+  const post = h.app.posts.get("alice", h.project.id, first.postId);
+  assert.equal(post.media[0].kind, "video");
+  assert.deepEqual(post.accountIds, ["x", "youtube"]);
+  assert.deepEqual(h.app.swipe.settings("alice", h.project.id).accountIds, ["bluesky"]);
+  assert.deepEqual(h.app.swipe.settings("alice", h.project.id).sourceAccountIds, ["youtube"]);
+  h.advance(3 * HOUR);
+  await h.app.dropper.tick();
+  assert.equal(h.downloads.length, 2);
+  assert.equal(h.app.dropper.state("alice", h.project.id).nextSlotAt, h.now() + HOUR / 2);
+  h.app.privacy.removeConnectionData(h.app.store.get("account", "tiktok"));
+  assert.equal(h.app.store.list("dropperItem").length, 0);
+  assert.equal(h.app.dropper.settings("alice", h.project.id).sourceAccountId, null);
+});

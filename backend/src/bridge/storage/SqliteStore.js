@@ -189,7 +189,9 @@ export class SqliteStore {
           if (changes <= this.persistedChanges) return;
           const bytes = this.db.serialize();
           const sequence = ++this.snapshotSequence;
-          await this.durability.persist(bytes, sequence);
+          // Read wake metadata in the same synchronous turn as the snapshot.
+          const metadata = this.nextBackgroundWakeAt ? { nextWakeAt: this.nextBackgroundWakeAt() } : {};
+          await this.durability.persist(bytes, sequence, metadata);
           this.persistedChanges = changes;
         }
       })().finally(() => { this.flushTask = null; });
