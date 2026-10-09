@@ -69,7 +69,7 @@ const PAGE_COPY = {
   privacy: {
     label: "Privacy policy",
     title: "Privacy Policy",
-    effectiveDate: "October 1, 2026",
+    effectiveDate: "October 9, 2026",
     intro: <>This policy explains the information Meadow receives, how we use it, how long we keep it, and how you can withdraw access or delete it. Google and YouTube data are covered in plain language in the <a href="#privacy-youtube">YouTube section</a>.</>,
     sections: [
       { heading: "1. Account and workspace information", paragraphs: [
@@ -152,6 +152,13 @@ export default function LegalPage({ kind }) {
               </section>
             ))}
             {privacy && <>
+              <section id="privacy-chrome-extension">
+                <h2>FindMeadow Chrome extension</h2>
+                <p>The extension lets you create, save, schedule, and publish posts to the social accounts you choose in Meadow. It does not read the pages you browse, browsing history, clipboard, or social-platform cookies, and it does not include advertising or usage analytics.</p>
+                <p>When you approve the connection on Meadow, the extension stores a dedicated Meadow access key in local Chrome extension storage. The key authorizes access to your Meadow workspace; it is not a social-platform password. It stays on this browser profile until you disconnect the extension or remove it, and is sent only to Meadow over HTTPS. Disconnecting removes the local key. To revoke the server-side permission as well, remove the extension’s key in Meadow’s API Keys settings.</p>
+                <p>The extension retrieves your Meadow workspaces, connected-account names and publishing options, media, and post status to operate the composer. Media files you select are uploaded to Meadow. Captions, account selections, schedules, and platform settings are sent to Meadow when you save a draft or submit a post. Meadow validates posts and delivers submitted content to the destinations you selected, using the providers described in this policy. Uploads and saved posts follow Meadow’s retention and deletion rules above. Unsaved composer text is held in the open extension tab and is lost when it closes.</p>
+                <p>These data are used only to provide and protect the requested cross-posting features. We do not sell extension data or use it for advertising, unrelated profiling, or lending decisions. The extension’s sign-in screen explains this access before you connect. Contact <a href="mailto:hello@findmeadow.com">hello@findmeadow.com</a> for support or a privacy request.</p>
+              </section>
               <section id="social-platform-privacy" className="legal-platform-intro">
                 <h2>9. Social platform privacy notices</h2>
                 <p>Each notice describes what Meadow accesses through that platform, how the information supports the features you request, and how to remove the connection. The linked platform policies explain how the platform itself handles information.</p>
