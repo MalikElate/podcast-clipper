@@ -28,7 +28,7 @@ async function setup(t, { localPreview = false, auth = true, stripe, webhookSend
 }
 const pdf = Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF");
 
-test("public pricing trusts the visitor country only behind an opted-in edge", async t => {
+test("public pricing trusts the visitor country only behind an opted-in edge or private Cloudflare container", async t => {
   const untrusted = await setup(t);
   const ignored = await untrusted.request("/api/pricing", { user: null, headers: { "x-meadow-visitor-country": "CM" } });
   assert.equal(ignored.headers.get("cache-control"), "private, no-store");
@@ -40,6 +40,10 @@ test("public pricing trusts the visitor country only behind an opted-in edge", a
   assert.equal(quote.region, "ssa");
   assert.equal(quote.currency, "XAF");
   assert.equal(quote.freeAccounts, 2);
+
+  const container = await setup(t, { envOverrides: { CLOUDFLARE_APPLICATION_ID: "app-test" } });
+  const containerQuote = await container.request("/api/pricing/", { user: null, headers: { "x-meadow-visitor-country": "CM" } });
+  assert.equal((await containerQuote.json()).currency, "XAF");
 });
 
 test("webhook routes require a session, isolate owners, keep secrets private and send signed tests", async t => {
