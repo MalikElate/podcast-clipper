@@ -19,6 +19,7 @@ const NOT_FROM_CLOUDFLARE = new Set([
   "BRIDGE_TRUST_PROXY",  // only for a self-hosted reverse proxy
   "META_GRAPH_VERSION",  // falls back to a pinned default
   "YTDLP_PATH",          // set by the Dockerfile next to the binary it installs
+  "CLOUDFLARE_APPLICATION_ID", // injected by the Containers runtime, not Worker envVars
 ]);
 
 async function sourceFiles(dir) {

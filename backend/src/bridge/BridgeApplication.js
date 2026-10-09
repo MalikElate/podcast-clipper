@@ -151,9 +151,11 @@ export class BridgeApplication {
     };
     this.app = express(); this.app.disable("x-powered-by");
     // The Cloudflare container is private and receives this header only after
-    // the Worker replaces any visitor-supplied value. Other deployments must
-    // explicitly opt in when their own trusted edge does the same.
-    this.visitorCountry = req => env.BRIDGE_TRUST_COUNTRY_HEADER === "1" ? req.headers["x-meadow-visitor-country"] : null;
+    // the Worker replaces any visitor-supplied value. The runtime marker also
+    // covers a new container image started by an older Durable Object whose
+    // envVars predate BRIDGE_TRUST_COUNTRY_HEADER. Other deployments must opt in.
+    const trustCountryHeader = env.BRIDGE_TRUST_COUNTRY_HEADER === "1" || Boolean(env.CLOUDFLARE_APPLICATION_ID);
+    this.visitorCountry = req => trustCountryHeader ? req.headers["x-meadow-visitor-country"] : null;
     if (durability) this.app.use(durableResponseBarrier(this.store));
     if (env.BRIDGE_TRUST_PROXY) this.app.set("trust proxy", Number(env.BRIDGE_TRUST_PROXY));
     this.app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } }));

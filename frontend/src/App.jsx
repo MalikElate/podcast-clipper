@@ -167,7 +167,7 @@ function PricingSurface({ marketing = false }) {
       }
       if (checkoutError.code === "pricing_changed") {
         retryPricing();
-        setError("Your local price changed. Review the updated prices and choose a plan again.");
+        setError("We couldn't verify your local price. Review the refreshed prices and choose a plan again.");
       } else setError(checkoutError.message);
       setBusyPlan("");
     }
