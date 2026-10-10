@@ -27,7 +27,7 @@ function renderHeader(auth, props = {}) {
 
 test("signed-out navigation separates sign-in from free account creation", () => {
   const html = renderHeader({ user: null, loading: false });
-  assert.match(html, /href="https:\/\/app\.findmeadow\.com\/sign-in">Sign in<\/a>/);
+  assert.match(html, /class="site-nav-signin" href="https:\/\/app\.findmeadow\.com\/sign-in">Sign in<\/a>/);
   assert.match(html, /class="btn-small-primary" href="https:\/\/app\.findmeadow\.com\/sign-up">Try for free /);
   assert.doesNotMatch(html, /Start posting/);
 });
