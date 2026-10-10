@@ -5,6 +5,7 @@ import SiteFooter from "./SiteFooter.jsx";
 import SiteHeader from "./SiteHeader.jsx";
 import PricingComparison from "./PricingComparison.jsx";
 import PricingQuoteStatus from "./PricingQuoteStatus.jsx";
+import { Icon } from "../bridge/Icons.jsx";
 import { marketingHref } from "../siteUrls.js";
 
 function ArrowIcon() {
@@ -48,7 +49,7 @@ export default function Pricing({ onSignIn, onChoosePlan, busyPlan = "", error =
               <div className="pricing-price"><strong>{planMonthlyPrice(plan, yearly, quote)}</strong>{quote && <span>{currencyLabel(quote)}/month</span>}</div>
               <p className="pricing-billing-note">{planBillingNote(plan, yearly, quote)}</p>
               <div className="pricing-card-divider" aria-hidden="true" />
-              <ul><li className="pricing-account">{planAccounts(plan, quote)}</li>{plan.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
+              <ul><li className="pricing-account"><Icon name="check" size={17}/>{planAccounts(plan, quote)}</li>{plan.features.map(feature => <li key={feature}><Icon name="check" size={17}/>{feature}</li>)}</ul>
               {plan.id === "free" ? <a className="pricing-button" href={planHref(plan)}>Try for free <ArrowIcon /></a> : <button className={plan.popular ? "btn-primary" : "pricing-button"} disabled={Boolean(busyPlan) || !quote} onClick={() => onChoosePlan(plan.id, yearly ? "yearly" : "monthly")}>{loading ? "Opening secure checkout…" : `Choose ${plan.name}`} {!loading && <ArrowIcon />}</button>}
             </article>;
           })}
