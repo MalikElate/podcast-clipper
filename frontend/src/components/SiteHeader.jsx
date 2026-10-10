@@ -58,9 +58,9 @@ export default function SiteHeader({ className = "", homeHref = marketingHref("/
         <nav className="landing-nav" aria-label="Main navigation">
           <a href={marketingHref("/#ways-to-use")}><strong>API/MCP</strong></a>
           <a className="site-human-link" href={CONTACT_PHONE_HREF}><strong>{CONTACT_PHONE_DISPLAY}</strong></a>
+          {!user && !loading && <HeaderAction className="site-nav-signin" href={appHref("/sign-in")} onClick={signIn}>Sign in</HeaderAction>}
         </nav>
         <div className="landing-actions">
-          {!user && !loading && <HeaderAction className="btn-ghost" href={appHref("/sign-in")} onClick={signIn}>Sign in</HeaderAction>}
           <HeaderAction className="btn-small-primary" href={user ? appHref("/dashboard") : signupHref()}>{user ? "Dashboard" : "Try for free"} <ArrowIcon /></HeaderAction>
         </div>
       </div>
