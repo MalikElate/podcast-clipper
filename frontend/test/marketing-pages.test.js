@@ -5,7 +5,7 @@ import { PLATFORM_USE_CASES, getPlatformUseCaseBySlug } from "../src/platformUse
 import { isDashboardPath } from "../src/bridge/dashboardRoutes.js";
 
 test("cross-platform pages have unique paths that do not collide with other routes", () => {
-  assert.deepEqual(GENERAL_PAGES.map(page => page.path), ["/social-media-scheduler", "/cross-posting"]);
+  assert.deepEqual(GENERAL_PAGES.map(page => page.path), ["/social-media-scheduler", "/social-media-scheduling-api", "/manage-social-media-accounts", "/cross-posting"]);
   const taken = new Set(["/pricing", "/terms", "/privacy", "/terms-of-service", "/privacy-policy", ...PLATFORM_USE_CASES.map(platform => `/${platform.slug}`)]);
   for (const page of GENERAL_PAGES) {
     assert.equal(taken.has(page.path), false);
@@ -24,7 +24,7 @@ test("cross-platform pages have search metadata and answered questions", () => {
   }
 });
 
-test("Telegram is included in the public platform catalog and both marketing pages", () => {
+test("Telegram is included in the public platform catalog and marketing pages", () => {
   assert.equal(PLATFORM_USE_CASES.filter(platform => !platform.chatOnly).length, 11);
   const telegram = getPlatformUseCaseBySlug("telegram-publishing");
   assert.equal(telegram.id, "telegram");
