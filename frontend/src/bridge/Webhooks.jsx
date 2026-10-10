@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { api } from "./BridgeApi.js";
-import { Icon } from "./Icons.jsx";
+import CopyButton from "./CopyButton.jsx";
 import { Alert, Field, Modal } from "./ui.jsx";
 
-export default function Webhooks({ timeZone, onCopy }) {
+export default function Webhooks({ timeZone }) {
   const [webhook, setWebhook] = useState(null), [url, setUrl] = useState(""), [ready, setReady] = useState(false), [loading, setLoading] = useState(true), [busy, setBusy] = useState(""), [error, setError] = useState(""), [notice, setNotice] = useState(""), [secret, setSecret] = useState(""), [confirm, setConfirm] = useState("");
   useEffect(() => {
     const controller = new AbortController();
@@ -38,7 +38,7 @@ export default function Webhooks({ timeZone, onCopy }) {
       {delivery && <div className="bridge-webhook-status"><strong>Last delivery: {delivery.status === "pending" ? "retrying" : delivery.status}</strong><span>{delivery.type} · {new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short", timeZone }).format(new Date(delivery.at))}</span>{delivery.error && <p>{delivery.error}</p>}</div>}
     </>}
     <details className="bridge-webhook-details"><summary>Signature verification and delivery</summary><p>Verify <code>X-Meadow-Signature</code>, which contains <code>t=TIMESTAMP,v1=SIGNATURE</code>. Compute HMAC-SHA256 with your signing secret over <code>TIMESTAMP.RAW_BODY</code> and compare signatures securely. Reject timestamps older than five minutes.</p><p>Return a 2xx response within ten seconds. Failed requests retry up to five total attempts. Deduplicate by the event <code>id</code> or <code>X-Meadow-Event-Id</code>. The signature is refreshed for each attempt.</p><p><code>post.completed</code> includes the post, delivery, account, and project IDs, platform, status, <code>external_ref</code>, and URL. Outcomes include published, failed, needs_review, and awaiting_publish (TikTok inbox delivery).</p></details>
-    {secret && <Modal title="Copy your webhook signing secret" onClose={() => setSecret("")}><p>This secret is shown once. Store it securely on your webhook receiver to verify Meadow events.</p><div className="bridge-secret-row"><input aria-label="Webhook signing secret" readOnly value={secret} onFocus={event => event.target.select()}/><button className="bridge-button secondary" onClick={() => onCopy(secret)}><Icon name="copy" size={16}/> Copy</button></div><div className="bridge-modal-actions"><button className="bridge-button" onClick={() => setSecret("")}>Done</button></div></Modal>}
+    {secret && <Modal title="Copy your webhook signing secret" onClose={() => setSecret("")}><p>This secret is shown once. Store it securely on your webhook receiver to verify Meadow events.</p><div className="bridge-secret-row"><input aria-label="Webhook signing secret" readOnly value={secret} onFocus={event => event.target.select()}/><CopyButton value={secret} align="end"/></div><div className="bridge-modal-actions"><button className="bridge-button" onClick={() => setSecret("")}>Done</button></div></Modal>}
     {confirm && <Modal title={confirm === "remove" ? "Remove this webhook?" : "Rotate the signing secret?"} onClose={() => setConfirm("")} busy={Boolean(busy)}><p>{confirm === "remove" ? "Meadow will stop sending events to this URL. Pending deliveries will be removed." : "Update your receiver with the new secret after rotating. Pending deliveries signed with the old secret will be removed."}</p><Alert message={error}/><div className="bridge-modal-actions"><button className="bridge-button secondary" onClick={() => setConfirm("")}>Cancel</button><button className="bridge-button" disabled={Boolean(busy)} onClick={() => action(confirm)}>{busy ? "Updating…" : confirm === "remove" ? "Remove webhook" : "Rotate secret"}</button></div></Modal>}
   </section>;
 }

@@ -4,8 +4,9 @@ import { api } from "./BridgeApi.js";
 import { Icon } from "./Icons.jsx";
 import { AGENT_CLIENTS, agentInstructions, agentSetupPrompt } from "./agentSetup.js";
 import { Alert } from "./ui.jsx";
+import CopyButton from "./CopyButton.jsx";
 
-export default function AgentSetup({ onCopy }) {
+export default function AgentSetup() {
   const [client, setClient] = useState("claude"), [configuration, setConfiguration] = useState(null), [error, setError] = useState("");
   useEffect(() => {
     const controller = new AbortController();
@@ -20,7 +21,7 @@ export default function AgentSetup({ onCopy }) {
     {configuration && <div className="bridge-agent-prompt">
       <h3>Copy a setup prompt</h3>
       <p>Paste it into any agent that can make web requests, including remote and cloud agents. The agent shows you a code, you approve it in Meadow, and it gets its own API key for MCP and the REST API. No key to copy.</p>
-      <button type="button" className="bridge-button" onClick={() => onCopy(agentSetupPrompt(configuration))}><Icon name="copy" size={16}/> Copy setup prompt</button>
+      <CopyButton value={agentSetupPrompt(configuration)} className="bridge-button">Copy setup prompt</CopyButton>
     </div>}
     <h3 className="bridge-agent-manual">Or set up a specific app</h3>
     <div className="bridge-agent-tabs" role="tablist" aria-label="Agent setup">
@@ -30,7 +31,7 @@ export default function AgentSetup({ onCopy }) {
       <Alert message={error}/>
       {!configuration ? <p className="bridge-small">{error ? "Setup details could not be loaded. Refresh this page to try again." : "Loading connection details…"}</p> : <>
         <h3>{guide.title}</h3><p>{guide.text}</p>
-        <div className="bridge-agent-code"><pre><code>{guide.code}</code></pre><button type="button" className="bridge-button secondary small" onClick={() => onCopy(guide.code)}><Icon name="copy" size={15}/> Copy</button></div>
+        <div className="bridge-agent-code"><pre><code>{guide.code}</code></pre><CopyButton key={client} value={guide.code} className="bridge-button secondary small" iconSize={15} align="end"/></div>
         <p className="bridge-small">{guide.note}</p>
         {selected.docs && <a className="bridge-agent-docs" href={selected.docs} target="_blank" rel="noreferrer">{selected.name} setup guide <Icon name="external" size={14}/></a>}
       </>}
