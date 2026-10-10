@@ -207,7 +207,7 @@ export default function Landing({ onGetStarted }) {
             <AgentPublishingDemo />
           </div>
           <div className="scheduling-use-case-copy">
-            <h2 id="agent-publishing-title">use from your assistant</h2>
+            <h2 id="agent-publishing-title">Use from your assistant</h2>
             <p>Tell your AI assistant what you want to share. Let it prepare posts for your connected channels, review the details, and give the go-ahead. Meadow takes care of publishing.</p>
             <div className="scheduling-use-case-actions">
               <a className="scheduling-use-case-primary" href={signupHref()}>Try for free <ArrowIcon /></a>
