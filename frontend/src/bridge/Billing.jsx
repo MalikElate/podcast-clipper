@@ -102,6 +102,5 @@ export default function Billing({ localPreview, returnSearch = "" }) {
         </button>
       </article>;
     })}</div>
-    <p className="bridge-billing-footnote"><Icon name="check" size={15}/> Secure subscription checkout and billing management are provided by Stripe.</p>
   </>;
 }
