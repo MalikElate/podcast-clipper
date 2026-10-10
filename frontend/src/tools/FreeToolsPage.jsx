@@ -8,7 +8,7 @@ import { CaptionGenerator, HandleChecker, LinkedInFormatter, UtmBuilder, YouTube
 
 const href = page => `${page.path}/`;
 const absolute = page => `https://findmeadow.com${href(page)}`;
-const roast = { path: '/tiktok-roast', name: 'TikTok Niche or Not', category: 'Writing', description: 'Get a playful review of public TikTok captions, with practical ideas for your next post.' };
+const roast = { path: '/tools/tiktok-roast', name: 'TikTok Niche or Not', category: 'Writing', description: 'Get a playful review of public TikTok captions, with practical ideas for your next post.' };
 const items = [...FREE_TOOLS, roast, { ...GUIDES_HUB, category: 'Guides' }];
 
 function StructuredData({ page }) {
@@ -39,7 +39,7 @@ function Hub() {
 }
 
 function MediaTable({ guide }) {
-  return <div className="ft-table-wrap"><table><caption>{guide.platform} working dimensions</caption><thead><tr><th scope="col">Format</th><th scope="col">Dimensions</th><th scope="col">Ratio</th><th scope="col"><span className="sr-only">Crop image</span></th></tr></thead><tbody>{guide.rows.map(([label, width, height, ratio], index) => <tr key={label}><th scope="row">{label}</th><td>{width} × {height} px</td><td>{ratio}</td><td><a href={`/free-tools/social-media-image-cropper/?preset=${guide.slug}-${index}`} aria-label={`Crop an image for ${guide.platform} ${label}`}>Use size ↗</a></td></tr>)}</tbody></table></div>;
+  return <div className="ft-table-wrap"><table><caption>{guide.platform} working dimensions</caption><thead><tr><th scope="col">Format</th><th scope="col">Dimensions</th><th scope="col">Ratio</th><th scope="col"><span className="sr-only">Crop image</span></th></tr></thead><tbody>{guide.rows.map(([label, width, height, ratio], index) => <tr key={label}><th scope="row">{label}</th><td>{width} × {height} px</td><td>{ratio}</td><td><a href={`/tools/social-media-image-cropper/?preset=${guide.slug}-${index}`} aria-label={`Crop an image for ${guide.platform} ${label}`}>Use size ↗</a></td></tr>)}</tbody></table></div>;
 }
 
 function Guides({ page }) {
@@ -76,9 +76,9 @@ export default function FreeToolsPage({ page }) {
   return <div className="app"><div className="centered-shell landing-shell"><div className="landing landing-v2 ft-page">
     <SiteHeader />
     <main className="ft-main"><StructuredData page={page} />
-      <nav className="ft-breadcrumbs" aria-label="Breadcrumb"><a href="/">Meadow</a><span aria-hidden="true">/</span>{isHub ? <span>Free tools</span> : <><a href="/free-tools/">Free tools</a><span aria-hidden="true">/</span>{page.platform && <><a href={href(GUIDES_HUB)}>Media sizes</a><span aria-hidden="true">/</span></>}<span>{page.name}</span></>}</nav>
+      <nav className="ft-breadcrumbs" aria-label="Breadcrumb"><a href="/">Meadow</a><span aria-hidden="true">/</span>{isHub ? <span>Free tools</span> : <><a href="/tools/">Free tools</a><span aria-hidden="true">/</span>{page.platform && <><a href={href(GUIDES_HUB)}>Media sizes</a><span aria-hidden="true">/</span></>}<span>{page.name}</span></>}</nav>
       <header className={`ft-heading ${isHub ? 'ft-hub-heading' : ''}`}><h1>{page.name}</h1><p>{isHub ? 'A little help for your next post. Create, crop, format, and plan with tools that are free for everyone.' : page.intro || page.description}</p>{!isGuide && <span className="ft-hint">Free to use. No signup required.</span>}</header>
-      {isHub ? <Hub /> : isGuide ? <Guides page={page} /> : <><noscript><p className="ft-error">Enable JavaScript to use the interactive tool. The guide and frequently asked questions are available below.</p></noscript><Tool page={page} /><div className="ft-editorial ft-tool-guide">{page.sections.map(([heading, text]) => <section key={heading}><h2>{heading}</h2><p>{text}</p></section>)}</div><section className="ft-faq"><h2>Questions about {page.name.toLowerCase()}</h2>{page.faq.map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}</section><section className="ft-related"><div className="ft-section-heading"><h2>Keep creating.</h2><a href="/free-tools/">All free tools ↗</a></div><ToolList entries={related} /></section></>}
+      {isHub ? <Hub /> : isGuide ? <Guides page={page} /> : <><noscript><p className="ft-error">Enable JavaScript to use the interactive tool. The guide and frequently asked questions are available below.</p></noscript><Tool page={page} /><div className="ft-editorial ft-tool-guide">{page.sections.map(([heading, text]) => <section key={heading}><h2>{heading}</h2><p>{text}</p></section>)}</div><section className="ft-faq"><h2>Questions about {page.name.toLowerCase()}</h2>{page.faq.map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}</section><section className="ft-related"><div className="ft-section-heading"><h2>Keep creating.</h2><a href="/tools/">All free tools ↗</a></div><ToolList entries={related} /></section></>}
       {!isHub && <section className="ft-scheduler-link"><p>{scheduler.platform ? <>Made something for {scheduler.platform}? <a href={scheduler.path}>{scheduler.label}</a>, alongside your other channels.</> : <><a href={scheduler.path}>{scheduler.label}</a> from one calendar.</>}</p></section>}
       <section className="ft-cta"><div><h2>Ready for the next post?</h2><p>Bring your content and channels together in Meadow.</p></div><a className="ft-button" href={appHref('/dashboard')}>Start posting ↗</a></section>
     </main>

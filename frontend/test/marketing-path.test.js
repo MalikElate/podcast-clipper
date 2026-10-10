@@ -5,11 +5,11 @@ import { marketingPath, marketingHref } from "../src/siteUrls.js";
 test("public pages are linked at the address the assets actually serve", () => {
   assert.equal(marketingPath("/pricing"), "/pricing/");
   assert.equal(marketingPath("/tiktok-publishing"), "/tiktok-publishing/");
-  assert.equal(marketingPath("/free-tools/utm-builder"), "/free-tools/utm-builder/");
+  assert.equal(marketingPath("/tools/utm-builder"), "/tools/utm-builder/");
 });
 
 test("a path that already ends in a slash is left alone", () => {
-  assert.equal(marketingPath("/free-tools/"), "/free-tools/");
+  assert.equal(marketingPath("/tools/"), "/tools/");
   assert.equal(marketingPath("/"), "/");
 });
 

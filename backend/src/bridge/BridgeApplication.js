@@ -57,6 +57,7 @@ import { requireAuth } from "../lib/clerkAuth.js";
 import { registerMeadowMcpRoutes } from "./mcp/MeadowMcpServer.js";
 import { createMeadowMcpOAuth } from "./mcp/MeadowMcpOAuth.js";
 import { pricingForCountry } from "./shared/regionalPricing.js";
+import { legacyToolsPath } from "./shared/publicToolRoutes.js";
 
 const backendDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 export const route = fn => (req, res, next) => Promise.resolve().then(() => fn(req, res)).catch(next).finally(() => req.privacyRelease?.());
@@ -235,9 +236,16 @@ export class BridgeApplication {
     this.registerRoutes();
     this.app.use("/api", (req, res) => res.status(404).json({ error: "Endpoint not found." }));
     const frontend = path.resolve(backendDir, "../frontend/dist");
-    if (env.BRIDGE_SERVE_FRONTEND === "true" && fs.existsSync(frontend)) {
-      this.app.use(express.static(frontend));
-      this.app.get("*", (req, res) => res.sendFile(path.join(frontend, "index.html")));
+    if (env.BRIDGE_SERVE_FRONTEND === "true") {
+      this.app.use((req, res, next) => {
+        const target = legacyToolsPath(req.originalUrl);
+        if (target) return res.redirect(308, target);
+        next();
+      });
+      if (fs.existsSync(frontend)) {
+        this.app.use(express.static(frontend));
+        this.app.get("*", (req, res) => res.sendFile(path.join(frontend, "index.html")));
+      }
     }
     this.app.use((error, req, res, next) => {
       req.privacyRelease?.();

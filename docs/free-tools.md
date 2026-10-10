@@ -1,6 +1,6 @@
 # Free social media tools
 
-The public hub lives at `/free-tools/`. Ten tools, the media guide index, and seven platform guides are described in `frontend/src/tools/freeToolsCatalog.js`. The existing TikTok roast is also linked from the hub.
+The public hub lives at `/tools/`. The old `/free-tools` hub and every `/free-tools/<slug>` URL permanently redirect (308) to the matching `/tools/` URL, including nested media guides and query parameters. Cloudflare handles these redirects before serving assets; self-hosted Express does the same when `BRIDGE_SERVE_FRONTEND=true`. The `/api/free-tools/` endpoints are unchanged. Ten tools, the media guide index, and seven platform guides are described in `frontend/src/tools/freeToolsCatalog.js`. The TikTok roast lives at `/tools/tiktok-roast/` and is also linked from the hub; `/tiktok-roast` permanently redirects there with saved profile handles intact.
 
 The catalog feeds app routing, static prerendering, page titles/descriptions, canonicals, and the existing sitemap. `check-public-html.mjs` verifies the routes, metadata, structured data, and links from the hub. All tool pages remain readable without JavaScript; interactive controls need JavaScript. The tool interface and ZIP library load separately from the main application.
 

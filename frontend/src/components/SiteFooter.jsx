@@ -29,9 +29,9 @@ function MobileFooterGroup({ title, children }) {
 function ProductLinks({ onGetStarted }) {
   return <>
     {GENERAL_PAGES.map((page) => <a href={href(page.path)} key={page.path}>{page.footerLabel}</a>)}
-    <a href={href("/tiktok-roast")}>Free TikTok roast</a>
-    <a href={href("/free-tools/")}>Free social media tools</a>
-    <a href={href("/free-tools/media-size-guide/")}>Media-size guides</a>
+    <a href={href("/tools/tiktok-roast")}>Free TikTok roast</a>
+    <a href={href("/tools/")}>Free social media tools</a>
+    <a href={href("/tools/media-size-guide/")}>Media-size guides</a>
     <a href={href("/pricing")}>Pricing</a>
     {onGetStarted ? <button onClick={onGetStarted}>Create your first post</button> : <a href={appHref("/dashboard")}>Create your first post</a>}
   </>;

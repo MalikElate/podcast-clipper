@@ -6,7 +6,7 @@ import { GENERAL_PAGES } from "../src/marketing/generalPages.js";
 import { FREE_TOOL_PAGES, FREE_TOOLS, MEDIA_GUIDES, schedulerFor } from "../src/tools/freeToolsCatalog.js";
 import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_DISPLAY, LEGAL_ENTITY } from "../src/siteContact.js";
 
-for (const [path, heading] of [["tiktok-roast/index.html", "TikTok <span>Niche or Not"], ["index.html", "Creator tools for your AI"], ["404.html", ">404<"], ["pricing/index.html", "<h1>Pricing</h1>"], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
+for (const [path, heading] of [["tools/tiktok-roast/index.html", "TikTok <span>Niche or Not"], ["index.html", "Creator tools for your AI"], ["404.html", ">404<"], ["pricing/index.html", "<h1>Pricing</h1>"], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
   const html = await readFile(`dist/${path}`, "utf8");
   assert.match(html, /<h1/);
   assert.ok(html.includes(heading), `${path} must contain its own content without JavaScript`);
@@ -85,15 +85,19 @@ for (const platform of PLATFORM_USE_CASES) {
   assert.ok(html.includes('href="https://findmeadow.com/#ways-to-use"'), `${platform.slug} must link to the API and MCP section`);
 }
 
-const roastHtml = await readFile("dist/tiktok-roast/index.html", "utf8");
-assert.ok(!roastHtml.includes("Meadow is a social media scheduling tool, and I’m not sure what this has to do with our main product."), "tiktok-roast/index.html still contains removed intro copy");
-assert.ok(roastHtml.includes("Find out if you’re making niche content or just normie posting."), "tiktok-roast/index.html missing requested subheader");
-assert.ok(!roastHtml.includes("Turn the roast into your next post."), "tiktok-roast/index.html still contains removed copy");
-assert.ok(!roastHtml.includes("Meadow, with the gloves off."), "tiktok-roast/index.html still contains the removed roaster name");
-assert.ok(!roastHtml.includes("A little heat. A lot of room to grow."), "tiktok-roast/index.html still contains the removed roaster note");
-assert.ok(roastHtml.includes('class="landing-header site-header"'), "tiktok-roast/index.html must use the standard Meadow navbar");
-assert.ok(!roastHtml.includes('class="roast-nav"'), "tiktok-roast/index.html must not use its old custom navbar");
-for (const navItem of [`href="tel:${CONTACT_PHONE}"><strong>${CONTACT_PHONE_DISPLAY}</strong></a>`, 'href="https://findmeadow.com/#ways-to-use"><strong>API/MCP</strong></a>', ">Sign in</button>", 'href="https://app.findmeadow.com/sign-up">Try for free']) assert.ok(roastHtml.includes(navItem), `tiktok-roast/index.html missing standard navbar item ${navItem}`);
+const roastHtml = await readFile("dist/tools/tiktok-roast/index.html", "utf8");
+assert.ok(roastHtml.includes('<link rel="canonical" href="https://findmeadow.com/tools/tiktok-roast/" />'), "TikTok roast must use its new canonical URL");
+assert.ok(roastHtml.includes('<meta property="og:url" content="https://findmeadow.com/tools/tiktok-roast/" />'), "TikTok roast must use its new preview URL");
+assert.ok(sitemapUrls.includes("https://findmeadow.com/tools/tiktok-roast/"), "TikTok roast must appear under tools in the sitemap");
+assert.ok(!sitemapUrls.includes("https://findmeadow.com/tiktok-roast/"), "The sitemap must omit the retired TikTok roast URL");
+assert.ok(!roastHtml.includes("Meadow is a social media scheduling tool, and I’m not sure what this has to do with our main product."), "tools/tiktok-roast/index.html still contains removed intro copy");
+assert.ok(roastHtml.includes("Find out if you’re making niche content or just normie posting."), "tools/tiktok-roast/index.html missing requested subheader");
+assert.ok(!roastHtml.includes("Turn the roast into your next post."), "tools/tiktok-roast/index.html still contains removed copy");
+assert.ok(!roastHtml.includes("Meadow, with the gloves off."), "tools/tiktok-roast/index.html still contains the removed roaster name");
+assert.ok(!roastHtml.includes("A little heat. A lot of room to grow."), "tools/tiktok-roast/index.html still contains the removed roaster note");
+assert.ok(roastHtml.includes('class="landing-header site-header"'), "tools/tiktok-roast/index.html must use the standard Meadow navbar");
+assert.ok(!roastHtml.includes('class="roast-nav"'), "tools/tiktok-roast/index.html must not use its old custom navbar");
+for (const navItem of [`href="tel:${CONTACT_PHONE}"><strong>${CONTACT_PHONE_DISPLAY}</strong></a>`, 'href="https://findmeadow.com/#ways-to-use"><strong>API/MCP</strong></a>', ">Sign in</button>", 'href="https://app.findmeadow.com/sign-up">Try for free']) assert.ok(roastHtml.includes(navItem), `tools/tiktok-roast/index.html missing standard navbar item ${navItem}`);
 for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
   const html = await readFile(`dist${route}/index.html`, "utf8");
   assert.match(html, /<title>Dashboard · Meadow<\/title>/);
@@ -173,14 +177,20 @@ for (const page of GENERAL_PAGES) {
   assert.ok(!html.includes('class="upcoming-platforms"'));
   for (const name of ["Twitch", "Kick"]) assert.ok(html.includes(`aria-label="${name}"`), `${page.path} must include ${name} in its logo sections`);
 }
-const toolsHubHtml = await readFile("dist/free-tools/index.html", "utf8");
-assert.ok(landingHtml.includes('href="/free-tools/"'), "Homepage must link to the free tools hub");
+const toolsHubHtml = await readFile("dist/tools/index.html", "utf8");
+assert.ok(landingHtml.includes('href="/tools/"'), "Homepage must link to the free tools hub");
+assert.ok(landingHtml.includes('href="/tools/tiktok-roast/"'), "Homepage must link to the moved TikTok roast");
+assert.ok(toolsHubHtml.includes('href="/tools/tiktok-roast/"'), "Hub must link to the moved TikTok roast");
+assert.ok(toolsHubHtml.includes('"url":"https://findmeadow.com/tools/tiktok-roast/"'), "Hub structured data must use the moved TikTok roast URL");
+assert.ok(!sitemapUrls.some(url => new URL(url).pathname.startsWith("/free-tools")), "The sitemap must only list the new tool URLs");
 for (const page of FREE_TOOL_PAGES) {
   const html = await readFile(`dist${page.path}/index.html`, "utf8");
   assert.ok(html.includes(`<title>${page.title}</title>`), `${page.path} must have its own title`);
   assert.equal((html.match(/<h1[ >]/g) || []).length, 1, `${page.path} must have one main heading`);
   assert.ok(html.includes(page.name), `${page.path} must render its own content without JavaScript`);
   assert.ok(html.includes(`<link rel="canonical" href="https://findmeadow.com${page.path}/" />`), `${page.path} must declare its canonical URL`);
+  assert.ok(html.includes(`<meta property="og:url" content="https://findmeadow.com${page.path}/" />`), `${page.path} must use its new URL for link previews`);
+  assert.doesNotMatch(html, /(?:href|"url"|"item")[=:]"(?:https:\/\/findmeadow\.com)?\/(?:free-tools|tiktok-roast)(?:\/|")/, `${page.path} must not link to retired tool URLs`);
   assert.ok(sitemapUrls.includes(`https://findmeadow.com${page.path}/`), `${page.path} must be in the sitemap`);
   assert.ok(!html.includes('name="robots"'), `${page.path} must be indexable`);
   const schemas = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(match => JSON.parse(match[1]));
@@ -188,4 +198,8 @@ for (const page of FREE_TOOL_PAGES) {
   assert.ok(!html.includes('BridgeApp-'), `${page.path} must not preload the dashboard`);
 }
 for (const page of [...FREE_TOOLS, ...MEDIA_GUIDES]) assert.ok(toolsHubHtml.includes(`href="${page.path}/"`), `Hub must link to ${page.path}`);
+for (const guide of MEDIA_GUIDES) {
+  const html = await readFile(`dist${guide.path}/index.html`, "utf8");
+  assert.ok(html.includes(`href="/tools/social-media-image-cropper/?preset=${guide.slug}-0"`), `${guide.path} must link to crop presets at the new URL`);
+}
 console.log("All public pages, free tools, guides, and dashboard routes have deployable HTML entry points.");

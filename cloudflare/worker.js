@@ -8,6 +8,7 @@ import { DurableState } from "./durableState.js";
 import { createPublishingWake } from "./publishingWake.js";
 import { migrationScript } from "./migrationScript.js";
 import { appDomainRedirect, dashboardShellUrl } from "./domainRouting.js";
+import { legacyToolsPath } from "../backend/src/bridge/shared/publicToolRoutes.js";
 import { handlePosthogProxy, isPosthogProxyPath } from "./posthogProxy.js";
 import { OPENAI_APPS_CHALLENGE_PATH, openaiAppsChallengeResponse } from "./openaiAppsChallenge.js";
 import { handleDirectUpload, stagingKey } from "./directUploads.js";
@@ -258,6 +259,8 @@ function migrationAuthorized(request, workerEnv) {
 export default {
   async fetch(request, workerEnv, ctx) {
     const url = new URL(request.url);
+    const toolsRedirect = legacyToolsPath(url);
+    if (toolsRedirect) return Response.redirect(new URL(toolsRedirect, url).href, 308);
     if (isPosthogProxyPath(url.pathname)) return handlePosthogProxy(request);
     if (url.pathname === OPENAI_APPS_CHALLENGE_PATH) return openaiAppsChallengeResponse(workerEnv.OPENAI_APPS_CHALLENGE);
     if (url.pathname === "/api/tools/tiktok-roast") return handleTikTokRoast(request, workerEnv, ctx);

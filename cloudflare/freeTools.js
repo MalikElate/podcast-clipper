@@ -87,7 +87,7 @@ export function hasProfileEvidence(html, platform, handle) {
 export async function lookupHandle(parsed, fetcher = fetch) {
   const target = parsed.platform === 'tiktok' ? `https://www.tiktok.com/@${parsed.handle}/embed` : parsed.url;
   try {
-    const response = await fetcher(target, { redirect: 'error', signal: AbortSignal.timeout(8000), headers: { Accept: 'text/html', 'User-Agent': 'Meadow-Public-Profile-Checker/1.0 (+https://findmeadow.com/free-tools/)' } });
+    const response = await fetcher(target, { redirect: 'error', signal: AbortSignal.timeout(8000), headers: { Accept: 'text/html', 'User-Agent': 'Meadow-Public-Profile-Checker/1.0 (+https://findmeadow.com/tools/)' } });
     if (!response.ok) return 'unconfirmed';
     return hasProfileEvidence(await limitedText(response, 1_500_000), parsed.platform, parsed.handle) ? 'found' : 'unconfirmed';
   } catch { return 'unconfirmed'; }
