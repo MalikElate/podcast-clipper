@@ -3,6 +3,8 @@ import test from "node:test";
 import { BridgeApi } from "../src/bridge/BridgeApi.js";
 import { checkoutExpectation } from "../src/pricing.js";
 
+const mp4Fixture = "\0\0\0\x18ftypisom\0\0\0\0isom";
+
 const rejectedSession = () => Response.json({ error: "Authentication required.", code: "authentication_required" }, { status: 401 });
 
 test("checkout sends the quote the visitor reviewed with plan and cycle", async () => {
@@ -19,14 +21,16 @@ test("checkout sends the quote the visitor reviewed with plan and cycle", async 
 
 test("uploads authorize first, refresh only the small grant request, then send the file once with its grant", async () => {
   const tokens = [], requests = [], progress = [];
-  const file = new File(["fixture video bytes"], "recording.MP4", { type: "video/mp4" });
+  const file = new File([mp4Fixture], "recording.MP4", { type: "video/mp4" });
   let uploads = 0;
   const api = new BridgeApi({
     getToken: async options => { tokens.push(options); return `token-${tokens.length}`; },
     fetcher: async (path, options) => {
       assert.equal(path, "/api/bridge/projects/project/media/uploads");
       assert.equal(options.method, "POST");
-      assert.deepEqual(JSON.parse(options.body), { bytes: file.size, filename: file.name, direct: true });
+      const { sample, ...request } = JSON.parse(options.body);
+      assert.deepEqual(request, { bytes: file.size, filename: file.name, direct: true });
+      assert.equal(atob(sample), await file.text());
       requests.push(options.headers.Authorization);
       assert.equal(uploads, 0, "No file bytes may be sent before authorization succeeds");
       return requests.length === 1 ? rejectedSession() : Response.json({ uploadToken: "meadow_upload_fixture", expiresAt: Date.now() + 1800000 }, { status: 201 });
@@ -50,12 +54,17 @@ test("uploads authorize first, refresh only the small grant request, then send t
 
 test("failed authorization prevents sending the file", async () => {
   const api = new BridgeApi({ getToken: async () => null, fetcher: async () => assert.fail("No anonymous grant request"), uploader: async () => assert.fail("No unauthorized file transfer") });
-  await assert.rejects(api.uploadMedia("project", new File(["video"], "video.mp4")), error => error.code === "authentication_required");
+  await assert.rejects(api.uploadMedia("project", new File([mp4Fixture], "video.mp4")), error => error.code === "authentication_required");
+});
+
+test("a renamed file is rejected locally before requesting an upload ticket", async () => {
+  const api = new BridgeApi({ getToken: async () => "session", fetcher: async () => assert.fail("Invalid content must not request a ticket"), uploader: async () => assert.fail("Invalid content must not transfer") });
+  await assert.rejects(api.uploadMedia("project", new File(["<html>wrong content</html>"], "report.pdf", { type: "application/pdf" })), /does not contain a valid PDF/);
 });
 
 test("proxy upload size rejection is actionable even without a JSON error", async () => {
   const api = new BridgeApi({ getToken: async () => "session", fetcher: async () => Response.json({ uploadToken: "meadow_upload_fixture" }), uploader: async () => ({ ok: false, status: 413, data: {} }) });
-  await assert.rejects(api.uploadMedia("project", new File(["video"], "video.mp4")), error => error.status === 413 && /too large.*smaller video/.test(error.message));
+  await assert.rejects(api.uploadMedia("project", new File([mp4Fixture], "video.mp4")), error => error.status === 413 && /too large.*smaller video/.test(error.message));
 });
 
 test("file transfers never replay after authentication, server, or network failure", async () => {
@@ -66,7 +75,7 @@ test("file transfers never replay after authentication, server, or network failu
   ]) {
     let grants = 0, uploads = 0;
     const api = new BridgeApi({ getToken: async () => "session", fetcher: async () => { grants++; return Response.json({ uploadToken: "meadow_upload_fixture" }); }, uploader: async () => { uploads++; return failure(); } });
-    await assert.rejects(api.uploadMedia("project", new File(["video"], "video.mp4")));
+    await assert.rejects(api.uploadMedia("project", new File([mp4Fixture], "video.mp4")));
     assert.equal(grants, 1);
     assert.equal(uploads, 1);
   }
@@ -82,7 +91,7 @@ test("legacy multipart requests also stop after a rejected session without repla
 test("cancelling during grant issuance stops the file transfer", async () => {
   const controller = new AbortController();
   const api = new BridgeApi({ getToken: async () => "session", fetcher: async () => { controller.abort(); return Response.json({ uploadToken: "meadow_upload_fixture" }); }, uploader: async () => assert.fail("Cancelled upload must not start") });
-  await assert.rejects(api.uploadMedia("project", new File(["video"], "video.mp4"), { signal: controller.signal }), { name: "AbortError" });
+  await assert.rejects(api.uploadMedia("project", new File([mp4Fixture], "video.mp4"), { signal: controller.signal }), { name: "AbortError" });
 });
 
 test("JSON requests refresh a cached session token after the authentication gate rejects it", async () => {

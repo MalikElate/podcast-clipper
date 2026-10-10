@@ -42,7 +42,7 @@ test("composer destinations remain usable during uploads and reflect connection 
     server: { middlewareMode: true, hmr: false, ws: false }, appType: "custom", optimizeDeps: { noDiscovery: true, include: [] },
   });
   try {
-    const { PostEditor } = await server.ssrLoadModule("/src/bridge/Composer.jsx");
+    const { PostEditor, draftPost, mediaChangePatch, removeMediaPatch } = await server.ssrLoadModule("/src/bridge/Composer.jsx");
     const render = (props = {}) => renderToStaticMarkup(createElement(PostEditor, {
       post: post(), accounts: [], media: [], catalog, onChange() {}, onPickMedia() {}, ...props,
     }));
@@ -156,6 +156,67 @@ test("composer destinations remain usable during uploads and reflect connection 
       assert.doesNotMatch(visibleText(html), /Video only/);
       assert.equal(isDisabled(choice(html, "Expired")), true);
       assert.equal(isDisabled(choice(html, "Already published")), true);
+    });
+
+    await t.test("one upload zone shows supported types and leaves caption-only destinations available", () => {
+      const html = render({ unifiedUpload: true, post: post({ format: "auto" }), accounts: [account("Text account"), account("Video channel", "connected", "youtube")] });
+      assert.match(html, /bridge-unified-upload-zone/);
+      assert.match(visibleText(html), /Drag &amp; Drop JPG\/JPEG, PNG, WebP, GIF, MP4, MOV, WebM, PDF, DOCX, and PPTX OR Choose File/);
+      assert.doesNotMatch(visibleText(html), /MP3|WAV/);
+      assert.deepEqual(choiceLabels(html).map(value => value.match(/<strong>(.*?)<\/strong>/)[1]), ["Text account"]);
+    });
+
+    await t.test("PDF destinations follow document support and each platform's size limit", () => {
+      const document = { id: "pdf", kind: "document", filename: "report.pdf", mime: "application/pdf", bytes: 60 * 1024 ** 2 };
+      const documentCatalog = [
+        ...catalog,
+        { id: "linkedin", name: "LinkedIn", formats: ["text", "document"], documentMaxBytes: 100 * 1024 ** 2 },
+        { id: "telegram", name: "Telegram", formats: ["text", "document"], documentMaxBytes: 50 * 1024 ** 2 },
+      ];
+      const accounts = [account("LinkedIn page", "connected", "linkedin"), account("Telegram channel", "connected", "telegram"), account("X account")];
+      const html = render({ unifiedUpload: true, post: post({ format: "auto", mediaIds: ["pdf"] }), media: [document], catalog: documentCatalog, accounts });
+      assert.deepEqual(choiceLabels(html).map(value => value.match(/<strong>(.*?)<\/strong>/)[1]), ["LinkedIn page"]);
+      assert.match(visibleText(html), /Content Document/);
+      assert.doesNotMatch(html, /bridge-unified-upload-zone/, "A document cannot be mixed with more media");
+      const smaller = render({ unifiedUpload: true, post: post({ format: "auto", mediaIds: ["pdf"] }), media: [{ ...document, bytes: 20 * 1024 ** 2 }], catalog: documentCatalog, accounts });
+      assert.deepEqual(choiceLabels(smaller).map(value => value.match(/<strong>(.*?)<\/strong>/)[1]), ["LinkedIn page", "Telegram channel"]);
+    });
+
+    await t.test("an explicit Story draft keeps its format and selected image preview", () => {
+      const draft = draftPost({ id: "story-draft", format: "story", mediaIds: ["image"] }, { timeZone: "UTC" });
+      assert.equal(draft.format, "story");
+      const html = render({ unifiedUpload: true, post: draft, media: [{ id: "image", kind: "image", filename: "photo.jpg", bytes: 1000 }], catalog: catalog.map(item => item.id === "instagram" ? { ...item, formats: [...item.formats, "story"] } : item), accounts: [account("Instagram", "connected", "instagram"), account("X account")] });
+      assert.match(visibleText(html), /Content Story/);
+      assert.match(html, /bridge-media-strip/);
+      assert.deepEqual(choiceLabels(html).map(value => value.match(/<strong>(.*?)<\/strong>/)[1]), ["Instagram"]);
+    });
+
+    await t.test("saved media loading does not temporarily treat a video draft as text", () => {
+      const draft = post({ format: "auto", mediaIds: ["saved-video"], accountIds: ["YouTube channel"] });
+      const accounts = [account("YouTube channel", "connected", "youtube"), account("Text account")];
+      const pending = render({ unifiedUpload: true, post: draft, accounts, media: [] });
+      assert.match(visibleText(pending), /Content Loading media…/);
+      assert.match(visibleText(pending), /Destinations 1 selected Loading media before showing destinations…/);
+      assert.doesNotMatch(pending, /bridge-unified-upload-zone/);
+      const ready = render({ unifiedUpload: true, post: draft, accounts, media: [{ id: "saved-video", kind: "video", filename: "video.mp4", bytes: 1000 }] });
+      assert.deepEqual(choiceLabels(ready).map(value => value.match(/<strong>(.*?)<\/strong>/)[1]), ["YouTube channel", "Text account"]);
+    });
+
+    await t.test("removing media in the unified composer clears an old explicit format", () => {
+      assert.deepEqual(removeMediaPatch({ mediaIds: ["photo"], format: "image", overrides: { facebook: { format: "story", caption: "Custom" } } }, "photo", true, [{ id: "photo", kind: "image" }]),
+        { mediaIds: [], format: "auto", overrides: { facebook: { caption: "Custom" } } });
+      assert.deepEqual(removeMediaPatch({ mediaIds: ["photo"], format: "story" }, "photo", false), { mediaIds: [] });
+    });
+
+    await t.test("media changes retain only destination formats compatible with the new media", () => {
+      const post = { mediaIds: ["photo"], format: "image", overrides: { instagram: { format: "story" }, facebook: { format: "image" }, youtube: { format: "reel", caption: "Custom" } } };
+      const image = { id: "photo", kind: "image" }, video = { id: "clip", kind: "video" };
+      assert.deepEqual(mediaChangePatch(post, ["photo"], [image]).overrides,
+        { instagram: { format: "story" }, facebook: { format: "image" }, youtube: { caption: "Custom" } });
+      assert.deepEqual(mediaChangePatch(post, ["clip"], [video]).overrides,
+        { instagram: { format: "story" }, facebook: {}, youtube: { format: "reel", caption: "Custom" } });
+      assert.deepEqual(mediaChangePatch(post, ["photo", "clip"], [image, video]).overrides,
+        { instagram: {}, facebook: {}, youtube: { caption: "Custom" } });
     });
   } finally {
     await server.close();

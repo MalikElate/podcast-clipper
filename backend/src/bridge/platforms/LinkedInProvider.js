@@ -56,7 +56,10 @@ export class LinkedInProvider extends PlatformProvider {
       if (result.status !== "AVAILABLE") return { status: "processing", progress: { uploads }, pollAfterMs: 15000 };
     }
     if (ctx.progress.publicationId) return { status: "published", externalId: ctx.progress.publicationId, url: `https://www.linkedin.com/feed/update/${ctx.progress.publicationId}/` };
-    const content = uploads.length > 1 ? { multiImage: { images: uploads.map(upload => ({ id: upload.urn })) } } : uploads.length ? { media: { id: uploads[0].urn, ...(ctx.content.title ? { title: ctx.content.title } : {}) } } : undefined;
+    // LinkedIn requires a media title for document posts. The composer does not
+    // require a custom title, so use the uploaded filename when none was given.
+    const title = ctx.content.title?.trim() || (uploads[0]?.kind === "document" ? ctx.content.media[0]?.filename?.trim() || "Document" : "");
+    const content = uploads.length > 1 ? { multiImage: { images: uploads.map(upload => ({ id: upload.urn })) } } : uploads.length ? { media: { id: uploads[0].urn, ...(title ? { title } : {}) } } : undefined;
     const response = await this.request("posts", ctx.credentials, { method: "POST", raw: true, json: { author: ctx.account.remoteId, commentary: ctx.content.caption, visibility: "PUBLIC", distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] }, ...(content ? { content } : {}), lifecycleState: "PUBLISHED", isReshareDisabledByAuthor: false } });
     const id = response.headers.get("x-restli-id"); await response.body?.cancel();
     invariant(id, "LinkedIn did not confirm a published post.", { code: "unconfirmed_publication" }); await ctx.checkpoint({ publicationId: id });

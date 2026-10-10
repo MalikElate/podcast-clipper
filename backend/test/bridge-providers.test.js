@@ -205,8 +205,9 @@ test("LinkedIn document upload waits for availability and sends the Posts API co
     return { status: "AVAILABLE" };
   });
   const provider = new LinkedInProvider({ transport: http }), ctx = context([{ id: "doc", filename: "paper.pdf", kind: "document", mime: "application/pdf", bytes: 10, status: "ready" }]);
+  ctx.content.title = "";
   const result = await provider.publish(ctx); assert.equal(result.status, "published"); assert.equal(result.externalId, "urn:li:share:5");
-  const request = http.calls.find(call => call.url.endsWith("/posts")); assert.equal(request.options.json.content.media.id, "urn:li:document:1"); assert.equal(request.options.json.lifecycleState, "PUBLISHED"); assert.equal(request.options.headers["X-Restli-Protocol-Version"], "2.0.0");
+  const request = http.calls.find(call => call.url.endsWith("/posts")); assert.equal(request.options.json.content.media.id, "urn:li:document:1"); assert.equal(request.options.json.content.media.title, "paper.pdf"); assert.equal(request.options.json.lifecycleState, "PUBLISHED"); assert.equal(request.options.headers["X-Restli-Protocol-Version"], "2.0.0");
 });
 
 test("Pinterest creates a carousel with explicit board and media source", async () => {

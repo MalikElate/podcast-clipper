@@ -4,8 +4,7 @@ import { fileTypeFromFile } from "file-type";
 import { invariant, BridgeError } from "../core/errors.js";
 import { ProcessRunner } from "../core/ProcessRunner.js";
 import { LockService } from "../core/LockService.js";
-
-const accepted = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/quicktime", "video/webm", "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.presentationml.presentation", "application/msword", "application/vnd.ms-powerpoint"]);
+import { acceptedMediaMimes, unsupportedMediaMessage } from "./mediaValidation.js";
 
 export class MediaService {
   constructor({ store, projects, storage, publicUrl, signingKey, runner = new ProcessRunner(), clock = () => Date.now(), maxBytes = 1024 ** 3, locks = new LockService(store, { clock }) }) {
@@ -13,12 +12,12 @@ export class MediaService {
     this.locks = locks;
   }
 
-  async ingest(uid, projectId, file, { source = "upload", metadata = {} } = {}) {
+  async ingest(uid, projectId, file, { source = "upload", metadata = {}, expectedMime } = {}) {
     this.projects.require(uid, projectId);
     const stat = await fs.promises.stat(file.path);
     invariant(stat.size > 0 && stat.size <= this.maxBytes, `Upload a file smaller than ${Math.round(this.maxBytes / 1024 ** 2)} MB.`);
     const type = await fileTypeFromFile(file.path);
-    invariant(type && accepted.has(type.mime), "This file type cannot be posted. Upload an image, video, PDF, Word document, or PowerPoint file.", { status: 415, code: "unsupported_media" });
+    invariant(type && acceptedMediaMimes.has(type.mime) && (!expectedMime || type.mime === expectedMime), unsupportedMediaMessage, { status: 415, code: "unsupported_media" });
     const kind = type.mime.startsWith("image/") ? "image" : type.mime.startsWith("video/") ? "video" : "document";
     const id = randomUUID(), storageKey = `${id}.${type.ext}`;
     const filename = String(file.originalname || file.filename || `media.${type.ext}`).replace(/[\x00-\x1f/\\]/g, "_").slice(0, 180);
@@ -61,7 +60,7 @@ export class MediaService {
     await this.storage.persist?.(thumbnailKey);
   }
 
-  async createDirectUpload(uid, projectId, { bytes, filename } = {}) {
+  async createDirectUpload(uid, projectId, { bytes, filename, expectedMime } = {}) {
     this.projects.require(uid, projectId);
     invariant(Number.isSafeInteger(bytes) && bytes > 0 && bytes <= this.maxBytes, `Choose a file of up to ${Math.round(this.maxBytes / 1024 ** 2)} MB.`, { code: "upload_size_invalid" });
     invariant(this.store.list("media", { ownerUid: uid, statuses: ["uploading", "processing"] }).length < 100, "Finish your existing uploads before adding more.", { status: 429 });
@@ -69,7 +68,7 @@ export class MediaService {
     const ticket = await this.storage.createDirectUpload(storageKey, { bytes });
     this.projects.require(uid, projectId);
     // The signature limits when PUT may start; a slow transfer can finish later.
-    const record = { id, ownerUid: uid, projectId, storageKey, bytes, filename: String(filename || "media").replace(/[\x00-\x1f/\\]/g, "_").slice(0, 180), source: "direct_upload", status: "uploading", uploadExpiresAt: ticket.expiresAt + 2 * 3600000, variants: {}, metadata: {}, createdAt: this.clock(), updatedAt: this.clock() };
+    const record = { id, ownerUid: uid, projectId, storageKey, bytes, filename: String(filename || "media").replace(/[\x00-\x1f/\\]/g, "_").slice(0, 180), expectedMime, source: "direct_upload", status: "uploading", uploadExpiresAt: ticket.expiresAt + 2 * 3600000, variants: {}, metadata: {}, createdAt: this.clock(), updatedAt: this.clock() };
     this.store.put("media", record);
     await this.store.flush?.();
     return { directUpload: { ...ticket, mediaId: id } };
@@ -104,7 +103,7 @@ export class MediaService {
       const stat = await fs.promises.stat(this.storage.path(record.storageKey));
       invariant(stat.size === record.bytes, "The uploaded file size did not match. Select the file again.");
       const type = await fileTypeFromFile(this.storage.path(record.storageKey));
-      invariant(type && accepted.has(type.mime), "This file type cannot be posted. Upload an image, video, PDF, Word document, or PowerPoint file.", { status: 415, code: "unsupported_media" });
+      invariant(type && acceptedMediaMimes.has(type.mime) && (!record.expectedMime || type.mime === record.expectedMime), unsupportedMediaMessage, { status: 415, code: "unsupported_media" });
       Object.assign(record, { mime: type.mime, kind: type.mime.startsWith("image/") ? "image" : type.mime.startsWith("video/") ? "video" : "document" });
       await this.inspect(record);
       invariant(this.store.get("media", record.id)?.status === "processing" && !this.projects.privacy?.blocked(record.ownerUid), "The selected media was removed.");
@@ -183,7 +182,7 @@ export class MediaService {
     return { record, key, mime: variant === "original" ? record.mime : variant === "thumbnail" ? "image/jpeg" : record.variants[variant].mime };
   }
   toPublic(record) {
-    const { storageKey, thumbnailKey, variants, uploadExpiresAt, processingAttempts, retryAt, cleanupPending, ...visible } = record;
+    const { storageKey, thumbnailKey, variants, uploadExpiresAt, processingAttempts, retryAt, cleanupPending, expectedMime, ...visible } = record;
     return { ...visible, url: record.status === "ready" ? this.url(record) : null, thumbnailUrl: record.status === "ready" && thumbnailKey ? this.url(record, { variant: "thumbnail" }) : null, downloadUrl: record.status === "ready" ? this.url(record, { download: true }) : null };
   }
 

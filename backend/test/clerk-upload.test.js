@@ -45,7 +45,7 @@ test("Clerk upload tickets survive a buffered transfer after the session JWT exp
   }
 
   async function ticket(authorization) {
-    return fetch(`http://127.0.0.1:${server.address().port}/api/bridge/projects/${project.id}/media/uploads`, { method: "POST", headers: { Authorization: `Bearer ${authorization}`, "Content-Type": "application/json" }, body: JSON.stringify({ bytes: bytes.length }) });
+    return fetch(`http://127.0.0.1:${server.address().port}/api/bridge/projects/${project.id}/media/uploads`, { method: "POST", headers: { Authorization: `Bearer ${authorization}`, "Content-Type": "application/json" }, body: JSON.stringify({ bytes: bytes.length, filename: "recording.MP4", sample: bytes.subarray(0, 64 * 1024).toString("base64") }) });
   }
 
   const expired = await upload(token(true));

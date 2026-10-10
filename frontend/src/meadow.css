@@ -44,4 +44,8 @@
 .bridge.bridge[data-theme=light] .bridge-button:not(.secondary):not(.danger) { background: #547af1; border-color: #4169e1; color: #fff; }
 .bridge.bridge[data-theme=light] .bridge-button:not(.secondary):not(.danger):hover { background: #4169e1; }
 .bridge.bridge[data-theme=light] .bridge-upload-zone { background: #f3f6ec; border-color: #a5b697; }
+.bridge.bridge[data-theme=light] .bridge-composer-main .bridge-unified-upload-zone { background: #f1f4ee; border-color: #9eafbb; }
+.bridge.bridge[data-theme=light] .bridge-composer-main .bridge-unified-upload-zone:hover { background: #eef2eb; border-color: #7c98b4; }
+.bridge.bridge[data-theme=light] .bridge-upload-choose { background: #cbd6df; color: #17233a; }
+.bridge.bridge[data-theme=light] .bridge-upload-choose:hover:not(:disabled) { background: #bdcad5; }
 .bridge.bridge[data-theme=light] .bridge-modal { background: #fcfdf8; border-color: #cbd8bd; }

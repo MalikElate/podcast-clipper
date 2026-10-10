@@ -1,6 +1,7 @@
 import { getAuthToken } from "../authToken.js";
 import { normalizePlatformCollections } from "./platforms.js";
 import { uploadWithProgress } from "./uploadTransport.js";
+import { validateUploadFile, validateUploadSignature } from "./uploadValidation.js";
 import { captureRequestSuccess } from "../productAnalytics.js";
 import { captureGoogleRequestSuccess } from "../googleAnalytics.js";
 export const localPreview = Boolean(import.meta.env?.DEV && import.meta.env?.VITE_BRIDGE_LOCAL_PREVIEW === "true");
@@ -76,8 +77,16 @@ export class BridgeApi {
   updateProject(id, body) { return this.request(this.projectPath(id), { method: "PATCH", body }); }
   project(id, path, options) { return this.request(this.projectPath(id, path), options); }
   async uploadMedia(projectId, file, { signal, onProgress = () => {} } = {}) {
+    validateUploadFile(file);
     onProgress({ stage: "authorizing", loaded: 0, total: file.size });
-    const { uploadToken, directUpload } = await this.project(projectId, "/media/uploads", { method: "POST", body: { bytes: file.size, filename: file.name, direct: true }, signal });
+    signal?.throwIfAborted();
+    const bytes = new Uint8Array(await file.slice(0, 65536).arrayBuffer());
+    signal?.throwIfAborted();
+    validateUploadSignature(file, bytes);
+    const chunks = [];
+    for (let index = 0; index < bytes.length; index += 8192) chunks.push(String.fromCharCode(...bytes.subarray(index, index + 8192)));
+    const sample = btoa(chunks.join(""));
+    const { uploadToken, directUpload } = await this.project(projectId, "/media/uploads", { method: "POST", body: { bytes: file.size, filename: file.name, sample, direct: true }, signal });
     signal?.throwIfAborted();
     if (directUpload) return this.uploadDirect(projectId, file, directUpload, { signal, onProgress });
     if (typeof uploadToken !== "string" || !uploadToken.startsWith("meadow_upload_")) throw new Error("Meadow could not start the upload. Please refresh and try again.");
