@@ -14,7 +14,7 @@ Meadow is a publishing workspace for creating, scheduling, and analyzing social 
 - Durable deliveries for every account, automatic quota overflow queues, queue editing, deletion, reordering, and independent retries.
 - Per-post and per-account analytics, combined totals, post comparisons, and best-performing posts. Missing metrics remain unavailable instead of becoming zero.
 - Public pricing, Stripe subscription Checkout, webhook-backed billing status, and Stripe Customer Portal management.
-- Configuration screens for project settings, service readiness, API-key management, plan comparison, and Privacy & Account.
+- Configuration screens for project settings, service readiness, API-key management, plan comparison, and account deletion.
 - An API-key authenticated, stateless MCP endpoint for reading projects, accounts, posts and cached analytics, and for saving idempotent drafts.
 - Platform-specific privacy notices before Pinterest, TikTok, YouTube, Telegram, and Google Business Profile connections, durable account and connection erasure, provider authorization-removal webhooks, and platform data retention.
 
