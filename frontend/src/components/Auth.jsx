@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { SignIn, SignUp } from "@clerk/react";
 import { clerkAuthRedirectProps } from "../authRedirects.js";
+import { handleSignupTab, SIGNUP_APPEARANCE, syncSignupLayout } from "../signupLayout.js";
 import {
   buildSignupConsentMetadata,
   preventSignupWithoutConsent,
@@ -29,6 +30,7 @@ function SignupAuth({ redirectUrl }) {
     let activeHost = null;
 
     const mountConsentControls = () => {
+      syncSignupLayout(authRoot);
       const form = authRoot.querySelector(".cl-form");
       if (!form) return;
 
@@ -55,7 +57,9 @@ function SignupAuth({ redirectUrl }) {
     };
 
     const observer = new MutationObserver(mountConsentControls);
-    observer.observe(authRoot, { childList: true, subtree: true });
+    observer.observe(authRoot, {
+      childList: true, subtree: true, attributes: true, attributeFilter: ["value"],
+    });
     mountConsentControls();
 
     return () => {
@@ -76,9 +80,17 @@ function SignupAuth({ redirectUrl }) {
       className="signup-auth"
       onClickCapture={blockSignupWithoutConsent}
       onSubmitCapture={blockSignupWithoutConsent}
+      onInputCapture={() => syncSignupLayout(authRootRef.current)}
+      onChangeCapture={() => syncSignupLayout(authRootRef.current)}
+      onFocusCapture={() => syncSignupLayout(authRootRef.current)}
+      onKeyDownCapture={(event) => handleSignupTab(event, authRootRef.current)}
     >
       <div className="signup-auth-form">
-        <SignUp {...clerkAuthRedirectProps("sign-up", redirectUrl)} unsafeMetadata={consentMetadata} />
+        <SignUp
+          {...clerkAuthRedirectProps("sign-up", redirectUrl)}
+          appearance={SIGNUP_APPEARANCE}
+          unsafeMetadata={consentMetadata}
+        />
       </div>
 
       {consentHost && createPortal(

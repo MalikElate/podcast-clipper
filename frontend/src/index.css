@@ -374,6 +374,47 @@ button:not(:where(.cl-rootBox *)) {
   width: 100%;
 }
 
+/* Flatten layout wrappers, leaving Clerk's form, inputs and handlers intact. */
+.signup-auth[data-signup-entry="true"] .cl-main {
+  display: flex;
+  flex-direction: column;
+  reading-flow: flex-visual;
+}
+
+.signup-auth[data-signup-entry="true"] .cl-form,
+.signup-auth[data-signup-entry="true"] .signup-entry-fields {
+  display: contents;
+}
+
+.signup-auth[data-signup-entry="true"] .cl-formFieldRow__emailAddress {
+  order: 0;
+}
+
+.signup-auth[data-signup-entry="true"] .cl-dividerRow {
+  order: 1;
+}
+
+.signup-auth[data-signup-entry="true"] .cl-socialButtonsRoot {
+  order: 2;
+}
+
+.signup-auth[data-signup-entry="true"] .cl-formFieldRow__password {
+  order: 3;
+}
+
+.signup-auth[data-signup-entry="true"] .signup-consent-inline-host {
+  order: 4;
+}
+
+.signup-auth[data-signup-entry="true"] .signup-entry-action {
+  order: 5;
+}
+
+/* Also cover the first paint and browser autofill before an input event fires. */
+.signup-auth:not([data-email-entered="true"]):has(.cl-formFieldRow__emailAddress):not(:has(.cl-formFieldInput__emailAddress:autofill)) .cl-formFieldRow__password {
+  display: none;
+}
+
 @media (max-width: 720px) {
   .centered-shell:has(.signup-auth) {
     align-items: flex-start;
