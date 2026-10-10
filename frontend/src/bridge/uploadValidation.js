@@ -1,5 +1,5 @@
-// Match the media types accepted by the server. The picker hint is not a
-// validation boundary; each file is checked again before a transfer starts.
+// New uploads offered by the composer. The picker hint is not a validation
+// boundary; each file is checked again before a transfer starts.
 const types = {
   jpg: { kind: "image", mime: ["image/jpeg"] },
   jpeg: { kind: "image", mime: ["image/jpeg"] },
@@ -10,12 +10,10 @@ const types = {
   mov: { kind: "video", mime: ["video/quicktime"] },
   webm: { kind: "video", mime: ["video/webm"] },
   pdf: { kind: "document", mime: ["application/pdf"] },
-  docx: { kind: "document", mime: ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"] },
-  pptx: { kind: "document", mime: ["application/vnd.openxmlformats-officedocument.presentationml.presentation"] },
 };
 
 export const UPLOAD_ACCEPT = Object.keys(types).map(extension => `.${extension}`).join(",");
-export const UPLOAD_FORMATS = "JPG/JPEG, PNG, WebP, GIF, MP4, MOV, WebM, PDF, DOCX, and PPTX";
+export const UPLOAD_FORMATS = "JPG/JPEG, PNG, WebP, GIF, MP4, MOV, WebM, and PDF";
 
 export function validateUploadFile(file, maxBytes = Infinity) {
   const extension = String(file?.name || "").split(".").at(-1).toLowerCase();
@@ -43,7 +41,6 @@ export function validateUploadSignature(file, sample) {
     : extension === "mov" ? ["ftyp", "free", "mdat", "moov", "wide"].includes(text(4, 4))
     : extension === "webm" ? starts(0x1a, 0x45, 0xdf, 0xa3)
     : extension === "pdf" ? text(0, 5) === "%PDF-"
-    : extension === "docx" || extension === "pptx" ? starts(0x50, 0x4b, 0x03, 0x04)
     : false;
   if (!valid) throw new Error(`${file?.name || "This file"} does not contain a valid ${extension.toUpperCase()} file. Choose ${UPLOAD_FORMATS}.`);
 }

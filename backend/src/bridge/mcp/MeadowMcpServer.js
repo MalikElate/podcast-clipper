@@ -396,7 +396,7 @@ export function createMeadowMcpServer(application, uid, { authType = "api_key", 
 
   registerTool("upload_media", {
     title: "Upload media to Meadow",
-    description: `Add an image, video, PDF, Word or PowerPoint file to a Meadow project and return its media ID for publish_post, create_draft or publish_draft. Pass exactly one of: url (a public HTTP or HTTPS address that Meadow downloads; preferred for files over a few MB), data (base64 file bytes, up to ${inlineMediaLimit / 1024 ** 2} MB), or file (a file the user attached in ChatGPT). For a large local file, use create_upload_url instead.`,
+    description: `Add an image, video, or PDF file to a Meadow project and return its media ID for publish_post, create_draft or publish_draft. Pass exactly one of: url (a public HTTP or HTTPS address that Meadow downloads; preferred for files over a few MB), data (base64 file bytes, up to ${inlineMediaLimit / 1024 ** 2} MB), or file (a file the user attached in ChatGPT). For a large local file, use create_upload_url instead.`,
     inputSchema: {
       projectId: z.string().min(1).describe("A project ID returned by list_projects"),
       url: z.string().max(4096).optional().describe("A public HTTP or HTTPS URL of the file"),

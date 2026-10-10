@@ -13,8 +13,6 @@ const cases = [
   ["older.mov", [0, 0, 0, 24, ...Buffer.from("moov")], "video/quicktime", "video"],
   ["clip.webm", [0x1a, 0x45, 0xdf, 0xa3], "video/webm", "video"],
   ["deck.pdf", [...Buffer.from("%PDF-1.7")], "application/pdf", "document"],
-  ["deck.docx", [0x50, 0x4b, 0x03, 0x04], "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "document"],
-  ["deck.pptx", [0x50, 0x4b, 0x03, 0x04], "application/vnd.openxmlformats-officedocument.presentationml.presentation", "document"],
 ];
 
 test("accepted upload types have a matching picker hint, MIME, and content signature", () => {
@@ -24,12 +22,14 @@ test("accepted upload types have a matching picker hint, MIME, and content signa
     assert.doesNotThrow(() => validateUploadSignature(selected, Uint8Array.from(bytes)));
     assert.ok(UPLOAD_ACCEPT.includes(`.${name.split(".").at(-1).toLowerCase()}`));
   }
-  assert.doesNotMatch(UPLOAD_ACCEPT, /\.mp3|\.doc,|\.ppt,/);
+  assert.doesNotMatch(UPLOAD_ACCEPT, /\.mp3|\.docx|\.pptx|\.doc,|\.ppt,/);
 });
 
 test("unsupported, empty, mislabeled, oversized, and spoofed files fail before upload", () => {
   assert.throws(() => validateUploadFile(file("sound.mp3", [1, 2, 3], "audio/mpeg")), /not supported/);
   assert.throws(() => validateUploadFile(file("legacy.doc", [1, 2, 3], "application/msword")), /not supported/);
+  assert.throws(() => validateUploadFile(file("deck.docx", [0x50, 0x4b, 0x03, 0x04], "application/vnd.openxmlformats-officedocument.wordprocessingml.document")), /not supported/);
+  assert.throws(() => validateUploadFile(file("deck.pptx", [0x50, 0x4b, 0x03, 0x04], "application/vnd.openxmlformats-officedocument.presentationml.presentation")), /not supported/);
   assert.throws(() => validateUploadFile(new File([], "empty.pdf")), /empty/);
   assert.throws(() => validateUploadFile(file("wrong.pdf", [1], "image/png")), /does not match/);
   assert.throws(() => validateUploadFile(file("large.pdf", [1, 2, 3]), 2), /upload limit/);
