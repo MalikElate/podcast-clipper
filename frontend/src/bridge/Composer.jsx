@@ -5,7 +5,7 @@ import { Alert, Check, Field, MediaThumb, Modal, PlatformBadge } from "./ui.jsx"
 import { DestinationSettings } from "./DestinationSettings.jsx";
 import UploadProgress from "./UploadProgress.jsx";
 import { detectFormat, FORMAT_LABELS, formatVariants, MAX_MEDIA_BY_TYPE, POST_TYPES, supportsPostType } from "./platforms.js";
-import { UPLOAD_ACCEPT, UPLOAD_FORMATS, validateUploadSelection } from "./uploadValidation.js";
+import { UPLOAD_ACCEPT, UPLOAD_CATEGORIES, validateUploadSelection } from "./uploadValidation.js";
 import { hasPostContent } from "./postContent.js";
 import EmojiPicker from "./EmojiPicker.jsx";
 import { dashboardPath } from "./dashboardRoutes.js";
@@ -132,7 +132,7 @@ function UnifiedDropzone({ onPickMedia, onDropFiles, uploading }) {
     onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget)) setDragActive(false); }}
     onDrop={event => { event.preventDefault(); setDragActive(false); if (!uploading && event.dataTransfer?.files?.length) onDropFiles(event.dataTransfer.files); }}>
     <h3>Drag &amp; Drop</h3>
-    <p className="bridge-upload-types">{UPLOAD_FORMATS}</p>
+    <p className="bridge-upload-types">{UPLOAD_CATEGORIES}</p>
     <div className="bridge-upload-or"><span>OR</span></div>
     <button type="button" className="bridge-upload-choose" disabled={uploading} onClick={onPickMedia}>{uploading ? "Uploading…" : "Choose File"}</button>
   </div>;
