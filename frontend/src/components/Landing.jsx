@@ -195,9 +195,6 @@ export default function Landing({ onGetStarted }) {
                 <span>{platform.name}</span>
               </a>
             ))}
-            <div className="home-platform-coming-soon">
-              <span>More coming soon</span>
-            </div>
           </div>
         </section>
 
