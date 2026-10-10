@@ -74,7 +74,7 @@ Business verification, permission review, live availability, and each user's OAu
 
 ## Draft review description
 
-Meadow is a social publishing workspace for creators and businesses. Users sign in to Meadow, connect an account they are authorized to manage through the platform's authorization screen, and choose a destination. They upload their own media, write a caption, review the destination and content, and choose to publish immediately or schedule publication. Meadow sends the requested content to the selected account, reports processing and delivery status, links to the published post, and displays available performance metrics. Users can disconnect an account in Connections or request account deletion in Settings → Privacy & Account.
+Meadow is a social publishing workspace for creators and businesses. Users sign in to Meadow, connect an account they are authorized to manage through the platform's authorization screen, and choose a destination. They upload their own media, write a caption, review the destination and content, and choose to publish immediately or schedule publication. Meadow sends the requested content to the selected account, reports processing and delivery status, links to the published post, and displays available performance metrics. Users can disconnect an account in Accounts or request account deletion in Settings → Privacy & Account.
 
 ### Facebook permission explanations
 

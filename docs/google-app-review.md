@@ -38,8 +38,8 @@ Draft for the Google Cloud Data Access justification field (under 1,000 characte
 Use a test channel and a short video the demonstrator owns. Show the real behavior of the deployed version. Do not claim publication succeeded if Meadow or YouTube reports a restriction.
 
 1. Show `https://findmeadow.com`, its description of Meadow, and its public privacy policy.
-2. Sign in to Meadow, open Connections, and select Connect YouTube. Show the consent flow and requested permissions, including Google's unverified-app notice if it appears. Show the OAuth client identity without exposing passwords or tokens. Google asks that all OAuth clients assigned to this project be covered.
-3. Select the authorized channel and show its name in Meadow's Connections page. Explain that the read-only permission identifies the channel the user selected.
+2. Sign in to Meadow, open Accounts, and select Connect YouTube. Show the consent flow and requested permissions, including Google's unverified-app notice if it appears. Show the OAuth client identity without exposing passwords or tokens. Google asks that all OAuth clients assigned to this project be covered.
+3. Select the authorized channel and show its name in Meadow's Accounts page. Explain that the read-only permission identifies the channel the user selected.
 4. Upload the test video in Meadow. Set the title, description, audience, and visibility explicitly. Use private visibility for testing until the project's YouTube upload audit status is established.
 5. Publish the test video, show the processing state, then verify the resulting video and visibility in YouTube Studio. Explain how `youtube.upload` and `youtube.readonly` support these steps.
 6. Open Meadow's analytics for the video and refresh them. Explain the counts actually returned and the unavailable values. Explain that `yt-analytics.readonly` supplies share counts when YouTube has data for that account and reporting period; do not fabricate metrics for a new or private video.
