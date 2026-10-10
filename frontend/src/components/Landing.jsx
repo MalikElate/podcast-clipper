@@ -220,7 +220,7 @@ export default function Landing({ onGetStarted }) {
           <div className="usage-grid">
             <article className="usage-card usage-creator">
               <div className="usage-card-media"><img src="/marketing/meadow-creator-studio.webp" alt="A content creator recording and editing in a bright home studio" /></div>
-              <div className="usage-card-copy"><h3>For creators and teams</h3><p>Plan, draft, preview, schedule, and publish from Meadow&apos;s visual workspace.</p><ul><li>Stay hands-on from idea to delivery</li><li>Save drafts and review every destination</li><li>Keep your publishing calendar clear</li></ul></div>
+              <div className="usage-card-copy"><h3>For creators and teams</h3><p>Plan, draft, preview, schedule, and publish from Meadow&apos;s visual workspace.</p><ul role="list"><li>Stay hands-on from idea to delivery</li><li>Save drafts and review every destination</li><li>Keep your publishing calendar clear</li></ul></div>
             </article>
             <article className="usage-card usage-agents">
               <div className="usage-card-media usage-agent-visual" aria-label="AI agents connected to a Meadow draft">
@@ -228,13 +228,13 @@ export default function Landing({ onGetStarted }) {
                 <div className="usage-agent-row" aria-hidden="true">{AGENT_LOGOS.map((agent) => <span key={agent.name} className={agent.className} title={agent.name}><agent.Icon /></span>)}</div>
                 <div className="usage-agent-result"><span className="workflow-brand-dot" /><div><strong>Campaign draft ready</strong><small>4 destinations · waiting for review</small></div></div>
               </div>
-              <div className="usage-card-copy"><h3>For agent-assisted publishing</h3><p>Let a supported AI client prepare work through Meadow while you keep visibility and control.</p><ul><li>Use one private Meadow key</li><li>Create structured drafts through MCP</li><li>Review before anything is published</li></ul></div>
+              <div className="usage-card-copy"><h3>For agent-assisted publishing</h3><p>Let a supported AI client prepare work through Meadow while you keep visibility and control.</p><ul role="list"><li>Use one private Meadow key</li><li>Create structured drafts through MCP</li><li>Review before anything is published</li></ul></div>
             </article>
             <article className="usage-card usage-automation">
               <div className="usage-card-media usage-automation-visual">
                 <N8nAutomationBoard />
               </div>
-              <div className="usage-card-copy"><h3>For custom workflows</h3><p>Connect internal tools, scheduled jobs, or your own application to Meadow&apos;s publishing layer.</p><ul><li>Use one consistent API</li><li>Preview and validate destinations</li><li>Track delivery programmatically</li></ul></div>
+              <div className="usage-card-copy"><h3>For custom workflows</h3><p>Connect internal tools, scheduled jobs, or your own application to Meadow&apos;s publishing layer.</p><ul role="list"><li>Use one consistent API</li><li>Preview and validate destinations</li><li>Track delivery programmatically</li></ul></div>
             </article>
           </div>
         </section>
