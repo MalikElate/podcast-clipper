@@ -8,7 +8,6 @@ test("every dashboard view has a unique readable path", () => {
   assert.equal(dashboardPath("compose"), "/dashboard");
   assert.equal(dashboardPath("accounts"), "/dashboard/connections");
   assert.equal(dashboardPath("api-keys"), "/dashboard/api-keys");
-  assert.equal(dashboardPath("swipe"), "/dashboard/swipe");
   assert.equal(dashboardPath("dropper"), "/dashboard/dropper");
   assert.ok(paths.every(path => path === "/dashboard" || path.startsWith("/dashboard/")));
 });
@@ -19,6 +18,9 @@ test("dashboard paths and legacy OAuth links resolve to the correct view", () =>
   }
   assert.equal(dashboardView("/", "?view=accounts&connection=example"), "accounts");
   assert.equal(dashboardView("/dashboard/unknown"), "compose");
+  assert.equal(dashboardView("/dashboard/swipe"), "compose");
+  assert.equal(dashboardView("/dashboard", "?view=swipe"), "compose");
+  assert.equal(dashboardPath("swipe"), "/dashboard");
   assert.equal(dashboardView("/dashboard/clipping-studio"), "compose");
   assert.equal(dashboardView("/dashboard", "?view=clips"), "compose");
   assert.equal(isDashboardPath("/dashboard/posts/scheduled"), true);

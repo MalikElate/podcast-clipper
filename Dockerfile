@@ -12,7 +12,7 @@ RUN npm run build
 
 FROM node:22-bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg python3 ca-certificates tini build-essential && rm -rf /var/lib/apt/lists/*
-# Swipe or Push falls back to yt-dlp, pinned to the version Fast Transcriber runs.
+# Dropper falls back to yt-dlp, pinned to the version Fast Transcriber runs.
 ADD --chmod=755 https://github.com/yt-dlp/yt-dlp/releases/download/2026.08.19/yt-dlp_linux /usr/local/bin/yt-dlp
 RUN test "$(/usr/local/bin/yt-dlp --version)" = "2026.08.19"
 WORKDIR /app/backend

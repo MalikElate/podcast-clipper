@@ -14,8 +14,8 @@ const clone = value => JSON.parse(JSON.stringify(value));
 
 /** A finite, reviewed batch. Only due videos enter the publishing queue. */
 export class DropperService {
-  constructor({ store, projects, accounts, registry, posts, media, swipe, privacy, incomingDirectory, clock = () => Date.now(), enabled = true }) {
-    Object.assign(this, { store, projects, accounts, registry, posts, media, swipe, privacy, incomingDirectory, clock, enabled });
+  constructor({ store, projects, accounts, registry, posts, media, videoSources, privacy, incomingDirectory, clock = () => Date.now(), enabled = true }) {
+    Object.assign(this, { store, projects, accounts, registry, posts, media, videoSources, privacy, incomingDirectory, clock, enabled });
     this.decks = new Map();
     this.processing = new Map();
     this.stopVersions = new Map();
@@ -23,7 +23,7 @@ export class DropperService {
   }
 
   connectedAccounts(uid, projectId) {
-    return this.swipe.connectedAccounts(uid, projectId);
+    return this.videoSources.connectedAccounts(uid, projectId);
   }
 
   settings(uid, projectId) {
@@ -75,7 +75,7 @@ export class DropperService {
     const settings = this.settings(uid, projectId), cards = [], sources = [];
     const source = this.connectedAccounts(uid, projectId).find(account => account.id === settings.sourceAccountId);
     if (source) {
-      const { videos, error } = await this.swipe.sourceVideos(source);
+      const { videos, error } = await this.videoSources.sourceVideos(source);
       // Recheck the connection after remote video lookups.
       const current = this.store.get("account", source.id);
       invariant(current?.ownerUid === uid && current.projectId === projectId && current.status === "connected" && current.authorizationId === source.authorizationId, "The source connection changed. Refresh and try again.", { status: 409 });
@@ -87,7 +87,7 @@ export class DropperService {
       for (const video of videos) {
         const id = cardKey(source.id, video.externalId);
         if (decided.has(id) || copies.has(String(video.externalId))) continue;
-        cards.push({ id, accountId: source.id, accountName: source.label, platform: source.platform, ...video, pushable: Boolean(video.directUrl) || this.swipe.downloader.supports(source.platform) });
+        cards.push({ id, accountId: source.id, accountName: source.label, platform: source.platform, ...video, pushable: Boolean(video.directUrl) || this.videoSources.downloader.supports(source.platform) });
       }
     }
     cards.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
@@ -299,7 +299,7 @@ export class DropperService {
         update({ status: "downloading" });
         await this.store.flush?.();
         this.assertDispatchable(item);
-        const downloaded = await this.swipe.downloader.download({ url: item.source.url, platform: item.platform, directUrl: item.source.directUrl }, target, { maxBytes: this.media.maxBytes });
+        const downloaded = await this.videoSources.downloader.download({ url: item.source.url, platform: item.platform, directUrl: item.source.directUrl }, target, { maxBytes: this.media.maxBytes });
         this.assertDispatchable(item);
         ingested = await this.media.ingest(item.ownerUid, item.projectId, { path: target, originalname: downloaded.filename?.endsWith(".mp4") ? downloaded.filename : `${item.platform}-${String(item.externalId).slice(0, 40)}.mp4` }, { source: "dropper" });
         this.assertDispatchable(item);
@@ -333,6 +333,7 @@ export class DropperService {
 
   /** Cancel frozen work and erase every reference to a removed connection. */
   removeAccount(account) {
+    this.videoSources.invalidateAccount(account.id);
     const saved = this.store.get("dropperSettings", account.projectId);
     if (saved?.ownerUid === account.ownerUid) {
       const overrides = { ...saved.overrides }; delete overrides[account.id];
@@ -359,6 +360,7 @@ export class DropperService {
   }
 
   removeOwner(uid) {
+    this.videoSources.removeOwner(uid);
     for (const key of this.decks.keys()) if (key.startsWith(`${uid}:`)) this.decks.delete(key);
     for (const key of this.stopVersions.keys()) if (key.startsWith(`${uid}:`)) this.stopVersions.delete(key);
   }

@@ -10,7 +10,6 @@ import Accounts from "./Accounts.jsx";
 import PostsQueue from "./PostsQueue.jsx";
 import PostsCalendar from "./PostsCalendar.jsx";
 import Analytics from "./Analytics.jsx";
-import SwipeOrPush from "./SwipeOrPush.jsx";
 import AccountDropper from "./AccountDropper.jsx";
 import ConfigurationSettings from "./ConfigurationSettings.jsx";
 import ApiKeys from "./ApiKeys.jsx";
@@ -23,7 +22,6 @@ import "./bridge.css";
 
 export const modules = [
   { id: "compose", name: "Create post", icon: "compose" },
-  { id: "swipe", name: "Swipe or Push", icon: "swipe" },
   { id: "dropper", name: "Dropper", icon: "dropper" },
   { id: "accounts", name: "Connections", icon: "accounts" },
 ];
@@ -249,7 +247,6 @@ function ProjectWorkspace({ userId, project, config, view, navigate, compose, dr
     {view === "calendar" && <PostsCalendar {...common} onCreate={compose}/>}
     {["posts", "scheduled", "posted", "drafts", "failed"].includes(view) && <PostsQueue {...common} section={view} onCreate={() => compose()} onEditDraft={post => compose("", post.id)} onUpload={upload}/>}
     {view === "analytics" && <Analytics {...common}/>}
-    {view === "swipe" && <SwipeOrPush {...common} notify={notify} onAccounts={() => navigate("accounts")}/>}
     {view === "dropper" && <AccountDropper {...common} onAccounts={() => navigate("accounts")}/>}
     {showWelcome && <Modal title="Welcome to Meadow ✨" className="bridge-welcome-modal" onClose={dismissWelcome}>
       <p>Let&apos;s get your publishing workspace ready. Connect your first social account, then you can create, schedule, and publish from one place.</p>

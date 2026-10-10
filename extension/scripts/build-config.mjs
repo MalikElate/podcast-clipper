@@ -18,7 +18,7 @@ export function buildConfig() {
       } },
       react(),
       { name: "cross-posting-only", generateBundle(_options, bundle) {
-        const excluded = /\/(?:BridgeApp|SwipeOrPush|AccountDropper|ConnectAgent|productAnalytics|googleAnalytics|metaPixel|authToken)\.(?:jsx?|tsx?)$|\/node_modules\/(?:@clerk|posthog-js)\//;
+        const excluded = /\/(?:BridgeApp|AccountDropper|ConnectAgent|productAnalytics|googleAnalytics|metaPixel|authToken)\.(?:jsx?|tsx?)$|\/node_modules\/(?:@clerk|posthog-js)\//;
         for (const entry of Object.values(bundle)) {
           if (entry.type !== "chunk") continue;
           for (const id of Object.keys(entry.modules)) {

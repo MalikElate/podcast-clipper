@@ -1,4 +1,4 @@
-/** Shared video-post preparation for the reviewed Swipe and Dropper queues. */
+/** Video-post preparation for reviewed Dropper batches. */
 export const clipVideoText = (text, limit) => {
   const characters = [...String(text || "")];
   return characters.length > limit ? `${characters.slice(0, limit - 1).join("").trimEnd()}…` : characters.join("");

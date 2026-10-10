@@ -1,6 +1,6 @@
 # FindMeadow for Chrome
 
-A Manifest V3 extension for cross-posting only. Clicking its toolbar icon opens a persistent, packaged composer tab. It reuses Meadow's existing post editor, format checks, destination settings, preview-before-submission flow, and delivery statuses. It does not include the wider dashboard, clipping tools, swipe actions, or waterfall.
+A Manifest V3 extension for cross-posting only. Clicking its toolbar icon opens a persistent, packaged composer tab. It reuses Meadow's existing post editor, format checks, destination settings, preview-before-submission flow, and delivery statuses. It does not include the wider dashboard, clipping tools, Dropper, or waterfall.
 
 ## Build
 

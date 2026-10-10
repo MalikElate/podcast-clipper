@@ -36,7 +36,7 @@ test("sign-in returns only to Meadow pages, such as the OAuth consent screen", (
   const app = location("app.findmeadow.com");
   const consent = "https://app.findmeadow.com/oauth-consent?client_id=https%3A%2F%2Fchatgpt.com%2Foauth%2Fcodex%2Fclient.json&scope=meadow%3Aread&state=abc";
   assert.equal(safeReturnPath(consent, app), "/oauth-consent?client_id=https%3A%2F%2Fchatgpt.com%2Foauth%2Fcodex%2Fclient.json&scope=meadow%3Aread&state=abc");
-  assert.equal(safeReturnPath("/dashboard/swipe#top", app), "/dashboard/swipe#top");
+  assert.equal(safeReturnPath("/dashboard/dropper#top", app), "/dashboard/dropper#top");
   for (const unsafe of ["https://evil.example/oauth-consent", "//evil.example/x", "javascript:alert(1)", "https://findmeadow.com/", "/sign-in?redirect_url=/dashboard", "https://app.findmeadow.com/sign-up", "", null, undefined]) {
     assert.equal(safeReturnPath(unsafe, app), null, String(unsafe));
   }
