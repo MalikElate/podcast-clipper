@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { SignIn, SignUp } from "@clerk/react";
 import { clerkAuthRedirectProps } from "../authRedirects.js";
-import { handleSignupTab, SIGNUP_APPEARANCE, syncSignupLayout } from "../signupLayout.js";
+import { handleSignupTab, SIGNUP_APPEARANCE, syncSigninLayout, syncSignupLayout } from "../signupLayout.js";
 import {
   buildSignupConsentMetadata,
   preventSignupWithoutConsent,
@@ -145,10 +145,40 @@ function SignupAuth({ redirectUrl }) {
   );
 }
 
+function SigninAuth({ redirectUrl }) {
+  const authRootRef = useRef(null);
+  useEffect(() => {
+    const root = authRootRef.current;
+    const sync = () => syncSigninLayout(root);
+    const observer = new MutationObserver(sync);
+    observer.observe(root, {
+      childList: true, subtree: true, attributes: true,
+      attributeFilter: ["value", "aria-hidden", "tabindex"],
+    });
+    sync();
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={authRootRef}
+      className="signup-auth signin-auth"
+      onInputCapture={() => syncSigninLayout(authRootRef.current)}
+      onChangeCapture={() => syncSigninLayout(authRootRef.current)}
+      onFocusCapture={() => syncSigninLayout(authRootRef.current)}
+      onKeyDownCapture={(event) => handleSignupTab(event, authRootRef.current)}
+    >
+      <div className="signup-auth-form">
+        <SignIn {...clerkAuthRedirectProps("sign-in", redirectUrl)} appearance={SIGNUP_APPEARANCE} />
+      </div>
+    </div>
+  );
+}
+
 // Keep authentication owned by Clerk so its native sign-in and sign-up flow,
 // including headings, provider buttons, and recovery screens, remains intact.
 export default function Auth({ redirectUrl, mode = "sign-in" }) {
   return mode === "sign-up"
     ? <SignupAuth redirectUrl={redirectUrl} />
-    : <SignIn {...clerkAuthRedirectProps("sign-in", redirectUrl)} />;
+    : <SigninAuth redirectUrl={redirectUrl} />;
 }

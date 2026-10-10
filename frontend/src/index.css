@@ -376,7 +376,6 @@ button:not(:where(.cl-rootBox *)) {
 
 /* Flatten layout wrappers, leaving Clerk's form, inputs and handlers intact. */
 .signup-auth[data-signup-entry="true"] .cl-main {
-  display: flex;
   flex-direction: column;
   reading-flow: flex-visual;
 }
@@ -386,7 +385,8 @@ button:not(:where(.cl-rootBox *)) {
   display: contents;
 }
 
-.signup-auth[data-signup-entry="true"] .cl-formFieldRow__emailAddress {
+.signup-auth[data-signup-entry="true"] .cl-formFieldRow__emailAddress,
+.signup-auth[data-signup-entry="true"] .cl-formFieldRow__identifier {
   order: 0;
 }
 
@@ -396,6 +396,23 @@ button:not(:where(.cl-rootBox *)) {
 
 .signup-auth[data-signup-entry="true"] .cl-socialButtonsRoot {
   order: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Clerk may wrap the last-used provider separately. Flatten both groups so
+   Facebook remains first even when Google was used on the previous login. */
+.signup-auth[data-signup-entry="true"] .cl-socialButtons {
+  display: contents;
+}
+
+.signup-auth[data-signup-entry="true"] .cl-socialButtonsBlockButton {
+  width: 100%;
+}
+
+.signup-auth[data-signup-entry="true"] .cl-socialButtonsBlockButton__facebook {
+  order: -1;
 }
 
 .signup-auth[data-signup-entry="true"] .cl-formFieldRow__password {
@@ -411,8 +428,17 @@ button:not(:where(.cl-rootBox *)) {
 }
 
 /* Also cover the first paint and browser autofill before an input event fires. */
-.signup-auth:not([data-email-entered="true"]):has(.cl-formFieldRow__emailAddress):not(:has(.cl-formFieldInput__emailAddress:autofill)) .cl-formFieldRow__password {
+.signup-auth:not([data-email-entered="true"]):has(:is(.cl-formFieldRow__emailAddress, .cl-formFieldRow__identifier)):not(:has(:is(.cl-formFieldInput__emailAddress, .cl-formFieldInput__identifier):autofill)) .cl-formFieldRow__password {
   display: none;
+}
+
+.signin-auth[data-signup-entry="true"][data-email-entered="true"] .cl-formFieldRow__password {
+  position: static;
+  opacity: 1;
+  height: auto;
+  overflow: visible;
+  pointer-events: auto;
+  margin-top: 0;
 }
 
 @media (max-width: 720px) {
