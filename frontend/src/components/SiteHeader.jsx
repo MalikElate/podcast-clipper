@@ -56,7 +56,7 @@ export default function SiteHeader({ className = "", homeHref = marketingHref("/
         if (event.target.closest("a, button")) setMenuOpen(false);
       }}>
         <nav className="landing-nav" aria-label="Main navigation">
-          <a href={marketingHref("/#ways-to-use")}>API/MCP</a>
+          <a href={marketingHref("/#ways-to-use")}><strong>API/MCP</strong></a>
           <a className="site-human-link" href={CONTACT_PHONE_HREF}><strong>{CONTACT_PHONE_DISPLAY}</strong></a>
         </nav>
         <div className="landing-actions">
