@@ -1,0 +1,20 @@
+.bridge-page-skeleton { max-width: 720px; padding-block: 12px; }
+.bridge-skeleton-list { display: grid; gap: 14px; }
+.bridge-skeleton-row { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 18px; }
+.bridge-skeleton-block { display: block; border-radius: 3px; background: #d4d8d0; animation: bridge-skeleton-pulse 1.8s ease-in-out infinite; }
+.bridge-skeleton-image { height: 94px; }
+.bridge-skeleton-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding-top: 8px; }
+.bridge-skeleton-line { width: 70%; max-width: 280px; height: 8px; border-radius: 1px; }
+.bridge-skeleton-line.wide { width: 84%; max-width: 330px; }
+.bridge-skeleton-line.short { width: 32%; max-width: 130px; }
+@keyframes bridge-skeleton-pulse { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+@media (max-width: 560px) {
+  .bridge-skeleton-row { grid-template-columns: 80px minmax(0, 1fr); gap: 14px; }
+  .bridge-skeleton-image { height: 76px; }
+  .bridge-skeleton-line { width: 82%; }
+  .bridge-skeleton-line.wide { width: 100%; }
+  .bridge-skeleton-line.short { width: 42%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bridge-skeleton-block { animation: none; }
+}
