@@ -161,8 +161,8 @@ test("composer destinations remain usable during uploads and reflect connection 
     await t.test("one upload zone shows supported types and leaves caption-only destinations available", () => {
       const html = render({ unifiedUpload: true, post: post({ format: "auto" }), accounts: [account("Text account"), account("Video channel", "connected", "youtube")] });
       assert.match(html, /bridge-unified-upload-zone/);
-      assert.match(visibleText(html), /Drag &amp; Drop JPG\/JPEG, PNG, WebP, GIF, MP4, MOV, WebM, PDF, DOCX, and PPTX OR Choose File/);
-      assert.doesNotMatch(visibleText(html), /MP3|WAV/);
+      assert.match(visibleText(html), /Drag &amp; Drop JPG\/JPEG, PNG, WebP, GIF, MP4, MOV, WebM, and PDF OR Choose File/);
+      assert.doesNotMatch(visibleText(html), /MP3|WAV|DOCX|PPTX/);
       assert.deepEqual(choiceLabels(html).map(value => value.match(/<strong>(.*?)<\/strong>/)[1]), ["Text account"]);
     });
 

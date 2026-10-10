@@ -8,11 +8,9 @@ export const mediaMimeByExtension = Object.freeze({
   jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif",
   mp4: "video/mp4", mov: "video/quicktime", webm: "video/webm",
   pdf: "application/pdf",
-  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 });
 export const acceptedMediaMimes = new Set(Object.values(mediaMimeByExtension));
-export const unsupportedMediaMessage = "This file type cannot be posted. Upload a JPG, PNG, WebP, GIF, MP4, MOV, WebM, PDF, DOCX, or PPTX file.";
+export const unsupportedMediaMessage = "This file type cannot be posted. Upload a JPG/JPEG, PNG, WebP, GIF, MP4, MOV, WebM, or PDF file.";
 
 /** Reject an unsupported file before issuing either an R2 or API upload grant. */
 export async function validateUploadRequest(input = {}, maxBytes) {
@@ -32,10 +30,7 @@ export async function validateUploadRequest(input = {}, maxBytes) {
     "The selected file could not be checked. Select it again.", { code: "upload_sample_invalid" });
   let detected;
   try { detected = await fileTypeFromBuffer(prefix); } catch { /* An incomplete or malformed file is unsupported. */ }
-  // OpenXML's type metadata can occur after the first 64 KiB. A generic ZIP
-  // preview is provisional; the full-file detector must identify DOCX/PPTX.
-  const provisionalOpenXml = ["docx", "pptx"].includes(extension) && detected?.mime === "application/zip";
-  invariant(detected?.mime === expectedMime || provisionalOpenXml,
+  invariant(detected?.mime === expectedMime,
     unsupportedMediaMessage, { status: 415, code: "unsupported_media" });
   return { expectedMime };
 }

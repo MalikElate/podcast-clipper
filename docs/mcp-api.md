@@ -52,7 +52,7 @@ Deployment alone does not configure the Clerk OAuth client or complete marketpla
 | `get_post` | Returns one post by ID, with the status of each delivery. |
 | `create_draft` | Saves one non-empty draft without publishing it. A stable `requestId` makes retries idempotent. |
 | `get_account_options` | Fetches one account's current publishing options from its platform: TikTok privacy choices, interaction limits and permissions, Pinterest boards, and any known posting allowance. |
-| `upload_media` | Adds an image, video, PDF, Word or PowerPoint file to a project and returns its media ID. |
+| `upload_media` | Adds an image, video, or PDF file to a project and returns its media ID. |
 | `create_upload_url` | Returns a one-time, 30-minute link for uploading one large local file. |
 | `preview_post` | Validates a post against every selected account without queueing it. |
 | `publish_post` | Publishes a post now or schedules it. A stable `requestId` makes retries idempotent. |

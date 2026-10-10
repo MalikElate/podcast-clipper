@@ -2,7 +2,7 @@
 
 Meadow connects directly to each platform's API. Provider access depends on the application's approved products/scopes and the selected account's eligibility. Features available only in a platform's own app are not implied by an adapter entry. Live publication has not been verified with production credentials.
 
-The following is the implemented Meadow capability set. Defaults live in `backend/src/bridge/platforms/catalog.js`; dynamic account information is checked again before delivery. The media library accepts JPEG, PNG, WebP, GIF, MP4, MOV, WebM, PDF, Word and PowerPoint files. Delivery adapters convert images to JPEG and videos to H.264 MP4 where needed. GIF animation is preserved by the X adapter; other image adapters send a still image. The default server upload limit is 1 GiB regardless of a platform's higher limit.
+The following is the implemented Meadow capability set. Defaults live in `backend/src/bridge/platforms/catalog.js`; dynamic account information is checked again before delivery. New media uploads accept JPEG, PNG, WebP, GIF, MP4, MOV, WebM, and PDF files. PDF is the only document type accepted for new uploads; previously uploaded documents remain available for existing drafts and scheduled posts. Delivery adapters convert images to JPEG and videos to H.264 MP4 where needed. GIF animation is preserved by the X adapter; other image adapters send a still image. The default server upload limit is 1 GiB regardless of a platform's higher limit.
 
 | Platform ID | Eligible destination | Implemented publishing formats |
 | --- | --- | --- |

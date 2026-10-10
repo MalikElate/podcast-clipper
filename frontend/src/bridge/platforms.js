@@ -63,7 +63,7 @@ export const POST_TYPES = [
   { id: "image", label: "Image", description: "One picture" },
   { id: "video", label: "Video", description: "One video" },
   { id: "carousel", label: "Carousel", description: "2 or more pictures or videos" },
-  { id: "document", label: "Document", description: "One PDF, DOCX, or PPTX file" },
+  { id: "document", label: "Document", description: "One PDF file" },
 ];
 export const MAX_MEDIA_BY_TYPE = { text: 0, image: 1, video: 1, carousel: 35, document: 1, reel: 1, story: 1 };
 
