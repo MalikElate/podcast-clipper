@@ -1,6 +1,6 @@
 # Free TikTok roast
 
-Public page: `/tiktok-roast`. Public endpoint: `POST /api/tools/tiktok-roast` with JSON `{ "handle": "creator" }`.
+Public page: `/tools/tiktok-roast/` (the former `/tiktok-roast` URL permanently redirects with its query parameters preserved). Public endpoint: `POST /api/tools/tiktok-roast` with JSON `{ "handle": "creator" }`.
 
 The edge Worker reads TikTok's public creator embed and extracts only the matching profile and up to ten public posts. The profile view uses the returned avatar, bio, verification badge, public account counts, post covers, and view counts. Image URLs must be HTTPS on TikTok/CDN domains; missing metrics stay missing. It does not use connected accounts, OAuth credentials, private content, or video/audio downloads. Public counts are display-only and do not affect scoring. TikTok can change or restrict the embed; unavailable data returns an honest error, never a fabricated report.
 

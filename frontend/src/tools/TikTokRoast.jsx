@@ -32,7 +32,7 @@ async function saveImage(result) {
   c.fillStyle='#52614e';c.font='30px Arial';c.fillText('/100 · caption roast score',70,434);
   c.fillStyle='#26382d';c.font='bold 38px Arial';wrapCanvas(c,result.roast,70,540,1050,53);
   c.font='23px Arial';c.fillStyle='#66715f';c.fillText(`${result.posts.length} public captions sampled · Videos not analyzed`,70,748);
-  c.fillText('Roast yours: findmeadow.com/tiktok-roast',70,810);
+  c.fillText('Roast yours: findmeadow.com/tools/tiktok-roast/',70,810);
   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
   if (!blob) throw new Error('The image could not be created. Try copying the result instead.');
   const url=URL.createObjectURL(blob), a=document.createElement('a');a.href=url;a.download=`meadow-tiktok-roast-${result.profile.handle}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -70,7 +70,7 @@ export default function TikTokRoast() {
   }
   async function share(kind) {
     setNotice('');
-    const text=`Meadow gave @${result.profile.handle} a ${result.score}/100 caption roast score. “${result.roast}”\nBased on ${result.posts.length} public captions, not the videos.\nhttps://findmeadow.com/tiktok-roast?handle=${encodeURIComponent(result.profile.handle)}`;
+    const text=`Meadow gave @${result.profile.handle} a ${result.score}/100 caption roast score. “${result.roast}”\nBased on ${result.posts.length} public captions, not the videos.\nhttps://findmeadow.com/tools/tiktok-roast/?handle=${encodeURIComponent(result.profile.handle)}`;
     try {
       if(kind==='image'){await saveImage(result);setNotice('Your roast card is ready to save.');}
       else {await navigator.clipboard.writeText(text);setNotice('Roast and link copied.');}

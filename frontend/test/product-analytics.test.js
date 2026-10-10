@@ -42,6 +42,7 @@ test("callback secrets, post IDs, raw content, and old person properties cannot 
   assert.equal(analyticsPath("/sign-in"), "/sign-in");
   assert.equal(analyticsPath("/oauth-consent"), "/oauth-consent");
   assert.equal(analyticsPath("/sign-up/complete"), "/sign-up/complete");
+  assert.equal(cleanAnalyticsUrl("https://findmeadow.com/tools/tiktok-roast/?handle=private.creator"), "https://findmeadow.com/tools/tiktok-roast");
   assert.equal(cleanAnalyticsUrl("https://attacker.example/private"), undefined);
   assert.equal(cleanAnalyticsUrl("https://name:secret@findmeadow.com/privacy?secret=yes"), "https://findmeadow.com/privacy");
   for (const event of ["$identify", "$snapshot", "$autocapture", "$exception"]) assert.equal(sanitizeAnalyticsEvent({ event, properties: {} }), null);

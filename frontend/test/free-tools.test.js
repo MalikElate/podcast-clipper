@@ -81,7 +81,10 @@ test('all ten tools and guides have unique public routes, metadata, and working 
   assert.equal(new Set(FREE_TOOL_PAGES.map(page => page.path)).size, FREE_TOOL_PAGES.length);
   assert.equal(new Set(FREE_TOOL_PAGES.map(page => page.title)).size, FREE_TOOL_PAGES.length);
   for (const page of FREE_TOOL_PAGES) {
+    assert.match(page.path, /^\/tools(?:\/|$)/);
+    assert.equal(findFreeToolPage(page.path), page);
     assert.equal(findFreeToolPage(`${page.path}/`), page);
+    assert.equal(findFreeToolPage(page.path.replace(/^\/tools/, '/free-tools')), undefined);
     assert.ok(page.description.length >= 70);
   }
   for (const preset of CROP_PRESETS) assert.ok(preset.width <= 4096 && preset.height <= 4096 && preset.width >= 100 && preset.height >= 100);

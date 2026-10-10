@@ -23,6 +23,7 @@ import { captureProductEvent } from "./productAnalytics.js";
 import { cleanSignupCallbackReferrer, queueGoogleSignup } from "./googleAnalytics.js";
 import { getPlatformUseCaseBySlug } from "./platformUseCases.js";
 import { findFreeToolPage } from "./tools/freeToolsCatalog.js";
+import { legacyToolsPath } from "../../backend/src/bridge/shared/publicToolRoutes.js";
 import { authContinuation } from "./authRedirects.js";
 const loadBridgeApp = () => import("./bridge/BridgeApp.jsx");
 const BridgeApp = lazy(loadBridgeApp);
@@ -30,6 +31,8 @@ const FreeToolsPage = lazy(() => import("./tools/FreeToolsPage.jsx"));
 
 export default function App() {
   const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
+  const toolsRedirect = legacyToolsPath(window.location.href);
+  if (toolsRedirect) return <DomainRedirect href={toolsRedirect} />;
   const surface = siteSurface(window.location);
   const localMarketingPreview = isLocalMarketingPreview(window.location, import.meta.env.DEV);
   const isTermsPage = pathname === "/terms" || pathname === "/terms-of-service";
@@ -54,7 +57,7 @@ export default function App() {
     return <OAuthConsentSurface />;
   }
   if (pathname === "/sign-up/complete") return <SignupComplete />;
-  if (pathname === "/tiktok-roast") return <TikTokRoast />;
+  if (pathname === "/tools/tiktok-roast") return <TikTokRoast />;
   if (pathname === "/developers") return <PublicDevelopersPage onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;
   if (pathname === "/contact") return <PublicContactPage onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;
   const freeToolPage = findFreeToolPage(pathname);

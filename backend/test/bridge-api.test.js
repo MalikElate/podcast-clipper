@@ -28,6 +28,23 @@ async function setup(t, { localPreview = false, auth = true, stripe, webhookSend
 }
 const pdf = Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF");
 
+test("self-hosted public tools permanently redirect without losing the tool path or query", async t => {
+  const h = await setup(t, { envOverrides: { BRIDGE_SERVE_FRONTEND: "true" } });
+  for (const method of ["GET", "HEAD"]) {
+    for (const path of ["/free-tools", "/free-tools/", "/free-tools/utm-builder", "/free-tools/media-size-guide/instagram-image-sizes/"]) {
+      const response = await fetch(`${h.base}${path}?preset=one&utm_campaign=a%20b`, { method, redirect: "manual" });
+      assert.equal(response.status, 308, `${method} ${path}`);
+      assert.equal(response.headers.get("location"), `${path.replace(/^\/free-tools/, "/tools").replace(/\/+$/, "")}/?preset=one&utm_campaign=a%20b`);
+    }
+  }
+  for (const path of ["/tiktok-roast", "/tiktok-roast/"]) {
+    const response = await fetch(`${h.base}${path}?handle=meadow.creator`, { redirect: "manual" });
+    assert.equal(response.status, 308);
+    assert.equal(response.headers.get("location"), "/tools/tiktok-roast/?handle=meadow.creator");
+  }
+  assert.equal((await h.request("/api/free-tools/generate", { user: null })).status, 404);
+});
+
 test("public pricing trusts the visitor country only behind an opted-in edge or private Cloudflare container", async t => {
   const untrusted = await setup(t);
   const ignored = await untrusted.request("/api/pricing", { user: null, headers: { "x-meadow-visitor-country": "CM" } });

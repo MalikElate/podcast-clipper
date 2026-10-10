@@ -1,6 +1,6 @@
 // `Free <name> · Meadow` suits a tool whose name is already what people search
 // for. A tool competing on a broader phrase passes its own title instead.
-const tool = (slug, name, category, description, intro, sections, faq, title) => ({ slug, path: `/free-tools/${slug}`, name, category, title: title || `Free ${name} · Meadow`, description, intro, sections, faq });
+const tool = (slug, name, category, description, intro, sections, faq, title) => ({ slug, path: `/tools/${slug}`, name, category, title: title || `Free ${name} · Meadow`, description, intro, sections, faq });
 
 export const FREE_TOOLS = [
   tool('utm-builder', 'UTM Builder', 'Planning',
@@ -65,7 +65,7 @@ export const MEDIA_GUIDES = [
   { slug: 'facebook-image-sizes', platform: 'Facebook', intro: 'Create square feed images, portrait artwork, and full-screen Story compositions for Facebook.', note: 'Use these as working canvases, then preview the exact placement before publishing. Feed, Story, Reel, and ad placements may crop the same file differently. A vertical canvas needs extra space around text for interface elements.', source: 'https://www.facebook.com/business/ads-guide/image', sourceLabel: 'Meta image placement guide', rows: [['Square feed canvas',1080,1080,'1:1'],['Portrait feed canvas',1080,1350,'4:5'],['Story / Reel canvas',1080,1920,'9:16'],['Landscape image canvas',1200,630,'1.91:1']] },
   { slug: 'x-image-sizes', platform: 'X', intro: 'Prepare landscape or square post images and a wide profile header for X.', note: 'A post can appear in a feed, a detail view, or a multi-image layout, each with a different crop. Keep the important content near the middle and check it on a phone. Profile header artwork also needs room for the avatar overlap.', source: 'https://help.x.com/en/managing-your-account/common-issues-when-uploading-profile-photo', sourceLabel: 'X profile image guidance', rows: [['Landscape post canvas',1600,900,'16:9'],['Square post canvas',1080,1080,'1:1'],['Profile header',1500,500,'3:1']] },
   { slug: 'pinterest-image-sizes', platform: 'Pinterest', intro: 'Build a vertical Pin that gives the image room to lead and keeps your headline readable.', note: 'Pinterest recommends a 2:3 ratio, such as 1000 × 1500 pixels, for standard image creative. Taller images may be cut off in feeds. Use a concise text overlay with enough contrast, and keep branding visible without covering the subject.', source: 'https://business.pinterest.com/creative-best-practices/', sourceLabel: 'Pinterest creative guidance', rows: [['Standard Pin',1000,1500,'2:3'],['Square image canvas',1000,1000,'1:1'],['Vertical video canvas',1080,1920,'9:16']] },
-].map(guide => ({ ...guide, path: `/free-tools/media-size-guide/${guide.slug}`, name: `${guide.platform} Media Sizes`, title: `${guide.platform} Image and Video Size Guide · Meadow`, description: `${guide.intro} Dimensions, ratios and free crop presets.` }));
+].map(guide => ({ ...guide, path: `/tools/media-size-guide/${guide.slug}`, name: `${guide.platform} Media Sizes`, title: `${guide.platform} Image and Video Size Guide · Meadow`, description: `${guide.intro} Dimensions, ratios and free crop presets.` }));
 
 // A tool prepares something that still has to be posted somewhere, so each one
 // points at the page that schedules it. Tools with no single destination point
@@ -81,7 +81,7 @@ export function schedulerFor(page) {
 }
 
 export const CROP_PRESETS = MEDIA_GUIDES.flatMap(guide => guide.rows.map(([label, width, height, ratio], index) => ({ id: `${guide.slug}-${index}`, label: `${guide.platform} · ${label}`, width, height, ratio })));
-export const TOOLS_HUB = { path: '/free-tools', name: 'Free Social Media Tools', title: 'Free Social Media Tools for Creators · Meadow', description: 'Free tools for better social posts: crop images, split Instagram grids, build UTM links, format text, check titles and generate captions and tags.' };
-export const GUIDES_HUB = { path: '/free-tools/media-size-guide', name: 'Social Media Size Guide', title: 'Social Media Image and Video Size Guide · Meadow', description: 'Find practical image dimensions and video canvas sizes for Instagram, TikTok, YouTube, LinkedIn, Facebook, X, and Pinterest, with free crop presets.' };
+export const TOOLS_HUB = { path: '/tools', name: 'Free Social Media Tools', title: 'Free Social Media Tools for Creators · Meadow', description: 'Free tools for better social posts: crop images, split Instagram grids, build UTM links, format text, check titles and generate captions and tags.' };
+export const GUIDES_HUB = { path: '/tools/media-size-guide', name: 'Social Media Size Guide', title: 'Social Media Image and Video Size Guide · Meadow', description: 'Find practical image dimensions and video canvas sizes for Instagram, TikTok, YouTube, LinkedIn, Facebook, X, and Pinterest, with free crop presets.' };
 export const FREE_TOOL_PAGES = [TOOLS_HUB, ...FREE_TOOLS, GUIDES_HUB, ...MEDIA_GUIDES];
 export const findFreeToolPage = pathname => FREE_TOOL_PAGES.find(page => page.path === pathname.replace(/\/+$/, ''));
