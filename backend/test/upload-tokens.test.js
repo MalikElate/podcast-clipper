@@ -8,6 +8,11 @@ import { BridgeApplication } from "../src/bridge/BridgeApplication.js";
 import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 
 const pdf = Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF");
+const sampleFor = bytes => {
+  const sample = Buffer.alloc(Math.min(bytes, 64 * 1024));
+  pdf.copy(sample);
+  return sample.toString("base64");
+};
 
 async function setup(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "meadow-upload-token-"));
@@ -33,7 +38,7 @@ async function setup(t) {
     return fetch(base + endpoint, { method, headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body && !form ? { "Content-Type": "application/json" } : {}), ...(cookie ? { Cookie: cookie } : {}) }, ...(body ? { body: form ? body : JSON.stringify(body) } : {}) });
   }
   async function issue(bytes = pdf.length) {
-    const response = await request(`${root}/media/uploads`, { method: "POST", body: { bytes } });
+    const response = await request(`${root}/media/uploads`, { method: "POST", body: { bytes, filename: "document.pdf", sample: sampleFor(bytes) } });
     assert.equal(response.status, 201);
     assert.equal(response.headers.get("cache-control"), "no-store");
     return response.json();
@@ -125,6 +130,31 @@ test("upload grants enforce declared bytes and remove rejected temporary files",
   assert.equal((await h.upload(short.uploadToken)).status, 401);
 });
 
+test("upload grants reject a different supported file type after preflight", async t => {
+  const h = await setup(t), ticket = await h.issue();
+  const jpeg = Buffer.alloc(pdf.length);
+  jpeg.set([0xff, 0xd8, 0xff, 0xe0]);
+  const response = await h.upload(ticket.uploadToken, { bytes: jpeg });
+  assert.equal(response.status, 415);
+  assert.equal((await response.json()).code, "unsupported_media");
+  assert.deepEqual(h.application.store.list("media"), []);
+  assert.deepEqual(fs.readdirSync(path.join(h.dir, "incoming")), []);
+});
+
+test("legacy bytes-only token grants remain usable and still reject unsupported file bytes", async t => {
+  const h = await setup(t);
+  const issueLegacy = async () => {
+    const response = await h.request(`${h.root}/media/uploads`, { method: "POST", body: { bytes: pdf.length } });
+    assert.equal(response.status, 201);
+    return (await response.json()).uploadToken;
+  };
+  assert.equal((await h.upload(await issueLegacy())).status, 201);
+  const rejected = await h.upload(await issueLegacy(), { bytes: Buffer.alloc(pdf.length) });
+  assert.equal(rejected.status, 415);
+  assert.equal((await rejected.json()).code, "unsupported_media");
+  assert.equal(h.application.store.list("media").length, 1);
+});
+
 test("account deletion immediately blocks upload grants and owner removal revokes them", async t => {
   const h = await setup(t), ticket = await h.issue();
   h.application.privacy.requestAccount("alice", { confirmation: "DELETE" });
@@ -133,7 +163,7 @@ test("account deletion immediately blocks upload grants and owner removal revoke
   assert.equal(h.application.store.list("media").length, 0);
 
   const otherRoot = `/projects/${h.other.id}`;
-  const otherTicketResponse = await h.request(`${otherRoot}/media/uploads`, { method: "POST", token: "bob", body: { bytes: pdf.length } });
+  const otherTicketResponse = await h.request(`${otherRoot}/media/uploads`, { method: "POST", token: "bob", body: { bytes: pdf.length, filename: "document.pdf", sample: sampleFor(pdf.length) } });
   assert.equal(otherTicketResponse.status, 201);
   const otherTicket = await otherTicketResponse.json();
   h.application.store.removeOwner("bob");

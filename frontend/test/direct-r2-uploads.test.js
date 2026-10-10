@@ -4,6 +4,8 @@ import { handleDirectUpload, stagingKey, directUploadMaxBytes } from "../../clou
 import { BridgeApi } from "../src/bridge/BridgeApi.js";
 import { uploadWithProgress } from "../src/bridge/uploadTransport.js";
 
+const mp4Fixture = "\0\0\0\x18ftypisom\0\0\0\0isom";
+
 const id = "c2ff249b-a63b-4287-831e-5aa68f615e16", key = `${id}.upload`, containerId = "a".repeat(64);
 const context = { containerId }, objects = () => new Map();
 const config = map => ({ R2_UPLOAD_ACCOUNT_ID: "b".repeat(32), R2_UPLOAD_BUCKET: "meadow-media", R2_UPLOAD_ACCESS_KEY_ID: "test-access", R2_UPLOAD_SECRET_ACCESS_KEY: "test-secret", MEADOW_MEDIA: { head: async key => map.get(key), delete: async key => map.delete(key) } });
@@ -60,7 +62,7 @@ test("missing, truncated and failed copies never acknowledge an uploaded file", 
 
 const ticket = { mediaId: id, uploadUrl: `https://${"b".repeat(32)}.r2.cloudflarestorage.com/meadow-media/direct-uploads/file?X-Amz-Signature=fixture`, method: "PUT" };
 test("browser uploads the raw file without session credentials, then waits for verified media", async () => {
-  const file = new File(["video"], "video.mp4"), stages = [], paths = [];
+  const file = new File([mp4Fixture], "video.mp4"), stages = [], paths = [];
   let transfers = 0, polls = 0;
   const api = new BridgeApi({ getToken: async () => "session", track: () => {}, waitForPreparation: async () => {}, fetcher: async (path, options) => {
     paths.push(path);
@@ -92,7 +94,7 @@ test("failed direct transfers and invalid ticket hosts never send a second copy"
       if (!path.endsWith("/uploads")) completions++;
       return Response.json({ directUpload: { ...ticket, ...(invalid ? { uploadUrl: "https://attacker.example/upload" } : {}) } });
     }, uploader: async () => { transfers++; return { ok: false, status: 403 }; } });
-    await assert.rejects(api.uploadMedia("project", new File(["file"], "file.mp4")));
+    await assert.rejects(api.uploadMedia("project", new File([mp4Fixture], "file.mp4")));
     assert.equal(transfers, invalid ? 0 : 1);
     assert.equal(completions, 0);
   }
@@ -105,7 +107,7 @@ test("lost completion acknowledgements recover by polling without reuploading", 
     if (path.endsWith("/complete")) { completions++; throw new TypeError("dropped acknowledgement"); }
     return Response.json({ media: { id, status: "ready" } });
   }, uploader: async () => { transfers++; return { ok: true }; } });
-  assert.equal((await api.uploadMedia("project", new File(["file"], "file.mp4"))).media.status, "ready");
+  assert.equal((await api.uploadMedia("project", new File([mp4Fixture], "file.mp4"))).media.status, "ready");
   assert.equal(transfers, 1); assert.equal(completions, 1);
 });
 
@@ -113,13 +115,13 @@ test("preparation failure and cancellation are visible, never acknowledged as re
   for (const cancel of [false, true]) {
     const controller = new AbortController();
     const api = new BridgeApi({ getToken: async () => "session", track: () => {}, waitForPreparation: async () => controller.abort(), fetcher: async path => Response.json(path.endsWith("/uploads") ? { directUpload: ticket } : { media: { id, status: cancel ? "processing" : "failed", error: "Unsupported video" } }), uploader: async () => ({ ok: true }) });
-    await assert.rejects(api.uploadMedia("project", new File(["file"], "file.mp4"), { signal: controller.signal }), cancel ? { name: "AbortError" } : /Unsupported video/);
+    await assert.rejects(api.uploadMedia("project", new File([mp4Fixture], "file.mp4"), { signal: controller.signal }), cancel ? { name: "AbortError" } : /Unsupported video/);
   }
 });
 
 test("XHR sends one raw PUT with progress and no authorization header", async () => {
   const xhr = { upload: {}, headers: {}, open(method, url) { this.method = method; this.url = url; }, setRequestHeader(name, value) { this.headers[name] = value; }, send(body) { this.body = body; } };
-  const file = new File(["file"], "file.mp4");
+  const file = new File([mp4Fixture], "file.mp4");
   const result = uploadWithProgress(ticket.uploadUrl, { method: "PUT", body: file, headers: ticket.headers || { "Content-Type": "application/octet-stream", "If-None-Match": "*" }, createRequest: () => xhr });
   assert.equal(xhr.method, "PUT"); assert.equal(xhr.body, file); assert.equal(xhr.headers.Authorization, undefined);
   xhr.status = 200; xhr.response = null; xhr.onload();

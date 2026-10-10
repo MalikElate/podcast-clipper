@@ -57,20 +57,26 @@ export function unsupportedReason(capability, media) {
   return formats.includes(format) ? null : `${name} can't publish ${FORMAT_LABELS[format]?.toLowerCase() || format} posts through Meadow`;
 }
 
-// The post types a user picks before writing. Each one only lists accounts whose platform can publish it.
+// Labels for the format inferred from selected media, including saved drafts.
 export const POST_TYPES = [
   { id: "text", label: "Text", description: "Words only, no media" },
   { id: "image", label: "Image", description: "One picture" },
   { id: "video", label: "Video", description: "One video" },
   { id: "carousel", label: "Carousel", description: "2 or more pictures or videos" },
+  { id: "document", label: "Document", description: "One PDF, DOCX, or PPTX file" },
 ];
-export const ACCEPT_BY_TYPE = { text: "", image: "image/*", video: "video/*", carousel: "image/*,video/*" };
-export const MAX_MEDIA_BY_TYPE = { text: 0, image: 1, video: 1, carousel: 35 };
+export const MAX_MEDIA_BY_TYPE = { text: 0, image: 1, video: 1, carousel: 35, document: 1, reel: 1, story: 1 };
 
 // Only videos can be mixed into some platforms' carousels, so a carousel that contains one narrows the list.
 export function supportsPostType(capability, type, media = []) {
   if (!capability?.formats?.includes(type)) return false;
-  return type !== "carousel" || capability.mixedCarousel || !media.some(item => item.kind !== "image");
+  if (type === "carousel" && !capability.mixedCarousel && media.some(item => item.kind !== "image")) return false;
+  if (capability.maxImages && media.length > capability.maxImages) return false;
+  return media.every(item => {
+    const maxBytes = capability[`${item.kind}MaxBytes`];
+    return (!maxBytes || !Number.isFinite(item.bytes) || item.bytes <= maxBytes)
+      && (item.kind !== "video" || !capability.videoMaxSeconds || !Number.isFinite(item.durationSec) || item.durationSec <= capability.videoMaxSeconds);
+  });
 }
 
 // Other ways a platform can publish the same media, such as a Story or Reel.

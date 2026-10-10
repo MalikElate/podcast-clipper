@@ -15,6 +15,7 @@ import { ProjectService } from "./services/ProjectService.js";
 import { WelcomeEmailService, clerkSignupContact } from "./services/WelcomeEmailService.js";
 import { ScheduleService } from "./services/ScheduleService.js";
 import { MediaService } from "./services/MediaService.js";
+import { validateUploadRequest } from "./services/mediaValidation.js";
 import { downloadRemoteMedia } from "./services/RemoteMedia.js";
 import { DropperService } from "./services/DropperService.js";
 import { VideoSourceService } from "./services/VideoSourceService.js";
@@ -355,7 +356,14 @@ export class BridgeApplication {
     app.get(`${root}/media`, route((req, res) => res.json({ media: this.media.list(req.uid, req.params.projectId) })));
     app.post(`${root}/media/uploads`, route(async (req, res) => {
       invariant(this.media.signingKey, "Media storage is not configured on this server.", { status: 503 });
-      res.status(201).json(req.body?.direct === true && this.storage.createDirectUpload ? await this.media.createDirectUpload(req.uid, req.params.projectId, req.body) : this.uploadTokens.create(req.uid, req.params.projectId, req.body));
+      this.projects.require(req.uid, req.params.projectId);
+      const direct = req.body?.direct === true && Boolean(this.storage.createDirectUpload);
+      // Older token/multipart clients send only { bytes }. They remain valid;
+      // the complete file is still inspected before durable storage. Direct R2
+      // uploads always need a bounded preflight because bytes bypass this API.
+      const validated = direct || req.body?.sample !== undefined ? await validateUploadRequest(req.body, this.media.maxBytes) : {};
+      const request = { ...req.body, ...validated };
+      res.status(201).json(direct ? await this.media.createDirectUpload(req.uid, req.params.projectId, request) : this.uploadTokens.create(req.uid, req.params.projectId, request));
     }));
     app.post(`${root}/media/uploads/:id/complete`, route(async (req, res) => {
       const result = await this.media.completeDirectUpload(req.uid, req.params.projectId, req.params.id);
@@ -367,7 +375,7 @@ export class BridgeApplication {
       invariant(req.file, "Choose a file to upload.");
       try {
         invariant(!req.uploadGrant || req.file.size === req.uploadGrant.bytes, "The uploaded file size did not match. Select the file again.", { code: "upload_size_mismatch" });
-        res.status(201).json({ media: this.media.toPublic(await this.media.ingest(req.uid, req.params.projectId, req.file)) });
+        res.status(201).json({ media: this.media.toPublic(await this.media.ingest(req.uid, req.params.projectId, req.file, { expectedMime: req.uploadGrant?.expectedMime })) });
       }
       finally { await fs.promises.unlink(req.file.path).catch(() => {}); }
     }));

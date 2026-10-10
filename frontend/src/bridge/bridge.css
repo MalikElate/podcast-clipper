@@ -38,6 +38,15 @@
 .bridge-upload-zone{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; margin:25px 0; min-height:205px; border:1px dashed #344765; border-radius:10px; background:#0d1421; text-align:center; padding:24px; }
 .bridge-upload-zone>svg{ color:#819ee2; margin-bottom:7px; }
 .bridge-upload-zone p{ font-size:calc(.875rem + 3px); }
+.bridge-composer-main .bridge-unified-upload-zone{min-height:300px;gap:0;border-width:2px;border-radius:5px;padding:32px 24px;transition:border-color .15s,background .15s}
+.bridge-unified-upload-zone h3{margin:0 0 16px;font-size:calc(1.25rem + 3px);font-weight:650}
+.bridge-unified-upload-zone .bridge-upload-types{max-width:600px;margin:0;color:var(--b-muted);line-height:1.5}
+.bridge-upload-or{display:flex;align-items:center;gap:12px;margin:27px 0;color:var(--b-muted);font-size:calc(.78rem + 3px);letter-spacing:.08em}
+.bridge-upload-or::before,.bridge-upload-or::after{content:"";display:block;width:32px;height:1px;background:var(--b-line)}
+.bridge-upload-choose{min-width:170px;min-height:56px;padding:12px 25px;border:0;border-radius:4px;background:#cbd6e6;color:#17233a;font-size:calc(.95rem + 3px)!important;font-weight:600;cursor:pointer}
+.bridge-upload-choose:hover:not(:disabled){background:#b9c8df}.bridge-upload-choose:focus-visible{outline:2px solid var(--b-blue);outline-offset:3px}.bridge-upload-choose:disabled{opacity:.6;cursor:wait}
+.bridge-unified-upload-zone.is-dragging{border-color:var(--b-blue)!important;background:color-mix(in srgb,var(--b-blue) 12%,var(--b-panel))!important}
+@media(max-width:600px){.bridge-composer-main .bridge-unified-upload-zone{min-height:255px;padding:28px 16px}.bridge-unified-upload-zone h3{font-size:calc(1.12rem + 3px)}}
 .bridge-upload-progress{ padding:14px 16px; margin:0 0 20px; border:1px solid var(--b-line); border-radius:9px; background:var(--b-raised); }
 .bridge-upload-progress>div{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; font-size:calc(.875rem + 3px); }
 .bridge-upload-progress>div>span,.bridge-upload-progress p{ color:var(--b-muted); font-size:calc(.75rem + 3px); }

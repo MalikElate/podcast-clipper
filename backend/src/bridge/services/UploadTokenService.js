@@ -10,12 +10,12 @@ export class UploadTokenService {
     Object.assign(this, { store, projects, maxBytes, clock });
   }
 
-  create(uid, projectId, { bytes } = {}) {
+  create(uid, projectId, { bytes, expectedMime } = {}) {
     this.projects.require(uid, projectId);
     invariant(Number.isSafeInteger(bytes) && bytes > 0 && bytes <= this.maxBytes, `Choose a file of up to ${Math.round(this.maxBytes / 1024 ** 2)} MB.`, { code: "upload_size_invalid" });
     const uploadToken = prefix + randomBytes(32).toString("base64url");
     const expiresAt = this.clock() + 30 * 60000;
-    this.store.saveState(this.digest(uploadToken), { kind: "media_upload", uid, projectId, bytes, expiresAt }, expiresAt);
+    this.store.saveState(this.digest(uploadToken), { kind: "media_upload", uid, projectId, bytes, expectedMime, expiresAt }, expiresAt);
     return { uploadToken, expiresAt };
   }
 

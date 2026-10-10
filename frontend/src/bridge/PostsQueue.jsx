@@ -5,6 +5,7 @@ import { Alert, Check, Empty, Modal, useProjectResource } from "./ui.jsx";
 import { PostEditor } from "./Composer.jsx";
 import PostDetails, { CompactPostCard } from "./PostDetails.jsx";
 import { PLATFORM_ORDER } from "./platforms.js";
+import { UPLOAD_ACCEPT, validateUploadSelection } from "./uploadValidation.js";
 import { useAccountOptions } from "./useAccountOptions.js";
 import { retryConfirmation } from "./deliveryPresentation.js";
 import { belongsToSection, newestPostFirst, pending } from "./postListOrder.js";
@@ -23,7 +24,7 @@ const contentTypes = [
   { id: "carousel", label: "Carousel" }, { id: "document", label: "Document" },
 ];
 const bulkSections = new Set(["failed", "scheduled", "drafts"]);
-export default function PostsQueue({ project, accounts: initialAccounts, accountsReady = true, media, catalog, onCreate, onEditDraft, onUpload, section = "posts" }) {
+export default function PostsQueue({ project, config, accounts: initialAccounts, accountsReady = true, media, catalog, onCreate, onEditDraft, onUpload, section = "posts" }) {
   const { data, error: loadError, loading, reload } = useProjectResource(project.id, "/posts", { posts: [] }, { interval: 15000 });
   const [accountId, setAccountId] = useState(""), [search, setSearch] = useState(""), [error, setError] = useState(""), [busy, setBusy] = useState(false), [uploading, setUploading] = useState(false), [action, setAction] = useState(null), [confirmed, setConfirmed] = useState(false), [editing, setEditing] = useState(null), [viewingId, setViewingId] = useState(null);
   const [datePresets, setDatePresets] = useState({}), [platform, setPlatform] = useState(""), [contentType, setContentType] = useState("");
@@ -122,11 +123,17 @@ export default function PostsQueue({ project, accounts: initialAccounts, account
   }
   async function uploadEditingMedia(files) {
     if (!files.length || !editing || uploading) return;
+    let selected;
+    try {
+      const existing = editing.mediaIds.map(id => media.find(item => item.id === id)).filter(Boolean);
+      if (existing.length !== editing.mediaIds.length) throw new Error("Wait for the saved media to load before adding files.");
+      selected = validateUploadSelection(files, existing, config?.maxUploadBytes);
+    } catch (error) { setError(error.message); return; }
     const postId = editing.id;
     const controller = new AbortController(); uploadController.current = controller;
     setUploading(true); setUploadProgress(null); setError("");
     try {
-      const uploaded = await onUpload([...files].slice(0, Math.max(0, 35 - editing.mediaIds.length)), setUploadProgress, { signal: controller.signal });
+      const uploaded = await onUpload(selected, setUploadProgress, { signal: controller.signal });
       if (uploaded.length) setEditing(current => current?.id === postId ? { ...current, mediaIds: [...new Set([...current.mediaIds, ...uploaded.map(item => item.id)])].slice(0, 35) } : current);
     } catch (error) { setError(error.message); } finally { if (uploadController.current === controller) uploadController.current = null; setUploading(false); }
   }
@@ -168,7 +175,7 @@ export default function PostsQueue({ project, accounts: initialAccounts, account
       {busy && <p className="bridge-small" role="status">Deleting {bulkProgress} of {bulkAction.items.length}…</p>}
       <div className="bridge-modal-actions"><button className="bridge-button secondary" disabled={busy} onClick={() => setBulkAction(null)}>Go back</button><button className="bridge-button danger" disabled={busy} onClick={performBulkDelete}>{busy ? "Deleting…" : `Delete ${bulkAction.items.length} ${bulkAction.items.length === 1 ? "post" : "posts"}`}</button></div>
     </Modal>}
-    <input type="file" ref={fileInput} hidden multiple accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx" onChange={event => { uploadEditingMedia(event.target.files); event.target.value = ""; }}/>
+    <input type="file" ref={fileInput} hidden multiple accept={UPLOAD_ACCEPT} onChange={event => { uploadEditingMedia(event.target.files); event.target.value = ""; }}/>
     {editing && <Modal title="Edit queued post" wide onClose={() => setEditing(null)} busy={busy || uploading || coverUploading}><Alert message={error}/><fieldset className="bridge-composer-workspace" disabled={busy}><PostEditor post={editing} onChange={setEditing} accounts={accounts} accountsReady={accountsReady} media={media} catalog={catalog} uploading={uploading} uploadProgress={uploadProgress} onCancelUpload={() => uploadController.current?.abort()} onPickMedia={() => fileInput.current?.click()} onRefreshOptions={refreshOptions} onUploadCover={onUpload} onCoverBusyChange={delta => setCoverUploads(count => Math.max(0, count + delta))} coverUploading={coverUploading} compact/></fieldset><div className="bridge-modal-actions"><button className="bridge-button secondary" disabled={uploading || coverUploading} onClick={() => setEditing(null)}>Discard changes</button><button className="bridge-button" disabled={busy || uploading || coverUploading} onClick={save}>{busy ? "Validating & saving…" : "Save & update queue"}</button></div></Modal>}
   </>;
 }

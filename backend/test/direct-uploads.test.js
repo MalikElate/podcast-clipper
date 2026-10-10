@@ -9,6 +9,11 @@ import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 import { DurableMediaStorage } from "../src/bridge/storage/DurableMediaStorage.js";
 
 const pdf = Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF");
+const sampleFor = (bytes, source = pdf) => {
+  const length = Math.min(bytes, 64 * 1024), sample = Buffer.alloc(length);
+  source.copy(sample, 0, 0, length);
+  return sample.toString("base64");
+};
 async function setup(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "meadow-direct-upload-")), objects = new Map(), calls = [];
   let now = Date.now(), downloadsBlocked;
@@ -41,7 +46,7 @@ async function setup(t) {
   t.after(async () => { await application.media.directProcessing; await new Promise(resolve => server.close(resolve)); application.close(); fs.rmSync(dir, { recursive: true, force: true }); });
   const root = `/projects/${project.id}`, base = `http://127.0.0.1:${server.address().port}/api/bridge`;
   const request = (endpoint, { method = "GET", token = "alice", body } = {}) => fetch(base + endpoint, { method, headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
-  const issue = async (bytes = pdf.length, filename = "file.pdf") => { const response = await request(`${root}/media/uploads`, { method: "POST", body: { bytes, filename, direct: true } }); assert.equal(response.status, 201); return (await response.json()).directUpload; };
+  const issue = async (bytes = pdf.length, filename = "file.pdf", source = pdf) => { const response = await request(`${root}/media/uploads`, { method: "POST", body: { bytes, filename, sample: sampleFor(bytes, source), direct: true } }); assert.equal(response.status, 201); return (await response.json()).directUpload; };
   const stage = (ticket, data = pdf) => { const record = application.store.get("media", ticket.mediaId); objects.set(`staging:${record.storageKey}`, data); return record; };
   const complete = ticket => request(`${root}/media/uploads/${ticket.mediaId}/complete`, { method: "POST", body: {} });
   return { application, storage, objects, calls, dir, root, project, other, request, issue, stage, complete, advance: ms => { now += ms; }, blockDownloads: promise => { downloadsBlocked = promise; } };
@@ -55,14 +60,31 @@ test("direct tickets, completion and status are restricted to the project owner"
   assert.equal((await h.request(`/projects/${h.other.id}/media/${ticket.mediaId}`, { token: "bob" })).status, 404);
   assert.deepEqual(h.application.media.list("alice", h.project.id), []);
   const publicRecord = (await (await h.request(`${h.root}/media/${ticket.mediaId}`)).json()).media;
-  assert.equal(publicRecord.status, "uploading"); assert.equal(publicRecord.url, null); assert.equal(publicRecord.storageKey, undefined);
+  assert.equal(publicRecord.status, "uploading"); assert.equal(publicRecord.url, null); assert.equal(publicRecord.storageKey, undefined); assert.equal(publicRecord.expectedMime, undefined);
 });
 
 test("direct size cap admits files above 100 MB and rejects invalid or oversized grants", async t => {
   const h = await setup(t);
-  await h.issue(120 * 1024 ** 2, "large.mp4");
-  await h.issue(5115 * 1024 ** 2, "largest.mp4");
+  await h.issue(120 * 1024 ** 2, "large.pdf");
+  await h.issue(5115 * 1024 ** 2, "largest.pdf");
   for (const bytes of [0, -1, "100", 1.5, 5115 * 1024 ** 2 + 1]) assert.equal((await h.request(`${h.root}/media/uploads`, { method: "POST", body: { direct: true, bytes } })).status, 400);
+});
+
+test("direct tickets reject unsupported and malformed file previews before contacting storage", async t => {
+  const h = await setup(t), ticketCalls = () => h.calls.filter(call => call.pathname === "/uploads").length;
+  const cases = [
+    [{ bytes: pdf.length, filename: "audio.mp3", sample: sampleFor(pdf.length), direct: true }, 415, "unsupported_media"],
+    [{ bytes: pdf.length, filename: "file.pdf", sample: sampleFor(pdf.length, Buffer.from("not a PDF")), direct: true }, 415, "unsupported_media"],
+    [{ bytes: pdf.length, filename: "file.pdf", sample: "not base64", direct: true }, 400, "upload_sample_invalid"],
+    [{ bytes: pdf.length, filename: "file.pdf", direct: true }, 400, "upload_sample_invalid"],
+  ];
+  for (const [body, status, code] of cases) {
+    const response = await h.request(`${h.root}/media/uploads`, { method: "POST", body });
+    assert.equal(response.status, status);
+    assert.equal((await response.json()).code, code);
+  }
+  assert.equal(ticketCalls(), 0);
+  assert.deepEqual(h.application.store.list("media"), []);
 });
 
 test("completion verifies stored bytes and prepares the original without reuploading it", async t => {
@@ -92,7 +114,7 @@ test("empty, incomplete and mismatched uploads never enter processing", async t 
 });
 
 test("magic-byte validation rejects disguised media and cleans its durable objects", async t => {
-  const h = await setup(t), bytes = Buffer.from("this is not a video"), ticket = await h.issue(bytes.length, "video.mp4"), record = h.stage(ticket, bytes);
+  const h = await setup(t), bytes = Buffer.alloc(pdf.length, 0), ticket = await h.issue(bytes.length), record = h.stage(ticket, bytes);
   assert.equal((await h.complete(ticket)).status, 202);
   await h.application.media.directProcessing;
   const media = (await (await h.request(`${h.root}/media/${ticket.mediaId}`)).json()).media;
@@ -105,7 +127,7 @@ test("magic-byte validation rejects disguised media and cleans its durable objec
 test("video processing reads real metadata and saves a thumbnail before ready", async t => {
   const h = await setup(t), filename = path.join(h.dir, "fixture.mp4");
   execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "color=c=green:s=160x90:d=1", "-c:v", "libx264", "-pix_fmt", "yuv420p", filename]);
-  const bytes = fs.readFileSync(filename), ticket = await h.issue(bytes.length, "video.mp4"); h.stage(ticket, bytes);
+  const bytes = fs.readFileSync(filename), ticket = await h.issue(bytes.length, "video.mp4", bytes); h.stage(ticket, bytes);
   assert.equal((await h.complete(ticket)).status, 202);
   await h.application.media.directProcessing;
   const media = (await (await h.request(`${h.root}/media/${ticket.mediaId}`)).json()).media;
