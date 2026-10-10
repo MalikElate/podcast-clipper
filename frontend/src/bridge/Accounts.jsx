@@ -6,8 +6,10 @@ import { Alert, Badge, Check, dateTime, Field, Modal, PlatformIcon } from "./ui.
 import { sortPlatforms } from "./platforms.js";
 import { ConnectionPrivacyModal } from "./ConnectionPrivacy.jsx";
 import { createAccountOperations } from "./accountOperations.js";
+import PageSkeleton from "./PageSkeleton.jsx";
 
 export default function Accounts(props) {
+  if (props.accountsReady === false) return props.accountsError ? null : <PageSkeleton label="Loading accounts"/>;
   return <ProjectAccounts key={props.project.id} {...props}/>;
 }
 
