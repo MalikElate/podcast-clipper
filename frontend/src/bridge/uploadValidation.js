@@ -13,6 +13,7 @@ const types = {
 };
 
 export const UPLOAD_ACCEPT = Object.keys(types).map(extension => `.${extension}`).join(",");
+export const UPLOAD_CATEGORIES = "Videos, images, and PDFs";
 export const UPLOAD_FORMATS = "JPG/JPEG, PNG, WebP, GIF, MP4, MOV, WebM, and PDF";
 
 export function validateUploadFile(file, maxBytes = Infinity) {
