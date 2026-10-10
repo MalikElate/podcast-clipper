@@ -32,7 +32,7 @@ function Check() {
 export default function AgentPublishingDemo() {
   const demoRef = useRef(null);
   // A complete, readable example is also available before hydration and with reduced motion.
-  const [{ step, agentIndex }, setFrame] = useState({ step: 6, agentIndex: 0 });
+  const [{ step, agentIndex, transitionId }, setFrame] = useState({ step: 6, agentIndex: 0, transitionId: 0 });
   const agent = AGENTS[agentIndex];
   const [playing, setPlaying] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -42,7 +42,7 @@ export default function AgentPublishingDemo() {
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
     const syncMotion = () => {
       setPlaying(!preference.matches);
-      setFrame(current => ({ ...current, step: preference.matches ? 6 : 0 }));
+      setFrame(current => ({ ...current, step: preference.matches ? 6 : 0, transitionId: 0 }));
     };
     const syncVisibility = () => setPageVisible(!document.hidden);
     const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: 0.25 });
@@ -62,13 +62,15 @@ export default function AgentPublishingDemo() {
     if (!playing || !visible || !pageVisible) return;
     const timer = window.setTimeout(() => setFrame(current => {
       const nextStep = (current.step + 1) % DURATIONS.length;
-      return { step: nextStep, agentIndex: nextStep === 0 ? (current.agentIndex + 1) % AGENTS.length : current.agentIndex };
+      const switchingAgent = nextStep === 0;
+      return { step: nextStep, agentIndex: switchingAgent ? (current.agentIndex + 1) % AGENTS.length : current.agentIndex, transitionId: current.transitionId + (switchingAgent ? 1 : 0) };
     }), DURATIONS[step]);
     return () => window.clearTimeout(timer);
   }, [step, playing, visible, pageVisible]);
 
   return (
     <figure className="agent-demo" ref={demoRef} data-agent={agent.id} aria-label={`Publishing through ${agent.name}`} aria-describedby="agent-demo-description">
+      {transitionId > 0 && <div className="agent-demo-flash" key={transitionId} aria-hidden="true" />}
       <div className="agent-demo-header">
         <AssistantMark agent={agent} />
         <strong>{agent.name}</strong>
