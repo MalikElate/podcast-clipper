@@ -71,7 +71,7 @@ test("composer destinations remain usable during uploads and reflect connection 
       assert.equal(refresh.length, 1);
       assert.match(refresh[0], /href="\/dashboard\/connections"/);
       assert.match(refresh[0], /target="_blank"/);
-      assert.match(refresh[0], /aria-label="Refresh connection for Expired account \(opens Connections in a new tab\)"/);
+      assert.match(refresh[0], /aria-label="Refresh connection for Expired account \(opens Accounts in a new tab\)"/);
     });
 
     await t.test("initial account loading is distinguished from an authoritative empty list", () => {

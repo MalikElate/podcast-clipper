@@ -7,7 +7,7 @@ const authorization = {
   detail: "Encrypted access and refresh tokens, granted permissions, token expiry, and this notice’s version and acceptance time. These keep your selected connection working and record what you agreed to. Meadow never receives your platform password.",
 };
 const sharing = "Meadow uses this data to operate your connection and the publishing or analytics you request. Cloudflare hosts the service. Your selected platform receives the media and publishing settings you submit; displaying a profile image can also contact that platform. We do not sell platform data or use it for advertising or general-purpose AI training. Product usage tracking is disabled.";
-const removal = "Remove the account in Connections to stop new publishing and delete its stored connection data, delivery history, and metrics. Your original Meadow content stays until you delete it. Published posts stay on the platform, and a request already sent may still finish. Full account deletion is available in Settings → Privacy & Account. Contact hello@findmeadow.com for a privacy request.";
+const removal = "Remove the account in Accounts to stop new publishing and delete its stored connection data, delivery history, and metrics. Your original Meadow content stays until you delete it. Published posts stay on the platform, and a request already sent may still finish. Full account deletion is available in Settings → Privacy & Account. Contact hello@findmeadow.com for a privacy request.";
 const googleUse = "Meadow’s use and transfer of Google API data follows the Google API Services User Data Policy, including Limited Use. Data is used for the connection and features you request. You can also remove access through Google’s security settings; revoking a Google grant can affect other channels or Google connections that share it.";
 const googlePolicies = [
   { label: "Google Privacy Policy", url: "https://policies.google.com/privacy" },
@@ -92,7 +92,7 @@ const notices = {
     name: "YouTube",
     connectionSummary: "Connect a YouTube channel to upload and schedule videos and view available performance.",
     requirement: "Your Google Account must be associated with a YouTube channel.",
-    revokeSummary: "You can disconnect YouTube from Meadow at any time in Connections. You can also remove Meadow through Google’s security settings.",
+    revokeSummary: "You can disconnect YouTube from Meadow at any time in Accounts. You can also remove Meadow through Google’s security settings.",
     shortAgreement: "I agree to Meadow’s Privacy Policy and the YouTube Terms of Service and allow the access described above.",
     introduction: "Meadow uses YouTube API Services. We use this information only to connect the YouTube channel you select, upload and schedule videos you ask us to publish, confirm whether an upload succeeded, and display the performance of your published videos.",
     data: [

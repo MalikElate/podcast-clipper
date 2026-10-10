@@ -23,7 +23,7 @@ import "./bridge.css";
 export const modules = [
   { id: "compose", name: "Create post", icon: "compose" },
   { id: "dropper", name: "Dropper", icon: "dropper" },
-  { id: "accounts", name: "Connections", icon: "accounts" },
+  { id: "accounts", name: "Accounts", icon: "accounts" },
 ];
 
 export const postModules = [
@@ -241,7 +241,7 @@ function ProjectWorkspace({ userId, project, config, view, navigate, compose, dr
   const common = { project, config, catalog, media, accountsReady, accounts: (accountResource.data.accounts || []).map(account => removingAccounts.includes(account.id) ? { ...account, status: "deleting" } : account) };
   const draftLoading = Boolean(draftId && (draftState.id !== draftId || draftState.loading));
   return <><Alert message={accountResource.error ? `Could not load your social accounts. ${accountResource.error}` : needsMedia ? mediaResource.error || uploadError : ""}/>
-    {accountResource.error && <div className="bridge-intro-row"><button type="button" className="bridge-button secondary small" disabled={accountResource.loading} onClick={accountResource.reload}>Retry connections</button></div>}
+    {accountResource.error && <div className="bridge-intro-row"><button type="button" className="bridge-button secondary small" disabled={accountResource.loading} onClick={accountResource.reload}>Retry accounts</button></div>}
     {view === "compose" && (draftLoading ? <div className="bridge-panel bridge-empty"><p>Loading your draft…</p></div> : draftState.error ? <div className="bridge-panel bridge-empty"><Alert message={draftState.error}/><button className="bridge-button secondary" onClick={() => navigate("drafts", { force: true })}>Back to drafts</button></div> : <Composer key={`${draftVersion}:${draftId}:${draftState.post?.revision || 0}`} {...common} draft={draftState.post} scheduledDate={scheduledDate} onDraftStarted={clearScheduledDate} onDirtyChange={onComposeDirty} onBusyChange={onComposeBusy} onAccounts={() => navigate("accounts")} onUpload={upload} onDiscard={() => navigate(draftId ? "drafts" : "posts", { force: true })} onDraftSaved={() => { navigate("drafts", { force: true }); notify("Draft saved."); }} onSubmitted={result => { navigate("posts", { force: true }); notify(`${result.posts.length} ${result.posts.length === 1 ? "post" : "posts"} added to your delivery queue.`); }}/>) }
     {view === "accounts" && <Accounts {...common} connectionId={connectionId} clearConnection={clearConnection} onChanged={accountResource.reload} onRemovalChange={accountRemovalChanged}/>}
     {view === "calendar" && <PostsCalendar {...common} onCreate={compose}/>}

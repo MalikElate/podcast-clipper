@@ -63,7 +63,7 @@ The first-run screen explains access before connecting. A separate Meadow page r
 1. Install the extension and click its toolbar icon.
 2. Read the disclosure, then choose Connect Meadow.
 3. Open the displayed Meadow verification link, sign in with the reviewer account supplied privately, and approve the displayed code. Return to the extension tab.
-4. Select a Meadow workspace. Connect test social accounts on Meadow's Connections page if none are supplied.
+4. Select a Meadow workspace. Connect test social accounts on Meadow's Accounts page if none are supplied.
 5. Choose a post format, enter text/add media, and select destinations. Review the per-platform privacy, consent, title, and other settings.
 6. Save a draft to exercise account/media/draft functionality without publishing.
 7. The Publish now or scheduling action first calls Meadow's preview validator. Only use an explicitly approved test destination for a real publication.

@@ -47,7 +47,7 @@ const check = (x, y, color) => `<path d="m${x + 2} ${y + 10} 6 6 11-13" fill="no
 
 function sidebar() {
   const items = [
-    ["Create", "+"], ["Calendar", "□"], ["Posts", "≡"], ["Scheduled", "◷"], ["Drafts", "◇"], ["Connections", "∞"],
+    ["Create", "+"], ["Calendar", "□"], ["Posts", "≡"], ["Scheduled", "◷"], ["Drafts", "◇"], ["Accounts", "∞"],
   ];
   return `
     ${rect(0, 0, 206, height, "#202124")}
