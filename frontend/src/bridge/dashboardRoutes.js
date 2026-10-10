@@ -1,6 +1,5 @@
 export const DASHBOARD_PATHS = Object.freeze({
   compose: "/dashboard",
-  swipe: "/dashboard/swipe",
   dropper: "/dashboard/dropper",
   calendar: "/dashboard/posts/calendar",
   posts: "/dashboard/posts",

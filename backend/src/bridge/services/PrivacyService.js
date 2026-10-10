@@ -155,7 +155,7 @@ export class PrivacyService {
   removeConnectionData(account) {
     for (const delivery of this.store.list("delivery", { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountId === account.id)) { this.store.removeRateEvent(delivery.id); this.store.remove("delivery", delivery.id); }
     this.store.removeRateEventsForAccount(account.ownerUid, account.id);
-    this.swipe?.removeAccount(account);
+    this.removeLegacySwipeAccountData(account);
     this.dropper?.removeAccount(account);
     for (const post of this.store.list("post", { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountIds.includes(account.id))) {
       const overrides = { ...post.overrides }; delete overrides[account.id];
@@ -163,6 +163,14 @@ export class PrivacyService {
       this.store.put("post", { ...post, accountIds, overrides, ...(!accountIds.length ? { status: "draft" } : {}), updatedAt: this.clock() });
     }
     this.store.remove("account", account.id);
+  }
+  removeLegacySwipeAccountData(account) {
+    // Keep decisions for active connections so Dropper can identify old copies.
+    for (const record of this.store.list("swipeDecision", { ownerUid: account.ownerUid, limit: null }).filter(item => item.accountId === account.id)) this.store.remove("swipeDecision", record.id);
+    const saved = this.store.get("swipeSettings", account.projectId);
+    if (saved?.ownerUid !== account.ownerUid || ![...(saved.accountIds || []), ...(saved.sourceAccountIds || [])].includes(account.id)) return;
+    const overrides = { ...saved.overrides }; delete overrides[account.id];
+    this.store.put("swipeSettings", { ...saved, accountIds: (saved.accountIds || []).filter(id => id !== account.id), sourceAccountIds: (saved.sourceAccountIds || []).filter(id => id !== account.id), overrides, updatedAt: this.clock() });
   }
   manualRevocationReceipt({ id = randomUUID(), subject, platform, createdAt }) {
     return { id, subject, platform, status: "manual_revocation_required", createdAt, expiresAt: this.clock() + 30 * DAY };

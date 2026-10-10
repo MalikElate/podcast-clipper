@@ -152,7 +152,7 @@ export class TikTokProvider extends PlatformProvider {
     }
     return { status: "processing", progress: ctx.progress, pollAfterMs: 30000 };
   }
-  /** The creator's latest public videos (video.list), for Swipe or Push. */
+  /** The creator's latest public videos (video.list), for Dropper. */
   async recentVideos({ credentials }) {
     const result = await this.http.request("https://open.tiktokapis.com/v2/video/list/?fields=id,title,video_description,create_time,cover_image_url,share_url,view_count,like_count,comment_count,share_count", { method: "POST", token: credentials.accessToken, json: { max_count: 20 }, safeToRetry: true, timeoutMs: 15000 });
     return (result.data?.videos || []).filter(video => /^\d+$/.test(String(video.id || "")) && /^https:\/\/(www\.)?tiktok\.com\//.test(video.share_url || "")).map(video => ({

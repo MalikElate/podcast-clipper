@@ -244,7 +244,7 @@ test("TikTok allows the selected public audience after the private-only restrict
   assert.equal(calls[0].options.json.post_info.privacy_level, "PUBLIC_TO_EVERYONE");
 });
 
-test("TikTok lists the creator's recent public videos for Swipe or Push", async () => {
+test("TikTok lists the creator's recent public videos for Dropper", async () => {
   const { provider, calls } = setup(() => ({ data: { videos: [
     { id: "7400000000000000001", title: "", video_description: "Behind the scenes #meadow", create_time: 1791300000, cover_image_url: "https://p16-sign.tiktokcdn.com/cover.jpeg", share_url: "https://www.tiktok.com/@creator/video/7400000000000000001", view_count: 1200, like_count: 45, comment_count: 3, share_count: 2 },
     { id: "not-a-video-id", share_url: "https://www.tiktok.com/@creator/video/1" },

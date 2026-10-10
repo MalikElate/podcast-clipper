@@ -53,12 +53,14 @@ function setup(t, { snapshot, at = Date.parse("2026-10-08T12:00:00Z") } = {}) {
   };
   const rates = { plan(key, proposed) { return new Map(proposed.map(item => [item.id, { dueAt: item.requestedAt, delayed: false }])); }, replan() {} };
   const posts = new PostService({ store, projects, accounts, registry, media, schedules: new ScheduleService({ clock: () => now }), rates, clock: () => now });
-  const swipe = {
+  const videoSources = {
     connectedAccounts(uid, projectId) { return store.list("account", { projectId, ownerUid: uid }).filter(item => item.status === "connected"); },
     async sourceVideos(account) { h.lastSource = account.id; return { videos: h.videos, error: null }; },
     downloader: { supports: () => true, async download(source, filename) { h.downloads.push(source.url); await h.downloadHook?.(); await fs.promises.writeFile(filename, "video-fixture"); return { filename: "source.mp4" }; } },
+    invalidateAccount() {},
+    removeOwner() {},
   };
-  h.dropper = new DropperService({ store, projects, accounts, registry, posts, media, swipe, privacy: { blocked: () => h.blocked }, incomingDirectory: directory, clock: () => now, enabled: false });
+  h.dropper = new DropperService({ store, projects, accounts, registry, posts, media, videoSources, privacy: { blocked: () => h.blocked }, incomingDirectory: directory, clock: () => now, enabled: false });
   h.posts = posts;
   h.configure = (input = {}) => h.dropper.saveSettings("alice", "creator", { sourceAccountId: "source", accountIds: ["x"], overrides: {}, intervalMinutes: 30, ...input });
   h.deck = () => h.dropper.deck("alice", "creator");
@@ -329,7 +331,7 @@ test("simultaneous identical starts remain idempotent after both await a fresh s
   const { cards } = await h.deck();
   h.configure(); // Invalidate the reviewed cache so both calls await a refresh.
   let reads = 0;
-  h.dropper.swipe.sourceVideos = async () => { if (++reads === 2) entered.resolve(); await release.promise; return { videos: h.videos, error: null }; };
+  h.dropper.videoSources.sourceVideos = async () => { if (++reads === 2) entered.resolve(); await release.promise; return { videos: h.videos, error: null }; };
   const first = h.start([cards[0].id]), second = h.start([cards[0].id]);
   await entered.promise;
   release.resolve();
@@ -343,7 +345,7 @@ test("stop while the initial source feed loads invalidates the pending start", a
   h.configure();
   const { cards } = await h.deck();
   h.configure();
-  h.dropper.swipe.sourceVideos = async () => { entered.resolve(); await release.promise; return { videos: h.videos, error: null }; };
+  h.dropper.videoSources.sourceVideos = async () => { entered.resolve(); await release.promise; return { videos: h.videos, error: null }; };
   const starting = h.start([cards[0].id]);
   await entered.promise;
   h.dropper.stop("alice", "creator");

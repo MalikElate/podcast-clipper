@@ -48,7 +48,7 @@ function analyticsEntry(post, credentials, platform) {
 }
 
 // Zernio reports each post's media type, cover image and media items. Keep only
-// HTTPS URLs; Swipe or Push uses them to preview and re-post a creator's videos.
+// HTTPS URLs; Dropper uses them to preview and re-post a creator's videos.
 function postMedia(post) {
   const items = (Array.isArray(post.mediaItems) ? post.mediaItems : []).slice(0, 20)
     .map(item => ({ type: typeof item?.type === "string" ? item.type : null, url: safeUrl(item?.url), thumbnail: safeUrl(item?.thumbnail) }))

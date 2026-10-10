@@ -8,7 +8,7 @@ import { downloadRemoteMedia } from "./RemoteMedia.js";
 // Fast Transcriber's link resolver, adapted for video: a platform's own file
 // URL first, then Cobalt, then local yt-dlp. TikTok and YouTube do not expose
 // downloadable files through their APIs, so they always use the resolvers.
-// Swipe or Push only passes URLs read from the user's own connected accounts.
+// Dropper only passes URLs read from the user's own connected accounts.
 
 const YTDLP_VERSION = "2026.08.19";
 const resolverPlatforms = new Set(["tiktok", "youtube", "instagram", "facebook", "threads"]);
@@ -92,7 +92,7 @@ export class VideoSourceDownloader {
       throw unavailable(/private|login|age/.test(code) ? "This video is private, so Meadow cannot download it." : /unavailable|not_found|deleted/.test(code) ? "This video is no longer available." : "Meadow could not download this video. Try it again later.");
     }
     const target = payload.status === "picker" ? payload.picker?.find(item => item?.type === "video")?.url : ["tunnel", "redirect"].includes(payload.status) ? payload.url : null;
-    if (!target) throw unavailable("This post has no single video to push.");
+    if (!target) throw unavailable("This post has no single downloadable video.");
     const result = await this.downloadMedia(new URL(target, this.cobaltUrl).href, destination, { maxBytes, timeoutMs: this.timeoutMs });
     return { ...result, filename: payload.filename || result.filename, resolver: "cobalt" };
   }

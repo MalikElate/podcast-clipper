@@ -106,6 +106,9 @@ test("connection erasure removes shared owner connections and all API history wi
   const bobProject = app.projects.create("bob", { name: "Bob" });
   const bob = h.account("bob", "x", { remoteId: "one", ownerUid: "bob", projectId: bobProject.id });
   h.post("mixed", [one, other]); h.post("only", [one]); h.post("duplicate", [duplicate]);
+  app.store.put("swipeDecision", { id: "old-source", ownerUid: "alice", projectId: h.project.id, accountId: one.id, postId: "only" });
+  app.store.put("swipeDecision", { id: "active-source", ownerUid: "alice", projectId: h.project.id, accountId: other.id, postId: "mixed" });
+  app.store.put("swipeSettings", { id: h.project.id, ownerUid: "alice", projectId: h.project.id, accountIds: [one.id, other.id], sourceAccountIds: [one.id, other.id], overrides: { [one.id]: { settings: {} }, [other.id]: { settings: {} } } });
   const delivery = app.store.get("delivery", "mixed:one");
   app.store.put("delivery", { ...delivery, status: "published", metrics: { likes: 10 }, externalId: "secret-api-id", progress: { uploadUrl: "secret-session" } });
   app.store.recordRateEvent(delivery.id, one.rateKey, h.now());
@@ -116,6 +119,11 @@ test("connection erasure removes shared owner connections and all API history wi
   assert.equal(app.store.get("account", one.id), null); assert.equal(app.store.get("account", duplicate.id), null);
   assert.ok(app.store.get("account", other.id)); assert.ok(app.store.get("account", bob.id));
   assert.equal(app.store.get("delivery", delivery.id), null);
+  assert.equal(app.store.get("swipeDecision", "old-source"), null);
+  assert.ok(app.store.get("swipeDecision", "active-source"));
+  assert.deepEqual(app.store.get("swipeSettings", h.project.id).accountIds, [other.id]);
+  assert.deepEqual(app.store.get("swipeSettings", h.project.id).sourceAccountIds, [other.id]);
+  assert.deepEqual(Object.keys(app.store.get("swipeSettings", h.project.id).overrides), [other.id]);
   assert.deepEqual(app.store.rateEvents(one.rateKey, 0), []);
   assert.deepEqual(app.store.get("post", "mixed").accountIds, [other.id]);
   assert.equal(app.store.get("post", "mixed").caption, "My original caption");

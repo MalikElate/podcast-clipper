@@ -42,7 +42,7 @@ export class YouTubeProvider extends GoogleProvider {
     }
     return { value, throughDate };
   }
-  /** The channel's latest public or unlisted uploads, for Swipe or Push. */
+  /** The channel's latest public or unlisted uploads, for Dropper. */
   async recentVideos({ account, credentials }) {
     const channels = await this.http.request(`https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${encodeURIComponent(account.remoteId)}`, { token: credentials.accessToken });
     const uploads = channels.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;

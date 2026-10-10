@@ -89,6 +89,15 @@ test("all project routes require authentication and reject another owner's proje
   assert.equal(config.platforms.find(platform => platform.id === "snapchat")?.configured, false);
 });
 
+test("removed Swipe or Push API routes are unavailable while Dropper remains available", async t => {
+  const h = await setup(t);
+  for (const [method, route] of [["GET", "/swipe"], ["POST", "/swipe/settings"], ["POST", "/swipe/decisions"], ["DELETE", "/swipe/decisions/old-card"]]) {
+    const response = await h.request(h.root + route, { method, ...(method === "POST" ? { body: {} } : {}) });
+    assert.equal(response.status, 404, `${method} ${route}`);
+  }
+  assert.equal((await h.request(h.root + "/dropper")).status, 200);
+});
+
 test("account view reports require authentication and expose an explicit 180-day window", async t => {
   const h = await setup(t);
   assert.equal((await h.request(`${h.root}/analytics/account-views`, { user: null })).status, 401);
