@@ -1,9 +1,10 @@
-/* Cross-platform marketing pages (social media scheduler, cross posting). */
+/* Cross-platform marketing pages. */
 .mkt-page a.btn-primary, .mkt-page a.btn-ghost, .mkt-page a.btn-small-primary, .mkt-page a.pricing-button { text-decoration: none; }
 .mkt-page .hero-platforms { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; margin-bottom: 32px; }
 .mkt-page .hero-platforms .landing-platform-mark { width: 32px; height: 32px; }
 .mkt-page .mkt-hero-actions { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px; }
 .landing .mkt-hero-actions .landing-cta { width: auto; }
+.landing .mkt-hero-actions a.landing-cta { border-radius: var(--radius-sm); font-weight: 650; }
 .mkt-secondary-cta { display: inline-flex; align-items: center; min-height: 52px; padding: 0 24px; border-radius: var(--radius-sm); font-size: 17px; font-weight: 650; }
 .mkt-card-grid { display: grid; gap: 16px; margin: 42px 0 0; padding: 0; list-style: none; }
 .mkt-card-grid-2 { grid-template-columns: repeat(2,minmax(0,1fr)); }
@@ -36,12 +37,26 @@
 .mkt-faq-item[open] summary::after { content: "–"; }
 .mkt-faq-item p { margin: 0; padding: 0 24px 22px; color: var(--text-muted); font-size: 17px; line-height: 1.65; }
 .mkt-page .landing-section { padding: 80px 0; }
+.mkt-feature-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 28px 48px; margin-top: 36px; }
+.mkt-feature-list .mkt-card { padding: 24px 0 0; border-top: 1px solid var(--border); border-radius: 0; background: transparent; box-shadow: none; }
+.mkt-preview-copy .mkt-preview-note { margin-top: 20px; }
+.mkt-api-example, .mkt-account-preview { min-width: 0; }
+.mkt-api-example h3, .mkt-account-preview h3 { margin: 0 0 18px; color: var(--text); font-size: 20px; letter-spacing: -.025em; }
+.mkt-api-example p, .mkt-account-preview > p { color: var(--text-muted); font-size: 14px; line-height: 1.65; }
+.mkt-api-example .dev-code { max-width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mkt-account-preview ul { margin: 0; padding: 0; list-style: none; }
+.mkt-account-preview li { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 14px; padding: 20px 0; border-top: 1px solid var(--border); }
+.mkt-account-preview li > div { display: grid; gap: 5px; }
+.mkt-account-preview strong { color: var(--text); font-size: 16px; }
+.mkt-account-preview li > div > span, .mkt-account-status { color: var(--text-muted); font-size: 14px; }
+.mkt-account-status { max-width: 110px; text-align: right; }
 
 @media (max-width: 900px) {
   .mkt-card-grid-3 { grid-template-columns: minmax(0,1fr); }
   .mkt-preview-section { grid-template-columns: minmax(0,1fr); gap: 36px; }
 }
 @media (max-width: 640px) {
+  .mkt-feature-list { grid-template-columns: minmax(0,1fr); gap: 24px; }
   .mkt-card-grid-2 { grid-template-columns: minmax(0,1fr); }
   .mkt-preview-card { padding: 16px; }
   .mkt-preview-row { gap: 10px; padding: 10px; }

@@ -8,6 +8,7 @@ import SiteFooter from "./SiteFooter.jsx";
 import SiteHeader from "./SiteHeader.jsx";
 import PricingComparison from "./PricingComparison.jsx";
 import PricingQuoteStatus from "./PricingQuoteStatus.jsx";
+import { appHref } from "../siteUrls.js";
 
 const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
 
@@ -28,6 +29,65 @@ function PlatformMark({ platform, variant = "default" }) {
       <PlatformIcon platform={platform.id} size={variant === "hero" ? 32 : 24} variant={variant} />
     </span>
   );
+}
+
+const SCHEDULING_REQUEST = `curl --request POST \\
+  "https://findmeadow.com/api/bridge/projects/$MEADOW_PROJECT_ID/posts" \\
+  --header "Authorization: Bearer $MEADOW_API_KEY" \\
+  --header "Content-Type: application/json" \\
+  --data '{
+    "requestId": "studio-update-20300115",
+    "items": [{
+      "caption": "Our next studio update is here.",
+      "format": "text",
+      "accountIds": ["ACCOUNT_ID"],
+      "schedule": {
+        "mode": "scheduled",
+        "localDateTime": "2030-01-15T09:00",
+        "timeZone": "Europe/London"
+      }
+    }]
+  }'`;
+
+function ApiSchedulingPreview() {
+  return <>
+    <div className="mkt-preview-copy">
+      <h2 id="mkt-preview-title">Give your application a publishing schedule.</h2>
+      <p>Use a private API key and the IDs of accounts connected to your project. Send the same items to the <code>/posts/preview</code> endpoint first to check them, then submit to <code>/posts</code> to queue delivery.</p>
+      <p className="mkt-preview-note">Prefer an AI client? Connect to Meadow’s MCP server and use <code>preview_post</code> followed by <code>publish_post</code> with a schedule.</p>
+    </div>
+    <div className="mkt-api-example">
+      <h3>Example REST scheduling request</h3>
+      <pre className="dev-code" tabIndex="0" aria-label="Example REST scheduling request"><code>{SCHEDULING_REQUEST}</code></pre>
+      <p>Set your key and project ID, replace <code>ACCOUNT_ID</code> with a connected account that supports text, and choose a future date. The response queues a post; check its delivery status to confirm publication.</p>
+    </div>
+  </>;
+}
+
+function AccountManagementPreview() {
+  const accounts = [
+    { platform: "instagram", name: "Studio Instagram", status: "Connected" },
+    { platform: "linkedin", name: "Studio LinkedIn page", status: "Reconnect required" },
+    { platform: "telegram", name: "Studio updates", status: "Connected" },
+  ];
+  return <>
+    <div className="mkt-preview-copy">
+      <h2 id="mkt-preview-title">Know which accounts are ready.</h2>
+      <p>Accounts shows the profiles, pages, and channels connected to Meadow. Check access before preparing a campaign, reconnect an expired account, and choose only the destinations that should receive each post.</p>
+      <p className="mkt-preview-note">Publishing status is separate from connection status. Review the result for each destination after a post is sent.</p>
+    </div>
+    <div className="mkt-account-preview" aria-label="Example connected accounts">
+      <h3>Your connected accounts</h3>
+      <ul>
+        {accounts.map(account => <li key={account.platform}>
+          <PlatformMark platform={PLATFORMS.find(platform => platform.id === account.platform)} />
+          <div><strong>{account.name}</strong><span>{PLATFORMS.find(platform => platform.id === account.platform).name}</span></div>
+          <span className="mkt-account-status">{account.status}</span>
+        </li>)}
+      </ul>
+      <p>Illustrative account names and statuses.</p>
+    </div>
+  </>;
 }
 
 function PlanGrid() {
@@ -87,8 +147,10 @@ export default function MarketingPage({ page, onGetStarted }) {
             <h1 className="landing-title">{page.headline}</h1>
             <p className="landing-subtitle">{page.subtitle}</p>
             <div className="hero-actions mkt-hero-actions">
-              <button className="btn-primary landing-cta" onClick={onGetStarted}>Start scheduling <ArrowIcon /></button>
-              <a className="pricing-button mkt-secondary-cta" href="#pricing">View pricing</a>
+              {page.primaryAction
+                ? <a className="btn-primary landing-cta" href={appHref(page.primaryAction.path)}>{page.primaryAction.label} <ArrowIcon /></a>
+                : <button className="btn-primary landing-cta" onClick={onGetStarted}>Start scheduling <ArrowIcon /></button>}
+              <a className="pricing-button mkt-secondary-cta" href={page.secondaryAction?.path || "#pricing"}>{page.secondaryAction?.label || "View pricing"}</a>
             </div>
           </div>
         </section>
@@ -101,14 +163,15 @@ export default function MarketingPage({ page, onGetStarted }) {
 
         <section className="landing-section" aria-labelledby="mkt-features-title">
           <div className="section-heading">
-            <h2 id="mkt-features-title">{page.kind === "cross-posting" ? "One post, made to fit everywhere." : "Built for running more than one account."}</h2>
+            <h2 id="mkt-features-title">{page.featureHeading || (page.kind === "cross-posting" ? "One post, made to fit everywhere." : "Built for running more than one account.")}</h2>
           </div>
-          <div className={`mkt-card-grid ${page.features.length === 4 ? "mkt-card-grid-2" : "mkt-card-grid-3"}`}>
+          <div className={page.featureHeading ? "mkt-feature-list" : `mkt-card-grid ${page.features.length === 4 ? "mkt-card-grid-2" : "mkt-card-grid-3"}`}>
             {page.features.map(item => <article className="mkt-card" key={item.title}><h3>{item.title}</h3><p>{item.text}</p></article>)}
           </div>
         </section>
 
         <section className="landing-section mkt-preview-section" aria-labelledby="mkt-preview-title">
+          {page.kind === "scheduling-api" ? <ApiSchedulingPreview /> : page.kind === "accounts" ? <AccountManagementPreview /> : <>
           <div className="mkt-preview-copy">
             <h2 id="mkt-preview-title">Scroll less and publish more.</h2>
             <p>Upload once and send it everywhere it belongs. Meadow takes the repetitive posting off your plate so you can spend your time making the next thing.</p>
@@ -132,6 +195,7 @@ export default function MarketingPage({ page, onGetStarted }) {
               </div>
             ))}
           </div>
+          </>}
         </section>
 
         <section className="landing-section" id="platforms" aria-labelledby="mkt-platforms-title">
@@ -166,8 +230,10 @@ export default function MarketingPage({ page, onGetStarted }) {
             <h2 id="landing-cta-title">Ready to get started?</h2>
             <p>Start publishing across every platform from one calm workspace.</p>
             <div className="landing-cta-actions">
-              <button className="landing-cta-primary" onClick={onGetStarted}>Start posting free <ArrowIcon /></button>
-              <a className="landing-cta-secondary" href="#pricing">View pricing</a>
+              {page.primaryAction
+                ? <a className="landing-cta-primary" href={appHref(page.primaryAction.path)}>{page.primaryAction.label} <ArrowIcon /></a>
+                : <button className="landing-cta-primary" onClick={onGetStarted}>Start posting free <ArrowIcon /></button>}
+              <a className="landing-cta-secondary" href={page.secondaryAction?.path || "#pricing"}>{page.secondaryAction?.label || "View pricing"}</a>
             </div>
           </div>
         </section>
