@@ -7,12 +7,13 @@ export const SIGNUP_APPEARANCE = {
   },
 };
 
-export function syncSignupLayout(root) {
-  const emailRow = root.querySelector(".cl-formFieldRow__emailAddress");
+export function syncSignupLayout(root, mode = "sign-up") {
+  const signingIn = mode === "sign-in";
+  const emailRow = root.querySelector(signingIn ? ".cl-formFieldRow__identifier" : ".cl-formFieldRow__emailAddress");
   const passwordRow = root.querySelector(".cl-formFieldRow__password");
-  const email = emailRow?.querySelector('input[name="emailAddress"]');
+  const email = emailRow?.querySelector(signingIn ? 'input[name="identifier"]' : 'input[name="emailAddress"]');
   const form = email?.closest(".cl-form");
-  const isEntry = Boolean(form && passwordRow && emailRow.parentElement === passwordRow.parentElement);
+  const isEntry = Boolean(form && (signingIn || (passwordRow && emailRow.parentElement === passwordRow.parentElement)));
   root.dataset.signupEntry = String(isEntry);
   root.dataset.emailEntered = String(Boolean(email?.value.trim()));
   if (!isEntry) return;
@@ -21,6 +22,23 @@ export function syncSignupLayout(root) {
   let action = form.querySelector(".cl-formButtonPrimary");
   while (action?.parentElement && action.parentElement !== form) action = action.parentElement;
   if (action?.parentElement === form) action.classList.add("signup-entry-action");
+}
+
+export function syncSigninLayout(root) {
+  syncSignupLayout(root, "sign-in");
+  if (root.dataset.signupEntry !== "true") return;
+  // Clerk already supports entering a password on its email step (for autofill).
+  // Expose that same native input once email is entered, including to keyboards
+  // and screen readers, without changing its value or authentication handlers.
+  const passwordRow = root.querySelector(".cl-formFieldRow__password");
+  if (!passwordRow) return;
+  const entered = root.dataset.emailEntered === "true";
+  const hidden = String(!entered);
+  if (passwordRow.getAttribute("aria-hidden") !== hidden) passwordRow.setAttribute("aria-hidden", hidden);
+  for (const control of passwordRow.querySelectorAll('input[name="password"], .cl-formFieldInputShowPasswordButton')) {
+    const tabIndex = entered ? 0 : -1;
+    if (control.tabIndex !== tabIndex) control.tabIndex = tabIndex;
+  }
 }
 
 // Clerk's form remains a single DOM subtree. Keep Tab navigation in the same
@@ -34,10 +52,15 @@ export function handleSignupTab(event, root) {
     && element.getClientRects().length && getComputedStyle(element).visibility !== "hidden"
   ));
   const groups = [
-    ".cl-formFieldRow__emailAddress", ".cl-socialButtonsRoot",
+    ".cl-formFieldRow__emailAddress, .cl-formFieldRow__identifier", ".cl-socialButtonsRoot",
     ".cl-formFieldRow__password", ".signup-consent-inline-host", ".signup-entry-action",
   ];
-  const ordered = groups.flatMap(group => all.filter(element => element.closest(group)));
+  const ordered = groups.flatMap(group => {
+    const controls = all.filter(element => element.closest(group));
+    return group === ".cl-socialButtonsRoot"
+      ? controls.sort((a, b) => Number(b.matches(".cl-socialButtonsBlockButton__facebook")) - Number(a.matches(".cl-socialButtonsBlockButton__facebook")))
+      : controls;
+  });
   ordered.push(...all.filter(element => !ordered.includes(element)));
   const index = ordered.indexOf(event.target);
   if (index < 0) return;

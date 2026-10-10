@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { handleSignupTab, syncSignupLayout } from "../src/signupLayout.js";
+import { handleSignupTab, syncSigninLayout, syncSignupLayout } from "../src/signupLayout.js";
 
 function entryForm(value = "") {
   const fields = { classList: new Set() };
@@ -10,15 +10,23 @@ function entryForm(value = "") {
   action.parentElement = form;
   const email = { value, closest: () => form };
   const emailRow = { parentElement: fields, querySelector: () => email };
-  const passwordRow = { parentElement: fields };
+  const passwordAttributes = new Map();
+  const passwordControls = [{ tabIndex: -1 }, { tabIndex: -1 }];
+  const passwordRow = {
+    parentElement: fields,
+    getAttribute: name => passwordAttributes.get(name),
+    setAttribute: (name, value) => passwordAttributes.set(name, value),
+    querySelectorAll: () => passwordControls,
+  };
   const root = {
     dataset: {},
     querySelector: selector => ({
       ".cl-formFieldRow__emailAddress": emailRow,
+      ".cl-formFieldRow__identifier": emailRow,
       ".cl-formFieldRow__password": passwordRow,
     })[selector] || null,
   };
-  return { root, email, emailRow, passwordRow, fields, action };
+  return { root, email, emailRow, passwordRow, passwordControls, fields, action };
 }
 
 test("a blank signup initially hides the password; typing and clearing update it", () => {
@@ -56,13 +64,36 @@ test("unrelated email and password fields do not trigger the signup layout", () 
   assert.equal(root.dataset.signupEntry, "false");
 });
 
+test("sign-in reveals Clerk's native password accessibly after email and hides it on clearing", () => {
+  const { root, email, passwordRow, passwordControls } = entryForm();
+  syncSigninLayout(root);
+  assert.equal(root.dataset.signupEntry, "true");
+  assert.equal(passwordRow.getAttribute("aria-hidden"), "true");
+  assert.deepEqual(passwordControls.map(control => control.tabIndex), [-1, -1]);
+  email.value = "person@example.com";
+  syncSigninLayout(root);
+  assert.equal(passwordRow.getAttribute("aria-hidden"), "false");
+  assert.deepEqual(passwordControls.map(control => control.tabIndex), [0, 0]);
+  email.value = "";
+  syncSigninLayout(root);
+  assert.equal(passwordRow.getAttribute("aria-hidden"), "true");
+  assert.deepEqual(passwordControls.map(control => control.tabIndex), [-1, -1]);
+});
+
+test("sign-in password recovery and verification steps retain Clerk's normal layout", () => {
+  const { root } = entryForm();
+  root.querySelector = () => null;
+  syncSigninLayout(root);
+  assert.equal(root.dataset.signupEntry, "false");
+});
+
 test("keyboard navigation follows email, providers, then password in either direction", () => {
   const focused = [];
   const element = (name, group, visible = true) => ({
     name, tabIndex: 0,
-    matches: () => false,
+    matches: selector => selector === ".cl-socialButtonsBlockButton__facebook" && name === "Facebook",
     getClientRects: () => visible ? [{}] : [],
-    closest: selector => selector === group,
+    closest: selector => selector.split(", ").includes(group),
     focus: () => focused.push(name),
   });
   const email = element("email", ".cl-formFieldRow__emailAddress");
@@ -70,7 +101,7 @@ test("keyboard navigation follows email, providers, then password in either dire
   const facebook = element("Facebook", ".cl-socialButtonsRoot");
   const google = element("Google", ".cl-socialButtonsRoot");
   const hidden = element("hidden submit", null, false);
-  const root = { dataset: { signupEntry: "true" }, querySelectorAll: () => [hidden, email, password, facebook, google] };
+  const root = { dataset: { signupEntry: "true" }, querySelectorAll: () => [hidden, email, password, google, facebook] };
   const previousStyle = globalThis.getComputedStyle;
   globalThis.getComputedStyle = () => ({ visibility: "visible" });
   try {
