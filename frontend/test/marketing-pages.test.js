@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { GENERAL_PAGES, findMarketingPage } from "../src/marketing/generalPages.js";
+import { GENERAL_PAGES, PUBLIC_MARKETING_PAGES, findMarketingPage } from "../src/marketing/generalPages.js";
 import { PLATFORM_USE_CASES, getPlatformUseCaseBySlug } from "../src/platformUseCases.js";
 import { isDashboardPath } from "../src/bridge/dashboardRoutes.js";
 
@@ -16,12 +16,25 @@ test("cross-platform pages have unique paths that do not collide with other rout
 });
 
 test("cross-platform pages have search metadata and answered questions", () => {
-  for (const page of GENERAL_PAGES) {
+  for (const page of PUBLIC_MARKETING_PAGES) {
     assert.ok(page.title.length <= 70, `${page.path} title length`);
     assert.ok(page.description.length >= 80 && page.description.length <= 200, `${page.path} description length`);
     assert.ok(page.faqs.length >= 5);
     assert.equal(new Set(page.faqs.map(item => item.q)).size, page.faqs.length, `${page.path} has duplicate questions`);
   }
+});
+
+test("the Hootsuite comparison is a distinct public route with sourced content", () => {
+  const page = findMarketingPage("/hootsuite-alternative");
+  assert.equal(page.kind, "alternative");
+  assert.equal(isDashboardPath(page.path), false);
+  assert.equal(new Set(PUBLIC_MARKETING_PAGES.map(item => item.path)).size, PUBLIC_MARKETING_PAGES.length);
+  assert.equal(page.checkedAt, "2026-10-12");
+  assert.ok(page.comparison.length >= 8);
+  assert.equal(new Set(page.comparison.map(row => row.feature)).size, page.comparison.length);
+  for (const row of page.comparison) assert.ok(row.meadow && row.hootsuite);
+  for (const source of page.sources) assert.match(new URL(source.href).hostname, /(?:^|\.)hootsuite\.com$/);
+  assert.ok(page.faqs.some(item => item.q.includes("automatically") && item.a.includes("no automatic Hootsuite migration")));
 });
 
 test("Telegram is included in the public platform catalog and marketing pages", () => {

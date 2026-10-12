@@ -1,6 +1,6 @@
 import { DASHBOARD_PATHS } from "./bridge/dashboardRoutes.js";
 import { PLATFORM_USE_CASES } from "./platformUseCases.js";
-import { GENERAL_PAGES } from "./marketing/generalPages.js";
+import { PUBLIC_MARKETING_PAGES } from "./marketing/generalPages.js";
 
 // This is PostHog's public, write-only project token, not a personal API key.
 export const MEADOW_POSTHOG_KEY = "phc_noGcZmRtAvHTjbRDfWdqMW5X3sdpsjwiRMt6evTw7AmM";
@@ -8,7 +8,7 @@ export const MEADOW_POSTHOG_PROXY_PATH = "/sprout";
 const hosts = new Set(["findmeadow.com", "www.findmeadow.com", "app.findmeadow.com"]);
 const preference = "meadow.product-analytics.disabled";
 const preferenceCookie = "meadow_analytics";
-const staticPaths = new Set(["/", "/start", "/sign-in", "/sign-up", "/sign-up/complete", "/oauth-consent", "/pricing", "/privacy", "/privacy-policy", "/terms", "/terms-of-service", "/tools/tiktok-roast", ...Object.values(DASHBOARD_PATHS), ...PLATFORM_USE_CASES.map(platform => `/${platform.slug}`), ...GENERAL_PAGES.map(page => page.path)]);
+const staticPaths = new Set(["/", "/start", "/sign-in", "/sign-up", "/sign-up/complete", "/oauth-consent", "/pricing", "/privacy", "/privacy-policy", "/terms", "/terms-of-service", "/tools/tiktok-roast", ...Object.values(DASHBOARD_PATHS), ...PLATFORM_USE_CASES.map(platform => `/${platform.slug}`), ...PUBLIC_MARKETING_PAGES.map(page => page.path)]);
 const events = new Set(["$pageview", "$pageleave", "meadow_signup_completed", "meadow_checkout_started", "meadow_post_submitted", "meadow_draft_saved", "meadow_connection_started", "meadow_account_connected", "meadow_account_disconnected", "meadow_media_uploaded"]);
 const properties = new Set(["token", "distinct_id", "$session_id", "$window_id", "$lib", "$lib_version", "$insert_id", "$sent_at", "$browser", "$browser_version", "$os", "$os_version", "$device_type", "$screen_height", "$screen_width", "$viewport_height", "$viewport_width", "$is_identified", "$process_person_profile", "$cookieless_mode", "$time", "$prev_pageview_duration", "$prev_pageview_max_scroll_percentage", "$prev_pageview_max_content_percentage"]);
 let client;

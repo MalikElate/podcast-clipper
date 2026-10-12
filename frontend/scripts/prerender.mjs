@@ -2,7 +2,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { createServer } from "vite";
 import { DASHBOARD_PATHS } from "../src/bridge/dashboardRoutes.js";
 import { PLATFORM_USE_CASES } from "../src/platformUseCases.js";
-import { GENERAL_PAGES } from "../src/marketing/generalPages.js";
+import { PUBLIC_MARKETING_PAGES } from "../src/marketing/generalPages.js";
 import { FREE_TOOL_PAGES } from "../src/tools/freeToolsCatalog.js";
 import { CONTACT_TITLE, CONTACT_DESCRIPTION, DEVELOPERS_TITLE, DEVELOPERS_DESCRIPTION } from "../src/siteContact.js";
 
@@ -28,7 +28,7 @@ const pages = [
     title: platform.title,
     description: platform.description,
   })),
-  ...GENERAL_PAGES.map((page) => ({
+  ...PUBLIC_MARKETING_PAGES.map((page) => ({
     path: page.path.slice(1),
     kind: "marketing",
     platformId: page.path,

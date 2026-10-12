@@ -5,6 +5,7 @@ import LegalPage from "./components/LegalPage.jsx";
 import Pricing from "./components/Pricing.jsx";
 import PlatformUseCasePage from "./components/PlatformUseCasePage.jsx";
 import MarketingPage from "./components/MarketingPage.jsx";
+import AlternativePage from "./components/AlternativePage.jsx";
 import AdSignupFunnel from "./components/AdSignupFunnel.jsx";
 import ContactPage from "./components/ContactPage.jsx";
 import DevelopersPage from "./components/DevelopersPage.jsx";
@@ -28,7 +29,8 @@ export function render(kind, platformId) {
   if (kind === "marketing") {
     const page = findMarketingPage(platformId);
     if (!page) throw new Error(`Unknown marketing page: ${platformId}`);
-    return renderToString(<div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><MarketingPage page={page} /></div></div>);
+    const Page = page.kind === "alternative" ? AlternativePage : MarketingPage;
+    return renderToString(<div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><Page page={page} /></div></div>);
   }
 
   if (kind === "platform") {
