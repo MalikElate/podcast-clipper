@@ -192,8 +192,10 @@ function funnelGeometry(width, height) {
   const onRim = rim - CARD_HEIGHT - 3, inNeck = neck - CARD_HEIGHT + 6;
   return { rim, slant, neck, cardWidth, offset, queue: Math.round(height * .012), onRim, inNeck, stack: neck + 14, sideInset: Math.min(20, width * .02) };
 }
-// Lane for each post in turn: left, then right.
-const LANES = [-1, 1];
+// Lane for each post in turn (-1 left, 0 middle, 1 right), in the reference's
+// order. The fall is long enough that a post is still well above the rim when
+// the one before it has slid off or faded, so lanes never collide.
+const LANES = [0, -1, 1, 0, 1, -1];
 
 function FunnelBoard({ demo, source, destinations, cards, wrongFormat: realWrongFormat, currentDrop, catalog, loading, intervalMinutes: interval, onSetup, setupDisabled }) {
   const stage = useRef(null);
