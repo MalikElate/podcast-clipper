@@ -23,6 +23,14 @@ class GoogleProvider extends PlatformProvider {
   }
 }
 
+// YouTube reports length as ISO 8601, for example PT1H2M3S.
+export function isoSeconds(value) {
+  const match = /^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(String(value || ""));
+  if (!match || match.slice(1).every(part => part === undefined)) return null;
+  const [days, hours, minutes, seconds] = match.slice(1).map(part => Number(part || 0));
+  return days * 86400 + hours * 3600 + minutes * 60 + seconds || null;
+}
+
 export class YouTubeProvider extends GoogleProvider {
   constructor(deps) { super("youtube", deps); }
   async accountViews({ account, credentials, window }) {
@@ -49,16 +57,16 @@ export class YouTubeProvider extends GoogleProvider {
     if (!uploads) return [];
     const list = await this.http.request(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails,status&maxResults=25&playlistId=${encodeURIComponent(uploads)}`, { token: credentials.accessToken });
     const items = (list.items || []).filter(item => ["public", "unlisted"].includes(item.status?.privacyStatus) && /^[\w-]{6,20}$/.test(item.contentDetails?.videoId || ""));
-    // One videos.list call (1 quota unit) adds each upload's public counts.
-    const statistics = new Map();
+    // One videos.list call (1 quota unit) adds each upload's public counts and length.
+    const statistics = new Map(), durations = new Map();
     if (items.length) {
-      const result = await this.http.request(`https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${items.map(item => item.contentDetails.videoId).join(",")}`, { token: credentials.accessToken });
-      for (const video of result.items || []) statistics.set(video.id, video.statistics || {});
+      const result = await this.http.request(`https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails&id=${items.map(item => item.contentDetails.videoId).join(",")}`, { token: credentials.accessToken });
+      for (const video of result.items || []) { statistics.set(video.id, video.statistics || {}); durations.set(video.id, isoSeconds(video.contentDetails?.duration)); }
     }
     return items.map(item => {
       const id = item.contentDetails.videoId, thumbnails = item.snippet?.thumbnails || {}, counts = statistics.get(id) || {};
       return { id, title: String(item.snippet?.title || ""), caption: String(item.snippet?.description || ""), publishedAt: Date.parse(item.contentDetails.videoPublishedAt || item.snippet?.publishedAt) || null,
-        thumbnailUrl: (thumbnails.high || thumbnails.medium || thumbnails.default)?.url || null, url: `https://www.youtube.com/watch?v=${id}`,
+        thumbnailUrl: (thumbnails.high || thumbnails.medium || thumbnails.default)?.url || null, url: `https://www.youtube.com/watch?v=${id}`, duration: durations.get(id) ?? null,
         metrics: { views: Number(counts.viewCount), likes: Number(counts.likeCount), comments: Number(counts.commentCount) } };
     });
   }

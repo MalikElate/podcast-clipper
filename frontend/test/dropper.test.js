@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { dropperDestinationAccounts, dropperSourceAccounts, selectableDropperCards, currentDropperItem, intervalMinutes, intervalInput, intervalLabel, dropperQueueStatus, funnelFeed, funnelDuration, funnelProgress, wrongFormatLabel, FUNNEL_STEP_MS, FUNNEL_TIMING } from "../src/bridge/dropper.js";
+import { dropperDestinationAccounts, dropperSourceAccounts, selectableDropperCards, currentDropperItem, intervalMinutes, intervalInput, intervalLabel, dropperQueueStatus, funnelFeed, funnelDuration, funnelProgress, wrongFormatLabel, FUNNEL_STEP_MS, FUNNEL_TIMING, videoFit, durationLabel } from "../src/bridge/dropper.js";
 
 test("dropper keeps distinct connected accounts on the same platform and excludes its source and chat destinations", () => {
   const accounts = [
@@ -65,7 +65,7 @@ test("the funnel drops videos through and turns away every other format, newest 
   const wrong = [{ id: "photo", publishedAt: 3, format: "photo" }, { id: "text", publishedAt: 4, format: "text" }];
   const feed = funnelFeed(cards, wrong);
   assert.deepEqual(feed.map(item => [item.id, item.fits]), [["v-old", true], ["photo", false], ["text", false], ["v-new", true]]);
-  assert.deepEqual(funnelFeed(cards, wrong, 2).map(item => item.id), ["text", "v-new"]);
+  assert.deepEqual(funnelFeed(cards, wrong, { limit: 2 }).map(item => item.id), ["text", "v-new"]);
   assert.equal(wrongFormatLabel("carousel"), "carousel");
   assert.equal(wrongFormatLabel("story"), "not a video");
 
@@ -83,4 +83,23 @@ test("the funnel drops videos through and turns away every other format, newest 
   assert.equal(end.active.length, 0);
   assert.equal(funnelDuration([]), 0);
   assert.equal(funnelProgress([], 0).done, true);
+});
+
+test("a video is the wrong format only when it is too long for every destination", () => {
+  const catalog = [{ id: "x", videoMaxSeconds: 140 }, { id: "bluesky", videoMaxSeconds: 180 }, { id: "youtube", videoMaxSeconds: 43200 }, { id: "tiktok", videoMaxSeconds: null }];
+  const x = { id: "a", platform: "x" }, bluesky = { id: "b", platform: "bluesky" }, youtube = { id: "c", platform: "youtube" }, tiktok = { id: "d", platform: "tiktok" };
+  assert.deepEqual(videoFit({ duration: 200 }, [x, bluesky], catalog), { fits: false, tooLong: [x, bluesky] });
+  assert.deepEqual(videoFit({ duration: 160 }, [x, bluesky], catalog), { fits: true, tooLong: [x] });
+  assert.deepEqual(videoFit({ duration: 200 }, [x, youtube], catalog), { fits: true, tooLong: [x] });
+  assert.deepEqual(videoFit({ duration: 99999 }, [tiktok], catalog), { fits: true, tooLong: [] });
+  // Unknown length is never rejected; that check happens when the video is prepared.
+  assert.deepEqual(videoFit({ duration: null }, [x], catalog), { fits: true, tooLong: [] });
+  assert.deepEqual(videoFit({ duration: 999 }, [], catalog), { fits: true, tooLong: [] });
+
+  const feed = funnelFeed([{ id: "long", duration: 200, publishedAt: 2 }, { id: "short", duration: 30, publishedAt: 1 }], [], { destinations: [x], catalog });
+  assert.deepEqual(feed.map(item => [item.id, item.fits]), [["short", true], ["long", false]]);
+  assert.equal(durationLabel(42), "0:42");
+  assert.equal(durationLabel(59.6), "1:00");
+  assert.equal(durationLabel(3723), "62:03");
+  assert.equal(durationLabel(null), "");
 });
