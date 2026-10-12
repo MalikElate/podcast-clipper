@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { dropperDestinationAccounts, dropperSourceAccounts, selectableDropperCards, currentDropperItem, intervalMinutes, intervalInput, intervalLabel, dropperQueueStatus, funnelFeed, funnelDuration, funnelProgress, wrongFormatLabel, FUNNEL_STEP_MS, FUNNEL_TIMING, videoFit, durationLabel } from "../src/bridge/dropper.js";
+import { dropperDestinationAccounts, dropperSourceAccounts, selectableDropperCards, currentDropperItem, intervalMinutes, intervalInput, intervalLabel, dropperQueueStatus, funnelFeed, funnelDuration, funnelProgress, wrongFormatLabel, FUNNEL_STEP_MS, FUNNEL_TIMING, videoFit, durationLabel, demoRejects } from "../src/bridge/dropper.js";
 
 test("dropper keeps distinct connected accounts on the same platform and excludes its source and chat destinations", () => {
   const accounts = [
@@ -102,4 +102,15 @@ test("a video is the wrong format only when it is too long for every destination
   assert.equal(durationLabel(59.6), "1:00");
   assert.equal(durationLabel(3723), "62:03");
   assert.equal(durationLabel(null), "");
+});
+
+test("the ?demo walkthrough adds an example rejection after every third post, never selectable", () => {
+  const cards = Array.from({ length: 7 }, (_, index) => ({ id: `v${index}`, publishedAt: (index + 1) * 10 }));
+  const demo = demoRejects(cards, "tiktok");
+  assert.deepEqual(demo.map(post => [post.id, post.format, post.publishedAt]), [["demo-0", "photo", 31], ["demo-1", "carousel", 61]]);
+  assert.ok(demo.every(post => post.demo && post.platform === "tiktok" && !cards.some(card => card.id === post.id)));
+  assert.deepEqual(demoRejects([], "tiktok"), []);
+  const feed = funnelFeed(cards, demo);
+  assert.deepEqual(feed.filter(item => !item.fits).map(item => item.id), ["demo-0", "demo-1"]);
+  assert.equal(feed.findIndex(item => item.id === "demo-0"), feed.findIndex(item => item.id === "v2") + 1);
 });
