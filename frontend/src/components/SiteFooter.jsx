@@ -33,6 +33,7 @@ function ProductLinks({ onGetStarted }) {
     <a href={href("/tools/tiktok-roast")}>Free TikTok roast</a>
     <a href={href("/tools/")}>Free social media tools</a>
     <a href={href("/tools/media-size-guide/")}>Media-size guides</a>
+    <a href={href("/social-media-analytics/")}>Social media analytics</a>
     <a href={href("/pricing")}>Pricing</a>
     {onGetStarted ? <button onClick={onGetStarted}>Create your first post</button> : <a href={appHref("/dashboard")}>Create your first post</a>}
   </>;
@@ -49,6 +50,7 @@ function ToolLinks() {
 
 function HelpLinks() {
   return <>
+    <a href={href("/blog/")}>Social media guides</a>
     <a href={href("/#faq")}>Frequently asked questions</a>
     <a href={href("/developers")}>API and MCP server</a>
     <a href={href("/contact")}>Contact support</a>

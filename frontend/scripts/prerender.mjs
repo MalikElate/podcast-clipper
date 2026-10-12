@@ -4,11 +4,13 @@ import { DASHBOARD_PATHS } from "../src/bridge/dashboardRoutes.js";
 import { PLATFORM_USE_CASES } from "../src/platformUseCases.js";
 import { PUBLIC_MARKETING_PAGES } from "../src/marketing/generalPages.js";
 import { FREE_TOOL_PAGES } from "../src/tools/freeToolsCatalog.js";
+import { CONTENT_PAGES } from "../src/blog/catalog.js";
 import { CONTACT_TITLE, CONTACT_DESCRIPTION, DEVELOPERS_TITLE, DEVELOPERS_DESCRIPTION } from "../src/siteContact.js";
 
 // Build public HTML once; no auth, API calls, or container startup at request time.
 const server = await createServer({ server: { middlewareMode: true }, appType: "custom" });
 const pages = [
+  ...CONTENT_PAGES.map(page => ({ path: page.path.slice(1), kind: "content", platformId: page.path, title: page.title, description: page.description, published: page.published, updated: page.updated })),
   ...FREE_TOOL_PAGES.map(page => ({ path: page.path.slice(1), kind: "free-tool", platformId: page.path, title: page.title, description: page.description })),
   { path: "tools/tiktok-roast", kind: "tiktok-roast", title: "TikTok Niche or Not — Free Caption Review · Meadow", description: "Review public TikTok captions, get practical fixes, then use Meadow to schedule and cross-post what you create next." },
   { path: "", kind: null, title: "Post to 11 Social Platforms at Once — Free | Meadow", description: "Schedule posts to TikTok, Instagram, YouTube, LinkedIn and 7 more from one place. Free plan, no credit card." },
@@ -56,7 +58,7 @@ function canonicalTarget(page) {
 
 // Search engines index the canonical address only: no 404 page, and one URL per duplicated legal page.
 function sitemapXml(indexable) {
-  const entries = indexable.map((page) => `  <url><loc>${canonicalTarget(page)}</loc></url>`).join("\n");
+  const entries = indexable.map((page) => `  <url><loc>${canonicalTarget(page)}</loc>${page.updated ? `<lastmod>${page.updated}</lastmod>` : ''}</url>`).join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>\n`;
 }
 
@@ -71,6 +73,7 @@ try {
       .replace(/<meta property="og:title" content="[^"]*"\s*\/>/, () => `<meta property="og:title" content="${escapeAttribute(page.title)}" />`)
       .replace(/<meta property="og:description" content="[^"]*"\s*\/>/, () => `<meta property="og:description" content="${description}" />`)
       .replace(/<meta property="og:url" content="[^"]*"\s*\/>/, () => `<meta property="og:url" content="${canonicalTarget(page)}" />`)
+      .replace('<meta property="og:type" content="website" />', () => page.published ? `<meta property="og:type" content="article" /><meta property="article:published_time" content="${page.published}" /><meta property="article:modified_time" content="${page.updated}" />` : '<meta property="og:type" content="website" />')
       .replace(/<link rel="canonical" href="[^"]*"\s*\/>/, () => page.noindex ? '<meta name="robots" content="noindex, follow" />' : `<link rel="canonical" href="${canonicalTarget(page)}" />`);
     const directory = page.path && page.path !== "404" ? `dist/${page.path}` : "dist";
     await mkdir(directory, { recursive: true });

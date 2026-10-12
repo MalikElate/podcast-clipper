@@ -1,4 +1,5 @@
 import { fitTags, suggestTags, validateHandle } from '../shared/freeTools.js';
+import { parseSocialGeneration, SOCIAL_GENERATION_KINDS, socialFallback, socialGenerationSpec } from '../shared/socialGenerators.js';
 import { limitedText } from './roast/core.js';
 import { fitHashtags, shortenText, writingIdeas, WRITING_KINDS, WRITING_LIMITS, WRITING_PLATFORMS } from '../shared/writingTools.js';
 
@@ -9,6 +10,7 @@ const clean = (value, length) => typeof value === 'string' ? value.replace(/[\u0
 const cleanDraft = value => value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, ' ').replace(/\r\n?/g, '\n').trim();
 
 export function parseGeneration(data) {
+  if (SOCIAL_GENERATION_KINDS.includes(data?.kind)) return parseSocialGeneration(data);
   if (!WRITING_KINDS.includes(data?.kind)) throw new Error('Choose a supported writing tool.');
   if (typeof data.topic !== 'string' || data.topic.trim().length < 3 || data.topic.length > 1200) throw new Error('Describe your topic in 3 to 1200 characters.');
   if (data.platform !== undefined && !WRITING_PLATFORMS.includes(data.platform)) throw new Error('Choose a supported social platform.');
@@ -17,8 +19,9 @@ export function parseGeneration(data) {
 }
 
 export async function generateIdeas(data, env) {
+  const social = SOCIAL_GENERATION_KINDS.includes(data.kind) ? socialGenerationSpec(data) : null;
   const tagList = ['tags', 'hashtags'].includes(data.kind);
-  const fallback = reason => ({ source: tagList ? 'keywords' : 'template', items: data.kind === 'tags' ? suggestTags(data.topic, data.keywords) : writingIdeas(data), reason });
+  const fallback = reason => social ? socialFallback(data, reason) : ({ source: tagList ? 'keywords' : 'template', items: data.kind === 'tags' ? suggestTags(data.topic, data.keywords) : writingIdeas(data), reason });
   if (!env.ROAST_AI || !env.ROAST_BUDGET) return fallback('unavailable');
   // Share the existing global daily allowance instead of opening an uncapped AI endpoint.
   try {
@@ -29,7 +32,7 @@ export async function generateIdeas(data, env) {
     const result = await Promise.race([
       env.ROAST_AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
         messages: [
-          { role: 'system', content: generationPrompt(data) },
+          { role: 'system', content: social?.prompt || generationPrompt(data) },
           { role: 'user', content: JSON.stringify(data) },
         ],
         // Workers bindings use the direct JSON schema (unlike some REST aliases).
@@ -37,19 +40,19 @@ export async function generateIdeas(data, env) {
           type: 'json_schema',
           json_schema: {
             type: 'object',
-            properties: { items: { type: 'array', items: { type: 'string' }, minItems: tagList ? 8 : 3, maxItems: tagList ? 15 : 3 } },
+            properties: { items: { type: 'array', items: { type: 'string' }, minItems: social?.minimum || (tagList ? 8 : 3), maxItems: social?.maximum || (tagList ? 15 : 3) } },
             required: ['items'],
             additionalProperties: false,
           },
         },
-        max_tokens: data.kind === 'description' || data.kind === 'linkedin' ? 1200 : 650, temperature: .7,
+        max_tokens: social?.tokens || (data.kind === 'description' || data.kind === 'linkedin' ? 1200 : 650), temperature: .7,
       }),
       new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Generation timed out')), 15000); }),
     ]);
     const parsed = typeof result.response === 'string' ? JSON.parse(result.response) : result.response;
     if (!Array.isArray(parsed?.items) || !parsed.items.every(item => typeof item === 'string')) return fallback('invalid_response');
-    const items = data.kind === 'tags' ? fitTags(parsed.items) : data.kind === 'hashtags' ? fitHashtags(parsed.items) : [...new Set(parsed.items.map(item => shortenText(cleanDraft(item), WRITING_LIMITS[data.kind])).filter(item => item.length >= 10))].slice(0, 3);
-    if (items.length < 3) return fallback('invalid_response');
+    const items = social ? social.normalize(parsed.items) : data.kind === 'tags' ? fitTags(parsed.items) : data.kind === 'hashtags' ? fitHashtags(parsed.items) : [...new Set(parsed.items.map(item => shortenText(cleanDraft(item), WRITING_LIMITS[data.kind])).filter(item => item.length >= 10))].slice(0, 3);
+    if (items.length < (social?.minimum || 3)) return fallback('invalid_response');
     return { source: 'ai', items };
   } catch { return fallback('generation_unavailable'); }
   finally { clearTimeout(timer); }

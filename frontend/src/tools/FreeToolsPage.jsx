@@ -5,6 +5,8 @@ import { appHref } from '../siteUrls.js';
 import { FREE_TOOLS, GUIDES_HUB, MEDIA_GUIDES, TOOLS_HUB, schedulerFor } from './freeToolsCatalog.js';
 import ImageTools from './ImageTools.jsx';
 import { CaptionGenerator, HandleChecker, LinkedInFormatter, UtmBuilder, YouTubeTagGenerator, YouTubeTitleChecker } from './TextTools.jsx';
+import { InstagramHashtagGenerator, NameGenerator, YouTubeChannelDescriptionGenerator } from './SocialGenerators.jsx';
+import TrendingHashtags from './TrendingHashtags.jsx';
 import { CharacterCounter, EngagementCalculator, PostingTimeFinder, WritingGenerator } from './WritingTools.jsx';
 
 const href = page => `${page.path}/`;
@@ -73,6 +75,13 @@ function Tool({ page }) {
     case 'linkedin-text-formatter': return <LinkedInFormatter />;
     case 'youtube-title-checker': return <YouTubeTitleChecker />;
     case 'youtube-tag-generator': return <YouTubeTagGenerator />;
+    case 'youtube-name-generator': return <NameGenerator key={page.slug} platform="youtube" channelNames />;
+    case 'username-generator': return <NameGenerator key={page.slug} />;
+    case 'tiktok-username-generator': return <NameGenerator key={page.slug} platform="tiktok" />;
+    case 'instagram-name-generator': return <NameGenerator key={page.slug} platform="instagram" />;
+    case 'instagram-hashtag-generator': return <InstagramHashtagGenerator />;
+    case 'youtube-channel-description-generator': return <YouTubeChannelDescriptionGenerator />;
+    case 'trending-hashtags': return <TrendingHashtags />;
     default: return null;
   }
 }

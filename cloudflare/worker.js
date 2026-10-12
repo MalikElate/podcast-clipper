@@ -1,5 +1,6 @@
 import { handleTikTokRoast } from "./roast/handler.js";
 import { handleFreeTools } from "./freeTools.js";
+import { handleTrendFeed } from "./trendFeed.js";
 export { RoastBudget } from "./roast/budget.js";
 import { Container } from "@cloudflare/containers";
 import { env } from "cloudflare:workers";
@@ -264,6 +265,7 @@ export default {
     if (isPosthogProxyPath(url.pathname)) return handlePosthogProxy(request);
     if (url.pathname === OPENAI_APPS_CHALLENGE_PATH) return openaiAppsChallengeResponse(workerEnv.OPENAI_APPS_CHALLENGE);
     if (url.pathname === "/api/tools/tiktok-roast") return handleTikTokRoast(request, workerEnv, ctx);
+    if (url.pathname === "/api/free-tools/trends") return handleTrendFeed(request, workerEnv, ctx);
     if (url.pathname.startsWith("/api/free-tools/")) return handleFreeTools(request, workerEnv, ctx);
     const appRedirect = appDomainRedirect(url);
     if (appRedirect) return Response.redirect(appRedirect, 308);

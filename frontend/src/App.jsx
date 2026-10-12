@@ -24,11 +24,13 @@ import { captureProductEvent } from "./productAnalytics.js";
 import { cleanSignupCallbackReferrer, queueGoogleSignup } from "./googleAnalytics.js";
 import { getPlatformUseCaseBySlug } from "./platformUseCases.js";
 import { findFreeToolPage } from "./tools/freeToolsCatalog.js";
+import { isContentPath } from "./blog/routes.js";
 import { legacyToolsPath } from "../../backend/src/bridge/shared/publicToolRoutes.js";
 import { authContinuation } from "./authRedirects.js";
 const loadBridgeApp = () => import("./bridge/BridgeApp.jsx");
 const BridgeApp = lazy(loadBridgeApp);
 const FreeToolsPage = lazy(() => import("./tools/FreeToolsPage.jsx"));
+const BlogPage = lazy(() => import("./blog/BlogPage.jsx"));
 
 export default function App() {
   const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -63,6 +65,7 @@ export default function App() {
   if (pathname === "/contact") return <PublicContactPage onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;
   const freeToolPage = findFreeToolPage(pathname);
   if (freeToolPage) return <Suspense fallback={<OpeningMeadow />}><FreeToolsPage page={freeToolPage} /></Suspense>;
+  if (isContentPath(pathname)) return <Suspense fallback={<OpeningMeadow />}><BlogPage path={pathname} /></Suspense>;
   if (pathname === "/pricing") return <PricingSurface marketing={surface === "marketing"} />;
   const platformPage = surface === "app" ? undefined : getPlatformUseCaseBySlug(pathname.slice(1));
   if (platformPage) return <PublicPlatformLanding platform={platformPage} onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;

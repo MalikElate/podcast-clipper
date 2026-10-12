@@ -4,6 +4,9 @@ import { DASHBOARD_PATHS } from "../src/bridge/dashboardRoutes.js";
 import { PLATFORM_USE_CASES } from "../src/platformUseCases.js";
 import { PUBLIC_MARKETING_PAGES } from "../src/marketing/generalPages.js";
 import { FREE_TOOL_PAGES, FREE_TOOLS, MEDIA_GUIDES, schedulerFor } from "../src/tools/freeToolsCatalog.js";
+import { CONTENT_PAGES, BLOG_HUB } from "../src/blog/catalog.js";
+import { BLOG_ARTICLES } from "../src/blog/articles.js";
+import { CONTENT_PATHS } from "../src/blog/routes.js";
 import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_DISPLAY, LEGAL_ENTITY } from "../src/siteContact.js";
 
 for (const [path, heading] of [["tools/tiktok-roast/index.html", "TikTok <span>Niche or Not"], ["index.html", "Creator tools for your AI"], ["404.html", ">404<"], ["pricing/index.html", "<h1>Pricing</h1>"], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
@@ -211,4 +214,36 @@ for (const guide of MEDIA_GUIDES) {
   const html = await readFile(`dist${guide.path}/index.html`, "utf8");
   assert.ok(html.includes(`href="/tools/social-media-image-cropper/?preset=${guide.slug}-0"`), `${guide.path} must link to crop presets at the new URL`);
 }
-console.log("All public pages, free tools, guides, and dashboard routes have deployable HTML entry points.");
+const guideHubHtml = await readFile('dist/blog/index.html', 'utf8');
+assert.deepEqual([...CONTENT_PATHS].sort(), CONTENT_PAGES.map(page => page.path).sort(), 'Client routes must match the prerendered content catalog');
+assert.ok(landingHtml.includes('href="/blog/"'), 'The homepage footer must expose the guide hub');
+assert.ok(guideHubHtml.includes('href="/blog/post-to-social-media-with-ai-agents/"'), 'The existing publishing guide must remain discoverable');
+for (const page of CONTENT_PAGES) {
+  const html = await readFile(`dist${page.path}/index.html`, 'utf8');
+  const canonical = `https://findmeadow.com${page.path}/`;
+  assert.ok(html.includes(`<title>${page.title}</title>`), `${page.path} must have its own title`);
+  assert.equal((html.match(/<h1[ >]/g) || []).length, 1, `${page.path} must have one main heading`);
+  assert.ok(html.includes(`<link rel="canonical" href="${canonical}" />`), `${page.path} must declare its canonical URL`);
+  assert.ok(html.includes(`<meta property="og:url" content="${canonical}" />`), `${page.path} must use its canonical URL in previews`);
+  assert.ok(sitemapUrls.includes(canonical), `${page.path} must appear in the sitemap`);
+  assert.ok(!html.includes('name="robots"'), `${page.path} must be indexable`);
+  const schemas = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].flatMap(match => JSON.parse(match[1])['@graph'] || []);
+  assert.ok(schemas.some(schema => schema['@type'] === 'BreadcrumbList'), `${page.path} must have breadcrumbs`);
+  if (page === BLOG_HUB) continue;
+  for (const section of page.sections) {
+    assert.ok(html.includes(`id="${section.id}"`), `${page.path} must render section ${section.id} without JavaScript`);
+    assert.ok(html.includes(`href="#${section.id}"`), `${page.path} contents must link to ${section.id}`);
+  }
+  if (page.slug) {
+    assert.ok(guideHubHtml.includes(`href="${page.path}/"`), `Guide hub must link to ${page.path}`);
+    const article = schemas.find(schema => schema['@type'] === 'Article');
+    assert.equal(article?.dateModified, page.updated, `${page.path} must declare its review date`);
+    assert.ok(html.includes('<meta property="og:type" content="article" />'), `${page.path} must use article previews`);
+    assert.ok(sitemap.includes(`<loc>${canonical}</loc><lastmod>${page.updated}</lastmod>`), `${page.path} must expose its review date in the sitemap`);
+    for (const tool of page.relatedTools || []) assert.ok(sitemapUrls.includes(`https://findmeadow.com${tool.href}`), `${page.path} must link to a real tool: ${tool.href}`);
+    for (const source of page.sources) assert.ok(html.includes(source.label.replaceAll('&', '&amp;')), `${page.path} must show its source attribution`);
+  }
+}
+assert.equal(new Set([...FREE_TOOL_PAGES, ...CONTENT_PAGES, ...PUBLIC_MARKETING_PAGES].map(page => page.path)).size, FREE_TOOL_PAGES.length + CONTENT_PAGES.length + PUBLIC_MARKETING_PAGES.length, 'Public catalogs must not compete for the same route');
+assert.equal(BLOG_ARTICLES.length, 10, 'Publish all ten reviewed article topics');
+console.log("All public pages, free tools, articles, guides, and dashboard routes have deployable HTML entry points.");
