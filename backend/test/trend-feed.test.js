@@ -57,7 +57,7 @@ test('upstream requests are credential-free fixed URLs with timeout and redirect
   let target, options;
   const result = await fetchTrendFeed(trendSource('google', 'GB'), async (url, opts) => { target = url; options = opts; return new Response(rss); }, now);
   assert.equal(target, 'https://trends.google.com/trending/rss?geo=GB');
-  assert.equal(options.redirect, 'error');
+  assert.equal(options.redirect, 'manual');
   assert.ok(options.signal instanceof AbortSignal);
   assert.equal(options.headers.Authorization, undefined);
   assert.equal(options.headers.Cookie, undefined);
