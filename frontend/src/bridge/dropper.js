@@ -59,19 +59,31 @@ export function dropperQueueStatus(item, formatDate, now = Date.now()) {
   return "Checking status";
 }
 
-// A copy takes its own bounce path and lands at its destination, including
-// destinations on a wrapped second row. Coordinates are relative to the board.
-export function dropKeyframes({ startX, startY, endX, endY, pegTop, pegHeight, copyIndex = 0 }) {
-  const frames = [{ transform: `translate(${startX}px, ${startY}px) scale(.7)`, opacity: 0, offset: 0 }];
-  for (let row = 0; row < 7; row += 1) {
-    const progress = (row + 1) / 8;
-    const direction = (row + copyIndex) % 2 ? 1 : -1;
-    const bounce = direction * Math.min(21, Math.abs(endX - startX) * .12 + 8);
-    const x = startX + (endX - startX) * progress + bounce;
-    const y = pegTop + pegHeight * (row + .4) / 7;
-    frames.push({ transform: `translate(${x}px, ${y}px) rotate(${direction * 12}deg)`, opacity: 1, offset: .1 + row * .105 });
-  }
-  frames.push({ transform: `translate(${endX}px, ${endY}px) scale(.65)`, opacity: 1, offset: .96 });
-  frames.push({ transform: `translate(${endX}px, ${endY}px) scale(.45)`, opacity: 0, offset: 1 });
-  return frames;
+const FORMAT_LABELS = { photo: "photo post", carousel: "carousel", text: "text post", post: "not a video" };
+export const wrongFormatLabel = format => FORMAT_LABELS[format] || FORMAT_LABELS.post;
+
+// One pass of the funnel, in milliseconds. A post lands on the rim, is checked,
+// then either drops through (videos) or is turned away (every other format).
+export const FUNNEL_STEP_MS = 750;
+export const FUNNEL_TIMING = { keep: { duration: 2600, check: 880, exit: 2400 }, reject: { duration: 1900, check: 890 } };
+const timing = item => item.fits ? FUNNEL_TIMING.keep : FUNNEL_TIMING.reject;
+
+// The newest posts, oldest first, so the latest video ends on top of the stack.
+export function funnelFeed(cards = [], wrongFormat = [], limit = 16) {
+  return [...cards.map(card => ({ ...card, fits: true })), ...wrongFormat.map(post => ({ ...post, fits: false }))]
+    .sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0)).slice(0, limit).reverse();
+}
+
+export const funnelDuration = feed => feed.reduce((end, item, index) => Math.max(end, index * FUNNEL_STEP_MS + timing(item).duration), 0);
+
+export function funnelProgress(feed, elapsed) {
+  const active = [], landed = [];
+  let wrong = 0;
+  feed.forEach((item, index) => {
+    const start = index * FUNNEL_STEP_MS, { duration, check, exit } = timing(item);
+    if (elapsed >= start && elapsed < start + duration) active.push({ item, index });
+    if (!item.fits && elapsed >= start + check) wrong += 1;
+    if (item.fits && elapsed >= start + exit) landed.unshift(item);
+  });
+  return { active, landed, wrong, done: elapsed >= funnelDuration(feed) };
 }

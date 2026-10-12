@@ -22,6 +22,7 @@ test("Dropper video sources include only the owner's connected accounts and keep
   const result = await source.sourceVideos({ platform: "tiktok", remoteId: "zernio:creator" });
   assert.equal(result.videos.length, 1);
   assert.equal(result.videos[0].directUrl, "https://cdn.example/video.mp4");
+  assert.deepEqual(result.others.map(post => [post.externalId, post.format, post.thumbnailUrl]), [["2", "photo", "https://cdn.example/photo.jpg"]]);
   assert.deepEqual(result.videos[0].metrics, { views: 12 });
 });
 
