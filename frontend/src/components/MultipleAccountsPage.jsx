@@ -23,7 +23,7 @@ function PlatformMark({ platform, size = 28 }) {
   return <span className="landing-platform-mark" style={{ "--platform-color": platform.color }} role="img" aria-label={platform.name}><PlatformIcon platform={platform.id} size={size} /></span>;
 }
 
-function AccountPlans() {
+export function AccountPlans() {
   const [yearly, setYearly] = useState(true);
   const { quote, status, retry } = usePricingQuote();
   return <section className="multi-section multi-pricing" id="pricing" aria-labelledby="multi-pricing-title">

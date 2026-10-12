@@ -1,0 +1,57 @@
+.publishing-use-case-page .landing-title { max-width: 18ch; }
+.publishing-use-case-page .hero-platforms { justify-content: center; }
+.use-case-hero-notice { max-width: 640px; margin: 24px auto 0; color: var(--text); font-size: 16px; font-weight: 650; line-height: 1.6; }
+.use-case-example { padding: 28px 32px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); }
+.use-case-example-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; padding-bottom: 20px; }
+.use-case-example-heading strong { font-size: 20px; letter-spacing: -.02em; }
+.use-case-example-heading > span { color: var(--text-muted); font-size: 14px; }
+.use-case-account-version { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: 24px 0; border-top: 1px solid var(--border); }
+.use-case-account-version h3 { margin: 0 0 7px; font-size: 17px; }
+.use-case-account-version p { margin: 0; color: var(--text-muted); font-size: 16px; line-height: 1.6; }
+.use-case-account-version > span:last-child { color: var(--text-muted); font-size: 13px; line-height: 1.8; text-align: right; }
+.use-case-example-note { margin: 18px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+.use-case-api-example h3 { margin: 0 0 14px; font-size: 21px; }
+.use-case-api-example > p { color: var(--text-muted); line-height: 1.7; overflow-wrap: anywhere; }
+.use-case-api-example pre { max-width: 100%; overflow-x: auto; padding: 24px; border-radius: 10px; background: var(--surface-2); color: var(--text); font-size: 13px; line-height: 1.65; tab-size: 2; }
+.use-case-api-example > a { display: inline-flex; align-items: center; gap: 8px; margin-top: 15px; color: var(--text); font-weight: 650; text-underline-offset: 4px; }
+.use-case-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+.use-case-weekday { padding: 13px 6px; text-align: center; color: var(--text-muted); font-size: 12px; border-right: 1px solid var(--border); }
+.use-case-calendar-day { min-height: 103px; min-width: 0; padding: 9px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 12px; }
+.use-case-calendar-day.has-event { background: var(--surface-2); }
+.use-case-calendar-day > div { margin-top: 8px; }
+.use-case-calendar-day .landing-platform-mark { width: 18px; height: 18px; }
+.use-case-calendar-day strong { display: block; margin: 5px 0; font-size: 11px; line-height: 1.4; }
+.use-case-calendar-day small { display: block; color: var(--text-muted); font-size: 10px; line-height: 1.4; }
+.use-case-calendar-agenda { display: none; list-style: none; padding: 0; margin: 22px 0 0; }
+.use-case-calendar-agenda li { display: flex; align-items: center; gap: 14px; padding: 15px 0; border-bottom: 1px solid var(--border); }
+.use-case-calendar-agenda strong { font-size: 14px; }
+.use-case-calendar-agenda span:not(.landing-platform-mark) { display: block; margin-top: 5px; color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+.use-case-comment-example > div { padding: 20px 0; }
+.use-case-comment-example > div + div { border-top: 1px solid var(--border); }
+.use-case-comment-example h3 { margin: 0 0 12px; font-size: 17px; }
+.use-case-comment-example > div p { max-width: 660px; margin: 0; color: var(--text-muted); font-size: 19px; line-height: 1.7; }
+.publishing-use-case-page .use-case-scope { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.use-case-scope h2 { max-width: 730px; }
+.use-case-scope p { max-width: 800px; margin: 0; color: var(--text-muted); font-size: 18px; line-height: 1.7; }
+.use-case-related nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 36px; margin-top: 26px; }
+.use-case-related a { display: flex; justify-content: space-between; align-items: center; gap: 16px; border-bottom: 1px solid var(--border); padding: 18px 0; color: var(--text); font-weight: 600; text-decoration: none; }
+.use-case-related a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.use-case-related a svg { flex-shrink: 0; }
+@media (max-width: 720px) {
+  .use-case-example { padding: 23px 20px; }
+  .use-case-account-version { grid-template-columns: 28px minmax(0, 1fr); gap: 12px; }
+  .use-case-account-version > span:last-child { grid-column: 2; text-align: left; }
+  .use-case-example-heading { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .use-case-calendar-day { min-height: 56px; padding: 8px 5px; }
+  .use-case-calendar-day > div { margin-top: 5px; }
+  .use-case-calendar-day strong, .use-case-calendar-day small { display: none; }
+  .use-case-calendar-agenda { display: block; }
+  .use-case-related nav { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 480px) {
+  .use-case-example { padding: 20px 15px; }
+  .use-case-account-version p { font-size: 15px; }
+  .use-case-api-example pre { padding: 16px; font-size: 12px; }
+  .use-case-weekday { padding: 10px 0; font-size: 10px; }
+  .use-case-comment-example > div p { font-size: 17px; }
+}

@@ -9,6 +9,7 @@ import SiteHeader from "./SiteHeader.jsx";
 import PricingComparison from "./PricingComparison.jsx";
 import PricingQuoteStatus from "./PricingQuoteStatus.jsx";
 import MultipleAccountsPage from "./MultipleAccountsPage.jsx";
+import PublishingUseCasePage from "./PublishingUseCasePage.jsx";
 import { appHref } from "../siteUrls.js";
 
 const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
@@ -134,6 +135,7 @@ export default function MarketingPage({ page, onGetStarted }) {
   }, [page]);
 
   if (page.kind === "multiple-accounts") return <MultipleAccountsPage page={page} onGetStarted={onGetStarted} />;
+  if (page.kind === "publishing-use-case") return <PublishingUseCasePage page={page} onGetStarted={onGetStarted} />;
 
   const faqSchema = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: page.faqs.map(item => ({ "@type": "Question", name: item.q, acceptedAnswer: { "@type": "Answer", text: item.a } })) };
 
