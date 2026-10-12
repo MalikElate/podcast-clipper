@@ -32,7 +32,7 @@ function fixture(t) {
 
 const limitError = error => error.code === "account_limit_reached" && error.status === 409;
 
-test("Sub-Saharan Free accounts stop at two new connections while reconnects and existing data remain intact", async t => {
+test("Central African Free accounts stop at two new connections while reconnects and existing data remain intact", async t => {
   const h = fixture(t);
   await h.connect("first", { startCountry: "CM" });
   await h.connect("second", { startCountry: "cm" });
@@ -59,6 +59,15 @@ test("Sub-Saharan Free accounts stop at two new connections while reconnects and
   h.store.put("billing", { id: "alice", ownerUid: "alice", status: "active", planId: "starter" });
   await h.connect("fourth", { startCountry: "CM" });
   assert.equal(h.accounts.list("alice", h.project.id).length, 4);
+});
+
+test("Eastern and Southern African Free accounts no longer have the regional two-account limit", async t => {
+  for (const country of ["KE", "UG", "TZ", "ZA"]) {
+    const h = fixture(t);
+    const pending = await h.begin(["one", "two", "three"], { startCountry: country });
+    h.accounts.attach("alice", h.project.id, pending.connectionId, ["one", "two", "three"]);
+    assert.equal(h.accounts.list("alice", h.project.id).length, 3, country);
+  }
 });
 
 test("regional limit counts the whole user and rejects oversized selections atomically", async t => {

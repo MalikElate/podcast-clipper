@@ -1,4 +1,4 @@
-import { nativeCurrencyForCountry, normalizeCountryCode } from './geography.js';
+import { regionalCurrencyForCountry, normalizeCountryCode } from './geography.js';
 
 // Fixed catalog reviewed from 2026-10-09 Frankfurter rates against the
 // official 655.957 XAF/XOF per EUR peg. See regionalPricingSnapshot.json.
@@ -55,7 +55,7 @@ function plansFromAmounts(monthly, yearly) {
 
 export function pricingForCountry(value) {
   const countryCode = normalizeCountryCode(value);
-  const nativeCurrency = nativeCurrencyForCountry(countryCode);
+  const nativeCurrency = regionalCurrencyForCountry(countryCode);
   if (!nativeCurrency) {
     return {
       region: 'global', countryCode, currency: 'USD', nativeCurrency: null,
@@ -68,6 +68,7 @@ export function pricingForCountry(value) {
   const currency = usesFallback ? 'EUR' : nativeCurrency;
   const monthly = usesFallback ? SSA_EUR_FALLBACK : nativeMonthly;
   return {
+    // Keep the existing billing/API identifier; geography controls eligibility.
     region: 'ssa', countryCode, currency, nativeCurrency,
     usesFallback, freeAccounts: 2,
     currencyExponent: ZERO_DECIMAL.has(currency) ? 0 : 2,
