@@ -184,13 +184,14 @@ const CARD_HEIGHT = 66;
 function funnelGeometry(width, height) {
   const rim = Math.round(height * .27), slant = Math.round(height * .5), neck = Math.round(height * .54);
   const cardWidth = width < 520 ? Math.max(200, width * .74) : Math.min(400, Math.max(260, width * .4));
-  // Posts come in on the left or right, cross the rim off-centre and slide
-  // down the funnel wall into the neck, like the reference.
-  const offset = width < 520 ? Math.round(width * .08) : Math.min(210, (width - cardWidth) / 2 - 16);
+  // Posts fall straight down a left, centre or right lane, land on the rim,
+  // then slide along it to the centre before dropping through, like the reference.
+  const offset = width < 520 ? Math.round(width * .08) : Math.round(Math.min(width * .22, (width - cardWidth) / 2 - 12));
   const onRim = rim - CARD_HEIGHT - 3, inNeck = neck - CARD_HEIGHT + 6;
   return { rim, slant, neck, cardWidth, offset, queue: Math.round(height * .055), onRim, inFunnel: Math.round((onRim + inNeck) / 2), inNeck, stack: neck + 16, sideInset: Math.min(20, width * .02) };
 }
-const DRIFT = [-1, .7, -.45, 1, -.8, .35, .9, -.6];
+// Lane for each post in turn (-1 left, 0 centre, 1 right); neighbours never share one.
+const LANES = [0, -1, 1, 0, -1, 1, -1, 0, 1];
 
 function FunnelBoard({ demo, source, destinations, cards, wrongFormat: realWrongFormat, currentDrop, catalog, loading, intervalMinutes: interval, onSetup, setupDisabled }) {
   const stage = useRef(null);
@@ -234,7 +235,7 @@ function FunnelBoard({ demo, source, destinations, cards, wrongFormat: realWrong
   const sides = width ? `M ${geometry.sideInset} ${geometry.rim + 2} L ${center - half} ${geometry.slant} V ${geometry.neck} M ${width - geometry.sideInset} ${geometry.rim + 2} L ${center + half} ${geometry.slant} V ${geometry.neck}` : "";
   const setup = loading ? "Loading your setup…" : [source?.label, source && platformName(catalog, source.platform), destinations.length ? `${destinations.length} ${destinations.length === 1 ? "destination" : "destinations"}` : "no destinations yet",
     source && destinations.length ? `every ${intervalLabel(interval)}` : null, "keep: videos that fit"].filter(Boolean).join(" · ");
-  const summary = loading ? "Loading your posts." : `${fitting.length} ${fitting.length === 1 ? "video is" : "videos are"} ready to drop. ${rejectedTotal} ${rejectedTotal === 1 ? "post is" : "posts are"} the wrong format.`;
+  const summary = loading ? "Loading your posts." : `${fitting.length} ${fitting.length === 1 ? "video is" : "videos are"} ready to post. ${rejectedTotal} ${rejectedTotal === 1 ? "post is" : "posts are"} the wrong format.`;
   const stageStyle = { "--dropper-card-width": `${geometry.cardWidth}px`, "--dropper-card-height": `${CARD_HEIGHT}px`, "--dropper-queue": `${geometry.queue}px`, "--dropper-rim": `${geometry.onRim}px`, "--dropper-funnel": `${geometry.inFunnel}px`, "--dropper-neck": `${geometry.inNeck}px`, "--dropper-stack": `${geometry.stack}px` };
 
   return <div className="dropper-funnel-board">
@@ -264,14 +265,14 @@ function FunnelBoard({ demo, source, destinations, cards, wrongFormat: realWrong
         : loading ? <span className="dropper-funnel-empty">Loading your posts…</span>
         : !feed.length ? <span className="dropper-funnel-empty">No recent posts on {source.label}</span>
         : progress.done && !currentDrop ? <span className="dropper-funnel-idle" aria-hidden="true">✓ all {cards.length + wrongFormat.length} posts checked</span> : null}
-      {progress.active.map(({ item, index }) => <FunnelCard key={`${feedKey}:${index}`} item={item} catalog={catalog} className={item.fits ? "keep" : "reject"} style={{ "--dropper-dx": `${Math.round(DRIFT[index % DRIFT.length] * geometry.offset)}px` }}/>)}
+      {progress.active.map(({ item, index }) => <FunnelCard key={`${feedKey}:${index}`} item={item} catalog={catalog} className={item.fits ? "keep" : "reject"} style={{ "--dropper-dx": `${LANES[index % LANES.length] * geometry.offset}px` }}/>)}
       {currentDrop && <FunnelCard item={{ ...currentDrop, fits: true, tooLong: [] }} catalog={catalog} className="dropping" status="dropping now"/>}
       <div className="dropper-funnel-stack" aria-hidden="true">
         {stacked.map((item, index) => <FunnelCard key={item.id} item={{ ...item, fits: true }} catalog={catalog} className="stacked" style={{ top: index * (CARD_HEIGHT + 9) }}/>)}
       </div>
       <div className="dropper-funnel-counts">
         <div className="wrong"><span>Wrong format ×</span><strong>{loading ? "–" : skipped}</strong></div>
-        <div className="ready"><span>Ready to drop ✓</span><strong>{loading ? "–" : ready}</strong></div>
+        <div className="ready"><span>Ready to post ✓</span><strong>{loading ? "–" : ready}</strong></div>
       </div>
     </div>
   </div>;
