@@ -72,10 +72,10 @@ export class DropperService {
 
   async deck(uid, projectId) {
     this.projects.require(uid, projectId);
-    const settings = this.settings(uid, projectId), cards = [], sources = [];
+    const settings = this.settings(uid, projectId), cards = [], wrongFormat = [], sources = [];
     const source = this.connectedAccounts(uid, projectId).find(account => account.id === settings.sourceAccountId);
     if (source) {
-      const { videos, error } = await this.videoSources.sourceVideos(source);
+      const { videos, others = [], error } = await this.videoSources.sourceVideos(source);
       // Recheck the connection after remote video lookups.
       const current = this.store.get("account", source.id);
       invariant(current?.ownerUid === uid && current.projectId === projectId && current.status === "connected" && current.authorizationId === source.authorizationId, "The source connection changed. Refresh and try again.", { status: 409 });
@@ -89,10 +89,12 @@ export class DropperService {
         if (decided.has(id) || copies.has(String(video.externalId))) continue;
         cards.push({ id, accountId: source.id, accountName: source.label, platform: source.platform, ...video, pushable: Boolean(video.directUrl) || this.videoSources.downloader.supports(source.platform) });
       }
+      for (const post of others) wrongFormat.push({ id: cardKey(source.id, post.externalId), platform: source.platform, format: post.format, caption: clipVideoText(post.caption, 140), publishedAt: post.publishedAt, url: post.url, thumbnailUrl: post.thumbnailUrl || null });
     }
     cards.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
+    wrongFormat.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
     this.decks.set(`${uid}:${projectId}`, { at: this.clock(), sourceAccountId: settings.sourceAccountId, cards: cards.slice(0, 50) });
-    return { cards: cards.slice(0, 50).map(({ directUrl, ...card }) => ({ ...card, previewUrl: directUrl })), sources, settings, ...this.state(uid, projectId) };
+    return { cards: cards.slice(0, 50).map(({ directUrl, ...card }) => ({ ...card, previewUrl: directUrl })), wrongFormat: wrongFormat.slice(0, 50), sources, settings, ...this.state(uid, projectId) };
   }
 
   queue(uid, projectId) {
