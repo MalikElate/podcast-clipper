@@ -14,6 +14,7 @@ export function billingPlanAction(planId, billing) {
   if (!billing || !plan) return { current: false, action: "none", label: "Choose a plan" };
   const active = SUBSCRIPTION_STATUSES.has(billing.status);
   const current = active ? billing.planId === planId : planId === "free";
+  if (billing.source === "complimentary") return { current, action: "none", label: current ? "Current plan" : "Complimentary access" };
   if (planId === "free") return { current, action: active ? "portal" : "none", label: active ? "Manage subscription" : "Current plan" };
   if (active && billing.region === "ssa") return { current, action: "portal", label: "Manage billing" };
   return { current, action: active ? "portal" : "checkout", label: active ? current ? "Manage current plan" : `Switch to ${plan.name}` : `Choose ${plan.name}` };

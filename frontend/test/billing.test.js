@@ -1,6 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { checkoutNotice, billingWarning, billingPlanQuote, SUBSCRIPTION_STATUSES } from "../src/bridge/billingState.js";
+import { checkoutNotice, billingWarning, billingPlanQuote, billingPlanAction, SUBSCRIPTION_STATUSES } from "../src/bridge/billingState.js";
+
+test("complimentary access never opens checkout or plan changes", () => {
+  const complimentary = { source: "complimentary", planId: "pro", status: "active", canManage: false };
+  for (const planId of ["free", "starter", "creator", "pro"]) {
+    const action = billingPlanAction(planId, complimentary);
+    assert.equal(action.action, "none");
+    assert.equal(action.current, planId === "pro");
+  }
+  assert.equal(billingPlanAction("pro", { ...complimentary, canManage: true }).action, "none");
+  assert.equal(billingPlanAction("pro", { planId: "free", status: "free" }).action, "checkout");
+  assert.equal(billingPlanAction("pro", { planId: "pro", status: "active", canManage: true }).action, "portal");
+});
 
 test("only confirmed, paid, active checkout shows payment confirmation", () => {
   for (const result of [{}, { checkoutStatus: "complete", paymentStatus: "unpaid", billing: { status: "active" } }, { checkoutStatus: "open", paymentStatus: "paid", billing: { status: "active" } }, { checkoutStatus: "complete", paymentStatus: "paid", billing: { status: "incomplete" } }]) {
