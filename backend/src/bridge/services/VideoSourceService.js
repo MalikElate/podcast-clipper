@@ -59,6 +59,7 @@ export class VideoSourceService {
     try {
       const videos = await this.accounts.withCredentials(account, credentials => provider.recentVideos({ account, credentials }));
       result = { videos: videos.map(video => ({ externalId: video.id, caption: video.caption || video.title, title: video.title, publishedAt: video.publishedAt, url: video.url, directUrl: null, metrics: videoMetrics(video.metrics), thumbnailUrl: video.thumbnailUrl,
+        duration: video.duration ?? null, width: video.width ?? null, height: video.height ?? null,
         embedUrl: account.platform === "tiktok" ? tiktokEmbed(video.url) : `https://www.youtube.com/embed/${video.id}` })), others: [], error: null };
     } catch (error) { result = { videos: [], others: [], error: publicError(error).error }; }
     this.videoCache.set(account.id, { at: this.clock(), authorizationId: account.authorizationId, ownerUid: account.ownerUid, result });

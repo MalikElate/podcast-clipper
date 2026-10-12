@@ -26,6 +26,8 @@ function inboxError(error) {
   return error;
 }
 
+const positive = value => Number.isFinite(value) && value > 0 ? value : null;
+
 export class TikTokProvider extends PlatformProvider {
   availableAccountViews({ credentials }) { return tiktokAccountAnalytics(this, credentials); }
   constructor(deps) { super("tiktok", deps); }
@@ -154,10 +156,11 @@ export class TikTokProvider extends PlatformProvider {
   }
   /** The creator's latest public videos (video.list), for Dropper. */
   async recentVideos({ credentials }) {
-    const result = await this.http.request("https://open.tiktokapis.com/v2/video/list/?fields=id,title,video_description,create_time,cover_image_url,share_url,view_count,like_count,comment_count,share_count", { method: "POST", token: credentials.accessToken, json: { max_count: 20 }, safeToRetry: true, timeoutMs: 15000 });
+    const result = await this.http.request("https://open.tiktokapis.com/v2/video/list/?fields=id,title,video_description,create_time,cover_image_url,share_url,duration,width,height,view_count,like_count,comment_count,share_count", { method: "POST", token: credentials.accessToken, json: { max_count: 20 }, safeToRetry: true, timeoutMs: 15000 });
     return (result.data?.videos || []).filter(video => /^\d+$/.test(String(video.id || "")) && /^https:\/\/(www\.)?tiktok\.com\//.test(video.share_url || "")).map(video => ({
       id: String(video.id), title: String(video.title || ""), caption: String(video.video_description || video.title || ""),
       publishedAt: Number.isFinite(video.create_time) ? video.create_time * 1000 : null, thumbnailUrl: video.cover_image_url || null, url: video.share_url,
+      duration: positive(video.duration), width: positive(video.width), height: positive(video.height),
       metrics: { views: video.view_count, likes: video.like_count, comments: video.comment_count, shares: video.share_count },
     }));
   }

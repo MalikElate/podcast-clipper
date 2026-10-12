@@ -48,6 +48,8 @@ export function PlatformIcon({ platform, size = 22, variant = "default" }) {
   };
   const PlatformLogo = icons[platform];
   if (!PlatformLogo) return <span className="bridge-platform-icon bridge-platform-icon-fallback" style={{ width: size, height: size }} aria-hidden="true" />;
+  // One-colour glyph that inherits the surrounding text colour.
+  if (variant === "mono") return <span className="social-brand-icon" data-platform={platform} style={{ width: size, height: size, color: "inherit" }} aria-hidden="true"><PlatformLogo aria-hidden="true" focusable="false"/></span>;
   let logo;
   if (isHero && platform === "x") {
     logo = <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
