@@ -1,7 +1,7 @@
 // Original editorial content. Platform instructions and sources were reviewed on
 // the dates below; account-specific controls can differ by app version and region.
 const article = (content) => ({ published: '2026-10-12', updated: '2026-10-12', ...content, path: `/blog/${content.slug}` });
-const link = (label, href) => ({ label, href });
+const link = (label, href) => ({ label, href: href.startsWith('/') && !href.endsWith('/') ? `${href}/` : href });
 
 export const BLOG_ARTICLES = [
   article({
