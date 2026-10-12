@@ -5,6 +5,7 @@ import { LockService } from "../core/LockService.js";
 import { deletionMarker } from "./PrivacyService.js";
 import { TrybeService } from "./TrybeService.js";
 import { pricingForCountry } from "../shared/regionalPricing.js";
+import { hasOngoingSubscription, parseComplimentaryProUids } from "./ComplimentaryAccess.js";
 
 const PLAN_PRICE_ENV = {
   starter: { monthly: "STRIPE_PRICE_STARTER_MONTHLY", yearly: "STRIPE_PRICE_STARTER_YEARLY" },
@@ -26,6 +27,7 @@ export class BillingService {
     this.trybe = trybe || new TrybeService({ store, env });
     this.locks = locks || new LockService(store);
     this.clock = clock;
+    this.complimentaryProUids = parseComplimentaryProUids(env.BRIDGE_COMPLIMENTARY_PRO_UIDS);
   }
 
   get configured() {
@@ -57,6 +59,14 @@ export class BillingService {
 
   publicRecord(uid) {
     const record = this.store.get("billing", uid);
+    if (this.complimentaryProUids.has(uid) && !hasOngoingSubscription(record)) {
+      return {
+        configured: this.configured, planId: "pro", cycle: null, status: "active", source: "complimentary",
+        region: null, currency: null, cancelAtPeriodEnd: false, currentPeriodEnd: null,
+        // A prior customer can still inspect invoices or payment obligations.
+        canManage: Boolean(record?.customerId),
+      };
+    }
     if (!record) return { configured: this.configured, planId: null, cycle: null, status: "free", region: null, currency: null, cancelAtPeriodEnd: false, currentPeriodEnd: null, canManage: false };
     return {
       configured: this.configured,
@@ -113,6 +123,10 @@ export class BillingService {
   }
 
   async checkout(uid, email, payload = {}, cookieHeader, { countryCode } = {}) {
+    invariant(!this.complimentaryProUids.has(uid), hasOngoingSubscription(this.store.get("billing", uid))
+      ? "This account is assigned complimentary Pro access. New checkout is disabled; manage your existing subscription separately."
+      : "Your account has complimentary Pro access. No checkout is needed.",
+    { status: 409, code: "complimentary_access" });
     invariant(this.configured, "Stripe checkout is not configured.", { status: 503, code: "billing_not_configured" });
     const { planId, cycle } = payload || {};
     const price = this.priceId(planId, cycle);

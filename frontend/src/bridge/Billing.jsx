@@ -48,6 +48,7 @@ export default function Billing({ localPreview, returnSearch = "" }) {
   }, [returnParams, refreshCount]);
 
   const active = SUBSCRIPTION_STATUSES.has(billing?.status);
+  const complimentary = billing?.source === "complimentary";
   const cardQuote = billingPlanQuote(billing, quote);
   const pricingDiffers = Boolean(active && quote && !cardQuote);
   const pricingMessage = pricingStatusMessage(quote, pricingStatus);
@@ -78,12 +79,13 @@ export default function Billing({ localPreview, returnSearch = "" }) {
   }
 
   return <>
-    <div className="bridge-intro-row"><p>Compare plans and choose the account capacity and support that fit your publishing workflow.</p>{billing?.canManage && <button className="bridge-button secondary" disabled={Boolean(busy)} onClick={manageBilling}>{busy === "portal" ? "Opening…" : "Manage billing"}</button>}</div>
+    <div className="bridge-intro-row"><p>{complimentary ? "Your complimentary Pro access includes all Pro features. No payment is required." : "Compare plans and choose the account capacity and support that fit your publishing workflow."}</p>{billing?.canManage && <button className="bridge-button secondary" disabled={Boolean(busy)} onClick={manageBilling}>{busy === "portal" ? "Opening…" : "Manage billing"}</button>}</div>
     <Alert message={error}/><Alert message={notice} success/>
     <Alert message={billingWarning(billing?.status)}/>
     <button className="bridge-button secondary" disabled={checking || Boolean(busy)} onClick={() => setRefreshCount(count => count + 1)}>{checking ? "Checking billing…" : "Refresh billing"}</button>
-    {billing && !billing.configured && !localPreview && <Alert message="Checkout is temporarily unavailable. Please try again later or contact hello@findmeadow.com."/>}
-    {active && <div className="bridge-panel bridge-billing-summary"><div><span>Current plan</span><strong>{PLANS.find(plan => plan.id === billing.planId)?.name || (billing.planId === "growth" ? "Growth" : "Paid plan")}</strong></div><div><span>Status</span><strong>{billing.status.replaceAll("_", " ")}</strong></div><div><span>Billing</span><strong>{billing.cycle || "—"}</strong></div>{subscriptionCurrency && <div><span>Subscription currency</span><strong className="bridge-billing-currency">{subscriptionCurrency}</strong></div>}{billing.currentPeriodEnd && <div><span>{billing.cancelAtPeriodEnd ? "Ends" : "Renews"}</span><strong>{new Date(billing.currentPeriodEnd).toLocaleDateString()}</strong></div>}</div>}
+    {billing && !complimentary && !billing.configured && !localPreview && <Alert message="Checkout is temporarily unavailable. Please try again later or contact hello@findmeadow.com."/>}
+    {active && <div className="bridge-panel bridge-billing-summary"><div><span>Current plan</span><strong>{PLANS.find(plan => plan.id === billing.planId)?.name || (billing.planId === "growth" ? "Growth" : "Paid plan")}</strong></div><div><span>Status</span><strong>{complimentary ? "Complimentary" : billing.status.replaceAll("_", " ")}</strong></div><div><span>Billing</span><strong>{complimentary ? "No charge" : billing.cycle || "—"}</strong></div>{!complimentary && subscriptionCurrency && <div><span>Subscription currency</span><strong className="bridge-billing-currency">{subscriptionCurrency}</strong></div>}{!complimentary && billing.currentPeriodEnd && <div><span>{billing.cancelAtPeriodEnd ? "Ends" : "Renews"}</span><strong>{new Date(billing.currentPeriodEnd).toLocaleDateString()}</strong></div>}</div>}
+    {!complimentary && <>
     {active && billing?.region === "ssa" && <p className="bridge-small bridge-regional-plan-note">To change your plan, contact <a href="mailto:hello@findmeadow.com">hello@findmeadow.com</a>. Manage billing updates payment details or cancellation.</p>}
     {pricingDiffers && billing?.region !== "ssa" && <p className="bridge-small bridge-regional-plan-note">Your current subscription uses different pricing from your current location. Review available plan changes and their prices in Stripe before confirming.</p>}
     {pricingMessage && <p className="bridge-pricing-quote-status" role={pricingStatus === "error" ? "alert" : "status"}>{pricingMessage} {pricingStatus === "error" && <button type="button" className="bridge-button secondary" onClick={retryPricing}>Retry</button>}</p>}
@@ -102,5 +104,6 @@ export default function Billing({ localPreview, returnSearch = "" }) {
         </button>
       </article>;
     })}</div>
+    </>}
   </>;
 }

@@ -62,6 +62,55 @@ function fixture(t) {
 }
 const starter = { planId: "starter", cycle: "monthly" };
 
+test("complimentary Pro is exact UID configuration and does not create Stripe billing state", async t => {
+  const h = fixture(t);
+  const billing = new BillingService({ ...h.options, stripe: null, env: {
+    BRIDGE_COMPLIMENTARY_PRO_UIDS: " user_Grantee , user_Grantee, user_*, grantee@example.test, alice ",
+  } });
+  assert.deepEqual(await billing.record("user_Grantee"), {
+    configured: false, planId: "pro", cycle: null, status: "active", source: "complimentary",
+    region: null, currency: null, cancelAtPeriodEnd: false, currentPeriodEnd: null, canManage: false,
+  });
+  for (const uid of ["user_Other", "user_GranteeExtra", "user_grantee", "user_*", "grantee@example.test", "alice"]) {
+    assert.equal(billing.publicRecord(uid).status, "free", uid);
+  }
+  await assert.rejects(billing.checkout("user_Grantee", null, starter), { status: 409, code: "complimentary_access" });
+  assert.equal(h.store.get("billing", "user_Grantee"), null);
+  assert.equal(h.store.list("checkout_session", { limit: null }).length, 0);
+  assert.equal(h.calls.created, 0);
+  assert.equal(new BillingService({ ...h.options, env: {} }).publicRecord("user_Grantee").status, "free", "removing the grant restores ordinary billing");
+});
+
+test("complimentary configuration preserves every ongoing Stripe billing state and blocks new checkout", async t => {
+  const h = fixture(t), uid = "user_Grantee";
+  const billing = new BillingService({ ...h.options, env: { ...h.options.env, BRIDGE_COMPLIMENTARY_PRO_UIDS: uid } });
+  for (const status of ["active", "trialing", "past_due", "unpaid", "incomplete", "paused", "unknown_future_status", null]) {
+    const saved = h.store.put("billing", { id: uid, ownerUid: uid, subscriptionId: "sub_existing", customerId: "cus_existing",
+      planId: "creator", cycle: "yearly", status, region: "ssa", currency: "XAF", currentPeriodEnd: 1800000000000, cancelAtPeriodEnd: true });
+    assert.deepEqual(billing.publicRecord(uid), h.billing.publicRecord(uid), `${status}: keep the real financial view`);
+    assert.equal(billing.publicRecord(uid).source, undefined);
+    await assert.rejects(billing.checkout(uid, null, starter), { code: "complimentary_access" });
+    assert.deepEqual(h.store.get("billing", uid), saved);
+  }
+  assert.equal(h.calls.created, 0);
+  assert.deepEqual(h.calls.cancelled, []);
+});
+
+test("historical Stripe customers retain portal access without creating a complimentary subscription", async t => {
+  const h = fixture(t), uid = "user_Grantee";
+  const billing = new BillingService({ ...h.options, env: { ...h.options.env, BRIDGE_COMPLIMENTARY_PRO_UIDS: uid } });
+  for (const status of ["canceled", "incomplete_expired"]) {
+    const saved = h.store.put("billing", { id: uid, ownerUid: uid, subscriptionId: "sub_previous", customerId: "cus_previous", planId: "starter", cycle: "monthly", status });
+    assert.equal(billing.publicRecord(uid).source, "complimentary");
+    assert.equal(billing.publicRecord(uid).canManage, true);
+    assert.equal((await billing.portal(uid)).url, "https://billing.stripe.com/session");
+    assert.equal(h.calls.portals.at(-1).customer, "cus_previous");
+    assert.deepEqual(h.store.get("billing", uid), saved);
+  }
+  assert.equal(h.calls.created, 0);
+  assert.deepEqual(h.calls.cancelled, []);
+});
+
 test("concurrent checkout requests reuse one Stripe session and changing plans expires it", async t => {
   const h = fixture(t);
   const [first, second] = await Promise.all([h.billing.checkout("alice", "alice@example.test", starter), h.billing.checkout("alice", "alice@example.test", starter)]);

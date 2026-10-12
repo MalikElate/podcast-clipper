@@ -26,6 +26,14 @@ Checkout returns to `/dashboard/billing` with a Stripe session ID. Meadow verifi
 
 Concurrent checkout requests reuse the same unpaid session; choosing another plan expires the previous session. The checkout request and its idempotency key are durably stored before contacting Stripe, allowing a lost response to be recovered after restart. If an unresolved attempt is over 23 hours old, checkout stops with `checkout_pending`. An operator must inspect Stripe's request logs using the stored key and reconcile any matching session/subscription before clearing that attempt; never blindly retry it with a new key. Account deletion also recovers outstanding attempts before expiring checkout and canceling subscriptions.
 
+### Complimentary Pro access
+
+Set the server runtime variable `BRIDGE_COMPLIMENTARY_PRO_UIDS` to a comma-separated list of exact Clerk user IDs. Verify the intended user in Clerk or the admin platform-usage report before adding their ID. Emails, prefixes and wildcards are not accepted. Cloudflare forwards this variable to the backend; use the shared release/configuration process and restart the backend when changing it. Remove an ID to revoke the grant. Keep this variable out of frontend build configuration.
+
+The allowlist grants Pro access without creating a customer, subscription, invoice or checkout. `GET /api/bridge/billing` reports `source: "complimentary"`, `planId: "pro"`, `status: "active"`, and no billing cycle or renewal date when there is no ongoing Stripe subscription. The grant also removes the regional Free two-account connection limit. It does not change provider permissions, publishing quotas, connection consent or upload limits. New checkout requests for an allowlisted user fail with `complimentary_access` before any Stripe operation.
+
+Inspect existing subscriptions, unpaid invoices, open Checkout sessions and unresolved checkout attempts before granting access. The allowlist does not cancel a subscription, expire an existing Checkout link or remove financial obligations. An ongoing subscription, including an unknown status, retains its actual billing display so charges are not hidden. Only `canceled` and `incomplete_expired` subscriptions permit the complimentary display; historical customers retain Customer Portal access for billing history. Stripe records and verified webhook processing remain intact, and removing the grant restores their ordinary billing view.
+
 ## Meta Pixel
 
 The shared HTML head loads `frontend/src/metaPixel.js` with public Pixel ID `1591452026328293`. It records `PageView` on production Meadow hosts, including client-side route changes, and stays off in development and local previews. It honors the existing analytics preference, Do Not Track, and Global Privacy Control. Automatic form capture and advanced matching are disabled; no signup or purchase conversions are inferred from page views.
