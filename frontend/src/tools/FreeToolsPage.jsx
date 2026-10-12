@@ -6,6 +6,7 @@ import { FREE_TOOLS, GUIDES_HUB, MEDIA_GUIDES, TOOLS_HUB, schedulerFor } from '.
 import ImageTools from './ImageTools.jsx';
 import { CaptionGenerator, HandleChecker, LinkedInFormatter, UtmBuilder, YouTubeTagGenerator, YouTubeTitleChecker } from './TextTools.jsx';
 import { InstagramHashtagGenerator, NameGenerator, YouTubeChannelDescriptionGenerator } from './SocialGenerators.jsx';
+import TrendingHashtags from './TrendingHashtags.jsx';
 
 const href = page => `${page.path}/`;
 const absolute = page => `https://findmeadow.com${href(page)}`;
@@ -71,6 +72,7 @@ function Tool({ page }) {
     case 'instagram-name-generator': return <NameGenerator key={page.slug} platform="instagram" />;
     case 'instagram-hashtag-generator': return <InstagramHashtagGenerator />;
     case 'youtube-channel-description-generator': return <YouTubeChannelDescriptionGenerator />;
+    case 'trending-hashtags': return <TrendingHashtags />;
     default: return null;
   }
 }

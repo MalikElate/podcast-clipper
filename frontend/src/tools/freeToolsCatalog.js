@@ -3,6 +3,12 @@
 const tool = (slug, name, category, description, intro, sections, faq, title) => ({ slug, path: `/tools/${slug}`, name, category, title: title || `Free ${name} · Meadow`, description, intro, sections, faq });
 
 export const FREE_TOOLS = [
+  tool('trending-hashtags', 'Trending Hashtag Finder', 'Planning',
+    'Find real trending hashtags on mastodon.social and Google Search topics by country. Explore dated source data, filter results, and copy relevant hashtag ideas.',
+    'Find a conversation worth joining. Explore current public trend data, see where it comes from, and choose ideas that fit your audience.',
+    [['Start with the source', 'Mastodon results show hashtags reported by mastodon.social, one server in a wider network. Google results show searches gaining interest in the selected country, with separate hashtag suggestions made from the topic. Neither source is an Instagram or TikTok hashtag ranking.'], ['Use a trend only when you have something to add', 'Read the linked source before posting. A trending word can refer to news, a sensitive event, a fandom, or something unrelated to your brand. Keep only ideas you understand and can use in a relevant post. Popularity does not guarantee reach.'], ['Check the time and measurement', 'Every result includes the data source and retrieval time. Google includes a publication time and its approximate search traffic where supplied. Mastodon includes reported daily uses and accounts. Today is a partial UTC day. Results are cached for up to 15 minutes; an upstream source can update on a different schedule.']],
+    [['Are these live Instagram or TikTok rankings?', 'No. The available feeds are Google Search topics and hashtags reported by mastodon.social. For TikTok, the tool links to the official Creative Center, which may require sign-in for detailed research.'], ['How often do the results update?', 'Meadow fetches the public source when you load results and keeps a snapshot for up to 15 minutes. The source can publish on its own schedule. The displayed timestamps let you check how recent the data is.'], ['What happens if a source is unavailable?', 'The tool displays an error and a link to the source. It never replaces a failed request with invented rankings.'], ['Can I use the suggested hashtags on any platform?', 'You can copy a relevant idea, but first check its meaning, the destination’s rules, and its context there. Google hashtag suggestions are derived from search topics, not measured social hashtag usage.']],
+    'Trending Hashtag Finder — Sourced Trends & Ideas | Meadow'),
   tool('youtube-name-generator', 'YouTube Channel Name Generator', 'Writing',
     'Find YouTube channel name ideas for your niche and tone, with suggested handles. Compare names and copy your favorites for free, without signup.',
     'Give your next channel a name that fits. Describe your videos and explore names with matching handle ideas.',
@@ -111,7 +117,7 @@ export function schedulerFor(page) {
 }
 
 export const CROP_PRESETS = MEDIA_GUIDES.flatMap(guide => guide.rows.map(([label, width, height, ratio], index) => ({ id: `${guide.slug}-${index}`, label: `${guide.platform} · ${label}`, width, height, ratio })));
-export const TOOLS_HUB = { path: '/tools', name: 'Free Social Media Tools', title: 'Free Social Media Tools for Creators · Meadow', description: 'Free tools for better social posts: crop images, split Instagram grids, build UTM links, format text, check titles and generate captions and tags.' };
+export const TOOLS_HUB = { path: '/tools', name: 'Free Social Media Tools', title: 'Free Social Media Tools for Creators · Meadow', description: 'Free social media tools: generate names, hashtags and channel descriptions, research trends, crop images, build UTM links, and prepare your next post.' };
 export const GUIDES_HUB = { path: '/tools/media-size-guide', name: 'Social Media Size Guide', title: 'Social Media Image and Video Size Guide · Meadow', description: 'Find practical image dimensions and video canvas sizes for Instagram, TikTok, YouTube, LinkedIn, Facebook, X, and Pinterest, with free crop presets.' };
 export const FREE_TOOL_PAGES = [TOOLS_HUB, ...FREE_TOOLS, GUIDES_HUB, ...MEDIA_GUIDES];
 export const findFreeToolPage = pathname => FREE_TOOL_PAGES.find(page => page.path === pathname.replace(/\/+$/, ''));
