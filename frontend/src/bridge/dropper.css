@@ -59,11 +59,11 @@ button.dropper-funnel-empty{color:var(--b-text);cursor:pointer}
 .dropper-funnel-counts .ready strong{color:var(--dropper-green)}
 @keyframes dropper-keep{0%{opacity:0;transform:translate(calc(-50% + var(--dropper-dx,0px)),calc(var(--dropper-queue) - 30px));animation-timing-function:cubic-bezier(.2,.9,.25,1)}3.8%{opacity:1;transform:translate(calc(-50% + var(--dropper-dx,0px)),var(--dropper-queue));animation-timing-function:cubic-bezier(.35,.05,.55,1)}41%,47.4%{transform:translate(calc(-50% + var(--dropper-dx,0px)),var(--dropper-rim));animation-timing-function:cubic-bezier(.45,0,.25,1)}53%{transform:translate(-50%,var(--dropper-rim));animation-timing-function:cubic-bezier(.3,0,.5,1)}92.3%,100%{opacity:1;transform:translate(-50%,var(--dropper-neck)) scale(.985)}}
 @keyframes dropper-reject{0%{filter:none;opacity:0;transform:translate(calc(-50% + var(--dropper-dx,0px)),calc(var(--dropper-queue) - 30px));animation-timing-function:cubic-bezier(.2,.9,.25,1)}6.1%{opacity:1;transform:translate(calc(-50% + var(--dropper-dx,0px)),var(--dropper-queue));animation-timing-function:cubic-bezier(.35,.05,.55,1)}65.3%{transform:translate(calc(-50% + var(--dropper-dx,0px)),var(--dropper-rim));background:var(--dropper-card);box-shadow:0 0 0 1px var(--dropper-card-line),0 1px 4px #3a1d5a14}67.3%{background:#f8dbe3;box-shadow:0 0 0 1.5px var(--dropper-red),0 0 16px #e0566f66}70%{transform:translate(calc(-50% + var(--dropper-dx,0px) - 5px),var(--dropper-rim))}73%{transform:translate(calc(-50% + var(--dropper-dx,0px) + 5px),var(--dropper-rim))}76%,83.7%{opacity:1;filter:none;transform:translate(calc(-50% + var(--dropper-dx,0px)),var(--dropper-rim));background:#f8dbe3;box-shadow:0 0 0 1.5px var(--dropper-red),0 1px 4px #3a1d5a14;animation-timing-function:cubic-bezier(.4,0,1,1)}100%{opacity:0;filter:blur(1.5px);transform:translate(calc(-50% + var(--dropper-dx,0px)),calc(var(--dropper-rim) - 8px)) scale(.96);background:#f8dbe3;box-shadow:0 0 0 1.5px var(--dropper-red)}}
-@keyframes dropper-hide-42{0%{opacity:1}42.3%{opacity:0}}
-@keyframes dropper-show-42{0%{opacity:0}42.3%{opacity:1}}
-@keyframes dropper-hide-67{0%{opacity:1}67.3%{opacity:0}}
-@keyframes dropper-show-67{0%{opacity:0}67.3%{opacity:1}}
-@keyframes dropper-strike{0%{text-decoration-color:transparent}67.3%{text-decoration-color:var(--dropper-red)}}
+@keyframes dropper-hide-42{0%{opacity:1}42.3%,100%{opacity:0}}
+@keyframes dropper-show-42{0%{opacity:0}42.3%,100%{opacity:1}}
+@keyframes dropper-hide-67{0%{opacity:1}67.3%,100%{opacity:0}}
+@keyframes dropper-show-67{0%{opacity:0}67.3%,100%{opacity:1}}
+@keyframes dropper-strike{0%{text-decoration-color:transparent}67.3%,100%{text-decoration-color:var(--dropper-red)}}
 @keyframes dropper-land{0%{transform:translateY(var(--dropper-from,-22px))}100%{transform:none}}
 @keyframes dropper-pulse{50%{box-shadow:0 0 0 1.5px var(--dropper-green),0 0 0 7px color-mix(in srgb,var(--dropper-green) 16%,transparent)}}
 
