@@ -24,6 +24,16 @@ test("cross-platform pages have search metadata and answered questions", () => {
   }
 });
 
+test("the six publishing use cases resolve as distinct public routes", () => {
+  const paths = ["/post-to-multiple-tiktok-accounts", "/post-to-multiple-instagram-accounts", "/bulk-scheduling", "/social-media-calendar", "/schedule-first-comment", "/agencies"];
+  for (const path of paths) {
+    const page = findMarketingPage(path);
+    assert.equal(page?.kind, "publishing-use-case", path);
+    assert.equal(isDashboardPath(path), false);
+  }
+  assert.equal(new Set(PUBLIC_MARKETING_PAGES.map(page => page.path)).size, PUBLIC_MARKETING_PAGES.length);
+});
+
 test("the Hootsuite comparison is a distinct public route with sourced content", () => {
   const page = findMarketingPage("/hootsuite-alternative");
   assert.equal(page.kind, "alternative");
