@@ -15,8 +15,15 @@ import { findMarketingPage } from "./marketing/generalPages.js";
 import { getPlatformUseCaseById } from "./platformUseCases.js";
 import FreeToolsPage from "./tools/FreeToolsPage.jsx";
 import { findFreeToolPage } from "./tools/freeToolsCatalog.js";
+import BlogPage from "./blog/BlogPage.jsx";
+import { findContentPage } from "./blog/catalog.js";
 
 export function render(kind, platformId) {
+  if (kind === "content") {
+    const page = findContentPage(platformId);
+    if (!page) throw new Error(`Unknown content page: ${platformId}`);
+    return renderToString(<BlogPage page={page} />);
+  }
   if (kind === "ad-funnel") return renderToString(<div className="app ad-funnel-app"><div className="centered-shell landing-shell"><AdSignupFunnel /></div></div>);
   if (kind === "free-tool") {
     const page = findFreeToolPage(platformId);
