@@ -135,7 +135,7 @@ export default function MarketingPage({ page, onGetStarted }) {
   }, [page]);
 
   if (page.kind === "multiple-accounts") return <MultipleAccountsPage page={page} onGetStarted={onGetStarted} />;
-  if (page.kind === "publishing-use-case") return <PublishingUseCasePage page={page} onGetStarted={onGetStarted} />;
+  if (["publishing-use-case", "agent-api"].includes(page.kind)) return <PublishingUseCasePage page={page} onGetStarted={onGetStarted} />;
 
   const faqSchema = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: page.faqs.map(item => ({ "@type": "Question", name: item.q, acceptedAnswer: { "@type": "Answer", text: item.a } })) };
 

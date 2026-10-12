@@ -37,6 +37,21 @@
 .use-case-related a { display: flex; justify-content: space-between; align-items: center; gap: 16px; border-bottom: 1px solid var(--border); padding: 18px 0; color: var(--text); font-weight: 600; text-decoration: none; }
 .use-case-related a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .use-case-related a svg { flex-shrink: 0; }
+.use-case-agent-example h3 { margin: 0 0 20px; font-size: 18px; }
+.use-case-agent-example blockquote { max-width: 770px; margin: 0; font-size: clamp(19px, 2.3vw, 25px); line-height: 1.6; letter-spacing: -.015em; }
+.use-case-agent-example ol { display: grid; gap: 12px; margin: 28px 0 0; padding-left: 22px; color: var(--text-muted); font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
+.use-case-guide > div { max-width: 780px; margin-top: 32px; }
+.use-case-guide h3 { margin: 0 0 12px; font-size: 22px; letter-spacing: -.025em; }
+.use-case-guide p { margin: 0; color: var(--text-muted); font-size: 17px; line-height: 1.8; overflow-wrap: anywhere; }
+.use-case-guide .use-case-sources { margin-top: 30px; font-size: 14px; }
+.use-case-sources a, .use-case-comparison a { color: var(--text); text-underline-offset: 4px; }
+.use-case-comparison { max-width: 100%; overflow-x: auto; }
+.use-case-comparison table { width: 100%; border-collapse: collapse; text-align: left; }
+.use-case-comparison th, .use-case-comparison td { padding: 22px 20px; vertical-align: top; line-height: 1.7; }
+.use-case-comparison thead { background: var(--surface-2); font-size: 14px; }
+.use-case-comparison tbody tr { border-bottom: 1px solid var(--border); }
+.use-case-comparison tbody th { width: 24%; font-size: 17px; }
+.use-case-comparison td { color: var(--text-muted); font-size: 15px; }
 @media (max-width: 720px) {
   .use-case-example { padding: 23px 20px; }
   .use-case-account-version { grid-template-columns: 28px minmax(0, 1fr); gap: 12px; }
@@ -47,6 +62,7 @@
   .use-case-calendar-day strong, .use-case-calendar-day small { display: none; }
   .use-case-calendar-agenda { display: block; }
   .use-case-related nav { grid-template-columns: minmax(0, 1fr); }
+  .use-case-comparison table { min-width: 620px; }
 }
 @media (max-width: 480px) {
   .use-case-example { padding: 20px 15px; }
