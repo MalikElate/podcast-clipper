@@ -89,6 +89,23 @@ export const GENERAL_PAGES = [
     ],
   },
   {
+    path: "/manage-multiple-social-media-accounts", kind: "multiple-accounts", footerLabel: "Manage multiple accounts",
+    title: "Manage Multiple Social Media Accounts on 11 Platforms | Meadow",
+    description: "Manage multiple social media accounts with Meadow. Upload once, schedule to Instagram, TikTok, Facebook, YouTube, Telegram and more, and track each delivery.",
+    headline: "Your social accounts. One place to post.",
+    subtitle: "Connect multiple profiles, pages, and channels across 11 platforms. Upload once, choose the accounts for each post, and publish now or schedule for later. One Meadow plan covers your connected accounts.",
+    faqs: [
+      { q: "Can one upload reach several social accounts?", a: "Yes. Upload your content to Meadow once, select the connected accounts that should receive it, and prepare a version for each destination. Meadow checks the content against each platform’s requirements before queueing the post." },
+      { q: "Can I use a different caption for each account?", a: "Yes. Keep a shared starting caption, then change the caption, format, and supported publishing settings for individual accounts. Your Instagram caption can be different from your LinkedIn or Facebook version." },
+      { q: "Do all accounts have to publish at the same time?", a: "No. Publish now, choose a future date and time, or give individual destinations their own local publishing times. Scheduled posts appear in your Meadow calendar." },
+      { q: "What if only one destination fails?", a: "Each account has its own delivery status. An account that needs attention does not stop the other destinations from publishing. Review the error for that account, reconnect if needed, and retry once it is ready." },
+      { q: "Can I prepare several uploads together?", a: "Yes. Meadow supports bulk uploads and scheduling. Review the content and destinations for each post before submitting the batch, so every file goes to the accounts you intended." },
+      { q: "Can my AI agent manage the same accounts?", a: "Yes. Meadow’s REST API and MCP server use the accounts connected to your workspace. A supported AI client or your own script can upload media, prepare drafts, validate content, and submit posts for publishing or scheduling." },
+      { q: "Does every video publish automatically?", a: "Publishing depends on the destination, its settings, and the permissions you approved. TikTok direct publishing and inbox upload are different flows: an inbox upload still needs you to finish posting inside TikTok. Meadow shows the result for each destination." },
+      ...SHARED_FAQS,
+    ],
+  },
+  {
     path: "/cross-posting", kind: "cross-posting", footerLabel: "Cross posting",
     title: "Cross Post to 11 Social Platforms at Once | Meadow",
     description: "Cross post to Instagram, TikTok, YouTube, X, LinkedIn, Telegram and more, with a version tailored to each platform instead of one shared caption.",
