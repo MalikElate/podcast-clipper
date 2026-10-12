@@ -1,0 +1,65 @@
+.multiple-accounts-page .multi-hero { padding-bottom: 70px; }
+.multiple-accounts-page .landing-title { max-width: 17ch; }
+.multiple-accounts-page .landing-subtitle { max-width: 740px; }
+.multiple-accounts-page .landing-platform-mark > .social-brand-icon { width: 100% !important; height: 100% !important; }
+.multi-hero-note { margin: 22px 0 0; color: var(--text-muted); font-size: 15px; }
+.multiple-accounts-page .multi-section { width: min(100%, 940px); margin: 0 auto; padding: 68px 0; scroll-margin-top: 80px; }
+.multi-section-heading { max-width: 780px; margin: 0 auto 32px; text-align: center; }
+.multi-section h2 { margin: 0 0 16px; color: var(--text); font-size: clamp(30px, 3.5vw, 44px); line-height: 1.12; letter-spacing: -.045em; text-wrap: balance; }
+.multi-section-heading p, .multi-agent-section p, .multi-closing p { margin: 0; color: var(--text-muted); font-size: 18px; line-height: 1.65; }
+.multi-pricing .pricing-cycle { display: flex; width: max-content; max-width: 100%; margin: 0 auto 26px; }
+.multi-plan-table { width: 100%; border-collapse: collapse; text-align: left; }
+.multi-plan-table th, .multi-plan-table td { padding: 20px 24px; vertical-align: middle; }
+.multi-plan-table thead { background: var(--surface-2); }
+.multi-plan-table thead th { font-size: 15px; font-weight: 600; }
+.multi-plan-table tbody tr { border-bottom: 1px solid var(--border); }
+.multi-plan-table tbody th { color: var(--text); font-size: 18px; font-weight: 650; }
+.multi-plan-table td { color: var(--text-muted); font-size: 16px; }
+.multi-plan-table td strong { display: block; color: var(--text); font-size: 19px; font-weight: 650; }
+.multi-plan-table td span { display: block; margin-top: 5px; font-size: 13px; line-height: 1.5; }
+.multi-pricing-note { margin: 20px 0 0; color: var(--text-muted); font-size: 14px; line-height: 1.7; text-align: center; }
+.multi-pricing-note a, .multi-agent-section > a { display: inline-flex; align-items: center; gap: 7px; color: var(--text); font-weight: 650; text-underline-offset: 4px; }
+.multi-pricing-note a { margin-left: 6px; }
+.multiple-accounts-page .hero-demo { width: 100%; max-width: 940px; }
+.multi-demo-note { margin: 14px 0 0; color: var(--text-faint); font-size: 13px; text-align: center; }
+.multi-publishing-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px 44px; margin: 34px 0 0; }
+.multi-publishing-details dt { color: var(--text); font-size: 18px; font-weight: 650; }
+.multi-publishing-details dd { margin: 9px 0 0; color: var(--text-muted); font-size: 16px; line-height: 1.65; }
+.multi-platform-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 28px; }
+.multi-platform-links a, .multi-chat-platforms a { display: flex; min-width: 0; align-items: center; gap: 12px; padding: 16px 0; color: var(--text); font-size: 17px; font-weight: 600; text-decoration: none; }
+.multi-platform-links a > svg { margin-left: auto; }
+.multi-platform-links a:hover span:last-of-type, .multi-chat-platforms a:hover span:last-of-type { text-decoration: underline; text-underline-offset: 4px; }
+.multi-platform-links .landing-platform-mark, .multi-chat-platforms .landing-platform-mark { flex-shrink: 0; }
+.multi-chat-platforms { margin-top: 30px; }
+.multi-chat-platforms p { margin: 0; color: var(--text-muted); font-size: 15px; line-height: 1.7; }
+.multi-chat-platforms > div { display: flex; gap: 30px; flex-wrap: wrap; }
+.multiple-accounts-page .multi-agent-section { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 38px; }
+.multi-agent-section > a { max-width: 235px; font-size: 16px; }
+.multi-agent-section > a svg { flex-shrink: 0; }
+.multiple-accounts-page .mkt-faq-list { max-width: 940px; margin-top: 32px; }
+.multi-closing { text-align: center; }
+.multi-closing h2 { max-width: 690px; margin-inline: auto; }
+.multi-closing .landing-cta { display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin-top: 26px; }
+@media (max-width: 720px) {
+  .multiple-accounts-page .multi-section { padding: 48px 0; }
+  .multi-plan-table th, .multi-plan-table td { padding: 17px 12px; }
+  .multi-platform-links { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 22px; }
+  .multiple-accounts-page .multi-agent-section { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .multi-agent-section > a { max-width: none; }
+}
+@media (max-width: 480px) {
+  .multiple-accounts-page .multi-hero { padding-bottom: 44px; }
+  .multi-plan-table th, .multi-plan-table td { padding: 16px 7px; }
+  .multi-plan-table thead th { font-size: 12px; }
+  .multi-plan-table tbody th { font-size: 15px; }
+  .multi-plan-table td { font-size: 13px; }
+  .multi-plan-table td strong { font-size: 15px; }
+  .multi-plan-table td span { font-size: 11px; }
+  .multi-plan-table th:first-child { width: 22%; }
+  .multi-plan-table th:nth-child(2) { width: 34%; }
+  .multi-publishing-details { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .multi-platform-links { gap: 6px 16px; }
+  .multi-platform-links a { gap: 8px; font-size: 14px; }
+  .multi-platform-links .landing-platform-mark { width: 24px; height: 24px; }
+  .multi-pricing-note a { margin-left: 0; }
+}
