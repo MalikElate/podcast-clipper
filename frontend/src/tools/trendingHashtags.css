@@ -1,0 +1,35 @@
+.ft-trends-start { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); }
+.ft-trends-start .ft-controls { height: 100%; justify-content: flex-start; }
+.ft-trends-start .ft-result > a { text-underline-offset: 4px; font-size: 14px; }
+.ft-trends-results { margin-top: 36px; }
+.ft-trends-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.ft-trends-heading h2 { font-size: 25px; }
+.ft-trends-heading p { margin-bottom: 0; }
+.ft-trends-heading > .ft-copy { flex-shrink: 0; }
+.ft-trends-results > .ft-field { max-width: 420px; }
+.ft-trends-results > .ft-hint { max-width: 850px; margin: 20px 0; }
+.ft-trend-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+.ft-trend-row { display: flex; align-items: flex-start; gap: 24px; justify-content: space-between; padding: 24px 0; border-bottom: 1px solid var(--border); }
+.ft-trend-main { min-width: 0; flex: 1; }
+.ft-trend-row h3 { margin: 0 0 10px; font-size: 21px; line-height: 1.45; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.ft-trend-row h3 a { text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.ft-trend-row p { margin: 8px 0; }
+.ft-trend-row > .ft-copy { flex-shrink: 0; max-width: 180px; }
+.ft-trend-metric, .ft-trend-suggestion { font-size: 14px; line-height: 1.65; }
+.ft-trend-suggestion span { font-weight: 600; overflow-wrap: anywhere; }
+.ft-trend-history { margin-top: 14px; }
+.ft-trend-history summary { width: fit-content; font-size: 13px; cursor: pointer; }
+.ft-trend-history .ft-table-wrap { margin: 16px 0 0; }
+.ft-trend-history .ft-table-wrap caption { font-size: 14px; padding: 16px; overflow-wrap: anywhere; }
+.ft-trend-history .ft-table-wrap :is(th, td) { padding: 10px 16px; font-size: 13px; }
+@media (max-width: 850px) {
+  .ft-trends-start { grid-template-columns: 1fr; }
+  .ft-trends-heading { flex-direction: column; gap: 16px; }
+}
+@media (max-width: 600px) {
+  .ft-trend-row { flex-direction: column; gap: 12px; }
+  .ft-trend-main { width: 100%; }
+  .ft-trend-history .ft-table-wrap :is(th, td) { padding: 10px 12px; }
+  .ft-trend-row h3 { font-size: 20px; }
+  .ft-trend-row > .ft-copy { max-width: 100%; }
+}
