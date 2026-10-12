@@ -47,6 +47,16 @@ test("the Hootsuite comparison is a distinct public route with sourced content",
   assert.ok(page.faqs.some(item => item.q.includes("automatically") && item.a.includes("no automatic Hootsuite migration")));
 });
 
+test("all twelve agent and API topics resolve without claiming the MCP protocol route", () => {
+  const paths = ["/social-media-mcp-server", "/claude", "/chatgpt", "/claude-code", "/best-social-media-tools-for-ai-agents", "/blog/post-to-social-media-with-ai-agents", "/youtube-mcp", "/instagram-mcp", "/social-media-api", "/tiktok-api", "/instagram-api", "/youtube-api"];
+  for (const path of paths) {
+    assert.equal(findMarketingPage(path)?.kind, "agent-api", path);
+    assert.equal(isDashboardPath(path), false, path);
+  }
+  assert.equal(findMarketingPage("/mcp"), null, "MCP transport must remain separate from public HTML");
+  assert.equal(new Set(PUBLIC_MARKETING_PAGES.map(page => page.path)).size, PUBLIC_MARKETING_PAGES.length);
+});
+
 test("Telegram is included in the public platform catalog and marketing pages", () => {
   assert.equal(PLATFORM_USE_CASES.filter(platform => !platform.chatOnly).length, 11);
   const telegram = getPlatformUseCaseBySlug("telegram-publishing");

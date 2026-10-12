@@ -29,7 +29,7 @@ const FAQS = [
   { q: "How does a client authenticate?", a: "With a Meadow API key created in Settings → API Keys, sent as an Authorization: Bearer header. A key has your full access. Clients that support OAuth sign-in can use that instead, and you approve each permission: meadow:read for the read tools, meadow:draft for create_draft, meadow:media for upload_media and create_upload_url, and meadow:publish for publish_post and publish_draft." },
   { q: "Which platforms can a post target?", a: "The same destinations the dashboard reaches: 11 platforms that accept posts, plus Twitch and Kick for channel chat. A post names its destinations, and each destination keeps its own text and settings." },
   { q: "How do I find out what happened to a post?", a: "Subscribe a webhook. post.completed fires once per destination with the platform, delivery ID and outcome; connection.needs_reconnect fires when an account needs reauthorizing. Payloads carry references and outcomes, never credentials, post content or media." },
-  { q: "Is the MCP endpoint public?", a: "The endpoint is reachable, but anonymous clients can only initialize the protocol and read tool descriptors. Retrieving anything from a workspace requires a key." },
+  { q: "Is the MCP endpoint public?", a: "The HTTPS endpoint is reachable, but every MCP request requires authentication, including initialization and tool discovery. Use a Meadow API key or a supported OAuth sign-in. The public setup overview is at /social-media-mcp-server/." },
 ];
 
 const faqSchema = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQS.map(item => ({ "@type": "Question", name: item.q, acceptedAnswer: { "@type": "Answer", text: item.a } })) };

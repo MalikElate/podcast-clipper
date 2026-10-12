@@ -2,6 +2,7 @@ import { PlatformIcon } from "../bridge/ui.jsx";
 import { sortPlatforms } from "../bridge/platforms.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import { PUBLISHING_PAGES } from "../marketing/publishingPages.js";
+import { AGENT_API_PAGES } from "../marketing/agentApiPages.js";
 import { signupHref } from "../siteUrls.js";
 import { schemaScriptProps } from "../siteSchema.js";
 import { AccountPlans } from "./MultipleAccountsPage.jsx";
@@ -61,6 +62,20 @@ function CalendarExample() {
 }
 
 function WorkflowPreview({ page }) {
+  if (page.preview === "agent") return <div className="use-case-example use-case-agent-example">
+    <h3>A prompt to start with</h3>
+    <blockquote>{page.prompt}</blockquote>
+    <ol aria-label="Meadow tool workflow">{page.toolFlow.map(step => <li key={step}>{step}</li>)}</ol>
+    <p className="use-case-example-note">Illustrative prompt and workflow. This example does not connect an account or submit a post.</p>
+  </div>;
+  if (page.preview === "code") return <div className="use-case-example use-case-api-example">
+    <h3>{page.codeLabel}</h3>
+    <pre tabIndex="0" aria-label={page.codeLabel}><code>{page.code}</code></pre>
+    <p className="use-case-example-note">{page.codeNote}</p>
+  </div>;
+  if (page.preview === "comparison") return <div className="use-case-comparison" role="region" aria-label="Social publishing tool comparison" tabIndex="0">
+    <table><thead><tr><th scope="col">Tool or approach</th><th scope="col">Connection</th><th scope="col">What to evaluate</th></tr></thead><tbody>{page.comparison.map(row => <tr key={row.name}><th scope="row">{row.href ? <a href={row.href}>{row.name}</a> : row.name}</th><td>{row.connection}</td><td>{row.fit}</td></tr>)}</tbody></table>
+  </div>;
   if (["tiktok", "instagram"].includes(page.preview)) return <AccountExample platform={page.preview} />;
   if (page.preview === "calendar") return <CalendarExample />;
   if (page.preview === "bulk") return <div className="use-case-example use-case-api-example">
@@ -105,6 +120,8 @@ export default function PublishingUseCasePage({ page, onGetStarted }) {
         <dl className="multi-publishing-details">{page.details.map(item => <div key={item.title}><dt>{item.title}</dt><dd>{item.text}</dd></div>)}</dl>
       </section>
 
+      {page.guide && <section className="multi-section use-case-guide" aria-labelledby="use-case-guide-title"><h2 id="use-case-guide-title">{page.path.startsWith("/blog/") ? "Follow the workflow from setup to delivery." : "Put the workflow into practice."}</h2>{page.guide.map(item => <div key={item.title}><h3>{item.title}</h3><p>{item.text}</p></div>)}{page.sources && <p className="use-case-sources">Client setup references: {page.sources.map(source => <a href={source.href} key={source.href}>{source.label}</a>)}. Checked 12 October 2026.</p>}</section>}
+
       <section className="multi-section use-case-scope" aria-labelledby="use-case-scope-title"><h2 id="use-case-scope-title">{page.noteHeading}</h2><p>{page.noteText}</p></section>
 
       {page.preview !== "comment" && <section className="multi-section" aria-labelledby="use-case-demo-title"><div className="multi-section-heading"><h2 id="use-case-demo-title">See Meadow’s publishing workspace.</h2><p>Create and preview a post, then follow the result for each destination. The same workflow is available through the API and a connected chatbot.</p></div><HeroDemo /><p className="multi-demo-note">Illustrative Meadow walkthrough with sample content on LinkedIn, Threads, and Bluesky.</p></section>}
@@ -115,7 +132,7 @@ export default function PublishingUseCasePage({ page, onGetStarted }) {
 
       <section className="multi-section" id="faq" aria-labelledby="use-case-faq-title"><div className="multi-section-heading"><h2 id="use-case-faq-title">Frequently asked questions</h2></div><div className="mkt-faq-list">{page.faqs.map(item => <details className="mkt-faq-item" key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}</div><script {...schemaScriptProps(faqSchema)} /></section>
 
-      <section className="multi-section use-case-related" aria-labelledby="use-case-related-title"><h2 id="use-case-related-title">Keep exploring Meadow.</h2><nav aria-label="Related publishing pages">{PUBLISHING_PAGES.filter(item => item.path !== page.path).map(item => <a href={`${item.path}/`} key={item.path}>{item.footerLabel} <Arrow /></a>)}<a href="/manage-multiple-social-media-accounts/">All your social accounts <Arrow /></a><a href="/developers/">API and MCP docs <Arrow /></a></nav></section>
+      <section className="multi-section use-case-related" aria-labelledby="use-case-related-title"><h2 id="use-case-related-title">Keep exploring Meadow.</h2><nav aria-label="Related publishing pages">{(page.kind === "agent-api" ? AGENT_API_PAGES : PUBLISHING_PAGES).filter(item => item.path !== page.path).map(item => <a href={`${item.path}/`} key={item.path}>{item.footerLabel} <Arrow /></a>)}<a href="/manage-multiple-social-media-accounts/">All your social accounts <Arrow /></a><a href="/developers/">API and MCP docs <Arrow /></a></nav></section>
 
       <section className="multi-section multi-closing" aria-labelledby="use-case-closing-title"><h2 id="use-case-closing-title">{page.closing}</h2><p>Start free and prepare your next post in Meadow.</p><a className="btn-primary landing-cta" href={signupHref()}>{page.action} <Arrow /></a></section>
     </main>

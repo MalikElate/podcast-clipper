@@ -2,6 +2,7 @@
 // Keep claims to what Meadow ships.
 import { ALTERNATIVE_PAGES } from "./alternativePages.js";
 import { PUBLISHING_PAGES } from "./publishingPages.js";
+import { AGENT_API_PAGES } from "./agentApiPages.js";
 
 const SHARED_FAQS = [
   { q: "Does Meadow support Twitch and Kick?", a: "Meadow’s Twitch and Kick integrations are built for scheduled chat messages, replies, and follow-up threads; Twitch also supports colored announcements. Connection availability depends on platform configuration. These integrations do not upload videos, broadcast live streams, or provide chat engagement analytics." },
@@ -135,5 +136,5 @@ export const GENERAL_PAGES = [
   },
 ];
 
-export const PUBLIC_MARKETING_PAGES = [...GENERAL_PAGES, ...PUBLISHING_PAGES, ...ALTERNATIVE_PAGES];
+export const PUBLIC_MARKETING_PAGES = [...GENERAL_PAGES, ...PUBLISHING_PAGES, ...AGENT_API_PAGES, ...ALTERNATIVE_PAGES];
 export const findMarketingPage = pathname => PUBLIC_MARKETING_PAGES.find(page => page.path === pathname) || null;
