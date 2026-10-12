@@ -62,6 +62,24 @@ export function dropperQueueStatus(item, formatDate, now = Date.now()) {
 const FORMAT_LABELS = { photo: "photo post", carousel: "carousel", text: "text post", post: "not a video" };
 export const wrongFormatLabel = format => FORMAT_LABELS[format] || FORMAT_LABELS.post;
 
+// Example posts for the /dashboard/dropper?demo walkthrough, so the funnel
+// shows rejections even when every real post fits. They stay in the browser:
+// never sent to the server and never selectable.
+const DEMO_REJECTS = [
+  { format: "photo", caption: "Photo dump from the shoot" },
+  { format: "carousel", caption: "5 tips carousel" },
+  { format: "video", caption: "Full podcast episode", duration: 2892 },
+  { format: "text", caption: "Text-only update" },
+  { format: "carousel", caption: "Before and after slides" },
+  { format: "photo", caption: "Behind-the-scenes still" },
+];
+
+export function demoRejects(cards = [], platform = "tiktok", every = 3) {
+  return [...cards].sort((a, b) => (a.publishedAt || 0) - (b.publishedAt || 0))
+    .filter((_, index) => index % every === every - 1)
+    .map((card, index) => ({ ...DEMO_REJECTS[index % DEMO_REJECTS.length], id: `demo-${index}`, platform, url: `https://www.${platform}.com/`, publishedAt: (card.publishedAt || 0) + 1, demo: true }));
+}
+
 export function durationLabel(seconds) {
   const total = Math.round(Number(seconds));
   return Number.isFinite(total) && total > 0 ? `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}` : "";

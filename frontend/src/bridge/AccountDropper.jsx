@@ -5,7 +5,7 @@ import { Alert, Check, Field, Modal, PlatformIcon, dateTime, useProjectResource 
 import { DestinationSettings } from "./DestinationSettings.jsx";
 import { useAccountOptions } from "./useAccountOptions.js";
 import { dashboardPath } from "./dashboardRoutes.js";
-import { dropperDestinationAccounts, dropperSourceAccounts, selectableDropperCards, currentDropperItem, intervalMinutes, intervalInput, intervalLabel, dropperQueueStatus, funnelFeed, funnelDuration, funnelProgress, wrongFormatLabel, videoFit, durationLabel } from "./dropper.js";
+import { dropperDestinationAccounts, dropperSourceAccounts, selectableDropperCards, currentDropperItem, intervalMinutes, intervalInput, intervalLabel, dropperQueueStatus, funnelFeed, funnelDuration, funnelProgress, wrongFormatLabel, videoFit, durationLabel, demoRejects } from "./dropper.js";
 import "./dropper.css";
 
 const initial = { cards: null, wrongFormat: [], sources: [], settings: { sourceAccountId: null, accountIds: [], overrides: {}, intervalMinutes: 480 }, queue: [], running: false, inFlight: false, nextSlotAt: null, run: null };
@@ -14,6 +14,7 @@ const optionPlatforms = new Set(["tiktok", "pinterest"]);
 const destinationSettingsPlatforms = new Set(["tiktok", "youtube", "pinterest", "bluesky", "google_business"]);
 
 export default function AccountDropper({ project, catalog, accounts, accountsReady, onAccounts }) {
+  const [demo] = useState(() => new URLSearchParams(window.location.search).has("demo"));
   const resource = useProjectResource(project.id, "/dropper", initial, { refreshOnFocus: true });
   const { data } = resource;
   const [editing, setEditing] = useState(false);
@@ -133,7 +134,7 @@ export default function AccountDropper({ project, catalog, accounts, accountsRea
     {resource.error && <button type="button" className="bridge-button secondary small" disabled={resource.loading} onClick={resource.reload}>Try again</button>}
     {hasUnavailable && <p className="bridge-notice" role="status">A saved account is unavailable. Choose connected accounts in Edit setup before starting another batch.</p>}
     <section className="bridge-panel dropper-board-panel" aria-label="Account dropper">
-      <FunnelBoard source={boardSource} destinations={boardDestinations} cards={cards} wrongFormat={data.wrongFormat || []} currentDrop={currentDrop} catalog={catalog} intervalMinutes={displayedSetup.intervalMinutes} loading={!accountsReady || data.cards === null && resource.loading} onSetup={() => setEditing(true)} setupDisabled={locked || !accountsReady || resource.loading || Boolean(resource.error)}/>
+      <FunnelBoard demo={demo} source={boardSource} destinations={boardDestinations} cards={cards} wrongFormat={data.wrongFormat || []} currentDrop={currentDrop} catalog={catalog} intervalMinutes={displayedSetup.intervalMinutes} loading={!accountsReady || data.cards === null && resource.loading} onSetup={() => setEditing(true)} setupDisabled={locked || !accountsReady || resource.loading || Boolean(resource.error)}/>
       <div className="dropper-board-controls">
         <div className="dropper-board-summary">
           <strong>{data.running ? "Dropper is running" : data.inFlight ? "Finishing a video" : "Ready when you are"}</strong>
@@ -181,13 +182,17 @@ const CARD_HEIGHT = 66;
 // the top, the rim sits about a third of the way down, the neck near halfway,
 // and the stack of drops runs down behind the counters.
 function funnelGeometry(width, height) {
-  const rim = Math.round(height * .3), slant = Math.round(height * .52), neck = Math.round(height * .57);
-  const cardWidth = width < 520 ? Math.max(200, width * .74) : Math.min(430, Math.max(250, width * .36));
-  return { rim, slant, neck, cardWidth, queue: Math.round(height * .05), onRim: rim - CARD_HEIGHT - 3, inNeck: neck - CARD_HEIGHT + 6, stack: neck + 14, sideInset: Math.min(34, width * .03) };
+  const rim = Math.round(height * .27), slant = Math.round(height * .5), neck = Math.round(height * .54);
+  const cardWidth = width < 520 ? Math.max(200, width * .74) : Math.min(400, Math.max(260, width * .4));
+  // Waiting posts sit off to either side, then slide to the middle of the rim.
+  const offset = width < 520 ? 0 : Math.min(190, (width - cardWidth) / 2 - 24);
+  return { rim, slant, neck, cardWidth, offset, queue: Math.round(height * .055), onRim: rim - CARD_HEIGHT - 3, inNeck: neck - CARD_HEIGHT + 6, stack: neck + 16, sideInset: Math.min(20, width * .02) };
 }
+const DRIFT = [-1, .7, -.45, 1, -.8, .35, .9, -.6];
 
-function FunnelBoard({ source, destinations, cards, wrongFormat, currentDrop, catalog, loading, intervalMinutes: interval, onSetup, setupDisabled }) {
+function FunnelBoard({ demo, source, destinations, cards, wrongFormat: realWrongFormat, currentDrop, catalog, loading, intervalMinutes: interval, onSetup, setupDisabled }) {
   const stage = useRef(null);
+  const wrongFormat = demo ? [...realWrongFormat, ...demoRejects(cards, source?.platform)] : realWrongFormat;
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [elapsed, setElapsed] = useState(Infinity);
   const feed = funnelFeed(cards, wrongFormat, { destinations, catalog });
@@ -247,10 +252,10 @@ function FunnelBoard({ source, destinations, cards, wrongFormat, currentDrop, ca
         : loading ? <span className="dropper-funnel-empty">Loading your posts…</span>
         : !feed.length ? <span className="dropper-funnel-empty">No recent posts on {source.label}</span>
         : progress.done && !currentDrop ? <span className="dropper-funnel-idle" aria-hidden="true">✓ all {cards.length + wrongFormat.length} posts checked</span> : null}
-      {progress.active.map(({ item, index }) => <FunnelCard key={`${feedKey}:${index}`} item={item} catalog={catalog} className={item.fits ? "keep" : "reject"} style={{ "--dropper-dx": `${index % 2 ? 60 : -60}px` }}/>)}
+      {progress.active.map(({ item, index }) => <FunnelCard key={`${feedKey}:${index}`} item={item} catalog={catalog} className={item.fits ? "keep" : "reject"} style={{ "--dropper-dx": `${Math.round(DRIFT[index % DRIFT.length] * geometry.offset)}px` }}/>)}
       {currentDrop && <FunnelCard item={{ ...currentDrop, fits: true, tooLong: [] }} catalog={catalog} className="dropping" status="dropping now"/>}
       <div className="dropper-funnel-stack" aria-hidden="true">
-        {stacked.map(item => <FunnelCard key={item.id} item={{ ...item, fits: true }} catalog={catalog} className="stacked"/>)}
+        {stacked.map((item, index) => <FunnelCard key={item.id} item={{ ...item, fits: true }} catalog={catalog} className="stacked" style={{ top: index * (CARD_HEIGHT + 9) }}/>)}
       </div>
       <div className="dropper-funnel-counts">
         <div className="wrong"><span>Wrong format ×</span><strong>{loading ? "–" : skipped}</strong></div>
@@ -262,7 +267,7 @@ function FunnelBoard({ source, destinations, cards, wrongFormat, currentDrop, ca
 
 function FunnelCard({ item, catalog, className, style, status }) {
   const name = platformName(catalog, item.platform), length = durationLabel(item.duration);
-  const video = item.format === undefined;
+  const video = item.format === undefined || item.format === "video";
   const title = clip(item.title || item.caption || (video ? `${name} video` : `${name} ${wrongFormatLabel(item.format)}`), 52);
   const kind = video ? `${length ? `${length} ` : ""}video` : wrongFormatLabel(item.format);
   const skips = (item.tooLong || []).map(account => platformName(catalog, account.platform));
