@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { DASHBOARD_PATHS } from "../src/bridge/dashboardRoutes.js";
 import { PLATFORM_USE_CASES } from "../src/platformUseCases.js";
-import { GENERAL_PAGES } from "../src/marketing/generalPages.js";
+import { PUBLIC_MARKETING_PAGES } from "../src/marketing/generalPages.js";
 import { FREE_TOOL_PAGES, FREE_TOOLS, MEDIA_GUIDES, schedulerFor } from "../src/tools/freeToolsCatalog.js";
 import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_DISPLAY, LEGAL_ENTITY } from "../src/siteContact.js";
 
@@ -112,7 +112,7 @@ for (const type of ["Organization", "WebSite", "SoftwareApplication"]) {
   assert.ok(landingHtml.includes(`"@type":"${type}"`), `The homepage must describe itself as a ${type}`);
 }
 assert.ok(!landingHtml.includes('"priceCurrency":"USD"'), "Static schema must not advertise one currency to every region");
-for (const path of ["index.html", "pricing/index.html", ...GENERAL_PAGES.map(page => `${page.path.slice(1)}/index.html`)]) {
+for (const path of ["index.html", "pricing/index.html", ...PUBLIC_MARKETING_PAGES.map(page => `${page.path.slice(1)}/index.html`)]) {
   const html = path === "index.html" ? landingHtml : await readFile(`dist/${path}`, "utf8");
   assert.ok(html.includes("Checking local prices…"), `${path} must wait for the server pricing quote`);
   assert.doesNotMatch(html, /Billed \$\d+ yearly/, `${path} must not prerender global dollar prices`);
@@ -160,7 +160,7 @@ for (const platform of PLATFORM_USE_CASES) {
     assert.doesNotMatch(html, />Start posting /, `${platform.slug} must not offer video publishing`);
   }
 }
-for (const page of GENERAL_PAGES) {
+for (const page of PUBLIC_MARKETING_PAGES) {
   const html = await readFile(`dist${page.path}/index.html`, "utf8");
   assert.ok(html.includes(`<title>${page.title}</title>`), `${page.path} must have its own title`);
   assert.ok(html.includes(`content="${page.description}"`), `${page.path} must have its own description`);
@@ -176,6 +176,15 @@ for (const page of GENERAL_PAGES) {
   for (const id of ["twitch", "kick"]) assert.ok(html.includes(`href="/${id}-publishing/"`), `${page.path} must link to ${id}`);
   assert.ok(!html.includes('class="upcoming-platforms"'));
   for (const name of ["Twitch", "Kick"]) assert.ok(html.includes(`aria-label="${name}"`), `${page.path} must include ${name} in its logo sections`);
+  if (page.kind === "alternative") {
+    assert.ok(html.includes('id="comparison"'), `${page.path} must render its comparison`);
+    assert.ok(html.includes('href="https://app.findmeadow.com/sign-up"'), `${page.path} must offer free signup`);
+    for (const row of page.comparison) {
+      assert.ok(html.includes(row.feature) && html.includes(row.meadow) && html.includes(row.hootsuite), `${page.path} must render both sides of ${row.feature}`);
+    }
+    for (const source of page.sources) assert.ok(html.includes(`href="${source.href}"`), `${page.path} must link to its sources`);
+    assert.ok(!html.includes('"aggregateRating"'), `${page.path} must not invent reviews`);
+  }
 }
 const toolsHubHtml = await readFile("dist/tools/index.html", "utf8");
 assert.ok(landingHtml.includes('href="/tools/"'), "Homepage must link to the free tools hub");

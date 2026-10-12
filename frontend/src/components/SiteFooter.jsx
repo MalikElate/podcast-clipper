@@ -2,7 +2,7 @@ import BrandLogo from "./BrandLogo.jsx";
 import { FaInstagram, FaLinkedin, FaXTwitter, FaYoutube } from "react-icons/fa6";
 import { sortPlatforms } from "../bridge/platforms.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
-import { GENERAL_PAGES } from "../marketing/generalPages.js";
+import { PUBLIC_MARKETING_PAGES } from "../marketing/generalPages.js";
 import { appHref, marketingHref, marketingPath, siteSurface } from "../siteUrls.js";
 
 const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
@@ -28,7 +28,7 @@ function MobileFooterGroup({ title, children }) {
 
 function ProductLinks({ onGetStarted }) {
   return <>
-    {GENERAL_PAGES.map((page) => <a href={href(page.path)} key={page.path}>{page.footerLabel}</a>)}
+    {PUBLIC_MARKETING_PAGES.map((page) => <a href={href(page.path)} key={page.path}>{page.footerLabel}</a>)}
     <a href={href("/tools/tiktok-roast")}>Free TikTok roast</a>
     <a href={href("/tools/")}>Free social media tools</a>
     <a href={href("/tools/media-size-guide/")}>Media-size guides</a>

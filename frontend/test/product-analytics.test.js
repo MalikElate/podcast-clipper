@@ -39,6 +39,8 @@ test("callback secrets, post IDs, raw content, and old person properties cannot 
   assert.equal(analyticsPath("/dashboard/posts/scheduled/"), "/dashboard/posts/scheduled");
   assert.equal(analyticsPath("/linkedin-scheduling"), "/other");
   assert.equal(analyticsPath("/start"), "/start");
+  assert.equal(analyticsPath("/hootsuite-alternative/"), "/hootsuite-alternative");
+  assert.equal(cleanAnalyticsUrl("https://findmeadow.com/hootsuite-alternative/?email=private@example.com"), "https://findmeadow.com/hootsuite-alternative");
   assert.equal(analyticsPath("/sign-in"), "/sign-in");
   assert.equal(analyticsPath("/oauth-consent"), "/oauth-consent");
   assert.equal(analyticsPath("/sign-up/complete"), "/sign-up/complete");
