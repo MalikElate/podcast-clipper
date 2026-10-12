@@ -6,22 +6,22 @@ import { ProjectService } from "../src/bridge/services/ProjectService.js";
 import { SecretVault } from "../src/bridge/core/SecretVault.js";
 import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 
-function fixture(t) {
+function fixture(t, { uid = "alice", env = {} } = {}) {
   const now = Date.parse("2026-10-09T12:00:00Z");
   const store = new SqliteStore();
   const projects = new ProjectService(store);
-  const project = projects.create("alice", { name: "Main" });
+  const project = projects.create(uid, { name: "Main" });
   const vault = new SecretVault(randomBytes(32).toString("base64"));
   const registry = { get: platform => ({
     authorizationUrl: async ({ state }) => `https://authorize.example/${platform}?state=${state}`,
     exchange: async ({ code }) => ({ accessToken: code }),
     accounts: async ({ accessToken }) => accessToken.split(",").map(remoteId => ({ remoteId, label: remoteId })),
   }) };
-  const accounts = new AccountService({ store, projects, registry, vault, clock: () => now });
+  const accounts = new AccountService({ store, projects, registry, vault, env, clock: () => now });
   t.after(() => store.db.close());
 
   async function begin(ids, { startCountry, callbackCountry, projectId = project.id } = {}) {
-    const { url } = await accounts.start("alice", projectId, "x", {}, { countryCode: startCountry });
+    const { url } = await accounts.start(uid, projectId, "x", {}, { countryCode: startCountry });
     const state = new URL(url).searchParams.get("state");
     const result = await accounts.callback("x", new URLSearchParams({ state, code: ids.join(",") }), { countryCode: callbackCountry });
     return { ...result, projectId, state };
@@ -31,6 +31,17 @@ function fixture(t) {
 }
 
 const limitError = error => error.code === "account_limit_reached" && error.status === 409;
+
+test("complimentary Pro bypasses the regional Free cap only for its exact owner", async t => {
+  const env = { BRIDGE_COMPLIMENTARY_PRO_UIDS: "user_Grantee" };
+  const grantee = fixture(t, { uid: "user_Grantee", env });
+  for (const id of ["one", "two", "three"]) await grantee.connect(id, { startCountry: "CM" });
+  assert.equal(grantee.accounts.list("user_Grantee", grantee.project.id).length, 3);
+  assert.equal(grantee.store.get("billing", "user_Grantee"), null);
+  const other = fixture(t, { uid: "user_Other", env });
+  for (const id of ["one", "two"]) await other.connect(id, { startCountry: "CM" });
+  await assert.rejects(other.connect("three", { startCountry: "CM" }), limitError);
+});
 
 test("Sub-Saharan Free accounts stop at two new connections while reconnects and existing data remain intact", async t => {
   const h = fixture(t);

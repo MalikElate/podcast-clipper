@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { isSubSaharanCountry, normalizeCountryCode } from "../shared/geography.js";
 import { invariant, ProviderError } from "../core/errors.js";
 import { SecretVault } from "../core/SecretVault.js";
+import { parseComplimentaryProUids } from "./ComplimentaryAccess.js";
 
 const DAY = 86400000;
 const authorizationFamily = platform => ["youtube", "google_business"].includes(platform) ? "google" : platform;
@@ -12,8 +13,9 @@ const sameIdentity = (account, candidate) => account.remoteId === candidate.remo
 const PAID_ENTITLEMENT_STATUSES = new Set(["active", "trialing"]);
 
 export class AccountService {
-  constructor({ store, projects, registry, vault, locks, clock = () => Date.now(), localPreview = false }) {
+  constructor({ store, projects, registry, vault, locks, env = {}, clock = () => Date.now(), localPreview = false }) {
     Object.assign(this, { store, projects, registry, vault, locks, clock, localPreview });
+    this.complimentaryProUids = parseComplimentaryProUids(env.BRIDGE_COMPLIMENTARY_PRO_UIDS);
   }
   toPublic(account) {
     const { encryptedCredentials, identityKey, authorizationId, authorizationGrantedAt, authorizationStartedAt, maintenanceDueAt, maintenanceAttempts, ...visible } = account;
@@ -227,6 +229,7 @@ export class AccountService {
       const accounts = [];
       const billing = this.store.get("billing", uid);
       const regionalFree = isSubSaharanCountry(normalizeCountryCode(visitorCountry) || connection.countryCode)
+        && !this.complimentaryProUids.has(uid)
         && !(billing?.planId && PAID_ENTITLEMENT_STATUSES.has(billing.status));
       let attachedCount = regionalFree ? this.store.list("account", { ownerUid: uid, limit: null }).filter(isAttached).length : 0;
       // The transaction serializes simultaneous callbacks and selections. The
