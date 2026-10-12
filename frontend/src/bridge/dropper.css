@@ -38,14 +38,14 @@ button.dropper-funnel-empty{color:var(--b-text);cursor:pointer}
 .dropper-funnel-sub small{grid-area:1/1;overflow:hidden;color:#7a6a88;font-family:var(--dropper-mono);font-size:calc(.6rem + 3px);line-height:1.4;text-overflow:ellipsis;white-space:nowrap}
 .dropper-funnel-close{flex-shrink:0;color:#b9a6c6;font-size:15px;line-height:1}
 .dropper-funnel-x{position:absolute;top:-9px;right:-9px;display:grid;place-items:center;width:21px;height:21px;border-radius:50%;background:var(--dropper-red);color:#fff;font-size:15px;font-weight:700;line-height:1;opacity:0;box-shadow:0 1px 3px #0003}
-.dropper-funnel-card.keep{animation:dropper-keep 4.6s linear both}
-.dropper-funnel-card.keep .pending{animation:dropper-hide-34 4.6s step-end both}
-.dropper-funnel-card.keep .checked{animation:dropper-show-34 4.6s step-end both;color:var(--dropper-green)}
-.dropper-funnel-card.reject{animation:dropper-reject 3s linear both}
-.dropper-funnel-card.reject .pending{animation:dropper-hide-55 3s step-end both}
-.dropper-funnel-card.reject .checked{animation:dropper-show-55 3s step-end both;color:var(--dropper-red)}
-.dropper-funnel-card.reject strong{animation:dropper-strike 3s step-end both}
-.dropper-funnel-card.reject .dropper-funnel-x{animation:dropper-show-55 3s step-end both}
+.dropper-funnel-card.keep{animation:dropper-keep 4.6s linear both;animation-delay:var(--dropper-delay,0ms)}
+.dropper-funnel-card.keep .pending{animation:dropper-hide-34 4.6s step-end both;animation-delay:var(--dropper-delay,0ms)}
+.dropper-funnel-card.keep .checked{animation:dropper-show-34 4.6s step-end both;animation-delay:var(--dropper-delay,0ms);color:var(--dropper-green)}
+.dropper-funnel-card.reject{animation:dropper-reject 3s linear both;animation-delay:var(--dropper-delay,0ms)}
+.dropper-funnel-card.reject .pending{animation:dropper-hide-55 3s step-end both;animation-delay:var(--dropper-delay,0ms)}
+.dropper-funnel-card.reject .checked{animation:dropper-show-55 3s step-end both;animation-delay:var(--dropper-delay,0ms);color:var(--dropper-red)}
+.dropper-funnel-card.reject strong{animation:dropper-strike 3s step-end both;animation-delay:var(--dropper-delay,0ms)}
+.dropper-funnel-card.reject .dropper-funnel-x{animation:dropper-show-55 3s step-end both;animation-delay:var(--dropper-delay,0ms)}
 .dropper-funnel-card.stacked small,.dropper-funnel-card.dropping small{color:var(--dropper-green)}
 .dropper-funnel-card.dropping{z-index:1;transform:translate(-50%,var(--dropper-neck));box-shadow:0 0 0 1.5px var(--dropper-green);animation:dropper-pulse 1.6s ease-in-out infinite}
 .dropper-funnel-stack{position:absolute;top:var(--dropper-stack);left:50%;display:flex;flex-direction:column;gap:8px;width:var(--dropper-card-width);transform:translateX(-50%)}
