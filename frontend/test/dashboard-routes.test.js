@@ -41,3 +41,10 @@ test("draft identity is scoped to the composer while billing keeps only billing 
   assert.equal(dashboardSearch("posts", search), "");
   assert.equal(dashboardSearch("billing", search), "?checkout=success&session_id=cs_live_123&portal_return=1");
 });
+
+test("the Dropper demo flag survives the dashboard's URL clean-up", () => {
+  assert.equal(dashboardSearch("dropper", "?demo"), "?demo=1");
+  assert.equal(dashboardSearch("dropper", "?demo=1&utm_source=x"), "?demo=1");
+  assert.equal(dashboardSearch("dropper", "?utm_source=x"), "");
+  assert.equal(dashboardSearch("accounts", "?demo"), "");
+});
