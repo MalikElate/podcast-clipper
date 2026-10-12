@@ -223,7 +223,7 @@ function FunnelBoard({ source, destinations, cards, wrongFormat, currentDrop, ca
   // Labels sit just inside the funnel wall at the height of their second line.
   const labelInset = Math.round(geometry.sideInset + (center - half - geometry.sideInset) * 46 / Math.max(1, geometry.slant - geometry.rim) + 14);
   const sides = width ? `M ${geometry.sideInset} ${geometry.rim + 2} L ${center - half} ${geometry.slant} V ${geometry.neck} M ${width - geometry.sideInset} ${geometry.rim + 2} L ${center + half} ${geometry.slant} V ${geometry.neck}` : "";
-  const setup = [source?.label, source && platformName(catalog, source.platform), destinations.length ? `${destinations.length} ${destinations.length === 1 ? "destination" : "destinations"}` : "no destinations yet",
+  const setup = loading ? "Loading your setup…" : [source?.label, source && platformName(catalog, source.platform), destinations.length ? `${destinations.length} ${destinations.length === 1 ? "destination" : "destinations"}` : "no destinations yet",
     source && destinations.length ? `every ${intervalLabel(interval)}` : null, "keep: videos that fit"].filter(Boolean).join(" · ");
   const summary = loading ? "Loading your posts." : `${fitting.length} ${fitting.length === 1 ? "video is" : "videos are"} ready to drop. ${rejectedTotal} ${rejectedTotal === 1 ? "post is" : "posts are"} the wrong format.`;
   const stageStyle = { "--dropper-card-width": `${geometry.cardWidth}px`, "--dropper-card-height": `${CARD_HEIGHT}px`, "--dropper-queue": `${geometry.queue}px`, "--dropper-rim": `${geometry.onRim}px`, "--dropper-neck": `${geometry.inNeck}px`, "--dropper-stack": `${geometry.stack}px` };
