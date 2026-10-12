@@ -189,7 +189,7 @@ test("regional checkout uses the fixed catalog amount and the configured plan pr
 
 test("regional checkout charges the catalog currency for NGN and EUR fallback countries", async t => {
   const h = fixture(t);
-  for (const [uid, countryCode, currency] of [["nigerian", "NG", "NGN"], ["eritrean", "ER", "EUR"]]) {
+  for (const [uid, countryCode, currency] of [["nigerian", "NG", "NGN"], ["ghanaian", "GH", "EUR"]]) {
     const pricing = pricingForCountry(countryCode);
     await h.billing.checkout(uid, null, { planId: "pro", cycle: "yearly" }, null, { countryCode });
     const data = h.calls.attempts.at(-1).params.line_items[0].price_data;
@@ -199,21 +199,24 @@ test("regional checkout charges the catalog currency for NGN and EUR fallback co
     assert.equal(data.product, "prod_pro");
     assert.deepEqual(data.recurring, { interval: "year" });
   }
-  assert.equal(pricingForCountry("ER").usesFallback, true);
+  assert.equal(pricingForCountry("GH").usesFallback, true);
 });
 
-test("large UGX and TZS annual charges offer only card payments", async t => {
+test("new Eastern and Southern African checkout uses configured global prices", async t => {
   const h = fixture(t);
-  for (const [uid, countryCode] of [["ugandan", "UG"], ["tanzanian", "TZ"]]) {
-    const pricing = pricingForCountry(countryCode);
-    assert.ok(pricing.plans.pro.yearlyMinor > 99_999_999);
+  for (const countryCode of ["UG", "TZ", "KE", "ZA"]) {
+    const uid = countryCode;
     await h.billing.checkout(uid, null, { planId: "pro", cycle: "yearly" }, null, { countryCode });
     const params = h.calls.attempts.at(-1).params;
-    assert.deepEqual(params.payment_method_types, ["card"]);
-    assert.equal(params.line_items[0].price_data.unit_amount, pricing.plans.pro.yearlyMinor);
+    assert.deepEqual(params.line_items, [{ price: "price_pro_yearly", quantity: 1 }]);
+    assert.equal(params.payment_method_types, undefined);
+    assert.equal(params.metadata.meadowPricingRegion, undefined);
   }
-  await h.billing.checkout("monthly", null, { planId: "pro", cycle: "monthly" }, null, { countryCode: "UG" });
-  assert.equal(h.calls.attempts.at(-1).params.payment_method_types, undefined);
+  const attempts = h.calls.attempts.length;
+  await assert.rejects(h.billing.checkout("stale-quote", null, { ...starter,
+    expectedCountryCode: "UG", expectedCurrency: "UGX", expectedAmountMinor: 3500000 }, null,
+  { countryCode: "UG" }), { code: "pricing_changed", status: 409 });
+  assert.equal(h.calls.attempts.length, attempts, "old regional quotes cannot reach Stripe");
 });
 
 test("a changed visitor quote stops checkout before Stripe is called", async t => {
@@ -251,9 +254,9 @@ test("regional checkout reuses only the matching country, currency, and amount",
 
 test("regional checkout retries an ambiguous Stripe response with the same inline price", async t => {
   const h = fixture(t); h.loseResponse();
-  await assert.rejects(h.billing.checkout("alice", null, { planId: "pro", cycle: "yearly" }, null, { countryCode: "KE" }), /response lost/);
+  await assert.rejects(h.billing.checkout("alice", null, { planId: "pro", cycle: "yearly" }, null, { countryCode: "NG" }), /response lost/);
   const restarted = new BillingService(h.options);
-  await restarted.checkout("alice", null, { planId: "pro", cycle: "yearly" }, null, { countryCode: "KE" });
+  await restarted.checkout("alice", null, { planId: "pro", cycle: "yearly" }, null, { countryCode: "NG" });
   assert.equal(h.calls.created, 1);
   assert.equal(h.calls.attempts[0].idempotencyKey, h.calls.attempts[1].idempotencyKey);
   assert.deepEqual(h.calls.attempts[0].params, h.calls.attempts[1].params);
@@ -295,6 +298,31 @@ test("regional webhook maps an inline Price only when metadata, owner, and price
   assert.equal(h.billing.syncSubscription(sub, "bob"), null);
   assert.equal(h.store.get("billing", "alice").planId, "creator");
   assert.equal(h.store.get("billing", "bob"), null);
+});
+
+test("existing Eastern African subscriptions retain their saved regional price and portal", async t => {
+  const h = fixture(t);
+  h.store.put("checkout_session", {
+    id: "cs_historical", ownerUid: "alice", checkoutKey: "historical_checkout",
+    region: "ssa", countryCode: "UG", currency: "UGX", amountMinor: 160000000,
+    planId: "pro", cycle: "yearly", productId: "prod_pro", priceId: "price_pro_yearly",
+  });
+  const subscription = {
+    id: "sub_historical", status: "active", customer: "cus_alice",
+    metadata: { meadowUserId: "alice", meadowPricingRegion: "ssa", meadowCountryCode: "UG",
+      meadowCurrency: "UGX", meadowAmountMinor: "160000000", meadowPlanId: "pro",
+      meadowBillingCycle: "yearly", meadowBasePriceId: "price_pro_yearly", meadowCheckoutKey: "historical_checkout" },
+    items: { data: [{ quantity: 1, price: { id: "price_historical", product: "prod_pro",
+      currency: "ugx", unit_amount: 160000000, recurring: { interval: "year" } }, current_period_end: 1800000000 }] },
+  };
+  const billing = h.billing.syncSubscription(subscription);
+  assert.equal(billing.planId, "pro");
+  assert.equal(billing.region, "ssa");
+  assert.equal(billing.currency, "UGX");
+  assert.equal(billing.amountMinor, 160000000);
+  assert.equal(pricingForCountry("UG").region, "global");
+  await h.billing.portal("alice");
+  assert.equal(h.calls.portals[0].configuration, "bpc_1");
 });
 
 test("regional portal keeps cancellation and payment updates but disables plan switching", async t => {

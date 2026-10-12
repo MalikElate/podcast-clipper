@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { isSubSaharanCountry, normalizeCountryCode } from "../shared/geography.js";
+import { isRegionalPricingCountry, normalizeCountryCode } from "../shared/geography.js";
 import { invariant, ProviderError } from "../core/errors.js";
 import { SecretVault } from "../core/SecretVault.js";
 
@@ -226,7 +226,7 @@ export class AccountService {
     return this.store.transaction(() => {
       const accounts = [];
       const billing = this.store.get("billing", uid);
-      const regionalFree = isSubSaharanCountry(normalizeCountryCode(visitorCountry) || connection.countryCode)
+      const regionalFree = isRegionalPricingCountry(normalizeCountryCode(visitorCountry) || connection.countryCode)
         && !(billing?.planId && PAID_ENTITLEMENT_STATUSES.has(billing.status));
       let attachedCount = regionalFree ? this.store.list("account", { ownerUid: uid, limit: null }).filter(isAttached).length : 0;
       // The transaction serializes simultaneous callbacks and selections. The
@@ -240,7 +240,7 @@ export class AccountService {
         invariant(!matches.some(account => account.projectId !== projectId), "This account is already connected in another workspace on your Meadow account. Use its existing connection.", { status: 409, code: "account_already_connected" });
         const existing = matches.find(account => account.remoteId === candidate.remoteId) || matches[0];
         invariant(!existing || existing.remoteId === candidate.remoteId, "This account is already connected through another integration. Use its existing connection.", { status: 409, code: "account_already_connected" });
-        invariant(!regionalFree || existing || attachedCount < 2, "The Free plan allows two connected social accounts in Sub-Saharan Africa. Upgrade or disconnect an account to add another.", { status: 409, code: "account_limit_reached" });
+        invariant(!regionalFree || existing || attachedCount < 2, "The Free plan allows two connected social accounts in Central and West Africa. Upgrade or disconnect an account to add another.", { status: 409, code: "account_limit_reached" });
         const id = existing?.id || randomUUID();
         const { credentials, ...profile } = candidate;
         const account = this.store.put("account", { ...existing, ...profile, id, ownerUid: uid, projectId, platform: connection.platform, status: "connected", rateKey: `${connection.platform}:${candidate.remoteId}`,

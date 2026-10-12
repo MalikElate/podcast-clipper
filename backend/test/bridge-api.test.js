@@ -58,6 +58,15 @@ test("public pricing trusts the visitor country only behind an opted-in edge or 
   assert.equal(quote.currency, "XAF");
   assert.equal(quote.freeAccounts, 2);
 
+  for (const countryCode of ["NG", "KE", "ZA"]) {
+    const response = await trusted.request("/api/pricing", { user: null, headers: { "x-meadow-visitor-country": countryCode } });
+    assert.equal(response.status, 200);
+    const current = await response.json();
+    assert.equal(current.region, countryCode === "NG" ? "ssa" : "global");
+    assert.equal(current.currency, countryCode === "NG" ? "NGN" : "USD");
+    assert.equal(current.freeAccounts, countryCode === "NG" ? 2 : 5);
+  }
+
   const container = await setup(t, { envOverrides: { CLOUDFLARE_APPLICATION_ID: "app-test" } });
   const containerQuote = await container.request("/api/pricing/", { user: null, headers: { "x-meadow-visitor-country": "CM" } });
   assert.equal((await containerQuote.json()).currency, "XAF");
