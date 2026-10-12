@@ -111,9 +111,9 @@ export function descriptionIdeas(data) {
   const subject = clean(data.topic, 240).replace(/[.!?]+$/, '');
   const voice = data.accountType === 'Business' ? 'We share' : data.accountType === 'Personal' ? 'I share' : 'Explore';
   const openings = {
-    Helpful: [`${brand ? `Welcome to ${brand}. ` : ''}${voice} ${subject}.`, `${brand || 'This channel'} is a place to learn about ${subject}.`, `Looking for videos about ${subject}? ${brand ? `Welcome to ${brand}.` : 'You are in the right place.'}`],
+    Helpful: [`${brand ? `Welcome to ${brand}. ` : ''}${voice} ${subject}. Get to know the ideas behind each video.`, `${brand || 'This channel'} is a place to learn about ${subject}.`, `Looking for videos about ${subject}? ${brand ? `Welcome to ${brand}.` : 'You are in the right place.'}`],
     Playful: [`${brand ? `${brand}: ` : ''}Come for ${subject}. Stay for the next idea.`, `A little curiosity, a little creativity, and a lot of ${subject}. ${brand ? `This is ${brand}.` : ''}`, `${voice} ${subject}. Bring your curiosity${brand ? ` to ${brand}` : ''}.`],
-    Professional: [`${brand || 'This channel'} focuses on ${subject}.`, `${voice} ${subject}, with room to examine the details.`, `Discover ${subject}${brand ? ` with ${brand}` : ''}.`],
+    Professional: [`${brand || 'This channel'} focuses on ${subject}. Take a closer look at the subject.`, `${voice} ${subject}, with room to examine the details.`, `Discover ${subject}${brand ? ` with ${brand}` : ''}. Explore the channel at your own pace.`],
     Curious: [`What can we discover about ${subject}? ${brand ? `Find out with ${brand}.` : 'Let’s explore together.'}`, `${brand || 'This channel'} follows the questions behind ${subject}.`, `${voice} ${subject}. There is always another detail to investigate.`],
   }[data.tone] || [];
   const audience = data.audience ? `For ${clean(data.audience, 120)}.` : '';

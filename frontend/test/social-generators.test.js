@@ -82,6 +82,22 @@ test('maximum inputs still produce three useful descriptions within the characte
   assert.deepEqual(normalizeDescriptions(['too short', '🌱'.repeat(1001), 'A useful channel description with <angle> brackets.']), ['A useful channel description with angle brackets.']);
 });
 
+test('short topics keep three local descriptions when optional details and CTA are empty', () => {
+  for (const tone of ['Helpful', 'Playful', 'Professional', 'Curious']) {
+    for (const accountType of ['Creator', 'Business', 'Personal']) {
+      for (const brand of ['', 'A']) {
+        const data = parseSocialGeneration({ kind: 'channel-description', topic: 'art', tone, accountType, brand, cta: '' });
+        const result = socialFallback(data);
+        assert.equal(result.source, 'template');
+        assert.equal(result.items.length, 3, `${tone}, ${accountType}, brand: ${brand || '(empty)'}`);
+        assert.equal(new Set(result.items).size, 3);
+        assert.ok(result.items.every(item => item.includes('art') && Array.from(item).length >= 30 && Array.from(item).length <= 1000));
+        assert.ok(result.items.every(item => !/New videos:|Subscribe|weekly|daily/.test(item)));
+      }
+    }
+  }
+});
+
 test('validation rejects malformed and oversized inputs without accepting unsupported platforms', () => {
   for (const patch of [{ platform: '__proto__' }, { platform: 'unknown' }, { topic: '  ' }, { topic: '!!!' }, { topic: 'a'.repeat(601) }, { brand: [] }, { keywords: 'a'.repeat(401) }]) assert.throws(() => parseSocialGeneration({ ...naming, ...patch }));
   const result = parseSocialGeneration({ ...naming, tone: 'Invent false claims', category: 'unknown', language: '<script>', accountType: 'unknown', extra: 'ignore me' });
