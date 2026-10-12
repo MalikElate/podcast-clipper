@@ -229,6 +229,8 @@ function FunnelBoard({ demo, source, destinations, cards, wrongFormat: realWrong
   const { width, height } = size, geometry = funnelGeometry(width, height), center = width / 2, half = geometry.cardWidth / 2 + 14;
   // Labels sit just inside the funnel wall at the height of their second line.
   const labelInset = Math.round(geometry.sideInset + (center - half - geometry.sideInset) * 46 / Math.max(1, geometry.slant - geometry.rim) + 14);
+  // The tinted inside of the funnel, from the rim down through the neck.
+  const inside = width ? `M ${geometry.sideInset} ${geometry.rim} H ${width - geometry.sideInset} L ${center + half} ${geometry.slant} V ${geometry.neck} H ${center - half} V ${geometry.slant} Z` : "";
   const sides = width ? `M ${geometry.sideInset} ${geometry.rim + 2} L ${center - half} ${geometry.slant} V ${geometry.neck} M ${width - geometry.sideInset} ${geometry.rim + 2} L ${center + half} ${geometry.slant} V ${geometry.neck}` : "";
   const setup = loading ? "Loading your setup…" : [source?.label, source && platformName(catalog, source.platform), destinations.length ? `${destinations.length} ${destinations.length === 1 ? "destination" : "destinations"}` : "no destinations yet",
     source && destinations.length ? `every ${intervalLabel(interval)}` : null, "keep: videos that fit"].filter(Boolean).join(" · ");
@@ -243,8 +245,16 @@ function FunnelBoard({ demo, source, destinations, cards, wrongFormat: realWrong
     <p className="dropper-visually-hidden" aria-live="polite">{summary}</p>
     <div className="dropper-funnel-stage" ref={stage} style={stageStyle}>
       <svg className="dropper-funnel-lines" width={width} height={height} aria-hidden="true">
-        <line className="dropper-funnel-rim" x1="0" x2={width} y1={geometry.rim} y2={geometry.rim}/>
+        <defs>
+          <linearGradient id="dropper-funnel-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#d24fe0" stopOpacity=".3"/>
+            <stop offset=".55" stopColor="#d65ee2" stopOpacity=".16"/>
+            <stop offset="1" stopColor="#de7ee8" stopOpacity=".1"/>
+          </linearGradient>
+        </defs>
+        <path className="dropper-funnel-fill" d={inside} fill="url(#dropper-funnel-fill)"/>
         <path className="dropper-funnel-side" d={sides}/>
+        <line className="dropper-funnel-rim" x1="0" x2={width} y1={geometry.rim} y2={geometry.rim}/>
       </svg>
       {width >= 520 && <>
         <span className="dropper-funnel-label left" style={{ top: geometry.rim + 12, left: labelInset }} aria-hidden="true">Right format<br/>drops through</span>
