@@ -3,6 +3,7 @@ import { FaInstagram, FaLinkedin, FaXTwitter, FaYoutube } from "react-icons/fa6"
 import { sortPlatforms } from "../bridge/platforms.js";
 import { PLATFORM_USE_CASES } from "../platformUseCases.js";
 import { PUBLIC_MARKETING_PAGES } from "../marketing/generalPages.js";
+import { GENERATOR_TOOLS } from "../tools/generatorToolsCatalog.js";
 import { appHref, marketingHref, marketingPath, siteSurface } from "../siteUrls.js";
 
 const PLATFORMS = sortPlatforms(PLATFORM_USE_CASES);
@@ -42,6 +43,7 @@ function ToolLinks() {
     {FEATURED_PLATFORMS.map((platform) => <a href={href(`/${platform.slug}`)} key={platform.id}>{platform.name} Scheduler</a>)}
     {PLATFORM_USE_CASES.filter(platform => platform.chatOnly).map(platform => <a href={href(`/${platform.slug}`)} key={platform.id}>{platform.name} Chat Scheduler</a>)}
     <a href={href("/social-media-scheduler")}>All-platform Scheduler</a>
+    {GENERATOR_TOOLS.map(tool => <a href={href(tool.path)} key={tool.path}>{tool.name}</a>)}
   </>;
 }
 

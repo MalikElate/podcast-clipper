@@ -5,6 +5,7 @@ import { appHref } from '../siteUrls.js';
 import { FREE_TOOLS, GUIDES_HUB, MEDIA_GUIDES, TOOLS_HUB, schedulerFor } from './freeToolsCatalog.js';
 import ImageTools from './ImageTools.jsx';
 import { CaptionGenerator, HandleChecker, LinkedInFormatter, UtmBuilder, YouTubeTagGenerator, YouTubeTitleChecker } from './TextTools.jsx';
+import { CharacterCounter, EngagementCalculator, PostingTimeFinder, WritingGenerator } from './WritingTools.jsx';
 
 const href = page => `${page.path}/`;
 const absolute = page => `https://findmeadow.com${href(page)}`;
@@ -54,6 +55,14 @@ function Guides({ page }) {
 
 function Tool({ page }) {
   switch (page.slug) {
+    case 'hashtag-generator': return <WritingGenerator kind="hashtags" />;
+    case 'instagram-bio-generator': return <WritingGenerator kind="bio" />;
+    case 'caption-generator': return <WritingGenerator kind="captions" />;
+    case 'youtube-description-generator': return <WritingGenerator kind="description" />;
+    case 'linkedin-post-generator': return <WritingGenerator kind="linkedin" />;
+    case 'character-counter': return <CharacterCounter />;
+    case 'engagement-rate-calculator': return <EngagementCalculator />;
+    case 'best-time-to-post': return <PostingTimeFinder />;
     case 'utm-builder': return <UtmBuilder />;
     case 'social-media-image-cropper': return <ImageTools mode="crop" />;
     case 'instagram-grid-maker': return <ImageTools mode="grid" />;

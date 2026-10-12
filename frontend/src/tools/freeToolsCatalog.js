@@ -1,8 +1,10 @@
+import { GENERATOR_TOOLS } from './generatorToolsCatalog.js';
 // `Free <name> · Meadow` suits a tool whose name is already what people search
 // for. A tool competing on a broader phrase passes its own title instead.
 const tool = (slug, name, category, description, intro, sections, faq, title) => ({ slug, path: `/tools/${slug}`, name, category, title: title || `Free ${name} · Meadow`, description, intro, sections, faq });
 
 export const FREE_TOOLS = [
+  ...GENERATOR_TOOLS,
   tool('utm-builder', 'UTM Builder', 'Planning',
     'Build a UTM tracking link in seconds. Add source, medium and campaign tags to any URL, then copy it into your next post. Free, no signup.',
     'Know which post brought people to your site. Build a campaign link you can copy straight into your next post.',
@@ -81,7 +83,7 @@ export function schedulerFor(page) {
 }
 
 export const CROP_PRESETS = MEDIA_GUIDES.flatMap(guide => guide.rows.map(([label, width, height, ratio], index) => ({ id: `${guide.slug}-${index}`, label: `${guide.platform} · ${label}`, width, height, ratio })));
-export const TOOLS_HUB = { path: '/tools', name: 'Free Social Media Tools', title: 'Free Social Media Tools for Creators · Meadow', description: 'Free tools for better social posts: crop images, split Instagram grids, build UTM links, format text, check titles and generate captions and tags.' };
+export const TOOLS_HUB = { path: '/tools', name: 'Free Social Media Tools', title: 'Free Social Media Tools for Creators · Meadow', description: 'Free social tools: generate captions, bios and hashtags, count characters, calculate engagement, compare posting times, crop images and plan your next post.' };
 export const GUIDES_HUB = { path: '/tools/media-size-guide', name: 'Social Media Size Guide', title: 'Social Media Image and Video Size Guide · Meadow', description: 'Find practical image dimensions and video canvas sizes for Instagram, TikTok, YouTube, LinkedIn, Facebook, X, and Pinterest, with free crop presets.' };
 export const FREE_TOOL_PAGES = [TOOLS_HUB, ...FREE_TOOLS, GUIDES_HUB, ...MEDIA_GUIDES];
 export const findFreeToolPage = pathname => FREE_TOOL_PAGES.find(page => page.path === pathname.replace(/\/+$/, ''));
