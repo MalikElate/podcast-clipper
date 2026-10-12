@@ -1,14 +1,14 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "./BridgeApi.js";
 import { Icon } from "./Icons.jsx";
 import { Alert, Check, Field, Modal, PlatformIcon, dateTime, useProjectResource } from "./ui.jsx";
 import { DestinationSettings } from "./DestinationSettings.jsx";
 import { useAccountOptions } from "./useAccountOptions.js";
 import { dashboardPath } from "./dashboardRoutes.js";
-import { dropperDestinationAccounts, dropperSourceAccounts, selectableDropperCards, currentDropperItem, intervalMinutes, intervalInput, intervalLabel, dropperQueueStatus, funnelFeed, funnelDuration, funnelProgress, wrongFormatLabel } from "./dropper.js";
+import { dropperDestinationAccounts, dropperSourceAccounts, selectableDropperCards, currentDropperItem, intervalMinutes, intervalInput, intervalLabel, dropperQueueStatus, dropKeyframes } from "./dropper.js";
 import "./dropper.css";
 
-const initial = { cards: null, wrongFormat: [], sources: [], settings: { sourceAccountId: null, accountIds: [], overrides: {}, intervalMinutes: 480 }, queue: [], running: false, inFlight: false, nextSlotAt: null, run: null };
+const initial = { cards: null, sources: [], settings: { sourceAccountId: null, accountIds: [], overrides: {}, intervalMinutes: 480 }, queue: [], running: false, inFlight: false, nextSlotAt: null, run: null };
 const platformName = (catalog, platform) => catalog.find(item => item.id === platform)?.name || platform;
 const optionPlatforms = new Set(["tiktok", "pinterest"]);
 const destinationSettingsPlatforms = new Set(["tiktok", "youtube", "pinterest", "bluesky", "google_business"]);
@@ -131,7 +131,7 @@ export default function AccountDropper({ project, catalog, accounts, accountsRea
     {resource.error && <button type="button" className="bridge-button secondary small" disabled={resource.loading} onClick={resource.reload}>Try again</button>}
     {hasUnavailable && <p className="bridge-notice" role="status">A saved account is unavailable. Choose connected accounts in Edit setup before starting another batch.</p>}
     <section className="bridge-panel dropper-board-panel" aria-label="Account dropper">
-      <FunnelBoard source={boardSource} destinations={boardDestinations} cards={cards} wrongFormat={data.wrongFormat || []} currentDrop={currentDrop} catalog={catalog} intervalMinutes={displayedSetup.intervalMinutes} loading={!accountsReady || data.cards === null && resource.loading} onSetup={() => setEditing(true)} setupDisabled={locked || !accountsReady || resource.loading || Boolean(resource.error)}/>
+      <DropBoard source={boardSource} destinations={boardDestinations} currentDrop={currentDrop} catalog={catalog} loading={!accountsReady || data.cards === null && resource.loading} onSetup={() => setEditing(true)} setupDisabled={locked || !accountsReady || resource.loading || Boolean(resource.error)}/>
       <div className="dropper-board-controls">
         <div className="dropper-board-summary">
           <strong>{data.running ? "Dropper is running" : data.inFlight ? "Finishing a video" : "Ready when you are"}</strong>
@@ -173,92 +173,68 @@ function AccountAvatar({ account, className = "" }) {
     : <span className={`dropper-avatar dropper-avatar-fallback ${className}`} aria-hidden="true">{initial}</span>;
 }
 
-const FUNNEL = { height: 560, rim: 150, slant: 372, neck: 400, stack: 420 };
-
-function FunnelBoard({ source, destinations, cards, wrongFormat, currentDrop, catalog, loading, intervalMinutes: interval, onSetup, setupDisabled }) {
-  const stage = useRef(null);
-  const [width, setWidth] = useState(0);
-  const [elapsed, setElapsed] = useState(Infinity);
-  const feed = funnelFeed(cards, wrongFormat);
-  const feedKey = feed.map(item => item.id).join(",");
+function DropBoard({ source, destinations, currentDrop, catalog, loading, onSetup, setupDisabled }) {
+  const board = useRef(null), pegs = useRef(null), sourceNode = useRef(null);
+  const targets = useRef(new Map()), copies = useRef(new Map());
+  const [preview, setPreview] = useState(null);
+  const seen = useRef("");
+  const destinationKey = destinations.map(account => account.id).join(",");
+  const dropKey = currentDrop ? `${currentDrop.cardId}:${currentDrop.createdAt || currentDrop.slotAt}` : "";
+  useEffect(() => {
+    if (!dropKey || seen.current === dropKey) return;
+    seen.current = dropKey;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    setPreview(currentDrop);
+  }, [dropKey]);
 
   useEffect(() => {
-    if (!stage.current) return;
-    const resize = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
-    resize.observe(stage.current);
-    return () => resize.disconnect();
-  }, []);
+    if (!preview) return;
+    const timer = setTimeout(() => setPreview(null), 4100);
+    return () => clearTimeout(timer);
+  }, [preview]);
 
-  // Replay the sort whenever a different set of posts arrives.
-  useLayoutEffect(() => {
-    if (!feedKey || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setElapsed(Infinity); return; }
-    const started = performance.now(), total = funnelDuration(feed);
-    setElapsed(0);
-    const timer = setInterval(() => {
-      const now = performance.now() - started;
-      setElapsed(now);
-      if (now >= total) clearInterval(timer);
-    }, 80);
-    return () => clearInterval(timer);
-  }, [feedKey]);
+  useEffect(() => {
+    if (!preview || !board.current || !pegs.current) return;
+    const animations = [];
+    const animate = () => {
+      animations.forEach(animation => animation.cancel());
+      animations.length = 0;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const bounds = board.current.getBoundingClientRect(), field = pegs.current.getBoundingClientRect(), sourceBounds = sourceNode.current?.getBoundingClientRect();
+      destinations.forEach((account, index) => {
+        const target = targets.current.get(account.id), copy = copies.current.get(account.id);
+        if (!target || !copy) return;
+        const bucket = target.getBoundingClientRect();
+        const keyframes = dropKeyframes({ startX: bounds.width / 2 - 18, startY: (sourceBounds?.bottom || field.top) - bounds.top - 18, endX: bucket.left + bucket.width / 2 - bounds.left - 18, endY: bucket.top + bucket.height / 2 - bounds.top - 18, pegTop: field.top - bounds.top, pegHeight: field.height, copyIndex: index });
+        animations.push(copy.animate(keyframes, { duration: 2850, delay: Math.min(index, 10) * 80, easing: "linear", fill: "both" }));
+      });
+    };
+    animate();
+    const resize = new ResizeObserver(animate);
+    resize.observe(board.current);
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const motionChanged = () => { if (motion.matches) { animations.forEach(animation => animation.cancel()); setPreview(null); } };
+    motion.addEventListener("change", motionChanged);
+    return () => { resize.disconnect(); motion.removeEventListener("change", motionChanged); animations.forEach(animation => animation.cancel()); };
+  }, [preview, destinationKey]);
 
-  const progress = funnelProgress(feed, elapsed);
-  const wrongCount = progress.done ? wrongFormat.length : progress.wrong;
-  const readyCount = progress.done ? cards.length : progress.landed.length;
-  const stacked = progress.done ? cards.slice(0, 3) : progress.landed.slice(0, 3);
-  const cardWidth = width < 520 ? Math.max(150, width * .55) : Math.min(340, Math.max(200, width * .38)), neck = cardWidth / 2 + 12, center = width / 2;
-  const sides = width ? `M ${center - neck} ${FUNNEL.neck} V ${FUNNEL.slant} L 6 ${FUNNEL.rim + 4} M ${center + neck} ${FUNNEL.neck} V ${FUNNEL.slant} L ${width - 6} ${FUNNEL.rim + 4}` : "";
-  const setup = [source ? source.label : null, source ? platformName(catalog, source.platform) : null,
-    destinations.length ? `${destinations.length} ${destinations.length === 1 ? "destination" : "destinations"}` : null,
-    source && destinations.length ? `every ${intervalLabel(interval)}` : null, "videos only"].filter(Boolean).join(" · ");
-  const summary = loading ? "Loading your posts." : `${cards.length} ${cards.length === 1 ? "video is" : "videos are"} ready to drop. ${wrongFormat.length} ${wrongFormat.length === 1 ? "post is" : "posts are"} the wrong format.`;
-
-  return <div className="dropper-funnel-board">
-    <div className="dropper-funnel-head">
-      <div><h2>Dropper</h2><p>{setup}</p></div>
-      {!loading && source && <span>{cards.length + wrongFormat.length} posts checked</span>}
+  return <div ref={board} className="dropper-board">
+    <div className="dropper-source" ref={sourceNode}>
+      {source ? <><AccountAvatar account={source}/><div><span>Source account</span><strong>{source.label}</strong><small><PlatformIcon platform={source.platform} size={16}/>{platformName(catalog, source.platform)}</small></div></>
+        : <button type="button" className="dropper-source-empty" disabled={setupDisabled} onClick={onSetup}><Icon name={loading ? "clock" : "plus"} size={24}/><span>{loading ? "Loading…" : "Choose source account"}</span></button>}
     </div>
-    <p className="dropper-visually-hidden" aria-live="polite">{summary}</p>
-    <div className="dropper-funnel-stage" ref={stage} style={{ "--dropper-card-width": `${cardWidth}px` }}>
-      <svg className="dropper-funnel-lines" width={width} height={FUNNEL.height} aria-hidden="true">
-        <line className="dropper-funnel-rim" x1="0" x2={width} y1={FUNNEL.rim} y2={FUNNEL.rim}/>
-        <path className="dropper-funnel-side" d={sides}/>
-      </svg>
-      <span className="dropper-funnel-label left" aria-hidden="true">Videos only<br/>drop through</span>
-      <span className="dropper-funnel-label right" aria-hidden="true">Destinations<strong>{destinations.length}</strong></span>
-      {!source ? <button type="button" className="dropper-funnel-empty" disabled={setupDisabled} onClick={onSetup}><Icon name={loading ? "clock" : "plus"} size={20}/>{loading ? "Loading…" : "Choose source account"}</button>
-        : loading ? <span className="dropper-funnel-empty">Loading your posts…</span>
-        : !feed.length ? <span className="dropper-funnel-empty">No recent posts on {source.label}</span> : null}
-      {progress.active.map(({ item, index }) => <FunnelCard key={`${feedKey}:${index}`} item={item} catalog={catalog} className={item.fits ? "keep" : "reject"} style={{ "--dropper-dx": `${index % 2 ? 46 : -46}px` }}/>)}
-      {currentDrop && <FunnelCard item={{ ...currentDrop, fits: true }} catalog={catalog} className="dropping" status="dropping now"/>}
-      <div className="dropper-funnel-stack" style={{ top: FUNNEL.stack }} aria-hidden="true">
-        {stacked.map(item => <FunnelCard key={item.id} item={{ ...item, fits: true }} catalog={catalog} className="stacked"/>)}
-        {progress.done && cards.length > stacked.length && <span className="dropper-funnel-more">+{cards.length - stacked.length} more ready</span>}
-      </div>
+    <svg className="dropper-pegs" ref={pegs} viewBox="0 0 1000 380" aria-hidden="true">
+      {Array.from({ length: 7 }, (_, row) => Array.from({ length: row + 3 }, (_, column) => <g key={`${row}:${column}`}><circle className="dropper-peg-shadow" cx={500 + (column - (row + 2) / 2) * 94} cy={42 + row * 46} r="7"/><circle className="dropper-peg" cx={500 + (column - (row + 2) / 2) * 94} cy={39 + row * 46} r="6"/></g>))}
+    </svg>
+    <div className="dropper-buckets">
+      {destinations.length ? destinations.map(account => <div className="dropper-bucket" key={account.id}>
+        <div className="dropper-bucket-cup" ref={node => { if (node) targets.current.set(account.id, node); else targets.current.delete(account.id); }}><AccountAvatar account={account}/></div>
+        <strong title={account.label}>{account.label}</strong><small><PlatformIcon platform={account.platform} size={16}/>{platformName(catalog, account.platform)}</small>
+      </div>) : <button type="button" className="dropper-destinations-empty" disabled={setupDisabled} onClick={onSetup}><Icon name="accounts" size={21}/><span>Choose destination accounts</span></button>}
     </div>
-    <div className="dropper-funnel-counts">
-      <div className="wrong"><span>Wrong format ×</span><strong>{loading ? "–" : wrongCount}</strong></div>
-      <div className="ready"><span>Ready to drop ✓</span><strong>{loading ? "–" : readyCount}</strong></div>
-    </div>
+    {preview && destinations.map(account => <span className="dropper-copy" aria-hidden="true" key={`${dropKey}:${account.id}`} ref={node => { if (node) copies.current.set(account.id, node); else copies.current.delete(account.id); }}>{preview.thumbnailUrl ? <img src={preview.thumbnailUrl} alt="" referrerPolicy="no-referrer"/> : <Icon name="video" size={19}/>}</span>)}
+    <p className="dropper-preview-caption">{preview ? "Drop preview · posting status appears in your queue" : destinations.length ? `Each video lands in all ${destinations.length} selected ${destinations.length === 1 ? "account" : "accounts"}` : "Your selected accounts will appear here"}</p>
   </div>;
-}
-
-function FunnelCard({ item, catalog, className, style, status }) {
-  const name = platformName(catalog, item.platform);
-  const title = clip(item.title || item.caption || (item.fits ? `${name} video` : `${name} ${wrongFormatLabel(item.format)}`), 46);
-  const checked = status || (item.fits ? "video · drops" : `${wrongFormatLabel(item.format)} · wrong format`);
-  return <div className={`dropper-funnel-card ${className}`} style={style} aria-hidden="true">
-    <span className="dropper-funnel-icon"><PlatformIcon platform={item.platform} size={17}/></span>
-    <span className="dropper-funnel-text"><strong>{title}</strong>
-      {className === "keep" || className === "reject" ? <><small className="pending">{domainOf(item.url) || name}</small><small className="checked">{checked}</small></> : <small>{checked}</small>}
-    </span>
-    {className === "reject" && <span className="dropper-funnel-x">×</span>}
-  </div>;
-}
-
-const clip = (text, length) => text.length > length ? `${text.slice(0, length - 1).trimEnd()}…` : text;
-function domainOf(url) {
-  try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
 }
 
 function ReviewCard({ card, selected, order, disabled, alreadyQueued, catalog, timeZone, onChange }) {
