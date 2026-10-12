@@ -184,9 +184,11 @@ const CARD_HEIGHT = 66;
 function funnelGeometry(width, height) {
   const rim = Math.round(height * .27), slant = Math.round(height * .5), neck = Math.round(height * .54);
   const cardWidth = width < 520 ? Math.max(200, width * .74) : Math.min(400, Math.max(260, width * .4));
-  // Waiting posts sit off to either side, then slide to the middle of the rim.
-  const offset = width < 520 ? 0 : Math.min(190, (width - cardWidth) / 2 - 24);
-  return { rim, slant, neck, cardWidth, offset, queue: Math.round(height * .055), onRim: rim - CARD_HEIGHT - 3, inNeck: neck - CARD_HEIGHT + 6, stack: neck + 16, sideInset: Math.min(20, width * .02) };
+  // Posts come in on the left or right, cross the rim off-centre and slide
+  // down the funnel wall into the neck, like the reference.
+  const offset = width < 520 ? Math.round(width * .08) : Math.min(210, (width - cardWidth) / 2 - 16);
+  const onRim = rim - CARD_HEIGHT - 3, inNeck = neck - CARD_HEIGHT + 6;
+  return { rim, slant, neck, cardWidth, offset, queue: Math.round(height * .055), onRim, inFunnel: Math.round((onRim + inNeck) / 2), inNeck, stack: neck + 16, sideInset: Math.min(20, width * .02) };
 }
 const DRIFT = [-1, .7, -.45, 1, -.8, .35, .9, -.6];
 
@@ -231,7 +233,7 @@ function FunnelBoard({ demo, source, destinations, cards, wrongFormat: realWrong
   const setup = loading ? "Loading your setup…" : [source?.label, source && platformName(catalog, source.platform), destinations.length ? `${destinations.length} ${destinations.length === 1 ? "destination" : "destinations"}` : "no destinations yet",
     source && destinations.length ? `every ${intervalLabel(interval)}` : null, "keep: videos that fit"].filter(Boolean).join(" · ");
   const summary = loading ? "Loading your posts." : `${fitting.length} ${fitting.length === 1 ? "video is" : "videos are"} ready to drop. ${rejectedTotal} ${rejectedTotal === 1 ? "post is" : "posts are"} the wrong format.`;
-  const stageStyle = { "--dropper-card-width": `${geometry.cardWidth}px`, "--dropper-card-height": `${CARD_HEIGHT}px`, "--dropper-queue": `${geometry.queue}px`, "--dropper-rim": `${geometry.onRim}px`, "--dropper-neck": `${geometry.inNeck}px`, "--dropper-stack": `${geometry.stack}px` };
+  const stageStyle = { "--dropper-card-width": `${geometry.cardWidth}px`, "--dropper-card-height": `${CARD_HEIGHT}px`, "--dropper-queue": `${geometry.queue}px`, "--dropper-rim": `${geometry.onRim}px`, "--dropper-funnel": `${geometry.inFunnel}px`, "--dropper-neck": `${geometry.inNeck}px`, "--dropper-stack": `${geometry.stack}px` };
 
   return <div className="dropper-funnel-board">
     <div className="dropper-funnel-head">

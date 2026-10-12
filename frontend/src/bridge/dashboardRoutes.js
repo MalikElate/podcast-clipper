@@ -54,6 +54,8 @@ export function dashboardSearch(view, search = "") {
   if (view === "billing") {
     for (const key of ["checkout", "session_id", "portal_return"]) if (source.has(key)) kept.set(key, source.get(key));
   }
+  // The Dropper walkthrough adds example rejections (see demoRejects).
+  if (view === "dropper" && source.has("demo")) kept.set("demo", "1");
   const query = kept.toString();
   return query ? `?${query}` : "";
 }
