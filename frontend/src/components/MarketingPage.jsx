@@ -90,13 +90,13 @@ function AccountManagementPreview() {
   </>;
 }
 
-function PlanGrid() {
+export function PlanGrid({ heading = "Get more reach, with less effort." }) {
   const [yearly, setYearly] = useState(true);
   const { quote, status, retry } = usePricingQuote();
   return (
     <>
       <div className="home-pricing-heading">
-        <h2 id="mkt-pricing-title">Get more reach, with less effort.</h2>
+        <h2 id="mkt-pricing-title">{heading}</h2>
 
         <div className="pricing-cycle" role="group" aria-label="Billing frequency">
           <button className={!yearly ? "active" : ""} onClick={() => setYearly(false)}>Monthly</button>

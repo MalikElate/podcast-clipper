@@ -7,6 +7,7 @@ import LegalPage from "./components/LegalPage.jsx";
 import Pricing from "./components/Pricing.jsx";
 import PlatformUseCasePage from "./components/PlatformUseCasePage.jsx";
 import MarketingPage from "./components/MarketingPage.jsx";
+import AlternativePage from "./components/AlternativePage.jsx";
 import AdSignupFunnel from "./components/AdSignupFunnel.jsx";
 import ContactPage from "./components/ContactPage.jsx";
 import DevelopersPage from "./components/DevelopersPage.jsx";
@@ -264,12 +265,13 @@ function PublicContactPage({ onGetStarted }) {
 }
 
 function PublicMarketingPage({ page, onGetStarted }) {
+  const Page = page.kind === "alternative" ? AlternativePage : MarketingPage;
   return (
     <div className="app">
       <div className="app-glow app-glow-a" />
       <div className="app-glow app-glow-b" />
       <div className="centered-shell landing-shell">
-        <MarketingPage page={page} onGetStarted={onGetStarted} />
+        <Page page={page} onGetStarted={onGetStarted} />
       </div>
     </div>
   );
