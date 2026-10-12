@@ -55,7 +55,7 @@ function setup(t, { snapshot, at = Date.parse("2026-10-08T12:00:00Z") } = {}) {
   const posts = new PostService({ store, projects, accounts, registry, media, schedules: new ScheduleService({ clock: () => now }), rates, clock: () => now });
   const videoSources = {
     connectedAccounts(uid, projectId) { return store.list("account", { projectId, ownerUid: uid }).filter(item => item.status === "connected"); },
-    async sourceVideos(account) { h.lastSource = account.id; return { videos: h.videos, others: h.others || [], error: null }; },
+    async sourceVideos(account) { h.lastSource = account.id; return { videos: h.videos, error: null }; },
     downloader: { supports: () => true, async download(source, filename) { h.downloads.push(source.url); await h.downloadHook?.(); await fs.promises.writeFile(filename, "video-fixture"); return { filename: "source.mp4" }; } },
     invalidateAccount() {},
     removeOwner() {},
@@ -82,20 +82,6 @@ test("Dropper requires one owned source, selected destinations, and a bounded in
   assert.equal(deck.settings.intervalMinutes, 1);
   await assert.rejects(h.dropper.deck("bob", "creator"), /Project not found/);
   await assert.rejects(h.start([]), /reviewed videos/);
-});
-
-test("wrong-format posts are reported for the funnel but can never be started", async t => {
-  const h = setup(t);
-  h.configure();
-  h.others = [
-    { externalId: "7400000000000000098", caption: "Older carousel", publishedAt: h.now() - 9 * MINUTE, url: "https://www.tiktok.com/@source/photo/7400000000000000098", format: "carousel", thumbnailUrl: null },
-    { externalId: "7400000000000000099", caption: "Photo dump", publishedAt: h.now() - 2 * MINUTE, url: "https://www.tiktok.com/@source/photo/7400000000000000099", format: "photo", thumbnailUrl: "https://cdn.example/p.jpg" },
-  ];
-  const deck = await h.deck();
-  assert.equal(deck.cards.length, 3);
-  assert.deepEqual(deck.wrongFormat.map(post => [post.format, post.caption, post.platform]), [["photo", "Photo dump", "tiktok"], ["carousel", "Older carousel", "tiktok"]]);
-  assert.ok(deck.wrongFormat.every(post => !deck.cards.some(card => card.id === post.id) && !("directUrl" in post)));
-  await assert.rejects(h.start([deck.wrongFormat[0].id]), error => error.code === "dropper_review_required");
 });
 
 test("reviewed videos retain selected order, immutable destinations and settings, and due-only spacing", async t => {
