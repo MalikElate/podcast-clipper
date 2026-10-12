@@ -5,7 +5,7 @@ import { Alert, Check, Field, Modal, PlatformIcon, dateTime, useProjectResource 
 import { DestinationSettings } from "./DestinationSettings.jsx";
 import { useAccountOptions } from "./useAccountOptions.js";
 import { dashboardPath } from "./dashboardRoutes.js";
-import { dropperDestinationAccounts, dropperSourceAccounts, selectableDropperCards, currentDropperItem, intervalMinutes, intervalInput, intervalLabel, dropperQueueStatus, funnelFeed, funnelDuration, funnelProgress, wrongFormatLabel } from "./dropper.js";
+import { dropperDestinationAccounts, dropperSourceAccounts, selectableDropperCards, currentDropperItem, intervalMinutes, intervalInput, intervalLabel, dropperQueueStatus, funnelFeed, funnelDuration, funnelProgress, wrongFormatLabel, videoFit, durationLabel } from "./dropper.js";
 import "./dropper.css";
 
 const initial = { cards: null, wrongFormat: [], sources: [], settings: { sourceAccountId: null, accountIds: [], overrides: {}, intervalMinutes: 480 }, queue: [], running: false, inFlight: false, nextSlotAt: null, run: null };
@@ -29,7 +29,8 @@ export default function AccountDropper({ project, catalog, accounts, accountsRea
   const eligible = dropperDestinationAccounts(accounts, catalog, data.settings.sourceAccountId);
   const destinations = data.settings.accountIds.map(id => eligible.find(account => account.id === id)).filter(Boolean);
   const cards = data.cards || [];
-  const selectable = selectableDropperCards(cards, data.queue);
+  const fitting = cards.filter(card => videoFit(card, destinations, catalog).fits);
+  const selectable = selectableDropperCards(fitting, data.queue);
   const selectableIds = new Set(selectable.map(card => card.id));
   const selectedCards = selected.map(id => selectable.find(card => card.id === id)).filter(Boolean);
   const locked = Boolean(busy || rechecking || data.running || data.inFlight);
@@ -51,13 +52,14 @@ export default function AccountDropper({ project, catalog, accounts, accountsRea
     return () => { mounted.current = false; request.current?.abort(); };
   }, [project.id]);
 
+  const selectableKey = selectable.map(card => card.id).join(",");
   useEffect(() => {
-    const valid = new Set(selectableDropperCards(data.cards || [], data.queue).map(card => card.id));
+    const valid = new Set(selectableKey.split(","));
     setSelected(current => {
       const kept = current.filter(id => valid.has(id));
       return kept.length === current.length ? current : kept;
     });
-  }, [data.cards, data.queue]);
+  }, [selectableKey]);
 
   useEffect(() => {
     if (failedRead.current && failedRead.current !== data) { failedRead.current = null; setRechecking(false); }
@@ -156,7 +158,7 @@ export default function AccountDropper({ project, catalog, accounts, accountsRea
           : !cards.length ? <p className="dropper-empty">{data.sources.find(item => item.accountId === source.id)?.error || "No recent videos are available from this account. Refresh to check again."}</p>
           : <>
             <div className="dropper-selection-bar"><Check checked={Boolean(selectable.length) && selectedCards.length === Math.min(50, selectable.length)} disabled={locked || !selectable.length || resource.loading} onChange={event => setSelected(event.target.checked ? selectable.slice(0, 50).map(card => card.id) : [])}>Select {selectable.length > 50 ? "first 50" : "all available"}</Check><span>{selectedCards.length} selected{selectable.length > 50 ? " · up to 50 per batch" : ""}</span></div>
-            <div className="dropper-video-grid">{cards.map(card => <ReviewCard key={card.id} card={card} selected={selected.includes(card.id)} order={selected.indexOf(card.id) + 1} disabled={locked || !selectableIds.has(card.id) || selectedCards.length >= 50 && !selected.includes(card.id) || resource.loading} alreadyQueued={card.pushable && !selectableIds.has(card.id)} catalog={catalog} timeZone={project.timeZone} onChange={() => toggleCard(card.id)}/>)}</div>
+            <div className="dropper-video-grid">{cards.map(card => <ReviewCard key={card.id} card={card} selected={selected.includes(card.id)} order={selected.indexOf(card.id) + 1} disabled={locked || !selectableIds.has(card.id) || selectedCards.length >= 50 && !selected.includes(card.id) || resource.loading} alreadyQueued={card.pushable && fitting.includes(card) && !selectableIds.has(card.id)} tooLong={!fitting.includes(card)} catalog={catalog} timeZone={project.timeZone} onChange={() => toggleCard(card.id)}/>)}</div>
           </>}
       </section>
       <DropQueue queue={data.queue} running={data.running} timeZone={project.timeZone} catalog={catalog}/>
@@ -173,85 +175,104 @@ function AccountAvatar({ account, className = "" }) {
     : <span className={`dropper-avatar dropper-avatar-fallback ${className}`} aria-hidden="true">{initial}</span>;
 }
 
-const FUNNEL = { height: 560, rim: 150, slant: 372, neck: 400, stack: 420 };
+const CARD_HEIGHT = 66;
+
+// Station positions scale with the stage, like the reference: posts wait near
+// the top, the rim sits about a third of the way down, the neck near halfway,
+// and the stack of drops runs down behind the counters.
+function funnelGeometry(width, height) {
+  const rim = Math.round(height * .3), slant = Math.round(height * .52), neck = Math.round(height * .57);
+  const cardWidth = width < 520 ? Math.max(200, width * .74) : Math.min(430, Math.max(250, width * .36));
+  return { rim, slant, neck, cardWidth, queue: Math.round(height * .05), onRim: rim - CARD_HEIGHT - 3, inNeck: neck - CARD_HEIGHT + 6, stack: neck + 14, sideInset: Math.min(34, width * .03) };
+}
 
 function FunnelBoard({ source, destinations, cards, wrongFormat, currentDrop, catalog, loading, intervalMinutes: interval, onSetup, setupDisabled }) {
   const stage = useRef(null);
-  const [width, setWidth] = useState(0);
+  const [size, setSize] = useState({ width: 0, height: 0 });
   const [elapsed, setElapsed] = useState(Infinity);
-  const feed = funnelFeed(cards, wrongFormat);
-  const feedKey = feed.map(item => item.id).join(",");
+  const feed = funnelFeed(cards, wrongFormat, { destinations, catalog });
+  const feedKey = `${feed.map(item => item.id).join(",")}|${destinations.map(account => account.id).join(",")}`;
 
   useEffect(() => {
     if (!stage.current) return;
-    const resize = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    const resize = new ResizeObserver(([entry]) => setSize({ width: entry.contentRect.width, height: entry.contentRect.height }));
     resize.observe(stage.current);
     return () => resize.disconnect();
   }, []);
 
-  // Replay the sort whenever a different set of posts arrives.
+  // Replay the sort whenever a different set of posts or destinations arrives.
   useLayoutEffect(() => {
-    if (!feedKey || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setElapsed(Infinity); return; }
+    if (!feed.length || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setElapsed(Infinity); return; }
     const started = performance.now(), total = funnelDuration(feed);
     setElapsed(0);
     const timer = setInterval(() => {
       const now = performance.now() - started;
       setElapsed(now);
       if (now >= total) clearInterval(timer);
-    }, 80);
+    }, 100);
     return () => clearInterval(timer);
   }, [feedKey]);
 
+  const fitting = cards.filter(card => videoFit(card, destinations, catalog).fits);
+  const rejectedTotal = wrongFormat.length + cards.length - fitting.length;
   const progress = funnelProgress(feed, elapsed);
-  const wrongCount = progress.done ? wrongFormat.length : progress.wrong;
-  const readyCount = progress.done ? cards.length : progress.landed.length;
-  const stacked = progress.done ? cards.slice(0, 3) : progress.landed.slice(0, 3);
-  const cardWidth = width < 520 ? Math.max(150, width * .55) : Math.min(340, Math.max(200, width * .38)), neck = cardWidth / 2 + 12, center = width / 2;
-  const sides = width ? `M ${center - neck} ${FUNNEL.neck} V ${FUNNEL.slant} L 6 ${FUNNEL.rim + 4} M ${center + neck} ${FUNNEL.neck} V ${FUNNEL.slant} L ${width - 6} ${FUNNEL.rim + 4}` : "";
-  const setup = [source ? source.label : null, source ? platformName(catalog, source.platform) : null,
-    destinations.length ? `${destinations.length} ${destinations.length === 1 ? "destination" : "destinations"}` : null,
-    source && destinations.length ? `every ${intervalLabel(interval)}` : null, "videos only"].filter(Boolean).join(" · ");
-  const summary = loading ? "Loading your posts." : `${cards.length} ${cards.length === 1 ? "video is" : "videos are"} ready to drop. ${wrongFormat.length} ${wrongFormat.length === 1 ? "post is" : "posts are"} the wrong format.`;
+  const skipped = progress.done ? rejectedTotal : progress.wrong;
+  const ready = progress.done ? fitting.length : progress.landed.length;
+  const stacked = (progress.done ? fitting : progress.landed).slice(0, 8);
+  const { width, height } = size, geometry = funnelGeometry(width, height), center = width / 2, half = geometry.cardWidth / 2 + 14;
+  // Labels sit just inside the funnel wall at the height of their second line.
+  const labelInset = Math.round(geometry.sideInset + (center - half - geometry.sideInset) * 46 / Math.max(1, geometry.slant - geometry.rim) + 14);
+  const sides = width ? `M ${geometry.sideInset} ${geometry.rim + 2} L ${center - half} ${geometry.slant} V ${geometry.neck} M ${width - geometry.sideInset} ${geometry.rim + 2} L ${center + half} ${geometry.slant} V ${geometry.neck}` : "";
+  const setup = [source?.label, source && platformName(catalog, source.platform), destinations.length ? `${destinations.length} ${destinations.length === 1 ? "destination" : "destinations"}` : "no destinations yet",
+    source && destinations.length ? `every ${intervalLabel(interval)}` : null, "keep: videos that fit"].filter(Boolean).join(" · ");
+  const summary = loading ? "Loading your posts." : `${fitting.length} ${fitting.length === 1 ? "video is" : "videos are"} ready to drop. ${rejectedTotal} ${rejectedTotal === 1 ? "post is" : "posts are"} the wrong format.`;
+  const stageStyle = { "--dropper-card-width": `${geometry.cardWidth}px`, "--dropper-card-height": `${CARD_HEIGHT}px`, "--dropper-queue": `${geometry.queue}px`, "--dropper-rim": `${geometry.onRim}px`, "--dropper-neck": `${geometry.inNeck}px`, "--dropper-stack": `${geometry.stack}px` };
 
   return <div className="dropper-funnel-board">
     <div className="dropper-funnel-head">
       <div><h2>Dropper</h2><p>{setup}</p></div>
-      {!loading && source && <span>{cards.length + wrongFormat.length} posts checked</span>}
+      {!loading && source && <span><i aria-hidden="true"/>{cards.length + wrongFormat.length} posts</span>}
     </div>
     <p className="dropper-visually-hidden" aria-live="polite">{summary}</p>
-    <div className="dropper-funnel-stage" ref={stage} style={{ "--dropper-card-width": `${cardWidth}px` }}>
-      <svg className="dropper-funnel-lines" width={width} height={FUNNEL.height} aria-hidden="true">
-        <line className="dropper-funnel-rim" x1="0" x2={width} y1={FUNNEL.rim} y2={FUNNEL.rim}/>
+    <div className="dropper-funnel-stage" ref={stage} style={stageStyle}>
+      <svg className="dropper-funnel-lines" width={width} height={height} aria-hidden="true">
+        <line className="dropper-funnel-rim" x1="0" x2={width} y1={geometry.rim} y2={geometry.rim}/>
         <path className="dropper-funnel-side" d={sides}/>
       </svg>
-      <span className="dropper-funnel-label left" aria-hidden="true">Videos only<br/>drop through</span>
-      <span className="dropper-funnel-label right" aria-hidden="true">Destinations<strong>{destinations.length}</strong></span>
+      {width >= 520 && <>
+        <span className="dropper-funnel-label left" style={{ top: geometry.rim + 12, left: labelInset }} aria-hidden="true">Right format<br/>drops through</span>
+        <span className="dropper-funnel-label right" style={{ top: geometry.rim + 12, right: labelInset }} aria-hidden="true">Skipped ×<strong>{loading ? "–" : skipped}</strong></span>
+      </>}
       {!source ? <button type="button" className="dropper-funnel-empty" disabled={setupDisabled} onClick={onSetup}><Icon name={loading ? "clock" : "plus"} size={20}/>{loading ? "Loading…" : "Choose source account"}</button>
         : loading ? <span className="dropper-funnel-empty">Loading your posts…</span>
-        : !feed.length ? <span className="dropper-funnel-empty">No recent posts on {source.label}</span> : null}
-      {progress.active.map(({ item, index }) => <FunnelCard key={`${feedKey}:${index}`} item={item} catalog={catalog} className={item.fits ? "keep" : "reject"} style={{ "--dropper-dx": `${index % 2 ? 46 : -46}px` }}/>)}
-      {currentDrop && <FunnelCard item={{ ...currentDrop, fits: true }} catalog={catalog} className="dropping" status="dropping now"/>}
-      <div className="dropper-funnel-stack" style={{ top: FUNNEL.stack }} aria-hidden="true">
+        : !feed.length ? <span className="dropper-funnel-empty">No recent posts on {source.label}</span>
+        : progress.done && !currentDrop ? <span className="dropper-funnel-idle" aria-hidden="true">✓ all {cards.length + wrongFormat.length} posts checked</span> : null}
+      {progress.active.map(({ item, index }) => <FunnelCard key={`${feedKey}:${index}`} item={item} catalog={catalog} className={item.fits ? "keep" : "reject"} style={{ "--dropper-dx": `${index % 2 ? 60 : -60}px` }}/>)}
+      {currentDrop && <FunnelCard item={{ ...currentDrop, fits: true, tooLong: [] }} catalog={catalog} className="dropping" status="dropping now"/>}
+      <div className="dropper-funnel-stack" aria-hidden="true">
         {stacked.map(item => <FunnelCard key={item.id} item={{ ...item, fits: true }} catalog={catalog} className="stacked"/>)}
-        {progress.done && cards.length > stacked.length && <span className="dropper-funnel-more">+{cards.length - stacked.length} more ready</span>}
       </div>
-    </div>
-    <div className="dropper-funnel-counts">
-      <div className="wrong"><span>Wrong format ×</span><strong>{loading ? "–" : wrongCount}</strong></div>
-      <div className="ready"><span>Ready to drop ✓</span><strong>{loading ? "–" : readyCount}</strong></div>
+      <div className="dropper-funnel-counts">
+        <div className="wrong"><span>Wrong format ×</span><strong>{loading ? "–" : skipped}</strong></div>
+        <div className="ready"><span>Ready to drop ✓</span><strong>{loading ? "–" : ready}</strong></div>
+      </div>
     </div>
   </div>;
 }
 
 function FunnelCard({ item, catalog, className, style, status }) {
-  const name = platformName(catalog, item.platform);
-  const title = clip(item.title || item.caption || (item.fits ? `${name} video` : `${name} ${wrongFormatLabel(item.format)}`), 46);
-  const checked = status || (item.fits ? "video · drops" : `${wrongFormatLabel(item.format)} · wrong format`);
+  const name = platformName(catalog, item.platform), length = durationLabel(item.duration);
+  const video = item.format === undefined;
+  const title = clip(item.title || item.caption || (video ? `${name} video` : `${name} ${wrongFormatLabel(item.format)}`), 52);
+  const kind = video ? `${length ? `${length} ` : ""}video` : wrongFormatLabel(item.format);
+  const skips = (item.tooLong || []).map(account => platformName(catalog, account.platform));
+  const checked = status || (item.fits ? `${kind} · drops${skips.length ? ` · skips ${skips.join(", ")}` : ""}` : video ? `${kind} · too long` : `${kind} · wrong format`);
   return <div className={`dropper-funnel-card ${className}`} style={style} aria-hidden="true">
-    <span className="dropper-funnel-icon"><PlatformIcon platform={item.platform} size={17}/></span>
+    <span className="dropper-funnel-icon" data-platform={item.platform}><PlatformIcon platform={item.platform} variant="mono" size={17}/></span>
     <span className="dropper-funnel-text"><strong>{title}</strong>
-      {className === "keep" || className === "reject" ? <><small className="pending">{domainOf(item.url) || name}</small><small className="checked">{checked}</small></> : <small>{checked}</small>}
+      {className === "keep" || className === "reject" ? <span className="dropper-funnel-sub"><small className="pending">{domainOf(item.url) || name}</small><small className="checked">{checked}</small></span> : <span className="dropper-funnel-sub"><small>{checked}</small></span>}
     </span>
+    <span className="dropper-funnel-close">×</span>
     {className === "reject" && <span className="dropper-funnel-x">×</span>}
   </div>;
 }
@@ -261,7 +282,7 @@ function domainOf(url) {
   try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
 }
 
-function ReviewCard({ card, selected, order, disabled, alreadyQueued, catalog, timeZone, onChange }) {
+function ReviewCard({ card, selected, order, disabled, alreadyQueued, tooLong, catalog, timeZone, onChange }) {
   const title = card.title || card.caption || `${platformName(catalog, card.platform)} video`;
   return <article className={`dropper-video-card ${selected ? "selected" : ""}`}>
     <div className="dropper-video-media">
@@ -271,7 +292,7 @@ function ReviewCard({ card, selected, order, disabled, alreadyQueued, catalog, t
       {selected && <span className="dropper-selected-order">{order === 1 ? "First" : `#${order}`}</span>}
     </div>
     <div className="dropper-video-description"><strong title={title}>{title}</strong>{Boolean(card.publishedAt) && <span>{dateTime(card.publishedAt, timeZone)}</span>}
-      {!card.pushable && <small>Meadow can’t download this video yet.</small>}{alreadyQueued && <small>Already in the dropper queue.</small>}
+      {!card.pushable && <small>Meadow can’t download this video yet.</small>}{alreadyQueued && <small>Already in the dropper queue.</small>}{tooLong && <small>Too long for your destinations.</small>}
       {card.url && <a href={card.url} target="_blank" rel="noreferrer">Review video <Icon name="external" size={13}/></a>}
     </div>
   </article>;

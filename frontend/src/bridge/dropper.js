@@ -62,15 +62,33 @@ export function dropperQueueStatus(item, formatDate, now = Date.now()) {
 const FORMAT_LABELS = { photo: "photo post", carousel: "carousel", text: "text post", post: "not a video" };
 export const wrongFormatLabel = format => FORMAT_LABELS[format] || FORMAT_LABELS.post;
 
-// One pass of the funnel, in milliseconds. A post lands on the rim, is checked,
-// then either drops through (videos) or is turned away (every other format).
-export const FUNNEL_STEP_MS = 750;
-export const FUNNEL_TIMING = { keep: { duration: 2600, check: 880, exit: 2400 }, reject: { duration: 1900, check: 890 } };
+export function durationLabel(seconds) {
+  const total = Math.round(Number(seconds));
+  return Number.isFinite(total) && total > 0 ? `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}` : "";
+}
+
+// A video drops into every destination whose length limit it fits. It is the
+// wrong format only when it is too long for all of them.
+export function videoFit(card, destinations = [], catalog = []) {
+  const seconds = Number(card.duration);
+  const tooLong = Number.isFinite(seconds) && seconds > 0 ? destinations.filter(account => {
+    const limit = catalog.find(platform => platform.id === account.platform)?.videoMaxSeconds;
+    return Number.isFinite(limit) && limit > 0 && seconds > limit;
+  }) : [];
+  return { fits: !destinations.length || tooLong.length < destinations.length, tooLong };
+}
+
+// One pass of the funnel, in milliseconds, paced like the reference: a post
+// waits above the rim, is checked on it, then either glides through the funnel
+// or is turned away there.
+export const FUNNEL_STEP_MS = 1300;
+export const FUNNEL_TIMING = { keep: { duration: 4600, check: 1650, exit: 4400 }, reject: { duration: 3000, check: 1650 } };
 const timing = item => item.fits ? FUNNEL_TIMING.keep : FUNNEL_TIMING.reject;
 
 // The newest posts, oldest first, so the latest video ends on top of the stack.
-export function funnelFeed(cards = [], wrongFormat = [], limit = 16) {
-  return [...cards.map(card => ({ ...card, fits: true })), ...wrongFormat.map(post => ({ ...post, fits: false }))]
+export function funnelFeed(cards = [], wrongFormat = [], { destinations = [], catalog = [], limit = 60 } = {}) {
+  const videos = cards.map(card => ({ ...card, ...videoFit(card, destinations, catalog) }));
+  return [...videos, ...wrongFormat.map(post => ({ ...post, fits: false, tooLong: [] }))]
     .sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0)).slice(0, limit).reverse();
 }
 
