@@ -100,7 +100,7 @@ export function videoFit(card, destinations = [], catalog = []) {
 // waits above the rim, is checked on it, then either glides through the funnel
 // or is turned away there.
 export const FUNNEL_STEP_MS = 1300;
-export const FUNNEL_TIMING = { keep: { duration: 4600, check: 1564, exit: 4420 }, reject: { duration: 3000, check: 1650 } };
+export const FUNNEL_TIMING = { keep: { duration: 3900, check: 1650, exit: 3900 }, reject: { duration: 2450, check: 1650 } };
 const timing = item => item.fits ? FUNNEL_TIMING.keep : FUNNEL_TIMING.reject;
 
 // The newest posts, oldest first, so the latest video ends on top of the stack.
