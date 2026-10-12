@@ -78,7 +78,8 @@ export function parseMastodonTrends(json) {
 
 export async function fetchTrendFeed(input, fetcher = fetch, now = Date.now()) {
   const response = await fetcher(input.feedUrl, {
-    redirect: 'error', signal: AbortSignal.timeout(8000),
+    // Workers supports manual/follow only. Reject 3xx below without following it.
+    redirect: 'manual', signal: AbortSignal.timeout(8000),
     headers: { Accept: input.source === 'google' ? 'application/rss+xml, application/xml, text/xml' : 'application/json', 'User-Agent': 'Meadow-Trend-Research/1.0 (+https://findmeadow.com/tools/trending-hashtags)' },
   });
   if (!response.ok) throw new Error('Trend source unavailable.');
