@@ -265,7 +265,7 @@ function FunnelBoard({ demo, source, destinations, cards, wrongFormat: realWrong
         : loading ? <span className="dropper-funnel-empty">Loading your posts…</span>
         : !feed.length ? <span className="dropper-funnel-empty">No recent posts on {source.label}</span>
         : progress.done && !currentDrop ? <span className="dropper-funnel-idle" aria-hidden="true">✓ all {cards.length + wrongFormat.length} posts checked</span> : null}
-      {progress.active.map(({ item, index }) => <FunnelCard key={`${feedKey}:${index}`} item={item} catalog={catalog} className={item.fits ? "keep" : "reject"} style={{ "--dropper-dx": `${LANES[index % LANES.length] * geometry.offset}px` }}/>)}
+      {progress.active.map(({ item, index, start }) => <FunnelCard key={`${feedKey}:${index}`} item={item} catalog={catalog} className={item.fits ? "keep" : "reject"} lag={elapsed - start} style={{ "--dropper-dx": `${LANES[index % LANES.length] * geometry.offset}px` }}/>)}
       {currentDrop && <FunnelCard item={{ ...currentDrop, fits: true, tooLong: [] }} catalog={catalog} className="dropping" status="dropping now"/>}
       <div className="dropper-funnel-stack" aria-hidden="true">
         {stacked.map((item, index) => <FunnelCard key={item.id} item={{ ...item, fits: true }} catalog={catalog} className="stacked" style={{ top: index * (CARD_HEIGHT + 9) }}/>)}
@@ -278,14 +278,17 @@ function FunnelBoard({ demo, source, destinations, cards, wrongFormat: realWrong
   </div>;
 }
 
-function FunnelCard({ item, catalog, className, style, status }) {
+function FunnelCard({ item, catalog, className, style, status, lag = 0 }) {
+  // A post can mount late when the page is busy (for example while it loads).
+  // Start its animation where it should already be so posts never bunch up.
+  const [delay] = useState(() => -Math.max(0, Math.round(lag)));
   const name = platformName(catalog, item.platform), length = durationLabel(item.duration);
   const video = item.format === undefined || item.format === "video";
   const title = clip(item.title || item.caption || (video ? `${name} video` : `${name} ${wrongFormatLabel(item.format)}`), 52);
   const kind = video ? `${length ? `${length} ` : ""}video` : wrongFormatLabel(item.format);
   const skips = (item.tooLong || []).map(account => platformName(catalog, account.platform));
   const checked = status || (item.fits ? `${kind} · drops${skips.length ? ` · skips ${skips.join(", ")}` : ""}` : video ? `${kind} · too long` : `${kind} · wrong format`);
-  return <div className={`dropper-funnel-card ${className}`} style={style} aria-hidden="true">
+  return <div className={`dropper-funnel-card ${className}`} style={delay ? { ...style, "--dropper-delay": `${delay}ms` } : style} aria-hidden="true">
     <span className="dropper-funnel-icon" data-platform={item.platform}><PlatformIcon platform={item.platform} variant="mono" size={17}/></span>
     <span className="dropper-funnel-text"><strong>{title}</strong>
       {className === "keep" || className === "reject" ? <span className="dropper-funnel-sub"><small className="pending">{domainOf(item.url) || name}</small><small className="checked">{checked}</small></span> : <span className="dropper-funnel-sub"><small>{checked}</small></span>}

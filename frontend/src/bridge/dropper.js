@@ -117,7 +117,7 @@ export function funnelProgress(feed, elapsed) {
   let wrong = 0;
   feed.forEach((item, index) => {
     const start = index * FUNNEL_STEP_MS, { duration, check, exit } = timing(item);
-    if (elapsed >= start && elapsed < start + duration) active.push({ item, index });
+    if (elapsed >= start && elapsed < start + duration) active.push({ item, index, start });
     if (!item.fits && elapsed >= start + check) wrong += 1;
     if (item.fits && elapsed >= start + exit) landed.unshift(item);
   });
