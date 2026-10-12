@@ -47,6 +47,24 @@ test("the Hootsuite comparison is a distinct public route with sourced content",
   assert.ok(page.faqs.some(item => item.q.includes("automatically") && item.a.includes("no automatic Hootsuite migration")));
 });
 
+test("the complete Buffer through Upload-Post range resolves as sourced public comparisons", () => {
+  const competitors = ["buffer", "later", "postiz", "publer", "sprout-social", "metricool", "post-bridge", "zernio", "blotato", "planoly", "loomly", "tailwind", "coschedule", "ayrshare", "upload-post"];
+  const pages = competitors.map(slug => findMarketingPage(`/alternatives/${slug}`));
+  assert.equal(PUBLIC_MARKETING_PAGES.filter(page => page.path.startsWith("/alternatives/")).length, competitors.length);
+  assert.equal(new Set(pages.map(page => page.headline)).size, competitors.length);
+  for (const page of pages) {
+    assert.equal(page.kind, "alternative");
+    assert.equal(isDashboardPath(page.path), false);
+    assert.ok(page.competitor && page.fit.meadow && page.fit.competitor);
+    assert.ok(page.comparison.length >= 8);
+    assert.equal(new Set(page.comparison.map(row => row.feature)).size, page.comparison.length);
+    for (const row of page.comparison) assert.ok(row.meadow && row.competitor);
+    assert.ok(page.sources.length > 0);
+    for (const source of page.sources) assert.equal(new URL(source.href).protocol, "https:");
+  }
+  assert.match(findMarketingPage("/alternatives/zernio").disclosure, /Meadow uses Zernio/);
+});
+
 test("all twelve agent and API topics resolve without claiming the MCP protocol route", () => {
   const paths = ["/social-media-mcp-server", "/claude", "/chatgpt", "/claude-code", "/best-social-media-tools-for-ai-agents", "/blog/post-to-social-media-with-ai-agents", "/youtube-mcp", "/instagram-mcp", "/social-media-api", "/tiktok-api", "/instagram-api", "/youtube-api"];
   for (const path of paths) {

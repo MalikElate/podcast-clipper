@@ -180,11 +180,16 @@ for (const page of PUBLIC_MARKETING_PAGES) {
   assert.ok(!html.includes('class="upcoming-platforms"'));
   for (const name of ["Twitch", "Kick"]) assert.ok(html.includes(`aria-label="${name}"`), `${page.path} must include ${name} in its logo sections`);
   if (page.kind === "alternative") {
+    const competitor = page.competitor || "Hootsuite";
+    assert.equal((html.match(/<h1[ >]/g) || []).length, 1, `${page.path} must have one main heading`);
+    assert.ok(html.replace(/<!--.*?-->/gs, "").includes(`Meadow vs. ${competitor}`), `${page.path} must identify the correct competitor`);
     assert.ok(html.includes('id="comparison"'), `${page.path} must render its comparison`);
     assert.ok(html.includes('href="https://app.findmeadow.com/sign-up"'), `${page.path} must offer free signup`);
     for (const row of page.comparison) {
-      assert.ok(html.includes(row.feature) && html.includes(row.meadow) && html.includes(row.hootsuite), `${page.path} must render both sides of ${row.feature}`);
+      assert.ok(html.includes(row.feature) && html.includes(row.meadow) && html.includes(row.competitor ?? row.hootsuite), `${page.path} must render both sides of ${row.feature}`);
     }
+    assert.equal((html.match(new RegExp(`data-label="${competitor}"`, "g")) || []).length, page.comparison.length, `${page.path} must label every competitor cell on mobile`);
+    if (page.disclosure) assert.ok(html.includes(page.disclosure), `${page.path} must render its provider disclosure`);
     for (const source of page.sources) assert.ok(html.includes(`href="${source.href}"`), `${page.path} must link to its sources`);
     assert.ok(!html.includes('"aggregateRating"'), `${page.path} must not invent reviews`);
   }

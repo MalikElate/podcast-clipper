@@ -1,3 +1,5 @@
+import { COMPETITOR_ALTERNATIVE_PAGES } from "./competitorAlternativePages.js";
+
 // Competitor details are sourced from their own public pages, not comparison sites.
 export const ALTERNATIVE_PAGES = [
   {
@@ -43,4 +45,5 @@ export const ALTERNATIVE_PAGES = [
       { q: "Does Meadow include a social inbox or social listening?", a: "No. Meadow focuses on content preparation, scheduling, publishing, and available post metrics. Hootsuite includes a unified social inbox and listening features if those are central to your work." },
     ],
   },
+  ...COMPETITOR_ALTERNATIVE_PAGES,
 ];

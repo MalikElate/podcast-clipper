@@ -17,6 +17,8 @@ function Arrow() {
 }
 
 export default function AlternativePage({ page, onGetStarted }) {
+  const competitor = page.competitor || "Hootsuite";
+  const checkedDate = new Intl.DateTimeFormat("en-GB", { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${page.checkedAt}T00:00:00Z`));
   useEffect(() => {
     document.title = page.title;
     const description = document.querySelector('meta[name="description"]');
@@ -33,29 +35,30 @@ export default function AlternativePage({ page, onGetStarted }) {
           <p className="landing-subtitle">{page.subtitle}</p>
           <div className="hero-actions mkt-hero-actions">
             <a className="btn-primary landing-cta" href={signupHref()}>Try Meadow for free <Arrow /></a>
-            <a className="alternative-text-link" href="#comparison">Compare Meadow and Hootsuite <Arrow /></a>
+            <a className="alternative-text-link" href="#comparison">Compare Meadow and {competitor} <Arrow /></a>
           </div>
           <p className="alternative-hero-note">Free plan. No credit card required.</p>
         </div>
       </section>
 
       <section className="landing-section alternative-comparison" id="comparison" aria-labelledby="alternative-comparison-title">
-        <div className="section-heading"><h2 id="alternative-comparison-title">Meadow vs. Hootsuite</h2><p>Compare the work you need to do, then choose the tool that fits.</p></div>
+        <div className="section-heading"><h2 id="alternative-comparison-title">Meadow vs. {competitor}</h2><p>Compare the work you need to do, then choose the tool that fits.</p></div>
         <div className="alternative-table-wrap">
           <table className="alternative-table" role="table">
-            <caption className="sr-only">Meadow and Hootsuite plans and publishing features</caption>
-            <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">What matters</th><th scope="col" role="columnheader"><BrandLogo /></th><th scope="col" role="columnheader">Hootsuite</th></tr></thead>
-            <tbody role="rowgroup">{page.comparison.map(row => <tr role="row" key={row.feature}><th scope="row" role="rowheader">{row.feature}</th><td role="cell" data-label="Meadow">{row.meadow}</td><td role="cell" data-label="Hootsuite">{row.hootsuite}</td></tr>)}</tbody>
+            <caption className="sr-only">Meadow and {competitor} plans and publishing features</caption>
+            <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">What matters</th><th scope="col" role="columnheader"><BrandLogo /></th><th scope="col" role="columnheader">{competitor}</th></tr></thead>
+            <tbody role="rowgroup">{page.comparison.map(row => <tr role="row" key={row.feature}><th scope="row" role="rowheader">{row.feature}</th><td role="cell" data-label="Meadow">{row.meadow}</td><td role="cell" data-label={competitor}>{row.competitor ?? row.hootsuite}</td></tr>)}</tbody>
           </table>
         </div>
-        <p className="alternative-source-note">Hootsuite details checked <time dateTime={page.checkedAt}>12 October 2026</time>. Sources: {page.sources.map((source, i) => <span key={source.href}>{i > 0 ? ", " : ""}<a href={source.href} target="_blank" rel="noopener noreferrer">{source.label}</a></span>)}. Features and prices can change; confirm the plan and billing terms before subscribing.</p>
+        <p className="alternative-source-note">{competitor} details checked <time dateTime={page.checkedAt}>{checkedDate}</time>. Sources: {page.sources.map((source, i) => <span key={source.href}>{i > 0 ? ", " : ""}<a href={source.href} target="_blank" rel="noopener noreferrer">{source.label}</a></span>)}. Features and prices can change; confirm the plan and billing terms before subscribing.</p>
+        {page.disclosure && <p className="alternative-source-note">{page.disclosure}</p>}
       </section>
 
       <section className="landing-section alternative-fit" aria-labelledby="alternative-fit-title">
         <h2 id="alternative-fit-title">Choose for the work you do.</h2>
         <div className="alternative-fit-columns">
-          <article><h3>When Meadow fits</h3><p>You want a clear place to prepare content, manage several accounts, and keep posts moving. You also want the option to publish from your AI assistant or your own application.</p></article>
-          <article><h3>When Hootsuite fits</h3><p>You need publishing alongside a shared customer-care inbox and social listening. Its higher plans add approval workflows, deeper reporting, and enterprise governance.</p></article>
+          <article><h3>When Meadow fits</h3><p>{page.fit?.meadow || "You want a clear place to prepare content, manage several accounts, and keep posts moving. You also want the option to publish from your AI assistant or your own application."}</p></article>
+          <article><h3>When {competitor} fits</h3><p>{page.fit?.competitor || "You need publishing alongside a shared customer-care inbox and social listening. Its higher plans add approval workflows, deeper reporting, and enterprise governance."}</p></article>
         </div>
       </section>
 
