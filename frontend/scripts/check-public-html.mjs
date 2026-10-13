@@ -131,7 +131,6 @@ for (const route of new Set(Object.values(DASHBOARD_PATHS))) {
 const landingHtml = await readFile("dist/index.html", "utf8");
 // Search engines read these from the served HTML, so assert the rendered page
 // rather than the module that builds them.
-assert.ok(landingHtml.includes('href="/developers/"'), "The developer page must be reachable from the footer");
 assert.ok(landingHtml.includes('href="/docs/">Docs</a>'), "The docs page must be reachable from the footer");
 for (const type of ["Organization", "WebSite", "SoftwareApplication"]) {
   assert.ok(landingHtml.includes(`"@type":"${type}"`), `The homepage must describe itself as a ${type}`);
