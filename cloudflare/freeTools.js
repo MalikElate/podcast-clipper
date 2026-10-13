@@ -1,7 +1,7 @@
 import { fitTags, suggestTags, validateHandle } from '../shared/freeTools.js';
 import { parseSocialGeneration, SOCIAL_GENERATION_KINDS, socialFallback, socialGenerationSpec } from '../shared/socialGenerators.js';
 import { limitedText } from './roast/core.js';
-import { fitHashtags, shortenText, writingIdeas, WRITING_KINDS, WRITING_LIMITS, WRITING_PLATFORMS } from '../shared/writingTools.js';
+import { fitHashtags, fitProfileDrafts, shortenText, writingIdeas, WRITING_KINDS, WRITING_LIMITS, WRITING_PLATFORMS } from '../shared/writingTools.js';
 
 const headers = { 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8', 'X-Content-Type-Options': 'nosniff' };
 const origins = new Set(['https://findmeadow.com', 'https://www.findmeadow.com', 'https://app.findmeadow.com']);
@@ -15,7 +15,7 @@ export function parseGeneration(data) {
   if (typeof data.topic !== 'string' || data.topic.trim().length < 3 || data.topic.length > 1200) throw new Error('Describe your topic in 3 to 1200 characters.');
   if (data.platform !== undefined && !WRITING_PLATFORMS.includes(data.platform)) throw new Error('Choose a supported social platform.');
   if (data.language !== undefined && !['English', 'French'].includes(data.language)) throw new Error('Choose English or French.');
-  return { kind: data.kind, topic: clean(data.topic, 1200), tone: ['Helpful', 'Playful', 'Professional', 'Curious'].includes(data.tone) ? data.tone : 'Helpful', audience: clean(data.audience, 120), cta: clean(data.cta, 160), hashtags: clean(data.hashtags, 120), keywords: clean(data.keywords, 400), links: clean(data.links, 600), platform: data.kind === 'bio' ? 'Instagram' : data.kind === 'description' || data.kind === 'tags' ? 'YouTube' : data.kind === 'linkedin' ? 'LinkedIn' : data.platform || 'TikTok', language: data.language || 'English' };
+  return { kind: data.kind, topic: clean(data.topic, 1200), brand: ['slogan', 'profile'].includes(data.kind) ? clean(data.brand, 80) : '', tone: ['Helpful', 'Playful', 'Professional', 'Curious'].includes(data.tone) ? data.tone : 'Helpful', audience: clean(data.audience, 120), cta: clean(data.cta, 160), hashtags: clean(data.hashtags, 120), keywords: clean(data.keywords, 400), links: clean(data.links, 600), platform: data.kind === 'bio' ? 'Instagram' : data.kind === 'description' || data.kind === 'tags' ? 'YouTube' : data.kind === 'linkedin' ? 'LinkedIn' : data.platform || 'TikTok', language: data.language || 'English' };
 }
 
 export async function generateIdeas(data, env) {
@@ -51,7 +51,7 @@ export async function generateIdeas(data, env) {
     ]);
     const parsed = typeof result.response === 'string' ? JSON.parse(result.response) : result.response;
     if (!Array.isArray(parsed?.items) || !parsed.items.every(item => typeof item === 'string')) return fallback('invalid_response');
-    const items = social ? social.normalize(parsed.items) : data.kind === 'tags' ? fitTags(parsed.items) : data.kind === 'hashtags' ? fitHashtags(parsed.items) : [...new Set(parsed.items.map(item => shortenText(cleanDraft(item), WRITING_LIMITS[data.kind])).filter(item => item.length >= 10))].slice(0, 3);
+    const items = social ? social.normalize(parsed.items) : data.kind === 'tags' ? fitTags(parsed.items) : data.kind === 'hashtags' ? fitHashtags(parsed.items) : data.kind === 'profile' ? fitProfileDrafts(parsed.items.map(cleanDraft), data.language) : [...new Set(parsed.items.map(item => shortenText(cleanDraft(item), WRITING_LIMITS[data.kind])).filter(item => item.length >= 10))].slice(0, 3);
     if (items.length < (social?.minimum || 3)) return fallback('invalid_response');
     return { source: 'ai', items };
   } catch { return fallback('generation_unavailable'); }
@@ -60,6 +60,8 @@ export async function generateIdeas(data, env) {
 
 function generationPrompt(data) {
   const task = {
+    slogan: 'Write exactly 3 distinct short brand slogans, each under 100 characters, using the supplied brand, topic and audience. Do not invent guarantees, awards, certifications, or superiority claims.',
+    profile: `Write exactly 3 distinct ${data.platform} profile drafts. Each must contain labeled lines Name, Handle idea, and Bio. Use the supplied brand and identity; the bio should be under 150 characters. Keep the complete draft under 420 characters. Handle ideas are not availability results. Do not invent credentials or achievements.`,
     captions: `Write exactly 3 distinct ${data.platform} caption drafts. Keep each under 450 characters.`,
     bio: 'Write exactly 3 distinct Instagram profile bios. Each must fit 150 characters including spaces. Use only the supplied identity and details; do not invent credentials.',
     description: 'Write exactly 3 distinct YouTube video descriptions, each under 1500 characters. Lead with the supplied topic, then useful context and the supplied call to action and links. Do not invent chapters, timestamps or links.',

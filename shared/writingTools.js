@@ -1,8 +1,8 @@
 import { captionIdeas, suggestTags, textLength } from './freeTools.js';
 
-export const WRITING_KINDS = ['captions', 'bio', 'description', 'linkedin', 'hashtags', 'tags'];
+export const WRITING_KINDS = ['captions', 'bio', 'description', 'linkedin', 'hashtags', 'tags', 'slogan', 'profile'];
 export const WRITING_PLATFORMS = ['Instagram', 'TikTok', 'LinkedIn', 'Facebook', 'X', 'YouTube', 'Threads', 'Pinterest'];
-export const WRITING_LIMITS = { captions: 600, bio: 150, description: 2500, linkedin: 1600 };
+export const WRITING_LIMITS = { captions: 600, bio: 150, description: 2500, linkedin: 1600, slogan: 100, profile: 420 };
 
 export function shortenText(text, limit) {
   const chars = Array.from(text);
@@ -23,6 +23,15 @@ export function fitHashtags(values) {
   return output;
 }
 
+export function fitProfileDrafts(values, language = 'English') {
+  const french = language === 'French';
+  return [...new Set(values.flatMap(value => {
+    const match = value.trim().match(/^(?:Name|Nom):\s*([^\n]+)\n(?:Handle idea|Idée de pseudo):\s*@?([a-z0-9_.]{1,30})\nBio:\s*([\s\S]+)$/i);
+    if (!match) return [];
+    return [`${french ? 'Nom' : 'Name'}: ${shortenText(match[1].trim(), 80)}\n${french ? 'Idée de pseudo' : 'Handle idea'}: @${match[2]}\nBio: ${shortenText(match[3].trim(), 150)}`];
+  }))].slice(0, 3);
+}
+
 export function writingIdeas(data) {
   const { kind, topic, audience = '', cta = '', keywords = '', links = '', language = 'English' } = data;
   const french = language === 'French';
@@ -32,7 +41,15 @@ export function writingIdeas(data) {
   const forAudience = audience.trim() ? `${french ? 'Pour' : 'For'} ${audience.trim()}.` : '';
   const join = values => values.filter(Boolean).join('\n\n');
   let drafts;
-  if (kind === 'bio') {
+  if (kind === 'slogan') {
+    const brand = data.brand?.trim() || shortenText(subject, 45);
+    drafts = french ? [`${brand}. Pensé pour vous.`, `${brand}. Votre prochaine idée commence ici.`, `${brand}. Place à ce qui compte.`] : [`${brand}. Made for your everyday.`, `${brand}. Make room for what matters.`, `${brand}. A fresh way forward.`];
+  } else if (kind === 'profile') {
+    const name = data.brand?.trim() || shortenText(subject, 50);
+    const base = name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 18) || 'yourbrand';
+    const bios = ['', french ? 'À découvrir : ' : 'Explore ', french ? 'Ici, on parle de ' : 'A place for '].map(prefix => shortenText([prefix + subject, forAudience, cta.trim()].filter(Boolean).join('\n'), 150));
+    drafts = bios.map((bio, index) => `${french ? 'Nom' : 'Name'}: ${name}\n${french ? 'Idée de pseudo' : 'Handle idea'}: @${base}${['', '_studio', '_daily'][index]}\nBio: ${bio}`);
+  } else if (kind === 'bio') {
     const suffix = [forAudience, cta.trim()].filter(Boolean).join('\n');
     const prefixes = french ? ['', 'À découvrir : ', 'Ici, on parle de ' ] : ['', 'Explore ', 'A place for '];
     drafts = prefixes.map(prefix => {

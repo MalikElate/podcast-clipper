@@ -4,6 +4,8 @@ import { characterStats, engagementRate, rankPostingTimes, WEEKDAYS, writingIdea
 import { CopyButton, Field, requestTool } from './freeToolUi.jsx';
 
 const configs = {
+  slogan: { topic: 'What does your brand offer?', placeholder: 'Handmade tableware for everyday meals, made in small batches', action: 'Generate slogans', result: 'Slogan ideas', platform: 'Instagram', item: 'Slogan' },
+  profile: { topic: 'About you or your brand', placeholder: 'A ceramic artist in Douala making small batches of everyday tableware', action: 'Generate profiles', result: 'Profile drafts', platform: 'Instagram', item: 'Profile' },
   hashtags: { topic: 'What is your post about?', placeholder: 'A balcony herb garden with basil and mint', action: 'Generate hashtags', result: 'Your hashtag ideas', platform: 'Instagram' },
   captions: { topic: 'What is your post about?', placeholder: 'A behind-the-scenes look at our new studio opening', action: 'Generate captions', result: 'Caption drafts', platform: 'Instagram', item: 'Caption' },
   bio: { topic: 'About you or your brand', placeholder: 'A ceramic artist in Douala making small batches of everyday tableware', action: 'Generate bios', result: 'Bio drafts', platform: 'Instagram', item: 'Bio' },
@@ -13,7 +15,7 @@ const configs = {
 
 export function WritingGenerator({ kind }) {
   const config = configs[kind];
-  const [values, setValues] = useState({ topic: '', platform: config.platform, language: 'English', tone: kind === 'linkedin' ? 'Professional' : 'Helpful', audience: '', cta: '', keywords: '', links: '' });
+  const [values, setValues] = useState({ topic: '', platform: config.platform, language: 'English', tone: kind === 'linkedin' ? 'Professional' : 'Helpful', audience: '', cta: '', keywords: '', links: '', brand: '' });
   const [items, setItems] = useState([]), [source, setSource] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const update = key => e => { setValues({ ...values, [key]: e.target.value }); setItems([]); setSource(''); setError(''); };
   async function generate(e) {
@@ -33,12 +35,13 @@ export function WritingGenerator({ kind }) {
   }
   const limit = WRITING_LIMITS[kind];
   return <div className="ft-workbench"><form onSubmit={generate}><fieldset className="ft-controls" disabled={busy}>
-    {['captions', 'hashtags'].includes(kind) && <Field label="Platform">{id => <select id={id} value={values.platform} onChange={update('platform')}>{WRITING_PLATFORMS.map(platform => <option key={platform}>{platform}</option>)}</select>}</Field>}
+    {['captions', 'hashtags', 'profile'].includes(kind) && <Field label="Platform">{id => <select id={id} value={values.platform} onChange={update('platform')}>{WRITING_PLATFORMS.map(platform => <option key={platform}>{platform}</option>)}</select>}</Field>}
+    {['slogan', 'profile'].includes(kind) && <Field label="Name or brand (optional)" value={values.brand} onChange={update('brand')} maxLength={80} placeholder="Your studio name" />}
     <Field label={config.topic}>{id => <textarea id={id} rows={4} placeholder={config.placeholder} value={values.topic} onChange={update('topic')} maxLength={1200} required />}</Field>
     <div className="ft-two-fields"><Field label="Language">{id => <select id={id} value={values.language} onChange={update('language')}><option>English</option><option>French</option></select>}</Field>{kind !== 'hashtags' && <Field label="Tone">{id => <select id={id} value={values.tone} onChange={update('tone')}>{['Helpful','Playful','Professional','Curious'].map(tone => <option key={tone}>{tone}</option>)}</select>}</Field>}</div>
     {kind !== 'hashtags' && <Field label="Audience (optional)" placeholder="Who you want to reach" value={values.audience} onChange={update('audience')} maxLength={120} />}
     {['hashtags', 'description', 'captions'].includes(kind) && <Field label="Key phrases (optional)" placeholder="Separate phrases with commas" value={values.keywords} onChange={update('keywords')} maxLength={400} />}
-    {kind !== 'hashtags' && <Field label="Call to action (optional)" placeholder={kind === 'bio' ? 'Explore the latest collection' : 'What has worked for you?'} value={values.cta} onChange={update('cta')} maxLength={kind === 'bio' ? 80 : 160} />}
+    {!['hashtags', 'slogan'].includes(kind) && <Field label="Call to action (optional)" placeholder={kind === 'bio' ? 'Explore the latest collection' : 'What has worked for you?'} value={values.cta} onChange={update('cta')} maxLength={kind === 'bio' ? 80 : 160} />}
     {kind === 'description' && <Field label="Useful links (optional)" hint="Include only links you want in the description. Check them before posting.">{id => <textarea id={id} rows={3} value={values.links} onChange={update('links')} placeholder="Studio website: https://example.com" maxLength={600} />}</Field>}
     <button className="ft-button" type="submit">{busy ? 'Creating ideas…' : config.action}</button>
     {error && <p className="ft-error" role="alert">{error}</p>}
