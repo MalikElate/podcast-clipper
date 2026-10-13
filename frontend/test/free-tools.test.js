@@ -77,7 +77,7 @@ test('image crop fills the destination and source slices meet without gaps', () 
   assert.throws(() => cropRectangle(0, 100, 10, 10));
 });
 test('all tools and guides have unique public routes, metadata, and working crop presets', () => {
-  assert.equal(FREE_TOOLS.length, 25);
+  assert.equal(FREE_TOOLS.length, 33);
   assert.equal(new Set(FREE_TOOL_PAGES.map(page => page.path)).size, FREE_TOOL_PAGES.length);
   assert.equal(new Set(FREE_TOOL_PAGES.map(page => page.title)).size, FREE_TOOL_PAGES.length);
   for (const page of FREE_TOOL_PAGES) {

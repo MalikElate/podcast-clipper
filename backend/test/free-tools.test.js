@@ -6,6 +6,29 @@ const request = (action, data, options = {}) => new Request(`https://findmeadow.
 const env = { FREE_TOOLS_LIMITER: { limit: async () => ({ success: true }) } };
 const data = { kind: 'captions', topic: 'Planting a balcony herb garden', tone: 'Helpful' };
 
+test('slogans and profiles validate briefs, share the budget and reject malformed AI profiles', async () => {
+  let calls = 0, prompt;
+  const aiEnv = { ROAST_BUDGET: { getByName: name => { assert.equal(name, 'daily'); return { take: async () => true }; } }, ROAST_AI: { run: async (_, input) => {
+    calls++; prompt = input.messages[0].content;
+    return { response: { items: ['Only a caption one.', 'Only a caption two.', 'Only a caption three.'] } };
+  } } };
+  for (const kind of ['slogan', 'profile']) {
+    const parsed = parseGeneration({ ...data, kind, brand: 'M'.repeat(100), platform: 'Instagram' });
+    assert.equal(parsed.brand.length, 80);
+    assert.throws(() => parseGeneration({ ...parsed, topic: 'x' }));
+    const result = await generateIdeas(parsed, aiEnv);
+    assert.equal(result.source, kind === 'profile' ? 'template' : 'ai');
+    assert.equal(result.items.length, 3);
+  }
+  assert.match(prompt, /Handle ideas are not availability results/);
+  aiEnv.ROAST_AI.run = async () => ({ response: { items: [1,2,3].map(index => `Name: Meadow ${index}\nHandle idea: @meadow${index}\nBio: ${'x'.repeat(200)}`) } });
+  const profiles = await generateIdeas(parseGeneration({ ...data, kind: 'profile' }), aiEnv);
+  assert.equal(profiles.source, 'ai'); assert.ok(profiles.items.every(text => text.split('Bio: ')[1].length === 150));
+  aiEnv.ROAST_BUDGET.getByName = () => ({ take: async () => false });
+  assert.equal((await generateIdeas(parseGeneration({ ...data, kind: 'slogan' }), aiEnv)).reason, 'daily_limit');
+  assert.equal(calls, 2);
+});
+
 test('generation validates bounded inputs and produces honest fallback without AI', async () => {
   assert.throws(() => parseGeneration({ ...data, topic: 'x'.repeat(1201) }));
   assert.throws(() => parseGeneration({ ...data, kind: 'unknown' }));
