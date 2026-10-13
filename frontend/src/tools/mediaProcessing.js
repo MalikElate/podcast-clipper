@@ -109,7 +109,8 @@ export async function recordVideo({ canvas, draw, video, audio, speed = 1, mute 
     signal?.throwIfAborted();
     if (video) { video.currentTime = 0; video.playbackRate = speed; source = context.createMediaElementSource(video); }
     else { source = context.createBufferSource(); source.buffer = audio; }
-    if (!mute) source.connect(destination);
+    // Keep the playback clock connected even when audio is excluded from the file.
+    source.connect(destination);
     draw(); stream = canvas.captureStream(30);
     if (!mute) for (const track of destination.stream.getAudioTracks()) stream.addTrack(track);
     recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5_000_000 });

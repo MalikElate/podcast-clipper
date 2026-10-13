@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { editedDuration, encodeWav, MAX_AUDIO_BYTES, MAX_VIDEO_BYTES, recordingFormat, trimFrames, validateMediaFile, videoGeometry, wrapCanvasText } from '../src/tools/mediaProcessing.js';
+import { editedDuration, encodeWav, MAX_AUDIO_BYTES, MAX_VIDEO_BYTES, recordingFormat, recordVideo, trimFrames, validateMediaFile, videoGeometry, wrapCanvasText } from '../src/tools/mediaProcessing.js';
 import { fitProfileDrafts, writingIdeas, WRITING_LIMITS } from '../../shared/writingTools.js';
 
 test('a WAV trim exports only the selected samples with a playable PCM header and interleaved stereo', () => {
@@ -33,6 +33,37 @@ test('file and codec checks bound resources and select a genuinely supported exp
   assert.equal(recordingFormat({ isTypeSupported: type => type === 'video/mp4' }), 'video/mp4');
   assert.equal(recordingFormat({ isTypeSupported: type => type === 'video/webm' }), 'video/webm');
   assert.throws(() => recordingFormat({ isTypeSupported: () => false }));
+});
+test('muted export keeps the playback graph running, omits the audio track and releases resources', async () => {
+  const names = ['AudioContext', 'MediaRecorder', 'document', 'requestAnimationFrame', 'cancelAnimationFrame'];
+  const original = Object.fromEntries(names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
+  let connected = false, closed = false, captured, stoppedTracks = 0;
+  const track = kind => ({ kind, stop: () => stoppedTracks++ });
+  const audioTrack = track('audio'), videoTrack = track('video');
+  class Context {
+    state = 'running';
+    resume() { return Promise.resolve(); }
+    close() { closed = true; this.state = 'closed'; return Promise.resolve(); }
+    createMediaStreamDestination() { return { stream: { getAudioTracks: () => [audioTrack], getTracks: () => [audioTrack] } }; }
+    createMediaElementSource() { return { connect: () => { connected = true; }, disconnect() {} }; }
+  }
+  class Recorder {
+    static isTypeSupported(type) { return type === 'video/mp4'; }
+    state = 'inactive';
+    constructor(stream, options) { captured = stream; this.mimeType = options.mimeType; }
+    start() { this.state = 'recording'; }
+    stop() { this.state = 'inactive'; queueMicrotask(() => { this.ondataavailable({ data: new Blob(['encoded frames']) }); this.onstop(); }); }
+  }
+  const document = new EventTarget(); document.hidden = false;
+  Object.assign(globalThis, { AudioContext: Context, MediaRecorder: Recorder, document, requestAnimationFrame: () => 1, cancelAnimationFrame: () => {} });
+  try {
+    const video = new EventTarget(); Object.assign(video, { duration: 1, currentTime: 0, pause() {}, play() { assert.equal(connected, true); queueMicrotask(() => this.dispatchEvent(new Event('ended'))); return Promise.resolve(); } });
+    const tracks = [videoTrack], canvas = { captureStream: () => ({ getTracks: () => tracks, addTrack: value => tracks.push(value) }) };
+    const result = await recordVideo({ canvas, draw() {}, video, mute: true });
+    assert.equal(result.extension, 'mp4'); assert.ok(result.blob.size > 0);
+    assert.equal(captured.getTracks().length, 1); assert.equal(captured.getTracks()[0].kind, 'video');
+    assert.equal(closed, true); assert.equal(stoppedTracks, 2);
+  } finally { for (const name of names) { if (original[name]) Object.defineProperty(globalThis, name, original[name]); else delete globalThis[name]; } }
 });
 test('canvas captions retain line breaks and joined emoji when wrapping', () => {
   const context = { measureText: value => ({ width: [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(value)].length }) };
