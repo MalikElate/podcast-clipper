@@ -9,7 +9,7 @@ import { createAccountOperations } from "./accountOperations.js";
 import PageSkeleton from "./PageSkeleton.jsx";
 
 export default function Accounts(props) {
-  if (props.accountsReady === false) return props.accountsError ? null : <PageSkeleton label="Loading accounts"/>;
+  if (props.accountsReady === false) return props.accountsError ? null : <PageSkeleton page="accounts" label="Loading accounts" catalog={props.catalog}/>;
   return <ProjectAccounts key={props.project.id} {...props}/>;
 }
 
