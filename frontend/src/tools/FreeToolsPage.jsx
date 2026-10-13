@@ -8,6 +8,8 @@ import { CaptionGenerator, HandleChecker, LinkedInFormatter, UtmBuilder, YouTube
 import { InstagramHashtagGenerator, NameGenerator, YouTubeChannelDescriptionGenerator } from './SocialGenerators.jsx';
 import TrendingHashtags from './TrendingHashtags.jsx';
 import { CharacterCounter, EngagementCalculator, PostingTimeFinder, WritingGenerator } from './WritingTools.jsx';
+import { AudioToVideo, AudioTrimmer, SafeZoneChecker, VideoEditor } from './MediaTools.jsx';
+import PostPreview from './PostPreview.jsx';
 
 const href = page => `${page.path}/`;
 const absolute = page => `https://findmeadow.com${href(page)}`;
@@ -20,7 +22,7 @@ function StructuredData({ page }) {
   const graph = [{ '@type': 'BreadcrumbList', itemListElement: breadcrumbs }];
   if (page === TOOLS_HUB || page === GUIDES_HUB) graph.push({ '@type': 'CollectionPage', name: page.name, description: page.description, url: absolute(page), mainEntity: { '@type': 'ItemList', itemListElement: (page === TOOLS_HUB ? items : MEDIA_GUIDES).map((item, i) => ({ '@type': 'ListItem', position: i + 1, name: item.name, url: absolute(item) })) } });
   else if (page.platform) graph.push({ '@type': 'Article', headline: page.name, description: page.description, url: absolute(page), author: { '@type': 'Organization', name: 'Meadow', url: 'https://findmeadow.com/' } });
-  else graph.push({ '@type': 'WebApplication', name: page.name, url: absolute(page), description: page.description, applicationCategory: page.category === 'Images' ? 'MultimediaApplication' : 'UtilitiesApplication', operatingSystem: 'Any', browserRequirements: 'Requires JavaScript and a modern browser', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } });
+  else graph.push({ '@type': 'WebApplication', name: page.name, url: absolute(page), description: page.description, applicationCategory: ['Images', 'Audio & video'].includes(page.category) ? 'MultimediaApplication' : 'UtilitiesApplication', operatingSystem: 'Any', browserRequirements: 'Requires JavaScript and a modern browser', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } });
   if (page.faq) graph.push({ '@type': 'FAQPage', mainEntity: page.faq.map(([question, answer]) => ({ '@type': 'Question', name: question, acceptedAnswer: { '@type': 'Answer', text: answer } })) });
   return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c') }} />;
 }
@@ -33,7 +35,7 @@ function Hub() {
   const [query, setQuery] = useState(''), [category, setCategory] = useState('All tools');
   const filtered = items.filter(item => (category === 'All tools' || item.category === category) && `${item.name} ${item.description}`.toLowerCase().includes(query.toLowerCase()));
   return <>
-    <div className="ft-search-bar"><div className="ft-tabs" role="group" aria-label="Tool categories">{['All tools', 'Images', 'Writing', 'Planning', 'Guides'].map(name => <button key={name} type="button" aria-pressed={category === name} onClick={() => setCategory(name)}>{name}</button>)}</div><input type="search" aria-label="Find a tool" placeholder="Find a tool…" value={query} onChange={e => setQuery(e.target.value)} /></div>
+    <div className="ft-search-bar"><div className="ft-tabs" role="group" aria-label="Tool categories">{['All tools', 'Images', 'Audio & video', 'Writing', 'Planning', 'Guides'].map(name => <button key={name} type="button" aria-pressed={category === name} onClick={() => setCategory(name)}>{name}</button>)}</div><input type="search" aria-label="Find a tool" placeholder="Find a tool…" value={query} onChange={e => setQuery(e.target.value)} /></div>
     <ToolList entries={filtered} />
     {!filtered.length && <p className="ft-empty" role="status">No matching tools. Try another word or choose All tools.</p>}
     <section className="ft-guide-section"><div className="ft-section-heading"><h2>The right size for every feed.</h2><a href={href(GUIDES_HUB)}>All media-size guides ↗</a></div><p>Useful canvases for your next post, with dimensions, aspect ratios, and a crop preset ready to use.</p><div className="ft-guide-links">{MEDIA_GUIDES.map(guide => <a key={guide.path} href={href(guide)}>{guide.platform}<span aria-hidden="true">↗</span></a>)}</div></section>
@@ -57,6 +59,14 @@ function Guides({ page }) {
 
 function Tool({ page }) {
   switch (page.slug) {
+    case 'audio-trimmer': return <AudioTrimmer />;
+    case 'slogan-generator': return <WritingGenerator kind="slogan" />;
+    case 'audio-to-video-converter': return <AudioToVideo />;
+    case 'safe-zone-checker': return <SafeZoneChecker />;
+    case 'video-speed-changer': return <VideoEditor key={page.slug} />;
+    case 'video-rotator': return <VideoEditor key={page.slug} rotate />;
+    case 'social-media-post-preview': return <PostPreview />;
+    case 'social-media-profile-generator': return <WritingGenerator kind="profile" />;
     case 'hashtag-generator': return <WritingGenerator kind="hashtags" />;
     case 'instagram-bio-generator': return <WritingGenerator kind="bio" />;
     case 'caption-generator': return <WritingGenerator kind="captions" />;

@@ -222,12 +222,10 @@
 .bridge-agent-code>.bridge-copy{position:absolute;top:10px;right:10px}
 .bridge-copy{position:relative;display:inline-flex;max-width:100%;flex-shrink:0}
 .bridge-secret-row>.bridge-copy>.bridge-button{width:100%}
-.bridge-copy-toast{position:absolute;bottom:calc(100% + 9px);left:0;z-index:10;width:max-content;max-width:min(260px,calc(100vw - 64px));padding:9px 12px;border-radius:6px;background:#233247;color:#fff;font-size:14px;line-height:1.4;font-weight:500;white-space:normal;box-shadow:0 4px 14px #0002;pointer-events:none}
-.bridge-copy-toast::after{content:"";position:absolute;top:100%;left:16px;width:8px;height:8px;background:inherit;transform:translateY(-50%) rotate(45deg)}
+.bridge-copy-toast{position:absolute;top:calc(100% + 9px);left:0;z-index:10;width:max-content;max-width:min(260px,calc(100vw - 64px));padding:9px 12px;border-radius:6px;background:#233247;color:#fff;font-size:14px;line-height:1.4;font-weight:500;white-space:normal;box-shadow:0 4px 14px #0002;pointer-events:none}
+.bridge-copy-toast::after{content:"";position:absolute;top:0;left:16px;width:8px;height:8px;background:inherit;transform:translateY(-50%) rotate(45deg)}
 .bridge-copy.align-end>.bridge-copy-toast{left:auto;right:0}
 .bridge-copy.align-end>.bridge-copy-toast::after{left:auto;right:16px}
-.bridge-copy-toast.is-below{bottom:auto;top:calc(100% + 9px)}
-.bridge-copy-toast.is-below::after{top:0}
 .bridge-copy-toast.is-error{background:#9f304b}
 .bridge-agent-docs{display:inline-flex;align-items:center;gap:6px;margin-top:13px;font-size:calc(.78rem + 3px)}
 .bridge-agent-permissions{margin-top:22px!important;padding-top:16px;border-top:1px solid var(--b-line)}
