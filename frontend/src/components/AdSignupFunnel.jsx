@@ -1,6 +1,6 @@
 import { appHref, marketingHref, signupHref } from "../siteUrls.js";
 import { usePricingQuote } from "../pricingQuote.js";
-import BrandLogo from "./BrandLogo.jsx";
+import SiteHeader from "./SiteHeader.jsx";
 
 function SignupLink({ children, className = "" }) {
   return <a className={className} href={signupHref()}>{children}</a>;
@@ -10,9 +10,7 @@ export default function AdSignupFunnel() {
   const { quote } = usePricingQuote();
   return (
     <div className="ad-funnel">
-      <header className="ad-funnel-header">
-        <a href={marketingHref("/")} aria-label="Meadow home"><BrandLogo /></a>
-      </header>
+      <SiteHeader />
 
       <main className="ad-funnel-main">
         <section className="ad-funnel-hero" aria-labelledby="ad-funnel-title">

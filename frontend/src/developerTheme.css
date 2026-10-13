@@ -13,17 +13,6 @@
   border-inline: 1px solid var(--rule) !important;
 }
 
-/* Header: flat bar on a hairline, aligned with the page column's content. */
-.landing-home .landing-header {
-  min-height: 64px;
-  padding-inline: calc(max(28px, (100vw - 1280px) / 2) + var(--rail-pad));
-  border-bottom: 1px solid var(--rule) !important;
-}
-.landing-home .landing-nav a { font-weight: 500; }
-.landing-home .site-header .landing-actions .btn-ghost,
-.landing-home .site-header .landing-actions .btn-small-primary { border-radius: 999px; }
-.landing-home .site-header .btn-small-primary { padding: 9px 16px; box-shadow: none; }
-
 /* Sections sit inside the rails and start on a full-width hairline. */
 .landing-home main > section {
   position: relative;
@@ -251,7 +240,6 @@
 @media (max-width: 720px) {
   .marketing-home-app .landing-shell { padding: 0; }
   .landing-home { border-inline: 0 !important; }
-  .landing-home .landing-header { padding-inline: var(--rail-pad); }
   .landing-home .home-centered-hero .landing-title { font-size: clamp(36px, 10vw, 52px); }
   .landing-home .home-hero-demo-stage { padding-top: 40px; }
   .landing-home .home-pricing-heading { align-items: flex-start; flex-direction: column; }

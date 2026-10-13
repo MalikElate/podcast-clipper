@@ -1528,12 +1528,12 @@ input[type="range"]::-moz-range-thumb {
 /* --- Meadow marketing surface --- */
 .landing-shell { align-items: flex-start; padding: 0 28px; }
 .landing { width: 100%; max-width: 1280px; margin: 0 auto; color: var(--text); }
-.landing-header { position: sticky; top: 0; z-index: 50; min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid rgba(67,80,119,.32); }
+.landing-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
 .landing-logo-link { color: inherit; text-decoration: none; flex-shrink: 0; }
 .landing .brand { justify-content: flex-start; }
 .landing .brand-logo-image { width: 40px; height: 40px; }
 .landing .brand-name { font-size: 27px; letter-spacing: -.035em; }
-.landing-nav { display: flex; align-items: center; gap: 24px; margin-left: auto; }
+.landing-nav { display: flex; align-items: center; gap: 28px; margin-left: auto; }
 .landing-nav a, .footer-links a, .footer-links button { color: var(--text-muted); text-decoration: none; transition: color .15s ease; }
 .landing-nav a { font-size: 16px; font-weight: 700; }
 .landing-nav a:hover, .footer-links a:hover, .footer-links button:hover { color: var(--text); }
@@ -1541,14 +1541,52 @@ input[type="range"]::-moz-range-thumb {
 .landing-actions .btn-ghost { padding: 9px 12px; }
 .btn-small-primary { display: inline-flex; align-items: center; gap: 7px; padding: 10px 14px; font-size: 15px; color: #fff; background: var(--cta); border: 1px solid rgba(143,162,255,.35); box-shadow: none; }
 .btn-small-primary:hover { background: var(--cta-hover); }
-.site-header { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); isolation: isolate; overflow: visible; }
+/* Reserve the fixed bar's space so the first content stays below it. */
+.site-header-space { height: 64px; width: 100%; flex: 0 0 auto; }
+.site-header {
+  --surface: #fcfdf8;
+  --text: #233247;
+  --text-muted: #536256;
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 60;
+  width: 100%;
+  height: 64px;
+  margin: 0;
+  padding: 0 max(28px, calc((100% - 1280px) / 2));
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  align-items: center;
+  isolation: isolate;
+  overflow: visible;
+  background: var(--surface);
+  color: var(--text);
+}
+.site-header-space ~ main [id] { scroll-margin-top: 88px; }
+/* The separate backdrop also covers an expanded phone menu. */
+.site-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--surface);
+}
+@supports ((backdrop-filter: blur(16px)) or (-webkit-backdrop-filter: blur(16px))) {
+  .site-header { background: transparent; }
+  .site-header::before {
+    background: color-mix(in srgb, var(--surface) 72%, transparent);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(140%);
+  }
+}
 .site-header-menu { display: contents; }
 .site-header .landing-logo-link { grid-column: 1; justify-self: start; }
 .site-header .landing-nav { grid-column: 2; justify-self: center; margin-left: 0; }
 .site-header .landing-actions { grid-column: 3; justify-self: end; }
 .site-menu-toggle { display: none; width: 44px; height: 44px; align-items: center; justify-content: center; padding: 0; background: transparent; color: var(--text); flex: 0 0 auto; }
 .site-menu-toggle:focus-visible { outline: 2px solid var(--cta); outline-offset: 3px; }
-.site-header .btn-small-primary { font-weight: 600; }
+.site-header .btn-small-primary { padding: 9px 16px; font-weight: 600; }
 .site-header .brand { justify-content: flex-start; }
 .site-header .brand-logo-image { width: 40px; height: 40px; }
 .site-header .brand-name { font-size: 27px; letter-spacing: -.035em; }
@@ -1659,7 +1697,6 @@ input[type="range"]::-moz-range-thumb {
 
 @media (max-width: 720px) {
   .landing-shell { padding: 0 18px; }
-  .landing-header { min-height: 70px; }
   .landing-actions .btn-ghost { display: none; }
   .landing .landing-title { font-size: clamp(41px,10.75vw,51px); }
   .landing-hero { padding: 54px 0 68px; }
@@ -1803,7 +1840,6 @@ input[type="range"]::-moz-range-thumb {
 
 /* --- Not found --- */
 .not-found-shell { display: flex; flex-direction: column; width: 100%; max-width: 1160px; min-height: 100vh; margin: 0 auto; padding: 0 28px; }
-.not-found-header { display: flex; align-items: center; justify-content: space-between; min-height: 82px; border-bottom: 1px solid var(--border); }
 .not-found-header > a { color: inherit; text-decoration: none; }
 .not-found-header > a:last-child { color: var(--text-muted); font-size: 15px; font-weight: 600; }
 .not-found-header .brand { justify-content: flex-start; }
@@ -1818,7 +1854,6 @@ input[type="range"]::-moz-range-thumb {
 
 @media (max-width: 620px) {
   .not-found-shell { padding: 0 18px; }
-  .not-found-header { min-height: 70px; }
   .not-found-page { padding: 70px 0 85px; }
 }
 
@@ -1830,21 +1865,11 @@ input[type="range"]::-moz-range-thumb {
   color: var(--text);
 }
 
-.legal-header,
 .legal-page,
 .legal-footer {
   width: 100%;
   max-width: 960px;
   margin: 0 auto;
-}
-
-.legal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 82px;
-  gap: 24px;
-  border-bottom: 1px solid rgba(67, 80, 119, 0.32);
 }
 
 .legal-brand {
@@ -1950,7 +1975,6 @@ input[type="range"]::-moz-range-thumb {
   text-decoration: underline;
 }
 
-.legal-shell-privacy .legal-header,
 .legal-shell-privacy .legal-page,
 .legal-shell-privacy .legal-footer {
   max-width: 1120px;
@@ -1965,12 +1989,12 @@ input[type="range"]::-moz-range-thumb {
 
 .legal-sidebar {
   position: sticky;
-  top: 24px;
+  top: 88px;
   padding-top: 56px;
 }
 
 .legal-sidebar-card {
-  max-height: calc(100vh - 48px);
+  max-height: calc(100vh - 112px);
   padding: 18px;
   overflow-y: auto;
   border: 1px solid var(--border);
@@ -2018,7 +2042,7 @@ input[type="range"]::-moz-range-thumb {
 .legal-body .legal-platform-policy {
   padding: 36px 0;
   border-bottom: 1px solid var(--border);
-  scroll-margin-top: 24px;
+  scroll-margin-top: 88px;
 }
 
 .legal-platform-policy h2 {
@@ -2115,7 +2139,6 @@ input[type="range"]::-moz-range-thumb {
 
 @media (max-width: 720px) {
   .legal-shell { padding: 0 18px; }
-  .legal-header { min-height: 70px; }
   .legal-nav { gap: 13px; }
   .legal-nav a { font-size: 12px; }
   .legal-page { padding: 70px 0 85px; }
@@ -2271,20 +2294,6 @@ input[type="range"]::-moz-range-thumb {
 
 /* --- Landing audience refresh --- */
 .landing-v2 { --landing-blue: #3266df; --landing-blue-soft: #eaf0ff; --landing-green-soft: #e8f3df; }
-.landing-v2 .landing-header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  margin-bottom: 0;
-  padding-inline: max(28px, calc((100vw - 1280px) / 2));
-  border-bottom: 0;
-  background: var(--surface);
-  color: var(--text);
-}
-.landing-v2 .landing-nav { gap: 28px; }
-.landing-v2 .landing-nav a { font-size: 16px; }
 .landing-hero-v2 { display: grid; grid-template-columns: minmax(0,.8fr) minmax(520px,1.2fr); gap: clamp(42px,6vw,88px); padding: 78px 0 112px; text-align: left; }
 .landing-hero-v2 .hero-copy { align-items: flex-start; max-width: 620px; }
 .landing-hero-v2 .landing-title { max-width: 10ch; margin-top: 22px; font-size: clamp(59px,6.5vw,89px); line-height: .95; }
@@ -2396,7 +2405,6 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (max-width: 720px) {
-  .landing-v2 .landing-header { padding-inline: 18px; }
   .landing-hero-v2 { padding: 50px 0 80px; }
   .landing-hero-v2 .hero-kicker { font-size: 11px; }
   .landing-hero-v2 .landing-title { margin-top: 18px; font-size: clamp(46px,13vw,63px); }
@@ -2542,7 +2550,6 @@ input[type="range"]::-moz-range-thumb {
 .marketing-home-app { --bg: #f4f7ee; background: #f4f7ee; color-scheme: light; }
 .marketing-home-app::before { display: none; }
 .landing-v2 { color: var(--text); }
-.landing-v2 .landing-header { background: var(--surface); border-bottom: 1px solid var(--border); }
 .landing-v2 .landing-hero-v2 { align-items: center; min-height: 640px; padding-top: clamp(76px,9vw,126px); padding-bottom: clamp(80px,10vw,132px); }
 .landing-v2 .landing-hero-v2 .landing-title { max-width: 12ch; margin: 19px 0 24px; color: var(--text); font-size: clamp(55px,6.2vw,83px); line-height: .99; }
 .home-hero-kicker, .home-section-label { display: inline-block; color: #a9d58f; font-size: 13px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
@@ -2614,14 +2621,16 @@ input[type="range"]::-moz-range-thumb {
 
 @media (max-width: 980px) {
   .site-header .landing-nav { display: flex; }
-  .site-header { display: flex; min-height: 64px; padding-block: 10px; flex-wrap: nowrap; gap: 12px; }
+  .site-header { display: flex; padding: 9px 18px; flex-wrap: nowrap; gap: 12px; }
   .site-header .brand { gap: 6px; }
   .site-header .brand-logo-image { width: 30px; height: 30px; }
   .site-header .brand-name { font-size: 19px; }
   .site-header .landing-logo-link { margin-right: auto; }
   .site-menu-toggle { display: inline-flex; }
-  .site-header-menu { position: absolute; top: 100%; inset-inline: 0; display: none; flex-direction: column; align-items: stretch; gap: 12px; margin: 0; padding: 12px 18px 18px; background: var(--surface); }
+  .site-header-menu { position: relative; display: none; flex-direction: column; align-items: stretch; gap: 12px; margin: 0; padding: 12px 0 18px; max-height: calc(100vh - 74px); max-height: calc(100dvh - 74px); overflow-y: auto; }
   .site-header-menu[data-open="true"] { display: flex; }
+  .site-header:has(.site-header-menu[data-open="true"]) { height: auto; flex-wrap: wrap; }
+  .site-header-menu { flex: 0 0 100%; }
   .site-header .landing-nav { width: 100%; flex-direction: column; align-items: stretch; gap: 2px; margin: 0; }
   .site-header .landing-nav a, .site-header .landing-nav .site-nav-signin { display: flex; align-items: center; justify-content: flex-start; min-height: 44px; padding: 8px 10px; }
   .site-header .landing-actions { flex-direction: column; align-items: stretch; gap: 10px; }
@@ -2629,7 +2638,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (max-width: 720px) {
-  .landing-v2 .home-platform-section { scroll-margin-top: 30px; }
+  .landing-v2 .home-platform-section { scroll-margin-top: 88px; }
 }
 
 @media (max-width: 360px) {
