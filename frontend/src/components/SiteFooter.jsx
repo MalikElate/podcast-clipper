@@ -30,9 +30,6 @@ function MobileFooterGroup({ title, children }) {
 function ProductLinks({ onGetStarted }) {
   return <>
     {PUBLIC_MARKETING_PAGES.map((page) => <a href={href(page.path)} key={page.path}>{page.footerLabel}</a>)}
-    <a href={href("/tools/tiktok-roast")}>Free TikTok roast</a>
-    <a href={href("/tools/")}>Free social media tools</a>
-    <a href={href("/tools/media-size-guide/")}>Media-size guides</a>
     <a href={href("/social-media-analytics/")}>Social media analytics</a>
     <a href={href("/pricing")}>Pricing</a>
     {onGetStarted ? <button onClick={onGetStarted}>Create your first post</button> : <a href={appHref("/dashboard")}>Create your first post</a>}
@@ -41,6 +38,9 @@ function ProductLinks({ onGetStarted }) {
 
 function ToolLinks() {
   return <>
+    <a href={href("/tools/tiktok-roast")}>Free TikTok roast</a>
+    <a href={href("/tools/")}>Free social media tools</a>
+    <a href={href("/tools/media-size-guide/")}>Media-size guides</a>
     {FEATURED_PLATFORMS.map((platform) => <a href={href(`/${platform.slug}`)} key={platform.id}>{platform.name} Scheduler</a>)}
     {PLATFORM_USE_CASES.filter(platform => platform.chatOnly).map(platform => <a href={href(`/${platform.slug}`)} key={platform.id}>{platform.name} Chat Scheduler</a>)}
     <a href={href("/social-media-scheduler")}>All-platform Scheduler</a>
@@ -53,6 +53,7 @@ function HelpLinks() {
     <a href={href("/blog/")}>Social media guides</a>
     <a href={href("/#faq")}>Frequently asked questions</a>
     <a href={href("/developers")}>API and MCP server</a>
+    <a href={href("/docs")}>Docs</a>
     <a href={href("/contact")}>Contact support</a>
     <a href={href("/privacy")}>Privacy policy</a>
     <a href={href("/terms")}>Terms of service</a>

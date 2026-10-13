@@ -47,7 +47,7 @@ export const GENERAL_PAGES = [
     headline: "A social media scheduling API for your tools and agents.",
     subtitle: "Send your content, connected account IDs, and publishing time to Meadow. Use the REST API from your application or MCP from a supported AI client, and follow delivery for each destination.",
     primaryAction: { label: "Get an API key", path: "/dashboard/api-keys" },
-    secondaryAction: { label: "Read API and MCP docs", path: "/developers/" },
+    secondaryAction: { label: "Read API and MCP docs", path: "/docs/" },
     featureHeading: "Control what gets scheduled.",
     platformHeading: "One integration for your connected accounts",
     platformText: "Reach eleven publishing platforms, including Telegram channels and groups, plus Twitch and Kick chat. Each destination keeps its own format requirements and publishing settings.",

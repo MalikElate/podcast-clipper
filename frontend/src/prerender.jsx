@@ -9,6 +9,7 @@ import AlternativePage from "./components/AlternativePage.jsx";
 import AdSignupFunnel from "./components/AdSignupFunnel.jsx";
 import ContactPage from "./components/ContactPage.jsx";
 import DevelopersPage from "./components/DevelopersPage.jsx";
+import DocsPage from "./components/DocsPage.jsx";
 import TikTokRoast from "./tools/TikTokRoast.jsx";
 import NotFound from "./components/NotFound.jsx";
 import { findMarketingPage } from "./marketing/generalPages.js";
@@ -32,6 +33,7 @@ export function render(kind, platformId) {
   }
   if (kind === "tiktok-roast") return renderToString(<TikTokRoast />);
   if (kind === "developers") return renderToString(<div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><DevelopersPage /></div></div>);
+  if (kind === "docs") return renderToString(<div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><DocsPage /></div></div>);
   if (kind === "contact") return renderToString(<div className="app"><div className="app-glow app-glow-a" /><div className="app-glow app-glow-b" /><div className="centered-shell landing-shell"><ContactPage /></div></div>);
   if (kind === "marketing") {
     const page = findMarketingPage(platformId);

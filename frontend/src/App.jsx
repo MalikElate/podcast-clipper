@@ -11,6 +11,7 @@ import AlternativePage from "./components/AlternativePage.jsx";
 import AdSignupFunnel from "./components/AdSignupFunnel.jsx";
 import ContactPage from "./components/ContactPage.jsx";
 import DevelopersPage from "./components/DevelopersPage.jsx";
+import DocsPage from "./components/DocsPage.jsx";
 import { findMarketingPage } from "./marketing/generalPages.js";
 import TikTokRoast from "./tools/TikTokRoast.jsx";
 import NotFound from "./components/NotFound.jsx";
@@ -62,6 +63,7 @@ export default function App() {
   if (pathname === "/sign-up/complete") return <SignupComplete />;
   if (pathname === "/tools/tiktok-roast") return <TikTokRoast />;
   if (pathname === "/developers") return <PublicDevelopersPage onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;
+  if (pathname === "/docs") return <PublicDocsPage onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;
   if (pathname === "/contact") return <PublicContactPage onGetStarted={() => window.location.assign(appHref("/dashboard"))} />;
   const freeToolPage = findFreeToolPage(pathname);
   if (freeToolPage) return <Suspense fallback={<OpeningMeadow />}><FreeToolsPage page={freeToolPage} /></Suspense>;
@@ -262,6 +264,18 @@ function PublicContactPage({ onGetStarted }) {
       <div className="app-glow app-glow-b" />
       <div className="centered-shell landing-shell">
         <ContactPage onGetStarted={onGetStarted} />
+      </div>
+    </div>
+  );
+}
+
+function PublicDocsPage({ onGetStarted }) {
+  return (
+    <div className="app">
+      <div className="app-glow app-glow-a" />
+      <div className="app-glow app-glow-b" />
+      <div className="centered-shell landing-shell">
+        <DocsPage onGetStarted={onGetStarted} />
       </div>
     </div>
   );

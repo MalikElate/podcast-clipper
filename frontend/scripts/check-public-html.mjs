@@ -9,7 +9,7 @@ import { BLOG_ARTICLES } from "../src/blog/articles.js";
 import { CONTENT_PATHS } from "../src/blog/routes.js";
 import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_DISPLAY, LEGAL_ENTITY } from "../src/siteContact.js";
 
-for (const [path, heading] of [["tools/tiktok-roast/index.html", "TikTok <span>Niche or Not"], ["index.html", "Creator tools for your AI"], ["404.html", ">404<"], ["pricing/index.html", "<h1>Pricing</h1>"], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
+for (const [path, heading] of [["tools/tiktok-roast/index.html", "TikTok <span>Niche or Not"], ["index.html", "Creator tools for your AI"], ["404.html", ">404<"], ["pricing/index.html", "<h1>Pricing</h1>"], ["docs/index.html", "Meadow docs"], ["developers/index.html", "Let an AI client draft, schedule and publish your posts."], ["terms/index.html", "Terms of Service"], ["terms-of-service/index.html", "Terms of Service"], ["privacy/index.html", "Privacy Policy"], ["privacy-policy/index.html", "Privacy Policy"]]) {
   const html = await readFile(`dist/${path}`, "utf8");
   assert.match(html, /<h1/);
   assert.ok(html.includes(heading), `${path} must contain its own content without JavaScript`);
@@ -57,16 +57,23 @@ const oauthConsentHtml = await readFile("dist/oauth-consent/index.html", "utf8")
 assert.ok(oauthConsentHtml.includes('<meta name="referrer" content="strict-origin-when-cross-origin" />'), "The OAuth consent route must preserve its origin on Clerk submissions");
 for (const url of sitemapUrls) assert.match(url, /^https:\/\/findmeadow\.com\//, `Sitemap entry ${url} must use the canonical host`);
 
-// The developer page exists to be found by someone evaluating the MCP server,
-// so what it promises has to match what the contract actually does.
+// The developer overview points to a separate, publicly rendered reference.
 const developersHtml = await readFile("dist/developers/index.html", "utf8");
-assert.ok(developersHtml.includes("https://findmeadow.com/mcp"), "The developer page must give the server URL");
-assert.ok(developersHtml.includes('"@type":"FAQPage"'), "The developer page must answer questions in a form search engines read");
-assert.ok(developersHtml.includes("publish_post") && developersHtml.includes("meadow:publish"), "The developer page must name the publishing tool and the permission it needs");
+const docsHtml = await readFile("dist/docs/index.html", "utf8");
+assert.ok(developersHtml.includes('href="https://findmeadow.com/docs/">Read the docs</a>'), "The developer overview must link to the docs page");
+assert.ok(!developersHtml.includes("dev-tool-list") && !developersHtml.includes("@modelcontextprotocol/inspector"), "The technical reference must live on the docs page");
+assert.ok(docsHtml.includes("https://findmeadow.com/mcp"), "The docs page must give the server URL");
+assert.ok(docsHtml.includes('"@type":"FAQPage"'), "The docs page must answer questions in a form search engines read");
+assert.ok(docsHtml.includes("publish_post") && docsHtml.includes("meadow:publish"), "The docs page must name the publishing tool and the permission it needs");
+for (const id of ["quickstart", "tools", "webhooks", "faq"]) {
+  assert.ok(docsHtml.includes(`href="#${id}"`) && docsHtml.includes(`id="${id}"`), `The docs page must have a reachable ${id} section`);
+}
 for (const overclaim of ["publish to 13", "Publish to 13", "publish to eleven platforms"]) {
-  assert.ok(!developersHtml.includes(overclaim), `The developer page must not claim it can ${overclaim}`);
+  for (const html of [developersHtml, docsHtml]) assert.ok(!html.includes(overclaim), `Developer pages must not claim they can ${overclaim}`);
 }
 assert.ok(sitemapUrls.includes("https://findmeadow.com/developers/"), "The developer page must appear in the sitemap");
+assert.ok(sitemapUrls.includes("https://findmeadow.com/docs/"), "The docs page must appear in the sitemap");
+assert.ok(docsHtml.includes('<link rel="canonical" href="https://findmeadow.com/docs/" />'), "The docs page must use its own canonical address");
 
 // People must be able to reach a person, and search engines must see how.
 const contactHtml = await readFile("dist/contact/index.html", "utf8");
@@ -111,6 +118,7 @@ const landingHtml = await readFile("dist/index.html", "utf8");
 // Search engines read these from the served HTML, so assert the rendered page
 // rather than the module that builds them.
 assert.ok(landingHtml.includes('href="/developers/"'), "The developer page must be reachable from the footer");
+assert.ok(landingHtml.includes('href="/docs/">Docs</a>'), "The docs page must be reachable from the footer");
 for (const type of ["Organization", "WebSite", "SoftwareApplication"]) {
   assert.ok(landingHtml.includes(`"@type":"${type}"`), `The homepage must describe itself as a ${type}`);
 }
