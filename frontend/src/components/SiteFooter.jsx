@@ -53,6 +53,7 @@ function HelpLinks() {
     <a href={href("/blog/")}>Social media guides</a>
     <a href={href("/#faq")}>Frequently asked questions</a>
     <a href={href("/developers")}>API and MCP server</a>
+    <a href={href("/docs")}>Docs</a>
     <a href={href("/contact")}>Contact support</a>
     <a href={href("/privacy")}>Privacy policy</a>
     <a href={href("/terms")}>Terms of service</a>

@@ -99,6 +99,12 @@
 .ft-scheduler-link a { color: var(--text); font-weight: 650; }
 
 .dev-hero { padding-block: clamp(48px,6vw,88px); }
+.docs-contents { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-top: 28px; }
+.docs-contents a { padding-block: 8px; color: var(--text); font-weight: 650; }
+.docs-page .section-heading { max-width: 760px; text-align: left; }
+.docs-page section[id] { scroll-margin-top: 100px; }
+.docs-page .dev-tool-row { min-width: 0; }
+.docs-page .dev-tool-row dd { overflow-wrap: anywhere; }
 .dev-section { padding-block: clamp(30px,4vw,54px); }
 .dev-section h2 { margin: 0 0 12px; font-size: clamp(22px,2.6vw,30px); letter-spacing: -.02em; }
 .dev-section p { max-width: 760px; color: var(--text-muted); line-height: 1.7; }

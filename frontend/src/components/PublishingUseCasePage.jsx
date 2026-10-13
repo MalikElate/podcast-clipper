@@ -83,7 +83,7 @@ function WorkflowPreview({ page }) {
     <p>Authenticated POST to <code>/api/bridge/projects/PROJECT_ID/posts/preview</code>, then <code>/posts</code> to submit.</p>
     <pre tabIndex="0" aria-label="Example Meadow batch scheduling JSON"><code>{BATCH_REQUEST}</code></pre>
     <p className="use-case-example-note">Replace the project, account, and media IDs with your own. Choose future dates and a time zone. Use an Authorization: Bearer header with your private Meadow API key.</p>
-    <a href="/developers/">Read the full API contract <Arrow /></a>
+    <a href="/docs/">Read the full API contract <Arrow /></a>
   </div>;
   if (page.preview === "comment") return <div className="use-case-example use-case-comment-example">
     <div><h3>Main post · scheduled in Meadow</h3><p>A look inside our studio. Here is what goes into every piece.</p></div>
@@ -132,7 +132,7 @@ export default function PublishingUseCasePage({ page, onGetStarted }) {
 
       <section className="multi-section" id="faq" aria-labelledby="use-case-faq-title"><div className="multi-section-heading"><h2 id="use-case-faq-title">Frequently asked questions</h2></div><div className="mkt-faq-list">{page.faqs.map(item => <details className="mkt-faq-item" key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}</div><script {...schemaScriptProps(faqSchema)} /></section>
 
-      <section className="multi-section use-case-related" aria-labelledby="use-case-related-title"><h2 id="use-case-related-title">Keep exploring Meadow.</h2><nav aria-label="Related publishing pages">{(page.kind === "agent-api" ? AGENT_API_PAGES : PUBLISHING_PAGES).filter(item => item.path !== page.path).map(item => <a href={`${item.path}/`} key={item.path}>{item.footerLabel} <Arrow /></a>)}<a href="/manage-multiple-social-media-accounts/">All your social accounts <Arrow /></a><a href="/developers/">API and MCP docs <Arrow /></a></nav></section>
+      <section className="multi-section use-case-related" aria-labelledby="use-case-related-title"><h2 id="use-case-related-title">Keep exploring Meadow.</h2><nav aria-label="Related publishing pages">{(page.kind === "agent-api" ? AGENT_API_PAGES : PUBLISHING_PAGES).filter(item => item.path !== page.path).map(item => <a href={`${item.path}/`} key={item.path}>{item.footerLabel} <Arrow /></a>)}<a href="/manage-multiple-social-media-accounts/">All your social accounts <Arrow /></a><a href="/docs/">API and MCP docs <Arrow /></a></nav></section>
 
       <section className="multi-section multi-closing" aria-labelledby="use-case-closing-title"><h2 id="use-case-closing-title">{page.closing}</h2><p>Start free and prepare your next post in Meadow.</p><a className="btn-primary landing-cta" href={signupHref()}>{page.action} <Arrow /></a></section>
     </main>

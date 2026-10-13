@@ -69,7 +69,7 @@ export const PUBLISHING_PAGES = [
     description: "Bulk schedule social media posts with Meadow’s REST API. Preview batches of up to 100 posts, set account versions and publishing times, and track each destination.",
     headline: "Turn a prepared batch into a publishing schedule.",
     subtitle: "Send up to 100 posts in one Meadow API request. Give each item its own content, destinations, and time, preview the batch, then submit it when everything is ready.",
-    action: "Try for free", secondary: { label: "Read API and MCP docs", href: "/developers/" },
+    action: "Try for free", secondary: { label: "Read API and MCP docs", href: "/docs/" },
     previewHeading: "A schedule for more than one post.",
     previewText: "Upload media first and use its Meadow media IDs. Send your items to the preview endpoint, resolve validation errors, and submit the same batch with a stable request identifier.",
     details: [

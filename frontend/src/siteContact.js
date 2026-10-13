@@ -14,5 +14,8 @@ export const CONTACT_PHONE_HREF = `tel:${CONTACT_PHONE}`;
 export const DEVELOPERS_TITLE = "MCP Server for Social Media Publishing | Meadow";
 export const DEVELOPERS_DESCRIPTION = "Let Claude or any MCP client draft, schedule and publish posts on 11 social platforms, plus Twitch and Kick chat. Free plan, API key in minutes.";
 
+export const DOCS_TITLE = "API and MCP Documentation | Meadow";
+export const DOCS_DESCRIPTION = "Connect your AI client or automation to Meadow. Read the MCP setup command, tool reference, authentication permissions, and signed webhook guidance.";
+
 export const CONTACT_TITLE = "Contact Meadow · Support Email and Phone";
 export const CONTACT_DESCRIPTION = `Reach the Meadow team by email at ${CONTACT_EMAIL} or by phone at ${CONTACT_PHONE_DISPLAY}. Meadow is operated by ${LEGAL_ENTITY}.`;
