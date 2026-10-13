@@ -167,12 +167,12 @@ function MetricIcon({ metric }) {
 
 export default function Analytics({ project, catalog }) {
   const { data, setData, loading, error: loadError, reload } = useProjectResource(project.id, "/analytics", null);
-  const { data: accountData } = useProjectResource(project.id, "/accounts", { accounts: [] });
+  const { data: accountData } = useProjectResource(project.id, "/accounts", { accounts: null });
   const [mode, setMode] = useState("overview"), [platform, setPlatform] = useState("all"), [accountId, setAccountId] = useState(""), [period, setPeriod] = useState("30"), [metric, setMetric] = useState("views"), [grain, setGrain] = useState("day"), [comparisonMetric, setComparisonMetric] = useState("views"), [query, setQuery] = useState(""), [sort, setSort] = useState("views"), [compare, setCompare] = useState([]), [openedId, setOpenedId] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState("");
   if (!data) return loadError
     ? <div className="bridge-analytics-dashboard"><Alert message={loadError}/><button className="bridge-button secondary" disabled={loading} onClick={reload}>Retry analytics</button></div>
-    : <PageSkeleton label="Loading analytics"/>;
-  const accounts = data.accounts.map(account => ({ ...account, label: accountData.accounts.find(item => item.id === account.id)?.label || account.label }));
+    : <PageSkeleton page="analytics" label="Loading analytics" accounts={accountData.accounts}/>;
+  const accounts = data.accounts.map(account => ({ ...account, label: accountData.accounts?.find(item => item.id === account.id)?.label || account.label }));
   const overview = buildAnalyticsOverview(data, { platform, accountId, period, timeZone: project.timeZone });
   const platforms = [...new Set(accounts.map(account => account.platform))].sort((a, b) => {
     const order = ["tiktok", "youtube", "instagram", "facebook"];
