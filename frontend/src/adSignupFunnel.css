@@ -9,18 +9,6 @@
 
 .ad-funnel a { text-decoration: none; }
 
-.ad-funnel-header {
-  display: flex;
-  min-height: 104px;
-  align-items: center;
-  justify-content: center;
-}
-
-.ad-funnel-header > a { color: inherit; }
-.ad-funnel-header .brand { justify-content: center; }
-.ad-funnel-header .brand-logo-image { width: 40px; height: 40px; }
-.ad-funnel-header .brand-name { font-size: 29px; letter-spacing: -.045em; }
-
 .ad-funnel-main {
   display: flex;
   align-items: center;
@@ -129,9 +117,6 @@
 .ad-funnel-footer a:hover { color: var(--text); }
 
 @media (max-width: 620px) {
-  .ad-funnel-header { min-height: 82px; }
-  .ad-funnel-header .brand-logo-image { width: 35px; height: 35px; }
-  .ad-funnel-header .brand-name { font-size: 25px; }
   .ad-funnel-main { align-items: flex-start; padding: 42px 0 44px; }
   .ad-funnel-hero h1 { font-size: clamp(48px, 14.4vw, 62px); line-height: .98; }
   .ad-funnel-description { margin-top: 25px; font-size: 17px; line-height: 1.55; }
@@ -143,7 +128,6 @@
 }
 
 @media (max-height: 760px) and (min-width: 621px) {
-  .ad-funnel-header { min-height: 82px; }
   .ad-funnel-main { padding: 18px 0 30px; }
   .ad-funnel-hero h1 { font-size: clamp(54px, 7vw, 72px); }
   .ad-funnel-description { margin-top: 22px; }

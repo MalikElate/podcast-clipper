@@ -44,6 +44,7 @@ export default function SiteHeader({ className = "", homeHref = marketingHref("/
   }
 
   return (
+    <div className="site-header-space">
     <header className={`landing-header site-header ${className}`.trim()} ref={headerRef} onKeyDown={handleKeyDown} onBlur={(event) => {
       if (!event.currentTarget.contains(event.relatedTarget)) setMenuOpen(false);
     }}>
@@ -64,5 +65,6 @@ export default function SiteHeader({ className = "", homeHref = marketingHref("/
         </div>
       </div>
     </header>
+    </div>
   );
 }

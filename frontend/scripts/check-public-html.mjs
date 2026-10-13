@@ -57,6 +57,20 @@ const oauthConsentHtml = await readFile("dist/oauth-consent/index.html", "utf8")
 assert.ok(oauthConsentHtml.includes('<meta name="referrer" content="strict-origin-when-cross-origin" />'), "The OAuth consent route must preserve its origin on Clerk submissions");
 for (const url of sitemapUrls) assert.match(url, /^https:\/\/findmeadow\.com\//, `Sitemap entry ${url} must use the canonical host`);
 
+// Every public surface must retain the same useful, rendered navigation.
+for (const path of new Set([...sitemapUrls.map(url => new URL(url).pathname), "/start/", "/terms-of-service/", "/privacy-policy/"])) {
+  const html = await readFile(`dist${path}index.html`, "utf8");
+  const headers = [...html.matchAll(/<header\b[^>]*class="[^"]*\bsite-header\b[^"]*"[\s\S]*?<\/header>/g)];
+  assert.equal(headers.length, 1, `${path} must have one shared public menu`);
+  const header = headers[0][0];
+  assert.ok(header.includes('aria-label="Main navigation"'), `${path} must label its navigation`);
+  assert.ok(header.includes('href="https://findmeadow.com/#ways-to-use"'), `${path} must link to API/MCP`);
+  assert.ok(header.includes('href="https://findmeadow.com/contact/"'), `${path} must link to support`);
+  assert.ok(header.includes('href="https://app.findmeadow.com/sign-up"'), `${path} must link to free signup`);
+  assert.ok(header.includes('aria-label="Open navigation menu"'), `${path} must provide a phone menu`);
+  assert.ok(!header.includes('href="tel:'), `${path} must not show the old phone link in its menu`);
+}
+
 // The developer overview points to a separate, publicly rendered reference.
 const developersHtml = await readFile("dist/developers/index.html", "utf8");
 const docsHtml = await readFile("dist/docs/index.html", "utf8");
