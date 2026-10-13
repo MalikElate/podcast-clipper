@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { appHref, marketingHref, signupHref } from "../siteUrls.js";
 import { usePublicAuth } from "../AuthContext.jsx";
-import { CONTACT_PHONE_DISPLAY, CONTACT_PHONE_HREF } from "../siteContact.js";
 import BrandLogo from "./BrandLogo.jsx";
 
 function ArrowIcon() {
@@ -57,7 +56,7 @@ export default function SiteHeader({ className = "", homeHref = marketingHref("/
       }}>
         <nav className="landing-nav" aria-label="Main navigation">
           <a href={marketingHref("/#ways-to-use")}><strong>API/MCP</strong></a>
-          <a className="site-human-link" href={CONTACT_PHONE_HREF}><strong>{CONTACT_PHONE_DISPLAY}</strong></a>
+          <a className="site-human-link" href={marketingHref("/contact")}><strong>support</strong></a>
           {!user && !loading && <HeaderAction className="site-nav-signin" href={appHref("/sign-in")} onClick={signIn}>Sign in</HeaderAction>}
         </nav>
         <div className="landing-actions">

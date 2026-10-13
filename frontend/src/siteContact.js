@@ -1,4 +1,4 @@
-// How people reach Meadow. The nav, the contact page and the welcome email all
+// How people reach Meadow. The contact page and the welcome email both
 // read from here, so the address and number are written once. The backend keeps
 // its own copy for the welcome email; contact-details.test.js compares the two.
 export const CONTACT_EMAIL = "hello@findmeadow.com";
