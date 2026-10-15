@@ -294,8 +294,4 @@ export default {
 
     return workerEnv.ASSETS.fetch(request);
   },
-  async scheduled(event, workerEnv) {
-    const response = await workerEnv.BACKEND.getByName("primary").fetch(new Request("http://backend/health"));
-    if (!response.ok) throw new Error("Meadow connection maintenance could not start.");
-  },
 };
