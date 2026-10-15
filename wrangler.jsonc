@@ -43,7 +43,7 @@
   "observability": {
     "enabled": true
   },
-  "triggers": { "crons": ["0 3 * * *"] },
+  "triggers": { "crons": [] },
   "r2_buckets": [{ "binding": "MEADOW_MEDIA", "bucket_name": "meadow-media" }],
   "vars": {
     "PORT": "8787",
