@@ -43,10 +43,11 @@
   "observability": {
     "enabled": true
   },
-  "triggers": { "crons": ["0 3 * * *", "*/30 * * * *"] },
+  "triggers": { "crons": ["0 3 * * *"] },
   "r2_buckets": [{ "binding": "MEADOW_MEDIA", "bucket_name": "meadow-media" }],
   "vars": {
     "PORT": "8787",
+    "BRIDGE_DISABLED_PLATFORMS": "twitch,kick",
     "BRIDGE_APP_URL": "https://app.findmeadow.com",
     "BRIDGE_PUBLIC_URL": "https://findmeadow.com",
     "CLERK_MCP_ISSUER": "https://clerk.findmeadow.com",

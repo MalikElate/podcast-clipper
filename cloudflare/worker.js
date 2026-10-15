@@ -295,7 +295,6 @@ export default {
     return workerEnv.ASSETS.fetch(request);
   },
   async scheduled(event, workerEnv) {
-    if (event.cron === "*/30 * * * *" && !workerEnv.TWITCH_CLIENT_ID) return;
     const response = await workerEnv.BACKEND.getByName("primary").fetch(new Request("http://backend/health"));
     if (!response.ok) throw new Error("Meadow connection maintenance could not start.");
   },
