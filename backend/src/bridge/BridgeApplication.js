@@ -37,6 +37,7 @@ import { PrivacyService } from "./services/PrivacyService.js";
 import { MetaPrivacyService } from "./services/MetaPrivacyService.js";
 import { SecretVault } from "./core/SecretVault.js";
 import { LockService } from "./core/LockService.js";
+import { ProcessRunner } from "./core/ProcessRunner.js";
 import { BridgeError, invariant, publicError } from "./core/errors.js";
 import { ProviderRegistry } from "./platforms/ProviderRegistry.js";
 import { connectionDisclosures, connectionDisclosure } from "./platforms/connectionPrivacy.js";
@@ -58,6 +59,7 @@ import { registerMeadowMcpRoutes } from "./mcp/MeadowMcpServer.js";
 import { createMeadowMcpOAuth } from "./mcp/MeadowMcpOAuth.js";
 import { pricingForCountry } from "./shared/regionalPricing.js";
 import { legacyToolsPath } from "./shared/publicToolRoutes.js";
+import { BLUESKY_CLIENT_METADATA_PATH, BLUESKY_JWKS_PATH } from "./shared/blueskyOAuth.js";
 
 const backendDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 export const route = fn => (req, res, next) => Promise.resolve().then(() => fn(req, res)).catch(next).finally(() => req.privacyRelease?.());
@@ -195,6 +197,9 @@ export class BridgeApplication {
     const json = express.json({ limit: "2mb" });
     this.app.use((req, res, next) => req.path === "/mcp" ? next() : json(req, res, next));
     this.app.get("/health", (req, res) => res.json({ status: "ok", app: "Meadow" }));
+    // The Worker never forwards /internal/ from the internet; only the container's
+    // Durable Object asks, before letting the container sleep.
+    this.app.get("/internal/activity", (req, res) => res.json({ busy: this.busy() }));
     this.registerPublicRoutes();
     registerMeadowMcpRoutes(this);
     let clerkAuth;
@@ -286,8 +291,9 @@ export class BridgeApplication {
       if (result.status === "approved") await this.store.flush?.();
       res.status(result.status === "pending" ? 202 : 200).json(result);
     }));
-    app.get("/oauth/bluesky/client-metadata.json", route(async (req, res) => res.json((await this.registry.get("bluesky").client()).clientMetadata)));
-    app.get("/oauth/bluesky/jwks.json", route(async (req, res) => res.json((await this.registry.get("bluesky").client()).jwks)));
+    // Production serves both from the Worker (cloudflare/blueskyOAuth.js).
+    app.get(BLUESKY_CLIENT_METADATA_PATH, route(async (req, res) => res.json((await this.registry.get("bluesky").client()).clientMetadata)));
+    app.get(BLUESKY_JWKS_PATH, route(async (req, res) => res.json((await this.registry.get("bluesky").client()).jwks)));
     app.get("/oauth/:platform/callback", route(async (req, res) => {
       const target = new URL("/dashboard/connections", this.appUrl);
       try {
@@ -428,6 +434,8 @@ export class BridgeApplication {
       this.analyticsTimer.unref?.();
     }
   }
+  /** Work no request is waiting on, which putting the container to sleep would cut off. */
+  busy() { return Boolean(ProcessRunner.children.size || this.media.directProcessing || this.worker.running || this.dropper.running || this.webhooks.running); }
   stopWorkers() { this.media.stop(); this.worker.stop(); this.webhooks.stop(); clearInterval(this.analyticsTimer); clearInterval(this.privacyTimer); clearInterval(this.connectionTimer); clearInterval(this.dropperTimer); if (this.dropper) this.dropper.enabled = false; }
   async shutdown({ timeoutMs = 25000 } = {}) {
     this.stopWorkers();

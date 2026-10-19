@@ -15,6 +15,7 @@ import { OPENAI_APPS_CHALLENGE_PATH, openaiAppsChallengeResponse } from "./opena
 import { handleDirectUpload, stagingKey } from "./directUploads.js";
 import { pricingForCountry } from "../backend/src/bridge/shared/regionalPricing.js";
 import { withVisitorCountry } from "./visitorCountry.js";
+import { blueskyOAuthDocument, isBlueskyOAuthDocument } from "./blueskyOAuth.js";
 export { ContainerProxy } from "@cloudflare/containers";
 
 const definedEnv = values => Object.fromEntries(
@@ -24,7 +25,9 @@ const definedEnv = values => Object.fromEntries(
 export class PodcastClipperBackend extends Container {
   inFlightRequests = 0;
   defaultPort = 8787;
-  sleepAfter = "2h";
+  // Each wake costs this much running time at least. Publishing and Dropper
+  // work arm their own wake-ups, and onActivityExpired waits for busy work.
+  sleepAfter = "15m";
   entrypoint = ["/usr/local/bin/node", "/app/src/bootstrap.js"];
   envVars = definedEnv({
     HOST: "0.0.0.0",
@@ -191,7 +194,18 @@ export class PodcastClipperBackend extends Container {
   async onActivityExpired() {
     const { mode } = await this.durableState.status();
     if (["migration", "resuming"].includes(mode) || mode === "legacy" && env.BRIDGE_MIGRATION_SECRET) return;
+    // A video can take longer to process or upload than sleepAfter with no
+    // request in flight. The library checks again after another sleepAfter.
+    if (await this.backendBusy()) return;
     return super.onActivityExpired();
+  }
+
+  async backendBusy() {
+    if (!this.ctx.container.running) return false;
+    try {
+      const response = await super.fetch(new Request("http://backend/internal/activity"));
+      return response.ok && (await response.json()).busy === true;
+    } catch { return false; }
   }
 
   onStart() {
@@ -283,6 +297,10 @@ export default {
         const action = request.method === "GET" ? "status" : request.method === "POST" ? (await request.json()).action : "invalid";
         return Response.json(await workerEnv.BACKEND.getByName("primary").migration(action), { headers: { "Cache-Control": "no-store" } });
       } catch (error) { return Response.json({ error: error.message }, { status: 503, headers: { "Cache-Control": "no-store" } }); }
+    }
+    if (isBlueskyOAuthDocument(url.pathname)) {
+      const document = await blueskyOAuthDocument(request, workerEnv);
+      if (document) return document;
     }
     const backendPath = ["/mcp", "/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"].includes(url.pathname) || ["/api/", "/media/", "/oauth/"].some(prefix => url.pathname.startsWith(prefix));
     if (backendPath || url.pathname === "/health") {

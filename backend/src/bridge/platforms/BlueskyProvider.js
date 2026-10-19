@@ -5,6 +5,7 @@ import { JoseKey } from "@atproto/jwk-jose";
 import { PlatformProvider } from "./PlatformProvider.js";
 import { invariant, ProviderError, BridgeError } from "../core/errors.js";
 import { SecretVault } from "../core/SecretVault.js";
+import { BLUESKY_KEY_ID, blueskyClientMetadata } from "../shared/blueskyOAuth.js";
 
 /** The official OAuth client owns DPoP, token refresh and identity discovery. */
 export class BlueskyProvider extends PlatformProvider {
@@ -29,8 +30,8 @@ export class BlueskyProvider extends PlatformProvider {
   async client() {
     invariant(this.configured, "Bluesky connections are not configured on this server.", { status: 503 });
     if (!this.clientPromise) this.clientPromise = (async () => new NodeOAuthClient({
-      clientMetadata: { client_id: `${this.publicUrl}/oauth/bluesky/client-metadata.json`, client_name: "Meadow", client_uri: this.publicUrl, policy_uri: new URL("/privacy", this.publicUrl).href, tos_uri: new URL("/terms", this.publicUrl).href, redirect_uris: [this.redirectUri], grant_types: ["authorization_code", "refresh_token"], response_types: ["code"], scope: "atproto transition:generic", application_type: "web", token_endpoint_auth_method: "private_key_jwt", token_endpoint_auth_signing_alg: "ES256", dpop_bound_access_tokens: true, jwks_uri: `${this.publicUrl}/oauth/bluesky/jwks.json` },
-      keyset: [await JoseKey.fromImportable(this.privateKey, "bridge-1")],
+      clientMetadata: blueskyClientMetadata(this.publicUrl),
+      keyset: [await JoseKey.fromImportable(this.privateKey, BLUESKY_KEY_ID)],
       stateStore: this.encryptedStore("blueskyState"), sessionStore: this.encryptedStore("blueskySession"),
       requestLock: (key, fn) => this.locks.withLock(`bluesky:${key}`, fn),
     }))().catch(error => { this.clientPromise = null; throw error; });
