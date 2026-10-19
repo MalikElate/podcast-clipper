@@ -10,6 +10,7 @@ import { ProviderError } from "../src/bridge/core/errors.js";
 import { SqliteStore } from "../src/bridge/storage/SqliteStore.js";
 import { SecretVault } from "../src/bridge/core/SecretVault.js";
 import { CONNECTION_PRIVACY_VERSION } from "../src/bridge/platforms/connectionPrivacy.js";
+import { ProcessRunner } from "../src/bridge/core/ProcessRunner.js";
 
 async function setup(t, { localPreview = false, auth = true, stripe, webhookSend, listUsers, envOverrides = {} } = {}) {
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bridge-api-test-"));
@@ -43,6 +44,19 @@ test("self-hosted public tools permanently redirect without losing the tool path
     assert.equal(response.headers.get("location"), "/tools/tiktok-roast/?handle=meadow.creator");
   }
   assert.equal((await h.request("/api/free-tools/generate", { user: null })).status, 404);
+});
+
+test("the container reports unfinished background work so it is not put to sleep under it", async t => {
+  const h = await setup(t);
+  const activity = async () => (await fetch(`${h.base}/internal/activity`)).json();
+  assert.deepEqual(await activity(), { busy: false });
+  const child = {}; ProcessRunner.children.add(child); t.after(() => ProcessRunner.children.delete(child));
+  assert.deepEqual(await activity(), { busy: true });
+  ProcessRunner.children.delete(child);
+  h.application.worker.running = true;
+  assert.deepEqual(await activity(), { busy: true });
+  h.application.worker.running = false;
+  assert.deepEqual(await activity(), { busy: false });
 });
 
 test("public pricing trusts the visitor country only behind an opted-in edge or private Cloudflare container", async t => {
