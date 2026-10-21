@@ -10,6 +10,7 @@ import { ProjectService } from "../src/bridge/services/ProjectService.js";
 import { ScheduleService } from "../src/bridge/services/ScheduleService.js";
 import { PublishingWorker } from "../src/bridge/services/PublishingWorker.js";
 import { invariant } from "../src/bridge/core/errors.js";
+import { assertPlatformAccess } from "../src/bridge/services/PlatformAccess.js";
 
 // Domain tests use the repository interface, without native SQLite or live posts.
 class MemoryStore {
@@ -40,6 +41,7 @@ function setup(t, { snapshot, at = Date.parse("2026-10-08T12:00:00Z") } = {}) {
   const h = { store, now: () => now, advance: ms => { now += ms; }, downloads: [], optionCalls: 0, downloadHook: null, optionHook: null, videos: [], blocked: false };
   h.videos = [1, 2, 3].map(index => ({ externalId: `740000000000000000${index}`, title: `Video ${index}`, caption: `Caption ${index}`, publishedAt: now - index * MINUTE, url: `https://www.tiktok.com/@source/video/740000000000000000${index}`, thumbnailUrl: `https://cdn.example/${index}.jpg`, metrics: { views: 10 }, embedUrl: `https://www.tiktok.com/player/v1/740000000000000000${index}` }));
   const accounts = {
+    assertPlatformAccess(uid, platform) { assertPlatformAccess(platform, false); },
     require(uid, projectId, id) { const account = projects.requireRecord(uid, projectId, "account", id); invariant(account.ownerUid === uid, "Account not found.", { status: 404 }); return account; },
     async options(uid, projectId, id) { this.require(uid, projectId, id); h.optionCalls++; await h.optionHook?.(h.optionCalls); return {}; },
   };

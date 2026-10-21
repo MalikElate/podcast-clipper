@@ -91,6 +91,7 @@ test("removal receipts survive restart and retries cannot delete a newly authori
 
 test("Meta removal clears pending selections and blocks an OAuth callback already in flight", async t => {
   const h = fixture(t), app = h.app;
+  app.store.put("billing", { id: "alice", ownerUid: "alice", planId: "starter", status: "active" });
   const candidates = [{ remoteId: "page", label: "Page", credentials: { accessToken: "token", metaUserIds: ["123456789123"] } }];
   app.store.put("connection", { id: "selection", ownerUid: "alice", projectId: h.project.id, platform: "facebook", createdAt: h.now() - 1000, expiresAt: h.now() + DAY, encrypted: app.vault.encrypt(candidates, "connection:selection") });
   let release, started;

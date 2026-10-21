@@ -70,6 +70,7 @@ test("complimentary Pro is exact UID configuration and does not create Stripe bi
   assert.deepEqual(await billing.record("user_Grantee"), {
     configured: false, planId: "pro", cycle: null, status: "active", source: "complimentary",
     region: null, currency: null, cancelAtPeriodEnd: false, currentPeriodEnd: null, canManage: false,
+    platformAccess: { paidPlatforms: ["facebook", "instagram", "threads"], hasPaidAccess: true },
   });
   for (const uid of ["user_Other", "user_GranteeExtra", "user_grantee", "user_*", "grantee@example.test", "alice"]) {
     assert.equal(billing.publicRecord(uid).status, "free", uid);
@@ -87,7 +88,11 @@ test("complimentary configuration preserves every ongoing Stripe billing state a
   for (const status of ["active", "trialing", "past_due", "unpaid", "incomplete", "paused", "unknown_future_status", null]) {
     const saved = h.store.put("billing", { id: uid, ownerUid: uid, subscriptionId: "sub_existing", customerId: "cus_existing",
       planId: "creator", cycle: "yearly", status, region: "ssa", currency: "XAF", currentPeriodEnd: 1800000000000, cancelAtPeriodEnd: true });
-    assert.deepEqual(billing.publicRecord(uid), h.billing.publicRecord(uid), `${status}: keep the real financial view`);
+    const { platformAccess, ...financialView } = billing.publicRecord(uid);
+    const { platformAccess: ordinaryAccess, ...ordinaryFinancialView } = h.billing.publicRecord(uid);
+    assert.deepEqual(financialView, ordinaryFinancialView, `${status}: keep the real financial view`);
+    assert.equal(platformAccess.hasPaidAccess, true, "the configured Pro grant still permits paid platforms");
+    assert.equal(ordinaryAccess.hasPaidAccess, ["active", "trialing"].includes(status));
     assert.equal(billing.publicRecord(uid).source, undefined);
     await assert.rejects(billing.checkout(uid, null, starter), { code: "complimentary_access" });
     assert.deepEqual(h.store.get("billing", uid), saved);
