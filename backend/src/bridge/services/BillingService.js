@@ -6,6 +6,7 @@ import { deletionMarker } from "./PrivacyService.js";
 import { TrybeService } from "./TrybeService.js";
 import { pricingForCountry } from "../shared/regionalPricing.js";
 import { hasOngoingSubscription, parseComplimentaryProUids } from "./ComplimentaryAccess.js";
+import { platformAccess } from "./PlatformAccess.js";
 
 const PLAN_PRICE_ENV = {
   starter: { monthly: "STRIPE_PRICE_STARTER_MONTHLY", yearly: "STRIPE_PRICE_STARTER_YEARLY" },
@@ -59,15 +60,16 @@ export class BillingService {
 
   publicRecord(uid) {
     const record = this.store.get("billing", uid);
+    const access = platformAccess(record, this.complimentaryProUids.has(uid));
     if (this.complimentaryProUids.has(uid) && !hasOngoingSubscription(record)) {
       return {
         configured: this.configured, planId: "pro", cycle: null, status: "active", source: "complimentary",
         region: null, currency: null, cancelAtPeriodEnd: false, currentPeriodEnd: null,
         // A prior customer can still inspect invoices or payment obligations.
-        canManage: Boolean(record?.customerId),
+        canManage: Boolean(record?.customerId), platformAccess: access,
       };
     }
-    if (!record) return { configured: this.configured, planId: null, cycle: null, status: "free", region: null, currency: null, cancelAtPeriodEnd: false, currentPeriodEnd: null, canManage: false };
+    if (!record) return { configured: this.configured, planId: null, cycle: null, status: "free", region: null, currency: null, cancelAtPeriodEnd: false, currentPeriodEnd: null, canManage: false, platformAccess: access };
     return {
       configured: this.configured,
       planId: record.planId || null,
@@ -78,6 +80,7 @@ export class BillingService {
       cancelAtPeriodEnd: Boolean(record.cancelAtPeriodEnd),
       currentPeriodEnd: record.currentPeriodEnd || null,
       canManage: Boolean(record.customerId),
+      platformAccess: access,
     };
   }
 

@@ -311,6 +311,7 @@ export class BridgeApplication {
           ...(Number.isInteger(details.providerSubcode) ? { providerSubcode: details.providerSubcode } : {}),
         }));
         target.searchParams.set("connectionError", connectionErrorMessage(req.params.platform, error));
+        if (error instanceof BridgeError && error.code === "paid_plan_required") target.searchParams.set("connectionErrorCode", error.code);
       }
       res.setHeader("Cache-Control", "no-store"); res.redirect(303, target.toString());
     }));

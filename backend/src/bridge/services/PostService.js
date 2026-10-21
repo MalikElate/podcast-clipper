@@ -121,6 +121,10 @@ export class PostService {
     invariant(Array.isArray(items) && items.length > 0 && items.length <= 100, "Submit between 1 and 100 posts at a time.");
     const normalized = items.map(item => this.normalize(uid, projectId, item));
     const accountIds = [...new Set(normalized.flatMap(item => item.accountIds))];
+    for (const accountId of accountIds) {
+      const account = this.accounts.require(uid, projectId, accountId);
+      this.accounts.assertPlatformAccess(uid, account.platform);
+    }
     const optionErrors = new Map(), freshOptions = new Map();
     if (refreshOptions) {
       for (const accountId of accountIds) {
@@ -205,6 +209,7 @@ export class PostService {
         ids.push(id);
         input.accountIds.forEach(accountId => {
           const account = this.accounts.require(uid, projectId, accountId);
+          this.accounts.assertPlatformAccess(uid, account.platform);
           this.store.put("delivery", { id: randomUUID(), projectId, ownerUid: uid, postId: id, accountId, platform: account.platform, rateKey: account.rateKey,
             requestedAt: accountSchedules[accountId].requestedAt, dueAt: accountSchedules[accountId].requestedAt, order, status: "queued", attempts: 0, progress: {}, createdAt: now, updatedAt: now });
           rateKeys.add(account.rateKey);
@@ -270,6 +275,7 @@ export class PostService {
       deliveries.filter(editableDelivery).forEach(item => this.store.remove("delivery", item.id));
       next.accountIds.forEach(accountId => {
         const account = this.accounts.require(uid, projectId, accountId);
+        this.accounts.assertPlatformAccess(uid, account.platform);
         const previous = deliveries.find(item => item.accountId === accountId);
         this.store.put("delivery", { id: previous?.id || randomUUID(), projectId, ownerUid: uid, postId: id, accountId, platform: account.platform, rateKey: account.rateKey,
           status: "queued", requestedAt: accountSchedules[accountId].requestedAt, dueAt: accountSchedules[accountId].requestedAt, order: previous?.order || this.store.nextSequence("delivery_order", this.clock() * 100), attempts: 0, progress: {}, createdAt: previous?.createdAt || this.clock(), updatedAt: this.clock() });
@@ -326,6 +332,7 @@ export class PostService {
     const inboxDelivery = delivery.platform === "tiktok" && (delivery.contentSnapshot?.settings?.deliveryMode === "inbox" || delivery.progress?.deliveryMode === "inbox");
     invariant(delivery.status !== "needs_review" || confirmedNotPublished === true, inboxDelivery ? "Check your TikTok inbox and confirm this upload was not received before retrying, to avoid a duplicate." : "Check the social account and confirm the unconfirmed message was not published, to avoid a duplicate.", { status: 409, code: "confirmation_required" });
     const account = this.accounts.require(uid, projectId, delivery.accountId);
+    this.accounts.assertPlatformAccess(uid, account.platform);
     invariant(account.status === "connected", "Reconnect this account before retrying.");
     if (delivery.status === "needs_account" && delivery.resumeStatus === "processing") {
       this.store.put("delivery", { ...delivery, status: "processing", resumeStatus: null, dueAt: this.clock(), error: null, updatedAt: this.clock() });

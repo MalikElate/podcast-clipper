@@ -64,6 +64,7 @@ function Workspace({ user, signOut }) {
   const initial = useRef({ params: new URLSearchParams(window.location.search), view: dashboardView(window.location.pathname, window.location.search) });
   const [view, setView] = useState(initial.current.view);
   const [billingSearch, setBillingSearch] = useState(() => dashboardSearch(initial.current.view, initial.current.params));
+  const [connectionUpgradeRequired, setConnectionUpgradeRequired] = useState(initial.current.params.get("connectionErrorCode") === "paid_plan_required");
   const [draftId, setDraftId] = useState(() => initial.current.view === "compose" ? initial.current.params.get("draft") || "" : "");
   const [projects, setProjects] = useState([]), [projectId, setProjectId] = useState(""), [config, setConfig] = useState(null), [error, setError] = useState(initial.current.params.get("connectionError") || ""), [notice, setNotice] = useState(""), [menuOpen, setMenuOpen] = useState(false), [connectionId, setConnectionId] = useState(initial.current.params.get("connection") || ""), [scheduledDate, setScheduledDate] = useState(""), [draftVersion, setDraftVersion] = useState(0);
   const [postsOpen, setPostsOpen] = useState(true);
@@ -90,7 +91,7 @@ function Workspace({ user, signOut }) {
       }
       if (controller.signal.aborted) return;
       setProjects(availableProjects); setConfig(configuration); setProjectId(availableProjects.find(item => item.id === initial.current.params.get("project"))?.id || availableProjects[0]?.id || "");
-    }).catch(error => { if (error.name !== "AbortError") setError(error.message); });
+    }).catch(error => { if (error.name !== "AbortError") { setError(error.message); setConnectionUpgradeRequired(false); } });
     window.history.replaceState({}, "", dashboardPath(initial.current.view) + dashboardSearch(initial.current.view, initial.current.params));
     return () => controller.abort();
   }, []);
@@ -117,6 +118,7 @@ function Workspace({ user, signOut }) {
       if (configurationViewIds.has(next)) setConfigurationOpen(true);
       setMenuOpen(false);
       setError("");
+      setConnectionUpgradeRequired(false);
       setNotice("");
       if (window.location.pathname !== dashboardPath(next) || window.location.search !== search) window.history.replaceState({}, "", canonicalUrl);
     };
@@ -126,7 +128,7 @@ function Workspace({ user, signOut }) {
   useEffect(() => { document.title = `${activeModule?.title || activeModule?.name || "Dashboard"} · Meadow`; }, [activeModule]);
   function setComposerDirty(value) { composeDirtyRef.current = value; }
   function setComposerBusy(value) { composeBusyRef.current = value; }
-  function selectView(next) { setView(next); if (postViewIds.has(next)) setPostsOpen(true); if (configurationViewIds.has(next)) setConfigurationOpen(true); setMenuOpen(false); setError(""); setNotice(""); }
+  function selectView(next) { setView(next); if (postViewIds.has(next)) setPostsOpen(true); if (configurationViewIds.has(next)) setConfigurationOpen(true); setMenuOpen(false); setError(""); setConnectionUpgradeRequired(false); setNotice(""); }
   function canLeaveComposer() {
     if (view !== "compose") return true;
     if (composeBusyRef.current) { setError("Please wait for the current post action to finish."); return false; }
@@ -174,7 +176,7 @@ function Workspace({ user, signOut }) {
       </div>
     </aside>
     <main className={`bridge-main${view === "dropper" ? " bridge-main-dropper" : ""}`}><header className="bridge-topbar"><button className="bridge-icon-button bridge-menu-toggle" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Icon name="menu"/></button></header>
-      <div className="bridge-content"><Alert message={error}/>{view !== "dropper" && <Alert message={notice} success/>}{view === "dropper" ? <h1 className="sr-only">{activeModule?.title || activeModule?.name}</h1> : <div className="bridge-page-heading"><h1>{activeModule?.title || activeModule?.name}</h1></div>}
+      <div className="bridge-content"><Alert message={error}/>{error && connectionUpgradeRequired && <button className="bridge-button secondary" onClick={() => navigate("billing")}>View paid plans</button>}{view !== "dropper" && <Alert message={notice} success/>}{view === "dropper" ? <h1 className="sr-only">{activeModule?.title || activeModule?.name}</h1> : <div className="bridge-page-heading"><h1>{activeModule?.title || activeModule?.name}</h1></div>}
         {!config ? !error && ["accounts", "analytics"].includes(view) ? <PageSkeleton page={view} label={view === "accounts" ? "Loading accounts" : "Loading analytics"}/> : <div className="bridge-panel bridge-empty"><p>{error ? "Meadow could not load. Check your connection and refresh this page." : ""}</p></div> : isConfigurationView ? <ConfigurationWorkspace billingSearch={billingSearch} user={user} project={project} config={config} view={view}/> : !project ? <div className="bridge-panel bridge-empty"><div className="bridge-empty-icon"><BridgeMark/></div><h2>Meadow is getting ready</h2><p>Your publishing account is not available yet.</p></div> : <ProjectWorkspace key={project.id} userId={user?.id} project={project} config={config} view={view} navigate={navigate} compose={compose} draftId={draftId} onComposeDirty={setComposerDirty} onComposeBusy={setComposerBusy} scheduledDate={scheduledDate} clearScheduledDate={() => setScheduledDate("")} draftVersion={draftVersion} connectionId={connectionId} clearConnection={() => setConnectionId("")} notify={setNotice}/>}
       </div>
     </main>
@@ -244,7 +246,7 @@ function ProjectWorkspace({ userId, project, config, view, navigate, compose, dr
   return <><Alert message={accountResource.error ? `Could not load your social accounts. ${accountResource.error}` : needsMedia ? mediaResource.error || uploadError : ""}/>
     {accountResource.error && <div className="bridge-intro-row"><button type="button" className="bridge-button secondary small" disabled={accountResource.loading} onClick={accountResource.reload}>Retry accounts</button></div>}
     {view === "compose" && (draftLoading ? <div className="bridge-panel bridge-empty"><p>Loading your draft…</p></div> : draftState.error ? <div className="bridge-panel bridge-empty"><Alert message={draftState.error}/><button className="bridge-button secondary" onClick={() => navigate("drafts", { force: true })}>Back to drafts</button></div> : <Composer key={`${draftVersion}:${draftId}:${draftState.post?.revision || 0}`} {...common} draft={draftState.post} scheduledDate={scheduledDate} onDraftStarted={clearScheduledDate} onDirtyChange={onComposeDirty} onBusyChange={onComposeBusy} onAccounts={() => navigate("accounts")} onUpload={upload} onDiscard={() => navigate(draftId ? "drafts" : "posts", { force: true })} onDraftSaved={() => { navigate("drafts", { force: true }); notify("Draft saved."); }} onSubmitted={result => { navigate("posts", { force: true }); notify(`${result.posts.length} ${result.posts.length === 1 ? "post" : "posts"} added to your delivery queue.`); }}/>) }
-    {view === "accounts" && <Accounts {...common} accountsError={accountResource.error} connectionId={connectionId} clearConnection={clearConnection} onChanged={accountResource.reload} onRemovalChange={accountRemovalChanged}/>}
+    {view === "accounts" && <Accounts {...common} onBilling={() => navigate("billing")} accountsError={accountResource.error} connectionId={connectionId} clearConnection={clearConnection} onChanged={accountResource.reload} onRemovalChange={accountRemovalChanged}/>}
     {view === "calendar" && <PostsCalendar {...common} onCreate={compose}/>}
     {["posts", "scheduled", "posted", "drafts", "failed"].includes(view) && <PostsQueue {...common} section={view} onCreate={() => compose()} onEditDraft={post => compose("", post.id)} onUpload={upload}/>}
     {view === "analytics" && <Analytics {...common}/>}

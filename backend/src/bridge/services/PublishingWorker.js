@@ -111,6 +111,7 @@ export class PublishingWorker {
         }
         if (dispatchAccount.status !== "connected") throw new BridgeError(dispatchAccount.lastError || "Reconnect this account to continue publishing.", { code: "reconnect_required" });
         if (dispatchAccount.authorizationId !== account.authorizationId) throw new BridgeError("This account connection changed. Try again.", { code: "connection_changed", status: 409 });
+        this.accounts.assertPlatformAccess(dispatchAccount.ownerUid, dispatchAccount.platform);
         const context = { account, credentials, delivery, post, content, media: this.media, progress: delivery.progress || {}, checkpoint };
         dispatched = true;
         const result = await (polling ? provider.poll(context) : provider.publish(context));
@@ -150,7 +151,11 @@ export class PublishingWorker {
           retryConnection("The connection was updated. Meadow will retry with its current access.");
           return;
         }
-        if (error.uncertain || ["processing_timeout", "unconfirmed_publication"].includes(error.code)) {
+        if (error.code === "paid_plan_required" && polling) {
+          // The provider may already have accepted this post. Preserve its
+          // checkpoint so upgrading resumes polling instead of publishing twice.
+          this.store.put("delivery", { ...current, status: "needs_account", resumeStatus: "processing", error: error.message, leaseUntil: null, updatedAt: this.clock() });
+        } else if (error.uncertain || ["processing_timeout", "unconfirmed_publication"].includes(error.code)) {
           this.complete({ ...current, status: "needs_review", error: error.message, leaseUntil: null, updatedAt: this.clock() });
         } else if (error.reconnect || error.code === "reconnect_required") {
           const message = error instanceof BridgeError ? error.message : "Reconnect this account to renew its permissions.";

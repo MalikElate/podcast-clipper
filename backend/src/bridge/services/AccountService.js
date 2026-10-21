@@ -3,14 +3,13 @@ import { isSubSaharanCountry, normalizeCountryCode } from "../shared/geography.j
 import { invariant, ProviderError } from "../core/errors.js";
 import { SecretVault } from "../core/SecretVault.js";
 import { parseComplimentaryProUids } from "./ComplimentaryAccess.js";
+import { assertPlatformAccess, hasPaidAccess, PAID_PLATFORMS } from "./PlatformAccess.js";
 
 const DAY = 86400000;
 const authorizationFamily = platform => ["youtube", "google_business"].includes(platform) ? "google" : platform;
 const sameTokens = (left, right) => left.accessToken === right.accessToken && left.refreshToken === right.refreshToken && left.did === right.did;
 const isAttached = account => !["deleting", "disconnected"].includes(account.status);
 const sameIdentity = (account, candidate) => account.remoteId === candidate.remoteId || Boolean(account.identityKey && account.identityKey === candidate.identityKey);
-// Checkout attempts and subscriptions awaiting payment are not paid access.
-const PAID_ENTITLEMENT_STATUSES = new Set(["active", "trialing"]);
 
 export class AccountService {
   constructor({ store, projects, registry, vault, locks, env = {}, clock = () => Date.now(), localPreview = false }) {
@@ -39,9 +38,12 @@ export class AccountService {
     })).then(items => items.filter(Boolean));
   }
   require(uid, projectId, accountId) { return this.projects.requireRecord(uid, projectId, "account", accountId); }
+  hasPaidAccess(uid) { return hasPaidAccess(this.store.get("billing", uid), this.complimentaryProUids.has(uid)); }
+  assertPlatformAccess(uid, platform) { assertPlatformAccess(platform, this.hasPaidAccess(uid)); }
 
   async start(uid, projectId, platform, { handle, consent } = {}, { countryCode: visitorCountry } = {}) {
     this.projects.require(uid, projectId);
+    this.assertPlatformAccess(uid, platform);
     this.privacy?.assertConnectionAvailable(uid, platform);
     invariant(!this.localPreview, "Live account connections are disabled in local preview.", { status: 409, code: "preview_mode" });
     invariant(this.vault.configured, "Social account connections are not configured on this server.", { status: 503 });
@@ -141,6 +143,7 @@ export class AccountService {
         saved = this.store.consumeState(SecretVault.hash(state || ""), this.clock());
         invariant(saved && saved.platform === platform, "This connection request has expired. Start again.");
         this.projects.require(saved.uid, saved.projectId);
+        this.assertPlatformAccess(saved.uid, platform);
         this.privacy?.requireConnectionConsent(platform, saved.privacyConsent);
       }
       await this.store.flush?.();
@@ -152,6 +155,7 @@ export class AccountService {
       saved = this.store.consumeState(SecretVault.hash(params.get("state") || ""), this.clock());
       invariant(saved && saved.platform === platform, "This connection request has expired. Start again.");
       this.projects.require(saved.uid, saved.projectId);
+      this.assertPlatformAccess(saved.uid, platform);
       this.privacy?.requireConnectionConsent(platform, saved.privacyConsent);
       invariant(!params.get("error") && params.get("code"), "The account connection was not authorized.");
       await this.store.flush?.();
@@ -159,10 +163,12 @@ export class AccountService {
       candidates = await provider.accounts(credentials);
     }
     invariant(saved && saved.platform === platform, "This connection request has expired. Start again.");
+    this.assertPlatformAccess(saved.uid, platform);
     invariant(Array.isArray(candidates) && candidates.length, "No eligible accounts were returned. Check your account type and permissions.");
     await this.prepareIdentities(saved.uid, platform, candidates);
     invariant((saved.createdAt || 0) + 10 * 60000 > this.clock(), "This connection request has expired. Start again.");
     this.projects.require(saved.uid, saved.projectId);
+    this.assertPlatformAccess(saved.uid, platform);
     this.privacy?.requireConnectionConsent(platform, saved.privacyConsent);
     this.privacy?.assertCurrentAuthorization(saved.uid, platform, saved);
     this.privacy?.assertConnectionAvailable(saved.uid, platform);
@@ -181,6 +187,7 @@ export class AccountService {
 
   async pending(uid, projectId, connectionId) {
     const connection = this.projects.requireRecord(uid, projectId, "connection", connectionId);
+    this.assertPlatformAccess(uid, connection.platform);
     invariant(connection.expiresAt > this.clock(), "This connection has expired. Connect the account again.");
     const candidates = this.vault.decrypt(connection.encrypted, `connection:${connectionId}`);
     if (connection.platform === "pinterest") {
@@ -217,6 +224,7 @@ export class AccountService {
 
   attach(uid, projectId, connectionId, selectedIds, { countryCode: visitorCountry } = {}) {
     const connection = this.projects.requireRecord(uid, projectId, "connection", connectionId);
+    this.assertPlatformAccess(uid, connection.platform);
     this.privacy?.requireConnectionConsent(connection.platform, connection.privacyConsent);
     invariant(connection.expiresAt > this.clock(), "This connection has expired. Connect the account again.");
     this.privacy?.assertCurrentAuthorization(uid, connection.platform, connection);
@@ -227,10 +235,8 @@ export class AccountService {
     this.metaPrivacy?.assertAuthorization(connection.platform, candidates, connection.authorizationStartedAt || connection.createdAt);
     return this.store.transaction(() => {
       const accounts = [];
-      const billing = this.store.get("billing", uid);
       const regionalFree = isSubSaharanCountry(normalizeCountryCode(visitorCountry) || connection.countryCode)
-        && !this.complimentaryProUids.has(uid)
-        && !(billing?.planId && PAID_ENTITLEMENT_STATUSES.has(billing.status));
+        && !this.hasPaidAccess(uid);
       let attachedCount = regionalFree ? this.store.list("account", { ownerUid: uid, limit: null }).filter(isAttached).length : 0;
       // The transaction serializes simultaneous callbacks and selections. The
       // owner boundary is intentional: another Meadow user may use this channel.
@@ -277,15 +283,18 @@ export class AccountService {
   async credentials(account, { force = false, minValidityMs = 5 * 60000, rejectedCredentials } = {}) {
     const initial = this.store.get("account", account.id);
     invariant(initial?.status === "connected" && initial.encryptedCredentials, initial?.lastError || "Reconnect this account before publishing.", { code: "reconnect_required" });
+    this.assertPlatformAccess(initial.ownerUid, initial.platform);
     const initialTokens = this.vault.decrypt(initial.encryptedCredentials, `account:${initial.id}`);
     // Accounts selected from the same grant may share a rotating refresh token.
     // Serialize by that token, then re-read after waiting for another refresh.
     return this.withCredentialLock(initial, async () => {
       const current = this.store.get("account", account.id);
       invariant(current?.status === "connected" && current.encryptedCredentials, current?.lastError || "Reconnect this account before publishing.", { code: "reconnect_required" });
+      this.assertPlatformAccess(current.ownerUid, current.platform);
       invariant(current.authorizationId === initial.authorizationId, "This account connection changed. Try again.", { code: "connection_changed", status: 409 });
       let credentials = this.vault.decrypt(current.encryptedCredentials, `account:${current.id}`);
       const requireCurrent = expected => {
+        this.assertPlatformAccess(current.ownerUid, current.platform);
         const latest = this.store.get("account", current.id);
         invariant(latest?.status === "connected" && latest.authorizationId === current.authorizationId && latest.encryptedCredentials && sameTokens(this.vault.decrypt(latest.encryptedCredentials, `account:${current.id}`), expected), "This account connection changed. Try again.", { code: "connection_changed", status: 409 });
       };
@@ -369,6 +378,7 @@ export class AccountService {
 
   async options(uid, projectId, accountId, { force = false } = {}) {
     const account = this.require(uid, projectId, accountId);
+    this.assertPlatformAccess(uid, account.platform);
     if (account.platform !== "pinterest" && !force && account.options && account.optionsUpdatedAt > this.clock() - 60000) return account.options;
     const options = await this.withCredentials(account, credentials => this.registry.get(account.platform).options(account, credentials));
     const current = this.store.get("account", account.id);
@@ -411,7 +421,7 @@ export class AccountService {
     if (this.running || this.localPreview) return;
     this.running = true;
     try {
-      const due = this.store.list("account", { status: "connected", limit: null }).filter(account => account.encryptedCredentials && (account.maintenanceDueAt || 0) <= this.clock() && !this.privacy?.blocked(account.ownerUid)).sort((a, b) => (a.maintenanceDueAt || 0) - (b.maintenanceDueAt || 0)).slice(0, 25);
+      const due = this.store.list("account", { status: "connected", limit: null }).filter(account => account.encryptedCredentials && (account.maintenanceDueAt || 0) <= this.clock() && !this.privacy?.blocked(account.ownerUid) && (!PAID_PLATFORMS.includes(account.platform) || this.hasPaidAccess(account.ownerUid))).sort((a, b) => (a.maintenanceDueAt || 0) - (b.maintenanceDueAt || 0)).slice(0, 25);
       for (const selected of due) {
         const account = this.store.get("account", selected.id);
         if (account?.status !== "connected" || account.authorizationId !== selected.authorizationId || (account.maintenanceDueAt || 0) > this.clock() || this.privacy?.blocked(account.ownerUid)) continue;

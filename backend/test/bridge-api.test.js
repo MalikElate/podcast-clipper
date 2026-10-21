@@ -288,7 +288,8 @@ test("Stripe checkout, webhooks, subscription state, and billing portal stay lin
   } });
 
   const before = await (await h.request("/api/bridge/billing")).json();
-  assert.deepEqual(before, { configured: true, planId: null, cycle: null, status: "free", region: null, currency: null, cancelAtPeriodEnd: false, currentPeriodEnd: null, canManage: false });
+  assert.deepEqual(before, { configured: true, planId: null, cycle: null, status: "free", region: null, currency: null, cancelAtPeriodEnd: false, currentPeriodEnd: null, canManage: false,
+    platformAccess: { paidPlatforms: ["facebook", "instagram", "threads"], hasPaidAccess: false } });
   const checkout = await h.request("/api/bridge/billing/checkout", { method: "POST", body: { planId: "creator", cycle: "yearly", trybeVisitorId: "ignore-client-body" }, headers: { Cookie: "ugc_vid_store-123=visitor-123" } });
   assert.equal(checkout.status, 200); assert.equal((await checkout.json()).url, "https://checkout.stripe.test/session");
   assert.equal(calls.checkout[0].line_items[0].price, "price_creator_yearly");

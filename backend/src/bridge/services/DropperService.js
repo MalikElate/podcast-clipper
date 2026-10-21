@@ -75,10 +75,12 @@ export class DropperService {
     const settings = this.settings(uid, projectId), cards = [], wrongFormat = [], sources = [];
     const source = this.connectedAccounts(uid, projectId).find(account => account.id === settings.sourceAccountId);
     if (source) {
+      this.accounts.assertPlatformAccess(uid, source.platform);
       const { videos, others = [], error } = await this.videoSources.sourceVideos(source);
       // Recheck the connection after remote video lookups.
       const current = this.store.get("account", source.id);
       invariant(current?.ownerUid === uid && current.projectId === projectId && current.status === "connected" && current.authorizationId === source.authorizationId, "The source connection changed. Refresh and try again.", { status: 409 });
+      this.accounts.assertPlatformAccess(uid, current.platform);
       sources.push({ accountId: source.id, accountName: source.label, platform: source.platform, videos: videos.length, error });
       const decisions = this.store.list("dropperItem", { projectId, ownerUid: uid, limit: null });
       const decided = new Set(decisions.filter(item => !["failed", "cancelled"].includes(item.status)).map(item => item.cardId));
@@ -134,6 +136,7 @@ export class DropperService {
     const operationKey = `${uid}:${projectId}`, stopVersion = this.stopVersions.get(operationKey) || 0;
     const settings = clone(this.settings(uid, projectId));
     invariant(settings.sourceAccountId && settings.accountIds.length, "Choose a source and at least one destination before starting Dropper.", { status: 409, code: "dropper_settings_required" });
+    this.accounts.assertPlatformAccess(uid, this.accounts.require(uid, projectId, settings.sourceAccountId).platform);
     let deck = this.decks.get(`${uid}:${projectId}`);
     if (!deck || deck.at <= this.clock() - CARD_TTL_MS || deck.sourceAccountId !== settings.sourceAccountId) {
       await this.deck(uid, projectId);
@@ -156,6 +159,7 @@ export class DropperService {
       }
       const source = this.accounts.require(uid, projectId, settings.sourceAccountId);
       invariant(source.ownerUid === uid && source.status === "connected", "Reconnect the source account before starting Dropper.");
+      this.accounts.assertPlatformAccess(uid, source.platform);
       const destinations = settings.accountIds.map(id => this.accounts.require(uid, projectId, id));
       invariant(destinations.every(account => account.ownerUid === uid && account.status === "connected"), "Reconnect each selected destination before starting Dropper.");
       const now = this.clock(), runId = randomUUID();
@@ -209,6 +213,7 @@ export class DropperService {
     invariant(current && pending.has(current.status) && run?.status === "running" && run.runId === item.runId && !this.privacy?.blocked(item.ownerUid), "Dropper was stopped before this video was queued.", { status: 409, code: "dropper_stopped" });
     const source = this.accounts.require(item.ownerUid, item.projectId, item.accountId);
     invariant(source.ownerUid === item.ownerUid && source.status === "connected" && (source.authorizationId || null) === item.sourceAuthorizationId && source.remoteId === item.sourceRemoteId && source.platform === item.platform, "The source connection changed. Start a new reviewed batch.", { status: 409, code: "dropper_connection_changed" });
+    this.accounts.assertPlatformAccess(item.ownerUid, source.platform);
     for (const id of item.accountIds) {
       const account = this.accounts.require(item.ownerUid, item.projectId, id), identity = item.destinationIdentities[id];
       invariant(id !== item.accountId && account.ownerUid === item.ownerUid && account.status === "connected" && identity && (account.authorizationId || null) === identity.authorizationId && account.remoteId === identity.remoteId && account.platform === identity.platform, "A selected destination connection changed. Start a new reviewed batch.", { status: 409, code: "dropper_connection_changed" });
