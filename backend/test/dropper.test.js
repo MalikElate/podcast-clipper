@@ -10,7 +10,7 @@ import { ProjectService } from "../src/bridge/services/ProjectService.js";
 import { ScheduleService } from "../src/bridge/services/ScheduleService.js";
 import { PublishingWorker } from "../src/bridge/services/PublishingWorker.js";
 import { invariant } from "../src/bridge/core/errors.js";
-import { assertPlatformAccess } from "../src/bridge/services/PlatformAccess.js";
+import { assertPlatformAccess, hasPaidAccess } from "../src/bridge/services/PlatformAccess.js";
 
 // Domain tests use the repository interface, without native SQLite or live posts.
 class MemoryStore {
@@ -41,7 +41,7 @@ function setup(t, { snapshot, at = Date.parse("2026-10-08T12:00:00Z") } = {}) {
   const h = { store, now: () => now, advance: ms => { now += ms; }, downloads: [], optionCalls: 0, downloadHook: null, optionHook: null, videos: [], blocked: false };
   h.videos = [1, 2, 3].map(index => ({ externalId: `740000000000000000${index}`, title: `Video ${index}`, caption: `Caption ${index}`, publishedAt: now - index * MINUTE, url: `https://www.tiktok.com/@source/video/740000000000000000${index}`, thumbnailUrl: `https://cdn.example/${index}.jpg`, metrics: { views: 10 }, embedUrl: `https://www.tiktok.com/player/v1/740000000000000000${index}` }));
   const accounts = {
-    assertPlatformAccess(uid, platform) { assertPlatformAccess(platform, false); },
+    assertPlatformAccess(uid, platform) { assertPlatformAccess(platform, hasPaidAccess(store.get("billing", uid))); },
     require(uid, projectId, id) { const account = projects.requireRecord(uid, projectId, "account", id); invariant(account.ownerUid === uid, "Account not found.", { status: 404 }); return account; },
     async options(uid, projectId, id) { this.require(uid, projectId, id); h.optionCalls++; await h.optionHook?.(h.optionCalls); return {}; },
   };
@@ -64,11 +64,63 @@ function setup(t, { snapshot, at = Date.parse("2026-10-08T12:00:00Z") } = {}) {
   };
   h.dropper = new DropperService({ store, projects, accounts, registry, posts, media, videoSources, privacy: { blocked: () => h.blocked }, incomingDirectory: directory, clock: () => now, enabled: false });
   h.posts = posts;
+  h.billing = status => store.put("billing", { id: "alice", ownerUid: "alice", planId: "starter", status });
   h.configure = (input = {}) => h.dropper.saveSettings("alice", "creator", { sourceAccountId: "source", accountIds: ["x"], overrides: {}, intervalMinutes: 30, ...input });
   h.deck = () => h.dropper.deck("alice", "creator");
   h.start = cardIds => h.dropper.start("alice", "creator", { cardIds });
   return h;
 }
+
+test("cached Meta source videos cannot start or dispatch to free destinations after a downgrade", async t => {
+  for (const platform of ["facebook", "instagram", "threads"]) {
+    const h = setup(t);
+    h.store.put("account", { ...h.store.get("account", "source"), platform, remoteId: "zernio:source" });
+    h.videos = [{ ...h.videos[0], url: `https://${platform}.com/video/one`, directUrl: "https://cdn.example/cached-video.mp4" }];
+    h.billing("active");
+    h.configure({ accountIds: ["x", "other"] });
+    const { cards } = await h.deck();
+    assert.equal(cards[0].previewUrl, h.videos[0].directUrl);
+    h.billing("canceled");
+    const denied = error => error.code === "paid_plan_required" && error.status === 403;
+    await assert.rejects(h.start([cards[0].id]), denied, "a reviewed cached deck still needs paid source access");
+    await assert.rejects(h.deck(), denied, "cached source feeds cannot expose new preview URLs after downgrade");
+    assert.equal(h.store.list("dropperItem").length, 0);
+    h.billing("active");
+    await h.start([cards[0].id]);
+    assert.equal(h.store.list("dropperItem")[0].source.directUrl, h.videos[0].directUrl);
+    h.billing("canceled");
+    await h.dropper.tick();
+    assert.equal(h.downloads.length, 0, "a queued direct URL must not bypass source access");
+    for (const kind of ["post", "delivery", "media"]) assert.equal(h.store.list(kind).length, 0);
+    const [failed] = h.dropper.state("alice", "creator").queue;
+    assert.equal(failed.status, "failed");
+    assert.match(failed.error, /paid Meadow plan/);
+    h.billing("active");
+    await h.start([cards[0].id]);
+    await h.dropper.tick();
+    assert.equal(h.downloads.length, 1);
+    assert.deepEqual(h.store.list("delivery").map(delivery => delivery.platform).sort(), ["tiktok", "x"]);
+  }
+});
+
+test("a Meta source downgrade during download or submit blocks the final queue commit", async t => {
+  for (const stage of ["download", "submit"]) {
+    const h = setup(t);
+    h.store.put("account", { ...h.store.get("account", "source"), platform: "instagram", remoteId: "zernio:source" });
+    h.videos[0].directUrl = "https://cdn.example/cached-video.mp4";
+    h.billing("active");
+    h.configure();
+    const { cards } = await h.deck();
+    await h.start([cards[0].id]);
+    if (stage === "download") h.downloadHook = async () => h.billing("canceled");
+    // Preview loads options first; submit's second lookup yields before commit.
+    else h.optionHook = async call => { if (call === 2) h.billing("canceled"); };
+    await h.dropper.tick();
+    assert.equal(h.downloads.length, 1);
+    for (const kind of ["post", "delivery", "media"]) assert.equal(h.store.list(kind).length, 0, `${stage}: ${kind}`);
+    assert.match(h.dropper.state("alice", "creator").queue[0].error, /paid Meadow plan/);
+  }
+});
 
 test("Dropper requires one owned source, selected destinations, and a bounded integer interval", async t => {
   const h = setup(t);
